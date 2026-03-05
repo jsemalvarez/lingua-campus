@@ -54,7 +54,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className="scroll-smooth">
       <head>
         {/* Script anti-flash: sincroniza el tema ANTES del primer paint */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

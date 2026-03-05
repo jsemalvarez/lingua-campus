@@ -5,7 +5,6 @@ import {
   Users,
   BookOpen,
   DollarSign,
-  LineChart,
   Gamepad2,
   ArrowRight,
   GraduationCap,
@@ -40,7 +39,7 @@ export default function LandingPage() {
                 Acceder
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="#contacto">
               <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 rounded-full px-6 transition-all hover:scale-105 hover:-translate-y-0.5">
                 Prueba Gratuita
               </Button>
@@ -163,6 +162,72 @@ export default function LandingPage() {
               </p>
             </div>
 
+          </div>
+        </section>
+
+        {/* Contact Form Section */}
+        <section id="contacto" className="container mx-auto px-6 mt-32 relative z-10 max-w-4xl scroll-mt-24">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 border border-slate-200/60 dark:border-slate-800 shadow-xl shadow-indigo-500/5">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                ¿Listo para modernizar tu instituto?
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400">
+                Déjanos tus datos y nos pondremos en contacto contigo para habilitarte una prueba gratuita.
+              </p>
+            </div>
+
+            <form className="space-y-6">
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Nombre completo
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                    placeholder="Ej. Juan Pérez"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Correo electrónico
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                    placeholder="juan@instituto.com"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="institute" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Nombre de tu Instituto
+                </label>
+                <input
+                  id="institute"
+                  type="text"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                  placeholder="Ej. Lingua Academy"
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="message" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  ¿Tienes alguna consulta o inquietud especial? (Opcional)
+                </label>
+                <textarea
+                  id="message"
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-y"
+                  placeholder="Cuéntanos un poco sobre cuántos alumnos manejas o qué desafíos administrativos tiene tu instituto hoy..."
+                />
+              </div>
+              <Button type="button" className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-6 text-lg font-bold shadow-lg shadow-indigo-500/25 transition-all">
+                Solicitar Prueba Gratuita <Sparkles className="w-5 h-5" />
+              </Button>
+            </form>
           </div>
         </section>
       </main>
