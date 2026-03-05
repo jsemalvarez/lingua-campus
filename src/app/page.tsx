@@ -1,100 +1,182 @@
 import * as React from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import {
+  Users,
+  BookOpen,
+  DollarSign,
+  LineChart,
+  Gamepad2,
+  ArrowRight,
+  GraduationCap,
+  Sparkles,
+  BarChart3
+} from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-/**
- * Main application dashboard preview.
- * This page showcases the modular and reusable components from the design system.
- */
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-screen bg-white dark:bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-hidden">
+      {/* Decorative background gradients */}
+      <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-950/20 pointer-events-none" />
+      <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-violet-400/10 dark:bg-violet-600/10 blur-3xl pointer-events-none" />
+      <div className="absolute top-40 -left-40 w-[500px] h-[500px] rounded-full bg-indigo-400/10 dark:bg-indigo-600/10 blur-3xl pointer-events-none" />
 
-      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-12">
-        <header className="mb-8 sm:mb-12 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-1.5 text-left">
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground/90 sm:text-5xl">
-              Bienvenido, <br className="sm:hidden" />
-              <span className="text-primary italic">Instituto S.XXI</span>
-            </h1>
-            <p className="text-base sm:text-lg text-foreground/50 font-medium">
-              Gestiona tus actividades diarias y haz crecer tu instituto.
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center transform group-hover:scale-105 transition-all shadow-lg shadow-indigo-500/20">
+              <GraduationCap className="text-white w-5 h-5" />
+            </div>
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300">
+              Lingua Campus
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Link href="/login">
+              <Button variant="ghost" className="font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">
+                Acceder
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 rounded-full px-6 transition-all hover:scale-105 hover:-translate-y-0.5">
+                Prueba Gratuita
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <main className="relative pt-32 pb-16 sm:pt-40 sm:pb-24">
+        {/* Hero Section */}
+        <section className="container mx-auto px-6 text-center max-w-5xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium text-sm mb-8 border border-indigo-100 dark:border-indigo-500/20 shadow-sm animate-fade-in-up">
+            <Sparkles className="w-4 h-4" />
+            <span>La evolución en la gestión de institutos de idiomas</span>
+          </div>
+
+          <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.1] mb-6 animate-fade-in-up animation-delay-100">
+            Administra. Analiza. <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
+              Potencia el aprendizaje.
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 animate-fade-in-up animation-delay-200 leading-relaxed">
+            Una plataforma integral diseñada especialmente para centros educativos. Desde la gestión financiera hasta métricas de rendimiento académico.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-300">
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white rounded-full px-8 p-6 text-lg font-semibold transition-all hover:scale-105 shadow-xl shadow-slate-900/10 gap-2">
+                Ingresar al Dashboard <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* Features Grid */}
+        <section className="container mx-auto px-6 mt-32 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              Todo lo que tu instituto necesita
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+              Herramientas poderosas diseñadas para optimizar el tiempo administrativo y mejorar el impacto pedagógico.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <Button variant="outline" size="md" className="sm:w-auto">
-              Configuración
-            </Button>
-            <Button variant="primary" size="md" className="premium-gradient sm:w-auto">
-              + Inscripción Nueva
-            </Button>
-          </div>
-        </header>
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-
-          <Card className="hover:scale-[1.02] active:scale-100 transition-all cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-foreground/70 flex items-center gap-2 text-sm sm:text-base">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Ingresos del Mes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl sm:text-4xl font-bold mb-1">$450.000,00</div>
-              <p className="text-xs sm:text-sm text-emerald-600 font-semibold tracking-wide">+12.5% respecto al mes anterior</p>
-            </CardContent>
-          </Card>
-
-          <Card variant="glass" className="hover:border-primary/50 transition-colors cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-foreground/70 text-sm sm:text-base">Estudiantes Activos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl sm:text-4xl font-bold mb-1">128</div>
-              <div className="flex items-center gap-2 mt-3">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-7 w-7 sm:h-8 sm:w-8 rounded-full border-2 border-background bg-zinc-200" />
-                  ))}
-                </div>
-                <span className="text-xs sm:text-sm text-foreground/40 font-medium">+2 este lunes</span>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="group bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Users className="w-7 h-7 text-blue-600 dark:text-blue-400" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card variant="bordered" className="flex flex-col items-center justify-center p-6 min-h-[140px] sm:min-h-[160px] group">
-            <div className="mb-4 text-primary text-lg sm:text-xl font-medium group-hover:scale-110 transition-transform text-center font-bold">
-              Ver Todos los Reportes
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                Gestión de Personas
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                Administra los perfiles de tus profesores y alumnos en un solo lugar. Asigna cursos, revisa el estado de matrícula y mantén el control total.
+              </p>
             </div>
-            <Button variant="ghost" className="rounded-full text-sm">Explorar Analíticas</Button>
-          </Card>
-        </div>
 
-        {/* Action Section */}
-        <section className="mt-12 sm:mt-16 rounded-2xl sm:rounded-3xl premium-gradient p-8 sm:p-12 text-white shadow-2xl flex flex-col items-center text-center gap-6 sm:gap-8 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
+            {/* Feature 2 */}
+            <div className="group bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <DollarSign className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                Finanzas y Pagos
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                Administración clara de ingresos y gastos. Registra el pago de cuotas mensuales y visualiza la rentabilidad del instituto.
+              </p>
+            </div>
 
-          <h2 className="text-2xl sm:text-4xl font-bold max-w-2xl leading-tight">
-            Toma el Control Administrativo de tu Institución con <span className="underline decoration-white/30">Lingua Campus</span>
-          </h2>
-          <p className="text-base sm:text-lg text-white/80 max-w-xl">
-            Automatiza pagos, controla el presentismo y mantén una comunicación fluida con tus estudiantes.
-          </p>
-          <div className="flex items-center justify-center w-full">
-            <Button className="bg-white text-primary hover:bg-white/90 border-0 h-12 px-8 sm:px-10 text-base w-full sm:w-auto font-bold">
-              Comenzar Ahora
-            </Button>
+            {/* Feature 3 */}
+            <div className="group bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-orange-500/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <BookOpen className="w-7 h-7 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                Reportes Académicos
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                Seguimiento exacto de asistencias y notas. Genera reportes académicos transparentes al instante para entregar a alumnos o tutores.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="group bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <BarChart3 className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                Métricas de Dificultad
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                Gráficas y analíticas que ayudan a visualizar rápidamente qué temas le costaron más a un alumno individual o a un curso entero.
+              </p>
+            </div>
+
+            {/* Feature 5 (Coming Soon) */}
+            <div className="group relative bg-gradient-to-br from-violet-600 to-indigo-700 rounded-3xl p-8 shadow-xl shadow-indigo-600/20 hover:-translate-y-1 transition-all duration-300 md:col-span-2 lg:col-span-2 overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] rounded-full pointer-events-none" />
+
+              <div className="absolute top-6 right-8">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                  <Sparkles className="w-3 h-3" /> Próximamente
+                </span>
+              </div>
+
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Gamepad2 className="w-7 h-7 text-white" />
+              </div>
+
+              <h3 className="text-2xl font-bold text-white mb-3 pr-32">
+                Playground Pedagógico
+              </h3>
+              <p className="text-indigo-100 leading-relaxed max-w-xl text-lg">
+                Ayudamos al proceso de aprendizaje activo. Los alumnos podrán acceder a un entorno interactivo para practicar con <strong>ejercicios globales y personalizados</strong>, adaptándose a su nivel y reforzando los temas que más necesitan repasar.
+              </p>
+            </div>
+
           </div>
         </section>
       </main>
 
-      <footer className="w-full py-12 border-t border-border/40 mt-12 bg-zinc-50 dark:bg-zinc-950/50">
-        <div className="container mx-auto text-center text-sm text-foreground/40 font-medium tracking-wide">
-          © 2026 Lingua Campus. Diseñado para Institutos de Idiomas de Vanguardia.
+      {/* Footer */}
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 mt-16 pb-12 pt-16">
+        <div className="container mx-auto px-6 flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-2 mb-4 opacity-50 grayscale">
+            <GraduationCap className="w-5 h-5" />
+            <span className="font-bold text-lg">Lingua Campus</span>
+          </div>
+          <p className="text-slate-500 text-sm">
+            © {new Date().getFullYear()} Lingua Campus. Todos los derechos reservados.
+          </p>
         </div>
       </footer>
     </div>
