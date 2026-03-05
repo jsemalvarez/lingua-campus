@@ -1,0 +1,250 @@
+// This is your Prisma schema file for Lingua Campus.
+// It uses PostgreSQL for persistence and is designed for Multi-tenancy.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// CORE TENANCY
+// -----------------------------------------------------------------------------
+
+model Institute {
+  id          String   @id @default(cuid())
+  name        String
+  subdomain   String   @unique
+  address     String?
+  phone       String?
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  students    Student[]
+  courses     Course[]
+  expenses    Expense[]
+}
+
+// -----------------------------------------------------------------------------
+// USERS & AUTH
+// -----------------------------------------------------------------------------
+
+enum UserRole {
+  SUPERADMIN // All access (L-C devs)
+  ADMIN      // Institute owner/admin
+  TEACHER    // Staff member
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  role        UserRole @default(ADMIN)
+  name        String     // Nombre Completo
+  phone       String?    // Celular
+  avatarUrl   String?
+  
+  instituteId String?
+  institute   Institute? @relation(fields: [instituteId], references: [id])
+  
+  courses     Course[]   @relation("CourseTeacher")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// BOARD: STUDENTS & ENROLLMENTS
+// -----------------------------------------------------------------------------
+
+model Student {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?  @unique
+  password      String?
+  phone         String?
+  
+  // Tutor Legal 1
+  guardian1Name     String?
+  guardian1Relation String?
+  guardian1Phone    String?
+  
+  // Tutor Legal 2
+  guardian2Name     String?
+  guardian2Relation String?
+  guardian2Phone    String?
+  birthDate     DateTime?
+  joinDate      DateTime @default(now())
+  
+  instituteId   String
+  institute     Institute @relation(fields: [instituteId], references: [id])
+  
+  enrollments   Enrollment[]
+  attendances   Attendance[]
+  grades        Grade[]
+  fees          Fee[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  name        String
+  level       String?
+  
+  teacherId   String?
+  teacher     User?     @relation("CourseTeacher", fields: [teacherId], references: [id])
+  
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+  
+  enrollments Enrollment[]
+  schedules   Schedule[]
+  lessons     Lesson[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Enrollment {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  
+  enrolledAt  DateTime @default(now())
+  status      String   @default("ACTIVE") // ACTIVE, DROPPED, FINISHED
+
+  @@unique([studentId, courseId])
+}
+
+// -----------------------------------------------------------------------------
+// ATTENDANCE & ACADEMICS
+// -----------------------------------------------------------------------------
+
+model Schedule {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  
+  dayOfWeek   Int      // 0-6 (Sun-Sat)
+  startTime   String   // HH:mm
+  endTime     String   // HH:mm
+  room        String?  // Ej: "Aula 1", "Laboratorio", etc
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  JUSTIFIED
+}
+
+enum LessonType {
+  CLASS
+  TP
+  EXAM
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  type        LessonType @default(CLASS)
+  
+  date        DateTime @db.Date
+  topic       String
+  content     String?  @db.Text
+  
+  attendances Attendance[]
+  grades      Grade[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  status      AttendanceStatus
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([studentId, lessonId])
+}
+
+model Grade {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  score       String?  // Can be a number like "8.5" or a letter like "A+"
+  feedback    String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([studentId, lessonId])
+}
+
+// -----------------------------------------------------------------------------
+// FINANCIALS
+// -----------------------------------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+model Fee {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  
+  amount      Float
+  year        Int
+  month       Int      // 1-12
+  status      PaymentStatus @default(PENDING)
+  datePaid    DateTime?
+  
+  instituteId String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  date        DateTime @db.Date
+  category    String   // Payroll, Rent, Utilities, etc.
+  
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
