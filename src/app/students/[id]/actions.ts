@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 
 export async function editStudentAction(formData: FormData) {
     const session = await getServerSession(authOptions);
@@ -63,7 +64,43 @@ export async function editStudentAction(formData: FormData) {
         revalidatePath(`/students/${studentId}`);
         revalidatePath("/students");
         return { success: true };
-    } catch (e: any) {
+    } catch {
         return { success: false, error: "Error de base de datos al actualizar el estudiante" };
+    }
+}
+
+export async function resetStudentPassword(studentId: string, customPassword?: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+        return { success: false, error: "Sin permisos" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId }
+        });
+
+        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+            return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        const newPassword = customPassword || "lingua1234";
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.student.update({
+            where: { id: studentId },
+            data: { password: hashedPassword }
+        });
+
+        return { success: true, newPassword };
+    } catch {
+        return { success: false, error: "Error al restablecer la contraseña" };
     }
 }

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
-import { Mail, Phone, Calendar, User, UserCheck, Edit3 } from "lucide-react";
+import { Mail, Phone, User, UserCheck, Edit3 } from "lucide-react";
 import dayjs from "dayjs";
+import { StudentDangerZone } from "./StudentDangerZone";
 
 interface StudentData {
     id: string;
@@ -21,7 +22,7 @@ interface StudentData {
     guardian2Phone: string | null;
 }
 
-export function StudentProfileView({ student }: { student: StudentData }) {
+export function StudentProfileView({ student, userRole }: { student: StudentData; userRole: string }) {
     const [isEditing, setIsEditing] = useState(false);
 
     if (isEditing) {
@@ -130,6 +131,13 @@ export function StudentProfileView({ student }: { student: StudentData }) {
                     </div>
                 </Card>
             </div>
+
+            {/* Danger Zone */}
+            {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (
+                <div className="md:col-span-3">
+                    <StudentDangerZone studentId={student.id} />
+                </div>
+            )}
         </div>
     );
 }

@@ -60,7 +60,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 <div className="grid gap-8 lg:grid-cols-4 items-start">
                     <div className="lg:col-span-3">
                         {/* Seccion 1: Perfil Interactivo (Vista / Edicion) */}
-                        <StudentProfileView student={student as any} />
+                        <StudentProfileView student={student as any} userRole={user.role} />
 
                         {/* Seccion 2: Cursos inscriptos */}
                         <div className="mt-8 max-w-5xl mx-auto space-y-4">
