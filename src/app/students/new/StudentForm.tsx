@@ -3,7 +3,7 @@
 import { useTransition, useState } from "react";
 import { createStudentAction } from "./actions";
 import { Button } from "@/components/ui/Button";
-import { User, Phone, Mail, Calendar, Users, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { User, Phone, Mail, Calendar, Users, Shield, CheckCircle, AlertCircle, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function StudentForm() {
@@ -49,6 +49,18 @@ export function StudentForm() {
                     </div>
 
                     <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-foreground/80">Fecha de Nacimiento</label>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <input
+                                name="birthDate"
+                                type="date"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-foreground/80">Celular del Alumno</label>
                         <div className="relative">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -75,15 +87,17 @@ export function StudentForm() {
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-foreground/80">Fecha de Nacimiento</label>
+                        <label className="text-sm font-semibold text-foreground/80">Contraseña de Acceso</label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                             <input
-                                name="birthDate"
-                                type="date"
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                                name="password"
+                                type="password"
+                                placeholder="..."
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
                             />
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1 text-right sm:text-left">Dejar en blanco para usar la contraseña por defecto: <span className="font-semibold text-foreground/80">estudiante123</span></p>
                     </div>
                 </div>
             </div>
