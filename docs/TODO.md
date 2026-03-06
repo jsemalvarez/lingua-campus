@@ -19,3 +19,6 @@
 
 ## Estilo / Frontend
 - [x] Reparar la superposición de Tailwind v4 en el componente de Tema (ThemeToggle)
+
+## Estudiantes
+- [ ] **Acceso a la plataforma**: Actualmente se les hardcodea una contraseña por defecto ("estudiante123") al ser creados. Implementar sistema de envío de bienvenida o asignación de contraseñas dinámicas por email.
