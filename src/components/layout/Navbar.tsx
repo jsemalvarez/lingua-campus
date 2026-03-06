@@ -19,14 +19,17 @@ export function Navbar({ className }: { className?: string }) {
     const pathname = usePathname();
     const { data: session, status } = useSession();
 
-    const navLinks = [
-        { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
-        { href: "/teachers", label: "Profesores", icon: Users },
-        { href: "/students", label: "Estudiantes", icon: Users },
-        { href: "/courses", label: "Cursos", icon: BookOpen },
-        { href: "/schedule", label: "Calendario", icon: Clock },
-        { href: "/payments", label: "Pagos", icon: DollarSign },
+    const allNavLinks = [
+        { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+        { href: "/teachers", label: "Profesores", icon: Users, roles: ["ADMIN"] },
+        { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "TEACHER"] },
+        { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER"] },
+        { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+        { href: "/payments", label: "Pagos", icon: DollarSign, roles: ["ADMIN", "STUDENT"] },
     ];
+
+    const userRole = (session?.user as any)?.role || "TEACHER"; // Default fallback
+    const navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
 
     // Cerrar menú al cambiar de ruta
     React.useEffect(() => {
@@ -189,16 +192,19 @@ export function Navbar({ className }: { className?: string }) {
                                     </Button>
                                 </Link>
 
-                                <Link href="/students/new" className="w-full">
-                                    <Button
-                                        variant="primary"
-                                        size="md"
-                                        className="premium-gradient w-full text-sm"
-                                        onClick={() => setIsMenuOpen(false)}
-                                    >
-                                        + Nueva Inscripción
-                                    </Button>
-                                </Link>
+                                {/* Nueva Inscripción solo para admins/teachers */}
+                                {userRole !== "STUDENT" && (
+                                    <Link href="/students/new" className="w-full">
+                                        <Button
+                                            variant="primary"
+                                            size="md"
+                                            className="premium-gradient w-full text-sm"
+                                            onClick={() => setIsMenuOpen(false)}
+                                        >
+                                            + Nueva Inscripción
+                                        </Button>
+                                    </Link>
+                                )}
                                 <Button
                                     variant="outline"
                                     size="md"
