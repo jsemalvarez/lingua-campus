@@ -58,7 +58,7 @@ export default async function DashboardPage() {
 
     // 1. Get total students for institute
     const totalStudents = await prisma.student.count({
-        where: { instituteId: user.instituteId }
+        where: { instituteId: user.instituteId, status: "ACTIVE" }
     });
 
     // 2. Total active courses

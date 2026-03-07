@@ -35,7 +35,7 @@ export default async function StudentsPage(props: PageProps) {
     const skip = (currentPage - 1) * PAGE_SIZE;
 
     // Build the query where clause
-    const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { instituteId: user.instituteId };
+    const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { instituteId: user.instituteId, status: "ACTIVE" };
 
     // Add simple text search if query is present
     const query = typeof searchParams.q === 'string' ? searchParams.q : undefined;

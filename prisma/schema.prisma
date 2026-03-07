@@ -74,6 +74,7 @@ model Student {
   dni           String?
   schoolInfo    String?
   registeredLevel String?
+  status          String   @default("ACTIVE") // ACTIVE, DELETED
   
   // Tutor Legal 1
   guardian1Name     String?
