@@ -164,7 +164,10 @@ export default async function StudentsPage(props: PageProps) {
                                                         )}
                                                         {student.phone && (
                                                             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                                <Phone size={13} className="text-emerald-500/80" /> {student.phone}
+                                                                <Phone size={13} className="text-emerald-500/80" />
+                                                                <a href={`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">
+                                                                    {student.phone}
+                                                                </a>
                                                             </div>
                                                         )}
                                                         {!student.email && !student.phone && student.guardian1Name && (
@@ -174,7 +177,10 @@ export default async function StudentsPage(props: PageProps) {
                                                                 </div>
                                                                 {student.guardian1Phone && (
                                                                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                                        <Phone size={13} className="text-emerald-500/80" /> {student.guardian1Phone}
+                                                                        <Phone size={13} className="text-emerald-500/80" />
+                                                                        <a href={`https://wa.me/${student.guardian1Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">
+                                                                            {student.guardian1Phone}
+                                                                        </a>
                                                                     </div>
                                                                 )}
                                                             </>

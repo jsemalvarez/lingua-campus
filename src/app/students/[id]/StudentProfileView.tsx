@@ -77,7 +77,7 @@ export function StudentProfileView({ student, userRole }: { student: StudentData
                                 <Phone size={16} />
                             </div>
                             <span className="text-sm font-medium">
-                                {student.phone || <span className="text-muted-foreground italic">No registrado</span>}
+                                {student.phone ? <a href={`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.phone}</a> : <span className="text-muted-foreground italic">No registrado</span>}
                             </span>
                         </div>
                     </div>
@@ -135,7 +135,7 @@ export function StudentProfileView({ student, userRole }: { student: StudentData
                                     </div>
                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
-                                        <span className="font-medium">{student.guardian1Phone || "-"}</span>
+                                        <span className="font-medium">{student.guardian1Phone ? <a href={`https://wa.me/${student.guardian1Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian1Phone}</a> : "-"}</span>
                                     </div>
                                 </>
                             ) : (
@@ -156,7 +156,7 @@ export function StudentProfileView({ student, userRole }: { student: StudentData
                                     </div>
                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
-                                        <span className="font-medium">{student.guardian2Phone || "-"}</span>
+                                        <span className="font-medium">{student.guardian2Phone ? <a href={`https://wa.me/${student.guardian2Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian2Phone}</a> : "-"}</span>
                                     </div>
                                 </>
                             ) : (
