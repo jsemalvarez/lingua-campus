@@ -167,7 +167,19 @@ export default async function StudentsPage(props: PageProps) {
                                                                 <Phone size={13} className="text-emerald-500/80" /> {student.phone}
                                                             </div>
                                                         )}
-                                                        {!student.email && !student.phone && (
+                                                        {!student.email && !student.phone && student.guardian1Name && (
+                                                            <>
+                                                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                                                    <UserPlus size={13} className="text-purple-500/80" /> {student.guardian1Name} {student.guardian1Relation ? `(${student.guardian1Relation})` : ""}
+                                                                </div>
+                                                                {student.guardian1Phone && (
+                                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                                                        <Phone size={13} className="text-emerald-500/80" /> {student.guardian1Phone}
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                        {!student.email && !student.phone && !student.guardian1Name && (
                                                             <span className="text-xs text-muted-foreground italic">Sin vías de contacto personal</span>
                                                         )}
                                                     </div>
