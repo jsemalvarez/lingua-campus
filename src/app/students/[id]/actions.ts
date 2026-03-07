@@ -23,6 +23,11 @@ export async function editStudentAction(formData: FormData) {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const phone = formData.get("phone") as string;
+    const birthDateStr = formData.get("birthDate") as string;
+    const dni = formData.get("dni") as string;
+    const address = formData.get("address") as string;
+    const schoolInfo = formData.get("schoolInfo") as string;
+    const registeredLevel = formData.get("registeredLevel") as string;
 
     const guardian1Name = formData.get("guardian1Name") as string;
     const guardian1Relation = formData.get("guardian1Relation") as string;
@@ -52,6 +57,11 @@ export async function editStudentAction(formData: FormData) {
                 name,
                 email: email || null,
                 phone: phone || null,
+                birthDate: birthDateStr ? new Date(birthDateStr) : null,
+                dni: dni || null,
+                address: address || null,
+                schoolInfo: schoolInfo || null,
+                registeredLevel: registeredLevel || null,
                 guardian1Name: guardian1Name || null,
                 guardian1Relation: guardian1Relation || null,
                 guardian1Phone: guardian1Phone || null,

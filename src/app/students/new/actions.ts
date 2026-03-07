@@ -27,6 +27,10 @@ export async function createStudentAction(formData: FormData) {
         const phone = formData.get("phone") as string;
         const birthDateStr = formData.get("birthDate") as string;
         const customPassword = formData.get("password") as string;
+        const dni = formData.get("dni") as string;
+        const address = formData.get("address") as string;
+        const schoolInfo = formData.get("schoolInfo") as string;
+        const registeredLevel = formData.get("registeredLevel") as string;
 
         // Tutor 1
         const g1Name = formData.get("g1Name") as string;
@@ -53,6 +57,10 @@ export async function createStudentAction(formData: FormData) {
                 password: hashedPassword,
                 phone: phone || null,
                 birthDate: birthDateStr ? new Date(birthDateStr) : null,
+                dni: dni || null,
+                address: address || null,
+                schoolInfo: schoolInfo || null,
+                registeredLevel: registeredLevel || null,
 
                 guardian1Name: g1Name || null,
                 guardian1Relation: g1Relation || null,

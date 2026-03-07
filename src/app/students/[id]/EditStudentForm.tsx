@@ -17,6 +17,11 @@ interface StudentData {
     guardian2Name: string | null;
     guardian2Relation: string | null;
     guardian2Phone: string | null;
+    dni: string | null;
+    address: string | null;
+    schoolInfo: string | null;
+    registeredLevel: string | null;
+    birthDate: Date | null;
 }
 
 export function EditStudentForm({ student, onCancel }: { student: StudentData, onCancel: () => void }) {
@@ -66,12 +71,55 @@ export function EditStudentForm({ student, onCancel }: { student: StudentData, o
                         <input type="text" name="name" defaultValue={student.name} required className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Juan Perez" />
                     </div>
                     <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fecha de Nacimiento</label>
+                        <input type="date" name="birthDate" defaultValue={student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" />
+                    </div>
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Correo (Opcional)</label>
                         <input type="email" name="email" defaultValue={student.email || ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="alumno@mail.com" />
                     </div>
                     <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular (Opcional)</label>
                         <input type="tel" name="phone" defaultValue={student.phone || ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="+54 9 11..." />
+                    </div>
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DNI</label>
+                        <input type="text" name="dni" defaultValue={student.dni || ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="12345678" />
+                    </div>
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Domicilio</label>
+                        <input type="text" name="address" defaultValue={student.address || ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Calle 123" />
+                    </div>
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Colegio / Turno</label>
+                        <input type="text" name="schoolInfo" defaultValue={student.schoolInfo || ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Colegio XYZ" />
+                    </div>
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nivel Inscripto</label>
+                        <select
+                            name="registeredLevel"
+                            defaultValue={student.registeredLevel || ""}
+                            className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                        >
+                            <option value="">Seleccionar...</option>
+                            <option value="Kinder">Kinder</option>
+                            <option value="Children 1">Children 1</option>
+                            <option value="Children 2">Children 2</option>
+                            <option value="Children 3">Children 3</option>
+                            <option value="Children 4">Children 4</option>
+                            <option value="Pre-adolescents 1">Pre-adolescents 1</option>
+                            <option value="Pre-adolescents 2">Pre-adolescents 2</option>
+                            <option value="Adolescents 1">Adolescents 1</option>
+                            <option value="Adolescents 2">Adolescents 2</option>
+                            <option value="Adolescents 3">Adolescents 3</option>
+                            <option value="Adults 1">Adults 1</option>
+                            <option value="Adults 2">Adults 2</option>
+                            <option value="Adults 3">Adults 3</option>
+                            <option value="Pre-intermediate">Pre-intermediate</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Upper-intermediate">Upper-intermediate</option>
+                            <option value="A Confirmar">A Confirmar</option>
+                        </select>
                     </div>
                 </div>
             </div>
