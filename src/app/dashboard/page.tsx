@@ -25,7 +25,12 @@ export default async function DashboardPage() {
     // Si es estudiante, armamos una vista rápida de estudiante
     if ((session.user as any).role === "STUDENT") {
         const student = await prisma.student.findUnique({
-            where: { email: session.user.email },
+            where: {
+                email_instituteId: {
+                    email: session.user.email!,
+                    instituteId: session.user.instituteId!
+                }
+            },
             select: { id: true, name: true, instituteId: true }
         });
 
