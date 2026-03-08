@@ -67,9 +67,14 @@ model User {
 model Student {
   id            String   @id @default(cuid())
   name          String
-  email         String?  @unique
+  email         String?  
   password      String?
   phone         String?
+  address       String?
+  dni           String?
+  schoolInfo    String?
+  registeredLevel String?
+  status          String   @default("ACTIVE") // ACTIVE, DELETED
   
   // Tutor Legal 1
   guardian1Name     String?
@@ -93,6 +98,8 @@ model Student {
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@unique([email, instituteId])
 }
 
 model Course {

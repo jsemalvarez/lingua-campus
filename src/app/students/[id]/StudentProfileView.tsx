@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
-import { Mail, Phone, Calendar, User, UserCheck, Edit3 } from "lucide-react";
+import { Mail, Phone, User, UserCheck, Edit3, Info } from "lucide-react";
 import dayjs from "dayjs";
+import { StudentDangerZone } from "./StudentDangerZone";
 
 interface StudentData {
     id: string;
@@ -19,9 +20,14 @@ interface StudentData {
     guardian2Name: string | null;
     guardian2Relation: string | null;
     guardian2Phone: string | null;
+    birthDate: Date | null;
+    address: string | null;
+    dni: string | null;
+    schoolInfo: string | null;
+    registeredLevel: string | null;
 }
 
-export function StudentProfileView({ student }: { student: StudentData }) {
+export function StudentProfileView({ student, userRole }: { student: StudentData; userRole: string }) {
     const [isEditing, setIsEditing] = useState(false);
 
     if (isEditing) {
@@ -43,7 +49,7 @@ export function StudentProfileView({ student }: { student: StudentData }) {
                         {student.name.charAt(0).toUpperCase()}
                     </div>
 
-                    <h2 className="text-xl font-bold">{student.name}</h2>
+                    <h2 className="text-xl font-bold capitalize">{student.name}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
                         Ingresó el {dayjs(student.joinDate).format("DD MMM, YYYY")}
                     </p>
@@ -71,15 +77,45 @@ export function StudentProfileView({ student }: { student: StudentData }) {
                                 <Phone size={16} />
                             </div>
                             <span className="text-sm font-medium">
-                                {student.phone || <span className="text-muted-foreground italic">No registrado</span>}
+                                {student.phone ? <a href={`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.phone}</a> : <span className="text-muted-foreground italic">No registrado</span>}
                             </span>
                         </div>
                     </div>
                 </Card>
             </div>
 
-            {/* Columna Derecha: Tutores */}
+            {/* Columna Derecha: Información Adicional y Tutores */}
             <div className="md:col-span-2 space-y-6">
+                <Card className="p-6 border-border/40 shadow-sm leading-relaxed">
+                    <h3 className="text-lg font-bold flex items-center gap-2 border-b border-border/40 pb-4 mb-4 text-foreground/90">
+                        <Info className="text-primary" /> Información Adicional
+                    </h3>
+                    <div className="grid sm:grid-cols-2 gap-5">
+                        <div className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">DNI</span>
+                            <p className="font-medium text-sm">{student.dni || "-"}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Fecha de Nacimiento</span>
+                            <p className="font-medium text-sm">
+                                {student.birthDate ? `${dayjs(student.birthDate).format("DD/MM/YYYY")} (${dayjs().diff(student.birthDate, 'year')} años)` : "-"}
+                            </p>
+                        </div>
+                        <div className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Domicilio</span>
+                            <p className="font-medium text-sm capitalize">{student.address || "-"}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Colegio / Turno</span>
+                            <p className="font-medium text-sm capitalize">{student.schoolInfo || "-"}</p>
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Nivel Inscripto (Censo Inicial)</span>
+                            <p className="font-medium text-sm capitalize">{student.registeredLevel || "-"}</p>
+                        </div>
+                    </div>
+                </Card>
+
                 <Card className="p-6 border-border/40 shadow-sm leading-relaxed">
                     <h3 className="text-lg font-bold flex items-center gap-2 border-b border-border/40 pb-4 mb-4 text-foreground/90">
                         <UserCheck className="text-primary" /> Tutores Legales
@@ -94,12 +130,12 @@ export function StudentProfileView({ student }: { student: StudentData }) {
                                 <>
                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Nombre y Relación</span>
-                                        <span className="font-medium">{student.guardian1Name}</span>
-                                        {student.guardian1Relation && <span className="text-muted-foreground ml-1">({student.guardian1Relation})</span>}
+                                        <span className="font-medium capitalize">{student.guardian1Name}</span>
+                                        {student.guardian1Relation && <span className="text-muted-foreground ml-1 capitalize">({student.guardian1Relation})</span>}
                                     </div>
                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
-                                        <span className="font-medium">{student.guardian1Phone || "-"}</span>
+                                        <span className="font-medium">{student.guardian1Phone ? <a href={`https://wa.me/${student.guardian1Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian1Phone}</a> : "-"}</span>
                                     </div>
                                 </>
                             ) : (
@@ -115,12 +151,12 @@ export function StudentProfileView({ student }: { student: StudentData }) {
                                 <>
                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Nombre y Relación</span>
-                                        <span className="font-medium">{student.guardian2Name}</span>
-                                        {student.guardian2Relation && <span className="text-muted-foreground ml-1">({student.guardian2Relation})</span>}
+                                        <span className="font-medium capitalize">{student.guardian2Name}</span>
+                                        {student.guardian2Relation && <span className="text-muted-foreground ml-1 capitalize">({student.guardian2Relation})</span>}
                                     </div>
                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
-                                        <span className="font-medium">{student.guardian2Phone || "-"}</span>
+                                        <span className="font-medium">{student.guardian2Phone ? <a href={`https://wa.me/${student.guardian2Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian2Phone}</a> : "-"}</span>
                                     </div>
                                 </>
                             ) : (
@@ -130,6 +166,13 @@ export function StudentProfileView({ student }: { student: StudentData }) {
                     </div>
                 </Card>
             </div>
+
+            {/* Danger Zone */}
+            {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (
+                <div className="md:col-span-3">
+                    <StudentDangerZone studentId={student.id} />
+                </div>
+            )}
         </div>
     );
 }

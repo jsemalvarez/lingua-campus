@@ -4,13 +4,21 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-    const hashedPassword = await bcrypt.hash('linguaadmin2026', 10);
+    const adminEmail = process.env.SEED_SUPERADMIN_EMAIL;
+    const adminPassword = process.env.SEED_SUPERADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+        console.error('Por favor, define SEED_SUPERADMIN_EMAIL y SEED_SUPERADMIN_PASSWORD en tu archivo .env');
+        process.exit(1);
+    }
+
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
     const superAdmin = await prisma.user.upsert({
-        where: { email: 'superadmin@lingua.com' },
+        where: { email: adminEmail },
         update: {},
         create: {
-            email: 'superadmin@lingua.com',
+            email: adminEmail,
             name: 'Super Administrador',
             password: hashedPassword,
             role: 'SUPERADMIN',

@@ -25,7 +25,7 @@ export default async function PaymentsPage() {
 
     // 1. Conseguir Lista de estudiantes para el Selector del Cobro
     const students = await prisma.student.findMany({
-        where: { instituteId: user.instituteId },
+        where: { instituteId: user.instituteId, status: "ACTIVE" },
         select: { id: true, name: true },
         orderBy: { name: "asc" }
     });

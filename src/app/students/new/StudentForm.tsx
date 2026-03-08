@@ -3,7 +3,7 @@
 import { useTransition, useState } from "react";
 import { createStudentAction } from "./actions";
 import { Button } from "@/components/ui/Button";
-import { User, Phone, Mail, Calendar, Users, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { User, Phone, Mail, Calendar, Users, Shield, CheckCircle, AlertCircle, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function StudentForm() {
@@ -49,6 +49,18 @@ export function StudentForm() {
                     </div>
 
                     <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-foreground/80">Fecha de Nacimiento</label>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <input
+                                name="birthDate"
+                                type="date"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-foreground/80">Celular del Alumno</label>
                         <div className="relative">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -75,15 +87,73 @@ export function StudentForm() {
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-foreground/80">Fecha de Nacimiento</label>
+                        <label className="text-sm font-semibold text-foreground/80">Contraseña de Acceso</label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                             <input
-                                name="birthDate"
-                                type="date"
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                                name="password"
+                                type="password"
+                                placeholder="..."
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
                             />
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1 text-right sm:text-left">Dejar en blanco para usar la contraseña por defecto: <span className="font-semibold text-foreground/80">estudiante123</span></p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-sm font-semibold text-foreground/80">DNI (Opcional)</label>
+                        <input
+                            name="dni"
+                            placeholder="Ej: 45123456"
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-sm font-semibold text-foreground/80">Domicilio</label>
+                        <input
+                            name="address"
+                            placeholder="Ej: Av. San Martín 123"
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-sm font-semibold text-foreground/80">Colegio / Turno</label>
+                        <input
+                            name="schoolInfo"
+                            placeholder="Ej: Sagrada Familia / Mañana"
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                        <label className="text-sm font-semibold text-foreground/80">Nivel Inscripto</label>
+                        <select
+                            name="registeredLevel"
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm appearance-none"
+                        >
+                            <option value="">Seleccionar...</option>
+                            <option value="Kinder">Kinder</option>
+                            <option value="Children 1">Children 1</option>
+                            <option value="Children 2">Children 2</option>
+                            <option value="Children 3">Children 3</option>
+                            <option value="Children 4">Children 4</option>
+                            <option value="Pre-adolescents 1">Pre-adolescents 1</option>
+                            <option value="Pre-adolescents 2">Pre-adolescents 2</option>
+                            <option value="Adolescents 1">Adolescents 1</option>
+                            <option value="Adolescents 2">Adolescents 2</option>
+                            <option value="Adolescents 3">Adolescents 3</option>
+                            <option value="Adults 1">Adults 1</option>
+                            <option value="Adults 2">Adults 2</option>
+                            <option value="Adults 3">Adults 3</option>
+                            <option value="Pre-intermediate">Pre-intermediate</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Upper-intermediate">Upper-intermediate</option>
+                            <option value="A Confirmar">A Confirmar</option>
+                        </select>
                     </div>
                 </div>
             </div>

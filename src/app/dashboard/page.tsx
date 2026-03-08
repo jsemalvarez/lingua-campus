@@ -22,6 +22,36 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
+    // Si es estudiante, armamos una vista rápida de estudiante
+    if ((session.user as any).role === "STUDENT") {
+        const student = await prisma.student.findUnique({
+            where: {
+                email_instituteId: {
+                    email: session.user.email!,
+                    instituteId: session.user.instituteId!
+                }
+            },
+            select: { id: true, name: true, instituteId: true }
+        });
+
+        if (!student) redirect("/login");
+
+        return (
+            <div className="min-h-screen bg-background">
+                <Navbar />
+                <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center space-y-6 mt-10">
+                    <GraduationCap size={64} className="mx-auto text-indigo-500 opacity-80" />
+                    <h1 className="text-3xl font-bold tracking-tight">Bienvenido, {student.name}</h1>
+                    <p className="text-muted-foreground max-w-lg mx-auto">
+                        Tu panel de estudiante está en construcción. Próximamente podrás acceder a tus ejercicios,
+                        reportes de notas y al Playground interactivo.
+                    </p>
+                </main>
+            </div>
+        );
+    }
+
+    // Flujo normal para Admin/Teacher
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true }
@@ -33,7 +63,7 @@ export default async function DashboardPage() {
 
     // 1. Get total students for institute
     const totalStudents = await prisma.student.count({
-        where: { instituteId: user.instituteId }
+        where: { instituteId: user.instituteId, status: "ACTIVE" }
     });
 
     // 2. Total active courses

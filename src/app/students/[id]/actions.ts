@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 
 export async function editStudentAction(formData: FormData) {
     const session = await getServerSession(authOptions);
@@ -22,6 +23,11 @@ export async function editStudentAction(formData: FormData) {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const phone = formData.get("phone") as string;
+    const birthDateStr = formData.get("birthDate") as string;
+    const dni = formData.get("dni") as string;
+    const address = formData.get("address") as string;
+    const schoolInfo = formData.get("schoolInfo") as string;
+    const registeredLevel = formData.get("registeredLevel") as string;
 
     const guardian1Name = formData.get("guardian1Name") as string;
     const guardian1Relation = formData.get("guardian1Relation") as string;
@@ -51,6 +57,11 @@ export async function editStudentAction(formData: FormData) {
                 name,
                 email: email || null,
                 phone: phone || null,
+                birthDate: birthDateStr ? new Date(birthDateStr) : null,
+                dni: dni || null,
+                address: address || null,
+                schoolInfo: schoolInfo || null,
+                registeredLevel: registeredLevel || null,
                 guardian1Name: guardian1Name || null,
                 guardian1Relation: guardian1Relation || null,
                 guardian1Phone: guardian1Phone || null,
@@ -63,7 +74,78 @@ export async function editStudentAction(formData: FormData) {
         revalidatePath(`/students/${studentId}`);
         revalidatePath("/students");
         return { success: true };
-    } catch (e: any) {
+    } catch {
         return { success: false, error: "Error de base de datos al actualizar el estudiante" };
+    }
+}
+
+export async function resetStudentPassword(studentId: string, customPassword?: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+        return { success: false, error: "Sin permisos" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId }
+        });
+
+        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+            return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        const newPassword = customPassword || "lingua1234";
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.student.update({
+            where: { id: studentId },
+            data: { password: hashedPassword }
+        });
+
+        return { success: true, newPassword };
+    } catch {
+        return { success: false, error: "Error al restablecer la contraseña" };
+    }
+}
+
+export async function softDeleteStudent(studentId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+        return { success: false, error: "Sin permisos para eliminar estudiantes" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId }
+        });
+
+        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+            return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        await prisma.student.update({
+            where: { id: studentId },
+            data: { status: "DELETED" }
+        });
+
+        revalidatePath("/students");
+        revalidatePath("/dashboard");
+        return { success: true };
+    } catch {
+        return { success: false, error: "Error de base de datos al eliminar el estudiante" };
     }
 }

@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 
+import bcrypt from "bcryptjs";
+
 export async function createStudentAction(formData: FormData) {
     const session = await getServerSession(authOptions);
 
@@ -24,6 +26,11 @@ export async function createStudentAction(formData: FormData) {
         const email = formData.get("email") as string;
         const phone = formData.get("phone") as string;
         const birthDateStr = formData.get("birthDate") as string;
+        const customPassword = formData.get("password") as string;
+        const dni = formData.get("dni") as string;
+        const address = formData.get("address") as string;
+        const schoolInfo = formData.get("schoolInfo") as string;
+        const registeredLevel = formData.get("registeredLevel") as string;
 
         // Tutor 1
         const g1Name = formData.get("g1Name") as string;
@@ -39,12 +46,21 @@ export async function createStudentAction(formData: FormData) {
             return { success: false, error: "El nombre del estudiante es obligatorio" };
         }
 
+        // Generamos o usamos la contraseña proporcionada
+        const finalPassword = customPassword && customPassword.trim() !== "" ? customPassword : "estudiante123";
+        const hashedPassword = await bcrypt.hash(finalPassword, 10);
+
         const newStudent = await prisma.student.create({
             data: {
                 name,
                 email: email || null,
+                password: hashedPassword,
                 phone: phone || null,
                 birthDate: birthDateStr ? new Date(birthDateStr) : null,
+                dni: dni || null,
+                address: address || null,
+                schoolInfo: schoolInfo || null,
+                registeredLevel: registeredLevel || null,
 
                 guardian1Name: g1Name || null,
                 guardian1Relation: g1Relation || null,

@@ -33,7 +33,7 @@ export default async function NewEnrollmentPage({ searchParams }: { searchParams
     // Obtener alumnos del instituto, excluyendo aquellos que ya tengan inscripciones en TODOS los cursos
     // (Por ahora traemos a todos, permitiendo que el form bloquee el submit en el backend si hay colisión)
     const students = await prisma.student.findMany({
-        where: { instituteId: user.instituteId },
+        where: { instituteId: user.instituteId, status: "ACTIVE" },
         select: { id: true, name: true, email: true },
         orderBy: { name: "asc" }
     });
