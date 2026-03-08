@@ -47,6 +47,11 @@ CREATE TABLE "Student" (
     "email" TEXT,
     "password" TEXT,
     "phone" TEXT,
+    "address" TEXT,
+    "dni" TEXT,
+    "schoolInfo" TEXT,
+    "registeredLevel" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
     "guardian1Name" TEXT,
     "guardian1Relation" TEXT,
     "guardian1Phone" TEXT,
@@ -176,7 +181,7 @@ CREATE UNIQUE INDEX "Institute_subdomain_key" ON "Institute"("subdomain");
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Student_email_key" ON "Student"("email");
+CREATE UNIQUE INDEX "Student_email_instituteId_key" ON "Student"("email", "instituteId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Enrollment_studentId_courseId_key" ON "Enrollment"("studentId", "courseId");
@@ -228,4 +233,3 @@ ALTER TABLE "Fee" ADD CONSTRAINT "Fee_studentId_fkey" FOREIGN KEY ("studentId") 
 
 -- AddForeignKey
 ALTER TABLE "Expense" ADD CONSTRAINT "Expense_instituteId_fkey" FOREIGN KEY ("instituteId") REFERENCES "Institute"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
