@@ -22,7 +22,7 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    // Si es estudiante, armamos una vista rápida de estudiante
+    // Si es estudiante, armamos una vista personalizada
     if ((session.user as any).role === "STUDENT") {
         const student = await prisma.student.findUnique({
             where: {
@@ -36,16 +36,144 @@ export default async function DashboardPage() {
 
         if (!student) redirect("/login");
 
+        // Cursos del estudiante
+        const enrollments = await prisma.enrollment.findMany({
+            where: { studentId: student.id, status: "ACTIVE" },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        name: true,
+                        level: true,
+                        teacher: { select: { name: true } },
+                        schedules: { select: { dayOfWeek: true, startTime: true, endTime: true }, orderBy: { dayOfWeek: 'asc' } }
+                    }
+                }
+            }
+        });
+
+        const courseIds = enrollments.map(e => e.course.id);
+
+        // Próximas clases de sus cursos
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcomingLessons = await prisma.lesson.findMany({
+            where: {
+                courseId: { in: courseIds },
+                date: { gte: today }
+            },
+            orderBy: { date: 'asc' },
+            take: 5,
+            include: {
+                course: { select: { name: true } }
+            }
+        });
+
+        // Estadísticas de asistencia
+        const totalAttendances = await prisma.attendance.count({
+            where: { studentId: student.id }
+        });
+        const presentCount = await prisma.attendance.count({
+            where: { studentId: student.id, status: { in: ["PRESENT", "LATE"] } }
+        });
+        const attendanceRate = totalAttendances > 0 ? Math.round((presentCount / totalAttendances) * 100) : 0;
+
+        // Cuotas pendientes
+        const pendingFees = await prisma.fee.count({
+            where: { studentId: student.id, status: { in: ["PENDING", "OVERDUE"] } }
+        });
+
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+        const studentStats = [
+            { label: "Mis Cursos", value: enrollments.length.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
+            { label: "Asistencia", value: totalAttendances > 0 ? `${attendanceRate}%` : "—", icon: GraduationCap, color: "text-blue-600", bg: "bg-blue-50" },
+            { label: "Cuotas Pendientes", value: pendingFees.toString(), icon: DollarSign, color: pendingFees > 0 ? "text-amber-600" : "text-green-600", bg: pendingFees > 0 ? "bg-amber-50" : "bg-green-50" },
+        ];
+
         return (
             <div className="min-h-screen bg-background">
                 <Navbar />
-                <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center space-y-6 mt-10">
-                    <GraduationCap size={64} className="mx-auto text-indigo-500 opacity-80" />
-                    <h1 className="text-3xl font-bold tracking-tight">Bienvenido, {student.name}</h1>
-                    <p className="text-muted-foreground max-w-lg mx-auto">
-                        Tu panel de estudiante está en construcción. Próximamente podrás acceder a tus ejercicios,
-                        reportes de notas y al Playground interactivo.
-                    </p>
+                <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">¡Hola, {student.name.split(" ")[0]}!</h1>
+                        <p className="text-muted-foreground mt-1">
+                            Aquí tenés un resumen de tu actividad académica.
+                        </p>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {studentStats.map((stat, i) => (
+                            <Card key={i} className="p-6 hover:shadow-md transition-shadow">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                                        <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                                    </div>
+                                    <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
+                                        <stat.icon size={24} />
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Mis Cursos */}
+                        <Card className="p-6">
+                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                                <BookOpen className="text-purple-500" size={20} /> Mis Cursos
+                            </h3>
+                            <div className="space-y-3">
+                                {enrollments.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground italic text-center py-4">No estás inscripto en ningún curso actualmente.</p>
+                                ) : enrollments.map((enrol) => (
+                                    <div key={enrol.course.id} className="p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-semibold text-sm">{enrol.course.name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {enrol.course.level || "Sin nivel"} • Prof. {enrol.course.teacher?.name || "N/A"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {enrol.course.schedules.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                {enrol.course.schedules.map((s, i) => (
+                                                    <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                                                        {dayNames[s.dayOfWeek]} {s.startTime}–{s.endTime}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+
+                        {/* Próximas Clases */}
+                        <Card className="p-6">
+                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                                <Clock className="text-blue-500" size={20} /> Próximas Clases
+                            </h3>
+                            <div className="space-y-3">
+                                {upcomingLessons.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground italic text-center py-4">No hay próximas clases programadas.</p>
+                                ) : upcomingLessons.map((lesson) => (
+                                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-sm">{lesson.course.name}</span>
+                                            <span className="text-xs text-muted-foreground">{lesson.topic}</span>
+                                        </div>
+                                        <div className="text-sm font-semibold tabular-nums">
+                                            {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
                 </main>
             </div>
         );
