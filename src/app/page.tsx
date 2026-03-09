@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -9,11 +11,16 @@ import {
   ArrowRight,
   GraduationCap,
   Sparkles,
-  BarChart3
+  BarChart3,
+  Menu,
+  X,
+  LogIn
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function LandingPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-hidden">
       {/* Decorative background gradients */}
@@ -23,8 +30,8 @@ export default function LandingPage() {
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 group cursor-pointer">
+        <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 group cursor-pointer shrink-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center transform group-hover:scale-105 transition-all shadow-lg shadow-indigo-500/20">
               <GraduationCap className="text-white w-5 h-5" />
             </div>
@@ -32,7 +39,9 @@ export default function LandingPage() {
               Lingua Campus
             </span>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Desktop buttons */}
+          <div className="hidden sm:flex items-center gap-4">
             <ThemeToggle />
             <Link href="/login">
               <Button variant="ghost" className="font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -41,6 +50,41 @@ export default function LandingPage() {
             </Link>
             <Link href="#contacto">
               <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 rounded-full px-6 transition-all hover:scale-105 hover:-translate-y-0.5">
+                Prueba Gratuita
+              </Button>
+            </Link>
+          </div>
+
+          {/* Mobile: theme toggle + login icon + hamburger */}
+          <div className="flex sm:hidden items-center gap-1">
+            <ThemeToggle />
+            <Link
+              href="/login"
+              className="p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Iniciar sesión"
+              title="Iniciar sesión"
+            >
+              <LogIn size={20} />
+            </Link>
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              aria-label={isMobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={isMobileMenuOpen}
+            >
+              {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile menu dropdown */}
+        <div
+          className={`sm:hidden overflow-hidden transition-all duration-300 ease-in-out bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200/50 dark:border-slate-800/50 ${isMobileMenuOpen ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+            }`}
+        >
+          <div className="container mx-auto px-4 py-4 flex flex-col gap-3">
+            <Link href="#contacto" onClick={() => setIsMobileMenuOpen(false)}>
+              <Button className="w-full justify-center bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 rounded-full transition-all">
                 Prueba Gratuita
               </Button>
             </Link>
