@@ -152,27 +152,52 @@ html.theme-transition *::after {
   animation: fade-in-up 0.4s ease both;
 }
 
-/* Scrollbar sutil */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Ocultar scrollbar en mobile para más espacio */
+@media (max-width: 767px) {
+  * {
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Scrollbar sutil — solo desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: var(--c-border);
-  border-radius: 999px;
-}
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--c-muted-fg);
+  ::-webkit-scrollbar-thumb {
+    background: var(--c-border);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--c-muted-fg);
+  }
 }
 
 /* Focus ring consistente */
 :focus-visible {
   outline: 2px solid var(--c-ring);
   outline-offset: 2px;
+}
+
+/* Safe area para iOS (home indicator) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Padding inferior en mobile para no tapar contenido con la tab bar fija */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 4.5rem;
+  }
 }
