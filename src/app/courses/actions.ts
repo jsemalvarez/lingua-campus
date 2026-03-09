@@ -128,3 +128,92 @@ export async function removeCourseScheduleAction(scheduleId: string, courseId: s
         return { success: false, error: "Error al eliminar horario" };
     }
 }
+
+export async function updateCourseTeacherAction(courseId: string, teacherId: string | null) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden cambiar el profesor" };
+
+    try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "Curso no encontrado o no pertenece a tu instituto" };
+        }
+
+        // Verify teacher belongs to the same institute (if not clearing)
+        if (teacherId) {
+            const teacher = await prisma.user.findUnique({ where: { id: teacherId } });
+            if (!teacher || teacher.instituteId !== user.instituteId || teacher.role !== "TEACHER") {
+                return { success: false, error: "Profesor no válido" };
+            }
+        }
+
+        await prisma.course.update({
+            where: { id: courseId },
+            data: { teacherId: teacherId || null }
+        });
+
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath("/courses");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al actualizar el profesor del curso" };
+    }
+}
+
+export async function updateCourseAction(courseId: string, data: { name?: string; level?: string }) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden editar el curso" };
+
+    if (!data.name?.trim()) {
+        return { success: false, error: "El nombre del curso es obligatorio" };
+    }
+
+    try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "Curso no encontrado o no pertenece a tu instituto" };
+        }
+
+        await prisma.course.update({
+            where: { id: courseId },
+            data: {
+                name: data.name.trim(),
+                level: data.level?.trim() || null,
+            }
+        });
+
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath("/courses");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al actualizar el curso" };
+    }
+}
+
+export async function removeStudentFromCourseAction(enrollmentId: string, courseId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden desinscribir alumnos" };
+
+    try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "Curso no encontrado o sin acceso" };
+        }
+
+        // Soft-drop: mark as DROPPED instead of deleting
+        await prisma.enrollment.update({
+            where: { id: enrollmentId },
+            data: { status: "DROPPED" }
+        });
+
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath("/courses");
+        revalidatePath("/students");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al desinscribir al estudiante" };
+    }
+}

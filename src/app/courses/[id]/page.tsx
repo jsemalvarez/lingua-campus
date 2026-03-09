@@ -8,6 +8,9 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange } from "lucide-react";
 import { ScheduleList } from "./ScheduleList";
 import { LessonList } from "./lessons/components/LessonList";
+import { EditTeacherModal } from "../components/EditTeacherModal";
+import { EditCourseModal } from "../components/EditCourseModal";
+import { RemoveStudentButton } from "../components/RemoveStudentButton";
 
 // TODO: Create StudentList component to handle enrollments. For now we will create an empty block
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -33,7 +36,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             lessons: { orderBy: { date: 'asc' } },
             enrollments: {
                 where: { status: "ACTIVE" },
-                include: { student: { select: { id: true, name: true, phone: true } } }
+                select: { id: true, student: { select: { id: true, name: true, phone: true } } }
             }
         }
     });
@@ -42,6 +45,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     if (!course || course.instituteId !== user.instituteId) {
         redirect("/courses");
     }
+
+    // Fetch available teachers for this institute (for admin teacher-edit dropdown)
+    const instituteTeachers = user.role === "ADMIN" ? await prisma.user.findMany({
+        where: { instituteId: user.instituteId, role: "TEACHER" },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' }
+    }) : [];
 
     const isTeacherOrAdmin = user.role === "ADMIN" || user.id === course.teacher?.id;
 
@@ -67,13 +77,33 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                 <BookOpen size={24} />
                             </div>
                             <div>
-                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                                    {course.name}
-                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                                        {course.name}
+                                    </h1>
+                                    {user.role === "ADMIN" && (
+                                        <EditCourseModal
+                                            courseId={course.id}
+                                            currentName={course.name}
+                                            currentLevel={course.level}
+                                        />
+                                    )}
+                                </div>
                                 <p className="text-sm font-semibold mt-0.5 text-muted-foreground flex items-center gap-2">
                                     Nivel: <span className="text-primary">{course.level || "General"}</span>
                                     <span className="text-border">•</span>
-                                    <GraduationCap size={14} className="ml-1" /> Prof. {course.teacher?.name || "Sin Asignar"}
+                                    {user.role === "ADMIN" ? (
+                                        <EditTeacherModal
+                                            courseId={course.id}
+                                            currentTeacherId={course.teacher?.id || null}
+                                            currentTeacherName={course.teacher?.name || null}
+                                            teachers={instituteTeachers}
+                                        />
+                                    ) : (
+                                        <>
+                                            <GraduationCap size={14} className="ml-1" /> Prof. {course.teacher?.name || "Sin Asignar"}
+                                        </>
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -155,8 +185,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                                             <p className="text-xs text-muted-foreground">{enrol.student.phone || "Sin teléfono"}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="px-3 py-1 rounded border border-border/40 text-xs font-semibold text-muted-foreground bg-muted/20">
-                                                        Activo
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="px-3 py-1 rounded border border-border/40 text-xs font-semibold text-muted-foreground bg-muted/20">
+                                                            Activo
+                                                        </div>
+                                                        {user.role === "ADMIN" && (
+                                                            <RemoveStudentButton
+                                                                enrollmentId={enrol.id}
+                                                                courseId={course.id}
+                                                                studentName={enrol.student.name}
+                                                            />
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
