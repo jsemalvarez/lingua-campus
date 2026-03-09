@@ -54,12 +54,113 @@ export default async function DashboardPage() {
     // Flujo normal para Admin/Teacher
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
+        select: { id: true, name: true, role: true, instituteId: true }
     });
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/admin/institutes");
     }
+
+    const isTeacher = user.role === "TEACHER";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // ─── TEACHER-specific dashboard ───
+    if (isTeacher) {
+        // Cursos asignados al profesor
+        const teacherCourses = await prisma.course.findMany({
+            where: { teacherId: user.id, instituteId: user.instituteId },
+            select: { id: true, name: true }
+        });
+        const teacherCourseIds = teacherCourses.map(c => c.id);
+
+        // Estudiantes inscritos en sus cursos
+        const myStudentsCount = await prisma.enrollment.count({
+            where: {
+                courseId: { in: teacherCourseIds },
+                status: "ACTIVE",
+                student: { status: "ACTIVE" }
+            }
+        });
+
+        // Próximas clases solo de sus cursos
+        const myUpcomingLessons = await prisma.lesson.findMany({
+            where: {
+                courseId: { in: teacherCourseIds },
+                date: { gte: today }
+            },
+            orderBy: { date: 'asc' },
+            take: 5,
+            include: {
+                course: { select: { name: true } }
+            }
+        });
+
+        const teacherStats = [
+            { label: "Mis Cursos", value: teacherCourses.length.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
+            { label: "Mis Estudiantes", value: myStudentsCount.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+        ];
+
+        return (
+            <div className="min-h-screen bg-background">
+                <Navbar />
+                <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">Panel de Control</h1>
+                            <p className="text-muted-foreground mt-1">
+                                Bienvenido de nuevo, {user.name || "profesor"}. Aquí tenés un resumen de tus cursos.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {teacherStats.map((stat, i) => (
+                            <Card key={i} className="p-6 hover:shadow-md transition-shadow">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                                        <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                                    </div>
+                                    <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
+                                        <stat.icon size={24} />
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Próximas Clases del profesor */}
+                    <Card className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Clock className="text-blue-500" size={20} /> Mis Próximas Clases
+                            </h3>
+                        </div>
+                        <div className="space-y-4">
+                            {myUpcomingLessons.length === 0 ? (
+                                <p className="text-sm text-muted-foreground italic text-center py-4">No tenés próximas clases programadas.</p>
+                            ) : myUpcomingLessons.map((lesson) => (
+                                <div key={lesson.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-sm">{lesson.course.name}</span>
+                                        <span className="text-xs text-muted-foreground">{lesson.topic}</span>
+                                    </div>
+                                    <div className="text-sm font-semibold tabular-nums">
+                                        {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
+
+    // ─── ADMIN dashboard (sin cambios) ───
 
     // 1. Get total students for institute
     const totalStudents = await prisma.student.count({
@@ -102,8 +203,6 @@ export default async function DashboardPage() {
     ];
 
     // 5. Fetch upcoming lessons
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const upcomingLessons = await prisma.lesson.findMany({
         where: {
             course: { instituteId: user.instituteId },
