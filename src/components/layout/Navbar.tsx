@@ -82,21 +82,21 @@ export function Navbar({ className }: { className?: string }) {
 
                         {status === "authenticated" ? (
                             <>
-                                {/* Avatar — visible en md+ */}
+                                {/* Perfil — siempre visible */}
                                 <Link href="/profile"
-                                    className="hidden md:flex h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 items-center justify-center text-primary text-xs font-semibold cursor-pointer hover:bg-primary/20 transition-colors"
+                                    className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                                     title="Ir a mi Perfil"
                                 >
-                                    P
+                                    <UserCircle size={20} />
                                 </Link>
 
-                                {/* Logout Desktop — visible en md+ */}
+                                {/* Logout — siempre visible */}
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => signOut({ callbackUrl: '/login' })}
                                     title="Cerrar sesión"
-                                    className="hidden md:flex text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors h-9 w-9 rounded-xl border border-transparent hover:border-red-200 dark:hover:border-red-900/50"
+                                    className="text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors h-8 w-8 sm:h-9 sm:w-9 rounded-xl border border-transparent hover:border-red-200 dark:hover:border-red-900/50"
                                 >
                                     <LogOut size={17} />
                                 </Button>
@@ -146,25 +146,6 @@ export function Navbar({ className }: { className?: string }) {
                                 </Link>
                             );
                         })}
-
-                        {/* Perfil tab */}
-                        <Link
-                            href="/profile"
-                            title="Perfil"
-                            className={cn(
-                                "flex items-center justify-center flex-1 py-2 rounded-xl transition-all duration-150",
-                                pathname === "/profile"
-                                    ? "text-primary"
-                                    : "text-foreground/50 active:text-foreground/80"
-                            )}
-                        >
-                            <div className={cn(
-                                "flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200",
-                                pathname === "/profile" && "bg-primary/10 scale-110"
-                            )}>
-                                <UserCircle size={22} strokeWidth={pathname === "/profile" ? 2.5 : 2} />
-                            </div>
-                        </Link>
                     </div>
                 </div>
             )}
