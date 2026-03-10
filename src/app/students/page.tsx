@@ -66,7 +66,7 @@ export default async function StudentsPage(props: PageProps) {
         <div className="min-h-screen bg-background pb-20">
             <Navbar />
 
-            <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <main className="container mx-auto px-2 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Estudiantes</h1>
@@ -136,26 +136,28 @@ export default async function StudentsPage(props: PageProps) {
                                 <table className="w-full text-left border-collapse whitespace-nowrap">
                                     <thead>
                                         <tr className="bg-muted/30 border-b border-border/50">
-                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Nombre del Alumno</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contacto</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Ingreso</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Acciones</th>
+                                            <th className="px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Nombre del Alumno</th>
+                                            <th className="px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contacto</th>
+                                            <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Ingreso</th>
+                                            <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
                                         {students.map((student) => (
                                             <tr key={student.id} className="hover:bg-muted/40 transition-colors group">
-                                                <td className="px-6 py-4">
+                                                <td className="px-3 sm:px-2 py-4 sm:py-2">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shadow-sm shadow-primary/5">
+                                                        <div className="hidden md:flex h-10 w-10 flex-shrink-0 rounded-full bg-primary/10 items-center justify-center text-primary font-bold shadow-sm shadow-primary/5">
                                                             {student.name.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <span className="font-semibold text-sm">{student.name}</span>
+                                                            <Link href={`/students/${student.id}`} className="font-semibold text-sm underline md:no-underline md:hover:underline hover:text-primary transition-colors text-foreground">
+                                                                {student.name}
+                                                            </Link>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-3 sm:px-2 py-4 sm:py-2">
                                                     <div className="flex flex-col gap-1.5">
                                                         {student.email && (
                                                             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
@@ -190,13 +192,13 @@ export default async function StudentsPage(props: PageProps) {
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                                                <td className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-medium text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <CalendarIcon size={14} />
                                                         {dayjs(student.joinDate).format("DD/MM/YYYY")}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="hidden lg:table-cell px-3 sm:px-6 py-4 text-right">
                                                     <Link href={`/students/${student.id}`}>
                                                         <Button variant="ghost" size="icon" className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary transition-all rounded-full h-8 w-8">
                                                             <Eye size={16} />
