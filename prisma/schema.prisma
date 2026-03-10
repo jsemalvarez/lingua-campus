@@ -50,6 +50,7 @@ model User {
   name        String     // Nombre Completo
   phone       String?    // Celular
   avatarUrl   String?
+  status      String   @default("ACTIVE") // ACTIVE, DELETED
   
   instituteId String?
   institute   Institute? @relation(fields: [instituteId], references: [id])

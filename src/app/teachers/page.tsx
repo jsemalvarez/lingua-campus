@@ -6,7 +6,8 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CreateTeacherModal } from "./components/CreateTeacherModal";
-import { Search, GraduationCap, Filter, Mail, Phone, Calendar as CalendarIcon, Edit3 } from "lucide-react";
+import { Search, GraduationCap, Filter, Mail, Phone, Calendar as CalendarIcon, Edit3, Eye } from "lucide-react";
+import Link from "next/link";
 import dayjs from "dayjs";
 
 export default async function TeachersPage() {
@@ -26,7 +27,9 @@ export default async function TeachersPage() {
     const teachers = await prisma.user.findMany({
         where: {
             instituteId: user.instituteId,
-            role: "TEACHER"
+            role: "TEACHER",
+            // @ts-ignore
+            status: "ACTIVE"
         },
         include: {
             courses: true // Obtenemos las clases activas donde figuran como titulares
@@ -100,7 +103,10 @@ export default async function TeachersPage() {
                                         </div>
                                         {teacher.phone && (
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                                                <Phone size={14} className="text-emerald-500/80" /> {teacher.phone}
+                                                <Phone size={14} className="text-emerald-500/80" />
+                                                <a href={`https://wa.me/${teacher.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">
+                                                    {teacher.phone}
+                                                </a>
                                             </div>
                                         )}
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium pt-2 border-t border-border/40 mt-2">
@@ -113,9 +119,18 @@ export default async function TeachersPage() {
                                     <div className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-lg">
                                         {teacher.courses.length} Cursos Asignados
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-full transition-colors">
-                                        <Edit3 size={16} />
-                                    </Button>
+                                    <div className="flex gap-1">
+                                        <Link href={`/teachers/${teacher.id}`}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-full transition-colors">
+                                                <Eye size={16} />
+                                            </Button>
+                                        </Link>
+                                        <Link href={`/teachers/${teacher.id}`}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-full transition-colors">
+                                                <Edit3 size={16} />
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </div>
                             </Card>
                         ))}
