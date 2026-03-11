@@ -5,10 +5,12 @@ import prisma from "@/lib/prisma";
 import dayjs from "dayjs";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
-import { Search, DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 import { RegisterFeeForm } from "./components/RegisterFeeForm";
 import { RegisterExpenseForm } from "./components/RegisterExpenseForm";
+import { RegisterSalaryForm } from "./components/RegisterSalaryForm";
+import { TransactionTable } from "./components/TransactionTable";
 
 export default async function PaymentsPage() {
     const session = await getServerSession(authOptions);
@@ -41,8 +43,20 @@ export default async function PaymentsPage() {
     // 3. Traer Gastos (Expenses) de este instituto
     const expenses = await prisma.expense.findMany({
         where: { instituteId: user.instituteId },
+        include: { recipient: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
-        take: 10
+        take: 15
+    });
+
+    // 4. Traer Empleados para el formulario de sueldos
+    const employees = await prisma.user.findMany({
+        where: {
+            instituteId: user.instituteId,
+            status: "ACTIVE",
+            role: { in: ["ADMIN", "TEACHER"] }
+        },
+        select: { id: true, name: true, role: true },
+        orderBy: { name: "asc" }
     });
 
     // 4. Calcular KPIs Básicos
@@ -79,9 +93,14 @@ export default async function PaymentsPage() {
         })),
         ...expenses.map(e => ({
             id: `e-${e.id}`,
+            originalId: e.id,
             date: e.date,
-            title: `${e.category}: ${e.description}`,
+            title: e.recipient ? `Sueldo: ${e.recipient.name}` : `${e.category}: ${e.description}`,
+            recipientName: e.recipient?.name || null,
+            ticketNumber: (e as any).ticketNumber || null,
             amount: e.amount,
+            category: e.category,
+            description: e.description,
             type: "EXPENSE" as const,
             status: "PAID",
             method: "N/A"
@@ -125,82 +144,18 @@ export default async function PaymentsPage() {
                         <Card className="p-5 border-border/40 border-l-4 border-l-emerald-500 bg-emerald-500/5">
                             <RegisterFeeForm students={students} />
                         </Card>
+                        <Card className="p-5 border-border/40 border-l-4 border-l-amber-500 bg-amber-500/5">
+                            <RegisterSalaryForm employees={employees} />
+                        </Card>
 
-                        <Card className="p-5 border-border/40 border-l-4 border-l-rose-500">
+                        <Card className="p-5 border-border/40 border-l-4 border-l-rose-500 bg-rose-500/5">
                             <RegisterExpenseForm />
                         </Card>
                     </div>
 
-                    {/* CENTRO-DERECHA: El libro contable de vida */}
-                    <div className="lg:col-span-2">
-                        <Card className="overflow-hidden border-border/40">
-                            <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <h2 className="font-bold text-lg flex items-center gap-2">
-                                    <Wallet className="text-primary" size={20} /> Movimientos Recientes
-                                </h2>
-                                <div className="relative w-full sm:max-w-xs">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                                    <input
-                                        type="text"
-                                        placeholder="Filtrar movimientos..."
-                                        className="w-full pl-9 pr-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {allTransactions.length === 0 ? (
-                                <div className="p-12 text-center text-muted-foreground italic text-sm">
-                                    Aún no hay movimientos contables registrados en la base de datos de tu instituto.
-                                    Empieza cargando el pago de un alumno o un gasto operativo.
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse whitespace-nowrap">
-                                        <thead>
-                                            <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border/50">
-                                                <th className="px-5 py-4">Concepto / Referencia</th>
-                                                <th className="px-5 py-4">Fecha</th>
-                                                <th className="px-5 py-4 text-right">Monto</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border/50">
-                                            {allTransactions.map((tx) => (
-                                                <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`p-2 rounded-full ${tx.type === "INCOME" ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
-                                                                {tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-semibold text-sm max-w-[200px] truncate" title={tx.title}>
-                                                                    {tx.title}
-                                                                </span>
-                                                                <div className="flex gap-2 text-xs font-medium mt-0.5">
-                                                                    <span className={tx.type === "INCOME" ? "text-emerald-500" : "text-rose-500"}>
-                                                                        {tx.type === "INCOME" ? "INGRESO" : "GASTO"}
-                                                                    </span>
-                                                                    {tx.status === "PENDING" && <span className="text-orange-500">· PENDIENTE</span>}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-xs font-medium text-muted-foreground">
-                                                        {dayjs(tx.date).format("DD MMM, YYYY")}
-                                                    </td>
-                                                    <td className="px-5 py-4 text-right">
-                                                        <span className={`font-bold tabular-nums tracking-tight ${tx.type === "INCOME" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                                                            {tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </Card>
-                    </div>
-                </div>
+                    {/* CENTRO-DERECHA: El libro contable de vida (Buscador y Tabla) */}
+                    <TransactionTable transactions={allTransactions} />
+                </div>                
             </main>
         </div>
     );

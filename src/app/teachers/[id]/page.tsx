@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
-import { ArrowLeft, BookOpen, Clock } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, DollarSign, Calendar as CalendarIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import dayjs from "dayjs";
 import { TeacherProfileView } from "./TeacherProfileView";
@@ -30,6 +30,10 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         include: {
             courses: {
                 where: { instituteId: user.instituteId }
+            },
+            expensesReceived: {
+                where: { instituteId: user.instituteId },
+                orderBy: { date: 'desc' }
             }
         }
     });
@@ -91,6 +95,50 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                                 </div>
                                             </Card>
                                         </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-12 max-w-5xl mx-auto space-y-4">
+                            <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+                                <DollarSign className="text-emerald-500" size={24} /> Historial de Pagos / Sueldos
+                            </h3>
+
+                            {teacher.expensesReceived.length === 0 ? (
+                                <Card className="p-8 text-center border-dashed border-border/50 bg-muted/10">
+                                    <div className="h-12 w-12 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-500 mb-3">
+                                        <DollarSign size={24} />
+                                    </div>
+                                    <h4 className="font-semibold text-lg">Sin pagos registrados</h4>
+                                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1">
+                                        No se han registrado pagos de sueldo para este profesor todavía.
+                                    </p>
+                                </Card>
+                            ) : (
+                                <div className="space-y-3">
+                                    {teacher.expensesReceived.map(payment => (
+                                        <Card key={payment.id} className="p-4 border-border/40 bg-card/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-600">
+                                                    <CalendarIcon size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm">{payment.description}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {dayjs(payment.date).format("DD [de] MMMM, YYYY")}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-emerald-600 dark:text-emerald-400">
+                                                    ${payment.amount.toLocaleString()}
+                                                </p>
+                                                <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                                                    Pagado
+                                                </span>
+                                            </div>
+                                        </Card>
                                     ))}
                                 </div>
                             )}

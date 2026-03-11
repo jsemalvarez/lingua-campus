@@ -2,17 +2,39 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { CreateScheduleModal } from "./components/CreateScheduleModal";
-import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User } from "lucide-react";
+
+import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen } from "lucide-react";
+import { format, addDays, subDays, addWeeks, subWeeks, startOfWeek, isSameDay, parseISO, isValid } from "date-fns";
+import { es } from "date-fns/locale";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-export default async function SchedulePage() {
+export default async function SchedulePage({
+    searchParams
+}: {
+    searchParams: Promise<{ view?: string; date?: string }>
+}) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
+
+    const params = await searchParams;
+    const view = params.view || "week";
+
+    // Parse the date from URL or use today
+    let displayDate = new Date();
+    if (params.date) {
+        const parsed = parseISO(params.date);
+        if (isValid(parsed)) {
+            displayDate = parsed;
+        }
+    }
+
+    const dateStr = format(displayDate, "yyyy-MM-dd");
+    const isToday = isSameDay(displayDate, new Date());
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -23,15 +45,14 @@ export default async function SchedulePage() {
         redirect("/dashboard");
     }
 
-    // Obtenemos los cursos para el modal
+    // Obtenemos los cursos para las estadísticas
     const courses = await prisma.course.findMany({
         where: { instituteId: user.instituteId },
-        select: { id: true, name: true, level: true },
-        orderBy: { name: 'asc' }
+        select: { id: true },
     });
 
-    // Obtenemos los horarios programados, incluyendo qué curso y qué profesor
-    const schedules = await prisma.schedule.findMany({
+    // Get all scheduled class templates
+    const allSchedules = await prisma.schedule.findMany({
         where: {
             course: {
                 instituteId: user.instituteId
@@ -40,7 +61,11 @@ export default async function SchedulePage() {
         include: {
             course: {
                 include: {
-                    teacher: true
+                    teacher: true,
+                    lessons: {
+                        orderBy: { date: 'desc' },
+                        take: 1
+                    }
                 }
             }
         },
@@ -49,6 +74,19 @@ export default async function SchedulePage() {
             { startTime: 'asc' }
         ]
     });
+
+    // Filter by day if in "day" view
+    const currentDayOfWeek = displayDate.getDay();
+    const schedules = view === "day"
+        ? allSchedules.filter(s => s.dayOfWeek === currentDayOfWeek)
+        : allSchedules;
+
+    // Navigation calculation
+    const prevDate = view === "day" ? subDays(displayDate, 1) : subWeeks(displayDate, 1);
+    const nextDate = view === "day" ? addDays(displayDate, 1) : addWeeks(displayDate, 1);
+
+    const prevUrl = `/schedule?view=${view}&date=${format(prevDate, "yyyy-MM-dd")}`;
+    const nextUrl = `/schedule?view=${view}&date=${format(nextDate, "yyyy-MM-dd")}`;
 
     const colors = [
         "bg-blue-500/10 text-blue-600 border-blue-500/20",
@@ -64,32 +102,72 @@ export default async function SchedulePage() {
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Calendario Institucional</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Visualiza y gestiona las clases programadas de la institución. Encontradas {schedules.length} plantillas de clases.
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground/90">
+                            {view === "day" ? "Clases del Día" : "Calendario Institucional"}
+                        </h1>
+                        <p className="text-muted-foreground mt-1 text-sm font-medium">
+                            {view === "day"
+                                ? `Mostrando ${schedules.length} clases para el ${format(displayDate, "EEEE d 'de' MMMM", { locale: es })}.`
+                                : `Visualiza la agenda semanal. Encontradas ${schedules.length} plantillas de clases.`}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="flex bg-muted/30 p-1 rounded-xl border border-border/50">
-                            <Button variant="ghost" size="sm" className="h-9 px-4 rounded-lg bg-background shadow-sm hover:bg-background">Día</Button>
-                            <Button variant="ghost" size="sm" className="h-9 px-4 rounded-lg text-muted-foreground hover:bg-muted/50">Semana</Button>
+                        <div className="flex bg-muted/30 p-1.5 rounded-2xl border border-border/50 shadow-sm">
+                            <Link href={`/schedule?view=day&date=${dateStr}`}>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`h-9 px-5 rounded-xl transition-all duration-300 font-semibold text-xs ${view === "day" ? "bg-background shadow-md text-foreground scale-[1.02]" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"}`}
+                                >
+                                    Día
+                                </Button>
+                            </Link>
+                            <Link href={`/schedule?view=week&date=${dateStr}`}>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`h-9 px-5 rounded-xl transition-all duration-300 font-semibold text-xs ${view === "week" ? "bg-background shadow-md text-foreground scale-[1.02]" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"}`}
+                                >
+                                    Semana
+                                </Button>
+                            </Link>
                         </div>
-                        <CreateScheduleModal courses={courses} />
                     </div>
                 </header>
 
-                {/* Date Selector */}
-                <div className="flex items-center justify-between mb-8 bg-muted/10 p-4 rounded-2xl border border-border/40">
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/50 hover:bg-muted hover:text-foreground">
-                            <ChevronLeft size={16} />
-                        </Button>
-                        <h2 className="text-lg font-bold tracking-tight">Semana Actual</h2>
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/50 hover:bg-muted hover:text-foreground">
-                            <ChevronRight size={16} />
-                        </Button>
+                {/* Date Navigation Control */}
+                <div className="flex items-center justify-between mb-8 bg-muted/15 p-5 rounded-[2rem] border border-border/30 backdrop-blur-sm shadow-inner">
+                    <div className="flex items-center gap-5">
+                        <Link href={prevUrl}>
+                            <Button variant="outline" size="icon" className="h-9 w-9 rounded-full border-border/50 bg-background/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300 shadow-sm active:scale-95">
+                                <ChevronLeft size={18} />
+                            </Button>
+                        </Link>
+                        <div className="flex flex-col items-center min-w-[180px]">
+                            <h2 className="text-base font-bold tracking-tight text-foreground/90 capitalize">
+                                {view === "day"
+                                    ? format(displayDate, "EEEE d 'de' MMMM", { locale: es })
+                                    : isToday ? "Semana Actual" : `Semana del ${format(startOfWeek(displayDate, { weekStartsOn: 1 }), "d 'de' MMM", { locale: es })}`}
+                            </h2>
+                            <span className="text-[10px] font-bold text-primary/60 tracking-widest uppercase mt-0.5">
+                                {view === "day" ? "Vista Diaria" : "Vista Semanal"}
+                            </span>
+                        </div>
+                        <Link href={nextUrl}>
+                            <Button variant="outline" size="icon" className="h-9 w-9 rounded-full border-border/50 bg-background/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300 shadow-sm active:scale-95">
+                                <ChevronRight size={18} />
+                            </Button>
+                        </Link>
                     </div>
-                    <Button variant="outline" size="sm" className="text-xs h-8 border-border/50 hover:bg-muted hover:text-foreground">Hoy</Button>
+                    <Link href={`/schedule?view=${view}&date=${format(new Date(), "yyyy-MM-dd")}`}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className={`text-[10px] font-black uppercase tracking-wider h-8 px-5 rounded-full border-border/50 transition-all duration-300 shadow-sm hover:shadow-md ${isToday ? "bg-primary text-primary-foreground border-primary" : "bg-background/50 hover:bg-muted hover:text-foreground"}`}
+                        >
+                            Hoy
+                        </Button>
+                    </Link>
                 </div>
 
                 <div className="grid gap-8 lg:grid-cols-4">
@@ -146,18 +224,30 @@ export default async function SchedulePage() {
                                                     </span>
                                                 </div>
                                                 <h3 className="text-lg font-bold tracking-tight text-foreground/90">{schedule.course.name} <span className="text-muted-foreground font-medium text-sm ml-1">({schedule.course.level || "General"})</span></h3>
+                                                {schedule.course.lessons.length > 0 && (
+                                                    <Link href={`/courses/${schedule.course.id}`} className="underline decoration-primary/30 underline-offset-4">
+                                                        <p className="text-sm font-medium text-primary/80 flex items-center gap-1.5 -mt-0.5 transition-colors hover:text-primary">
+                                                            <BookOpen size={14} /> {schedule.course.lessons[0].topic}
+                                                        </p>
+                                                    </Link>
+                                                )}
                                                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                                                     <span className="text-[10px]"><User size={13} /></span> {schedule.course.teacher ? schedule.course.teacher.name : "Sin profesor asignado"}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="sm:text-right w-full sm:w-auto flex sm:flex-col gap-2">
-                                            <Button variant="outline" size="sm" className="h-8 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-all flex-1 sm:flex-none">
-                                                Ver Asistencia
-                                            </Button>
-                                            <Button variant="ghost" size="sm" className="h-8 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity flex-1 sm:flex-none text-red-500 hover:text-red-600 hover:bg-red-50">
-                                                Eliminar
-                                            </Button>
+                                            <Link
+                                                href={schedule.course.lessons.length > 0
+                                                    ? `/courses/${schedule.course.id}/lessons/${schedule.course.lessons[0].id}/attendance`
+                                                    : `/courses/${schedule.course.id}`}
+                                                className="flex-1 sm:flex-none"
+                                            >
+                                                <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-all flex items-center justify-center gap-1.5">
+                                                    <ClipboardCheck size={14} /> Asistencia
+                                                </Button>
+                                            </Link>
+
                                         </div>
                                     </div>
                                 </Card>

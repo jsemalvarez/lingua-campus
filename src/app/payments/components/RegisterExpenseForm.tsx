@@ -36,7 +36,7 @@ export function RegisterExpenseForm() {
 
             <div className="space-y-1.5">
                 <label className="text-sm font-semibold">Descripción</label>
-                <input type="text" name="description" required placeholder="Ej: Sueldos Profesores Marzo, Alquiler..." className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                <input type="text" name="description" required placeholder="Ej: Materiales, Limpieza, Alquiler..." className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -47,7 +47,6 @@ export function RegisterExpenseForm() {
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Categoría</label>
                     <select name="category" required className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none">
-                        <option value="NOMINA">Nómina / Sueldos</option>
                         <option value="ALQUILER">Alquiler / Expensas</option>
                         <option value="SERVICIOS">Servicios (Luz, Internet)</option>
                         <option value="MANTENIMIENTO">Mantenimiento / Limpieza</option>
@@ -58,9 +57,15 @@ export function RegisterExpenseForm() {
                 </div>
             </div>
 
-            <div className="space-y-1.5">
-                <label className="text-sm font-semibold">Fecha (Opcional, sino toma la actual)</label>
-                <input type="date" name="date" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Fecha (Opcional)</label>
+                    <input type="date" name="date" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Nº de Ticket (Opcional)</label>
+                    <input type="text" name="ticketNumber" placeholder="Ej: 001-00234" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                </div>
             </div>
 
             {status === "success" && (
