@@ -9,6 +9,8 @@ import { Search, DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpR
 
 import { RegisterFeeForm } from "./components/RegisterFeeForm";
 import { RegisterExpenseForm } from "./components/RegisterExpenseForm";
+import { RegisterSalaryForm } from "./components/RegisterSalaryForm";
+import { ExpenseActions } from "./components/ExpenseActions";
 
 export default async function PaymentsPage() {
     const session = await getServerSession(authOptions);
@@ -41,8 +43,20 @@ export default async function PaymentsPage() {
     // 3. Traer Gastos (Expenses) de este instituto
     const expenses = await prisma.expense.findMany({
         where: { instituteId: user.instituteId },
+        include: { recipient: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
-        take: 10
+        take: 15
+    });
+
+    // 4. Traer Empleados para el formulario de sueldos
+    const employees = await prisma.user.findMany({
+        where: {
+            instituteId: user.instituteId,
+            status: "ACTIVE",
+            role: { in: ["ADMIN", "TEACHER"] }
+        },
+        select: { id: true, name: true, role: true },
+        orderBy: { name: "asc" }
     });
 
     // 4. Calcular KPIs Básicos
@@ -79,9 +93,14 @@ export default async function PaymentsPage() {
         })),
         ...expenses.map(e => ({
             id: `e-${e.id}`,
+            originalId: e.id,
             date: e.date,
-            title: `${e.category}: ${e.description}`,
+            title: e.recipient ? `Sueldo: ${e.recipient.name}` : `${e.category}: ${e.description}`,
+            recipientName: e.recipient?.name || null,
+            ticketNumber: (e as any).ticketNumber || null,
             amount: e.amount,
+            category: e.category,
+            description: e.description,
             type: "EXPENSE" as const,
             status: "PAID",
             method: "N/A"
@@ -125,8 +144,11 @@ export default async function PaymentsPage() {
                         <Card className="p-5 border-border/40 border-l-4 border-l-emerald-500 bg-emerald-500/5">
                             <RegisterFeeForm students={students} />
                         </Card>
+                        <Card className="p-5 border-border/40 border-l-4 border-l-amber-500 bg-amber-500/5">
+                            <RegisterSalaryForm employees={employees} />
+                        </Card>
 
-                        <Card className="p-5 border-border/40 border-l-4 border-l-rose-500">
+                        <Card className="p-5 border-border/40 border-l-4 border-l-rose-500 bg-rose-500/5">
                             <RegisterExpenseForm />
                         </Card>
                     </div>
@@ -161,14 +183,21 @@ export default async function PaymentsPage() {
                                                 <th className="px-5 py-4">Concepto / Referencia</th>
                                                 <th className="px-5 py-4">Fecha</th>
                                                 <th className="px-5 py-4 text-right">Monto</th>
+                                                <th className="px-5 py-4 text-right">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border/50">
                                             {allTransactions.map((tx) => (
-                                                <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
+                                                <tr key={tx.id} className="hover:bg-muted/30 transition-colors group">
                                                     <td className="px-5 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`p-2 rounded-full ${tx.type === "INCOME" ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                                                            <div className={`p-2 rounded-full ${
+                                                                tx.type === "INCOME" 
+                                                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                                                    : (tx as any).category === "NOMINA"
+                                                                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                                            }`}>
                                                                 {tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
                                                             </div>
                                                             <div className="flex flex-col">
@@ -176,7 +205,13 @@ export default async function PaymentsPage() {
                                                                     {tx.title}
                                                                 </span>
                                                                 <div className="flex gap-2 text-xs font-medium mt-0.5">
-                                                                    <span className={tx.type === "INCOME" ? "text-emerald-500" : "text-rose-500"}>
+                                                                    <span className={
+                                                                        tx.type === "INCOME" 
+                                                                            ? "text-emerald-500" 
+                                                                            : (tx as any).category === "NOMINA"
+                                                                                ? "text-amber-500"
+                                                                                : "text-rose-500"
+                                                                    }>
                                                                         {tx.type === "INCOME" ? "INGRESO" : "GASTO"}
                                                                     </span>
                                                                     {tx.status === "PENDING" && <span className="text-orange-500">· PENDIENTE</span>}
@@ -185,12 +220,35 @@ export default async function PaymentsPage() {
                                                         </div>
                                                     </td>
                                                     <td className="px-5 py-4 text-xs font-medium text-muted-foreground">
-                                                        {dayjs(tx.date).format("DD MMM, YYYY")}
+                                                        {new Date(tx.date).getUTCDay() !== undefined 
+                                                            ? dayjs(new Date(tx.date).toISOString().split('T')[0]).format("DD MMM, YYYY")
+                                                            : dayjs(tx.date).format("DD MMM, YYYY")}
                                                     </td>
                                                     <td className="px-5 py-4 text-right">
-                                                        <span className={`font-bold tabular-nums tracking-tight ${tx.type === "INCOME" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                                        <span className={`font-bold tabular-nums tracking-tight ${
+                                                            tx.type === "INCOME" 
+                                                                ? "text-emerald-600 dark:text-emerald-400" 
+                                                                : (tx as any).category === "NOMINA"
+                                                                    ? "text-amber-600 dark:text-amber-400"
+                                                                    : "text-rose-600 dark:text-rose-400"
+                                                        }`}>
                                                             {tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
                                                         </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        {tx.type === "EXPENSE" && (
+                                                            <ExpenseActions 
+                                                                expense={{
+                                                                    id: (tx as any).originalId,
+                                                                    description: (tx as any).description,
+                                                                    amount: tx.amount,
+                                                                    category: (tx as any).category,
+                                                                    recipientName: (tx as any).recipientName,
+                                                                    ticketNumber: (tx as any).ticketNumber,
+                                                                    date: tx.date
+                                                                }} 
+                                                            />
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))}

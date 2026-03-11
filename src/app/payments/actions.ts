@@ -64,6 +64,9 @@ export async function createExpenseAction(formData: FormData) {
     const amountStr = formData.get("amount") as string;
     const category = formData.get("category") as string;
     const dateStr = formData.get("date") as string;
+    const ticketNumber = formData.get("ticketNumber") as string;
+
+    const recipientId = formData.get("recipientId") as string;
 
     const amount = parseFloat(amountStr);
 
@@ -77,8 +80,10 @@ export async function createExpenseAction(formData: FormData) {
                 description: description.trim(),
                 amount,
                 category: category || "OTROS",
-                date: dateStr ? new Date(dateStr) : new Date(),
-                instituteId: user.instituteId as string
+                ticketNumber: ticketNumber?.trim() || null,
+                date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
+                instituteId: user.instituteId as string,
+                recipientId: recipientId || null
             }
         });
 
@@ -86,5 +91,62 @@ export async function createExpenseAction(formData: FormData) {
         return { success: true };
     } catch (e: any) {
         return { success: false, error: "Error al cargar gasto operativo" };
+    }
+}
+
+export async function updateExpenseAction(expenseId: string, formData: FormData) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    const description = formData.get("description") as string;
+    const amountStr = formData.get("amount") as string;
+    const category = formData.get("category") as string;
+    const dateStr = formData.get("date") as string;
+    const ticketNumber = formData.get("ticketNumber") as string;
+
+    const amount = parseFloat(amountStr);
+
+    if (!description || isNaN(amount) || amount <= 0) {
+        return { success: false, error: "Descripción y un monto mayor a 0 son obligatorios" };
+    }
+
+    try {
+        await prisma.expense.update({
+            where: { 
+                id: expenseId,
+                instituteId: user.instituteId as string // Seguridad extra
+            },
+            data: {
+                description: description.trim(),
+                amount,
+                category: category || "OTROS",
+                ticketNumber: ticketNumber?.trim() || null,
+                date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
+            }
+        });
+
+        revalidatePath("/payments");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al actualizar el gasto" };
+    }
+}
+
+export async function deleteExpenseAction(expenseId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        await prisma.expense.delete({
+            where: { 
+                id: expenseId,
+                instituteId: user.instituteId as string // Seguridad extra
+            }
+        });
+
+        revalidatePath("/payments");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al eliminar el gasto" };
     }
 }

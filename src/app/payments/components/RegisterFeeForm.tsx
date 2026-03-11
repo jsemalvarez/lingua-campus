@@ -73,7 +73,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
     return (
         <form id="fee-form" action={handleSubmit} className="space-y-4">
-            <h3 className="font-semibold text-lg border-b border-border/50 pb-2 mb-4">Ingresar Pago de Cuota</h3>
+            <h3 className="font-semibold text-lg border-b border-border/50 pb-2 mb-4 text-emerald-600 dark:text-emerald-400">Ingresar Pago de Cuota</h3>
 
             {/* Buscador de Estudiantes Autocompletable */}
             <div className="space-y-1.5 relative" ref={dropdownRef}>
@@ -157,8 +157,8 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                 </div>
             )}
 
-            <Button type="submit" className="w-full premium-gradient font-bold mt-2" disabled={isPending || !selectedStudent}>
-                {isPending ? "Grabando..." : "Confirmar Ingreso"}
+            <Button type="submit" className="w-full font-bold mt-2 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={isPending}>
+                {isPending ? "Grabando..." : "Confirmar Ingreso (+)"}
             </Button>
         </form>
     );
