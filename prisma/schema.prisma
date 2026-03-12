@@ -114,6 +114,9 @@ model Course {
   teacherId   String?
   teacher     User?     @relation("CourseTeacher", fields: [teacherId], references: [id])
   
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id])
+
   instituteId String
   institute   Institute @relation(fields: [instituteId], references: [id])
   
@@ -164,6 +167,8 @@ model Classroom {
   instituteId String
   institute   Institute @relation(fields: [instituteId], references: [id])
   
+  courses     Course[]
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
