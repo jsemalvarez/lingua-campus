@@ -22,7 +22,7 @@ export default function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-hidden">
+    <div className="relative min-h-screen bg-white dark:bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-x-hidden">
       {/* Decorative background gradients */}
       <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-950/20 pointer-events-none" />
       <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-violet-400/10 dark:bg-violet-600/10 blur-3xl pointer-events-none" />
