@@ -12,9 +12,15 @@ interface EditCourseModalProps {
     currentName: string;
     currentLevel: string | null;
     levels: { id: string; name: string }[];
+    currentClassroomId?: string | null;
+    currentClassroomName?: string | null;
+    classrooms?: { id: string; name: string; capacity: number | null }[];
+    currentTeacherId?: string | null;
+    currentTeacherName?: string | null;
+    teachers?: { id: string; name: string; email?: string }[];
 }
 
-export function EditCourseModal({ courseId, currentName, currentLevel, levels }: EditCourseModalProps) {
+export function EditCourseModal({ courseId, currentName, currentLevel, levels, currentClassroomId, currentClassroomName, classrooms, currentTeacherId, currentTeacherName, teachers }: EditCourseModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
@@ -23,6 +29,8 @@ export function EditCourseModal({ courseId, currentName, currentLevel, levels }:
     const [mounted, setMounted] = useState(false);
     const [name, setName] = useState(currentName);
     const [level, setLevel] = useState(currentLevel || "");
+    const [classroomId, setClassroomId] = useState(currentClassroomId || "");
+    const [teacherId, setTeacherId] = useState(currentTeacherId || "");
 
     useEffect(() => {
         setMounted(true);
@@ -33,7 +41,7 @@ export function EditCourseModal({ courseId, currentName, currentLevel, levels }:
         setStatus("idle");
 
         startTransition(async () => {
-            const result = await updateCourseAction(courseId, { name, level });
+            const result = await updateCourseAction(courseId, { name, level, classroomId, teacherId: teacherId || null });
             if (result.success) {
                 setStatus("success");
                 setTimeout(() => {
@@ -105,6 +113,46 @@ export function EditCourseModal({ courseId, currentName, currentLevel, levels }:
                                 ))
                             ) : (
                                 <option value="" disabled>No hay niveles creados</option>
+                            )}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-blue-500 transition-colors">
+                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            Aula
+                        </label>
+                        <select
+                            value={classroomId}
+                            onChange={(e) => setClassroomId(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all focus:border-blue-500 appearance-none cursor-pointer"
+                        >
+                            <option value="">Sin aula asignada</option>
+                            {classrooms && classrooms.length > 0 ? (
+                                classrooms.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name} {c.capacity ? `(Cap. ${c.capacity})` : ""}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>No hay aulas creadas</option>
+                            )}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-blue-500 transition-colors">
+                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            Profesor Asignado
+                        </label>
+                        <select
+                            value={teacherId}
+                            onChange={(e) => setTeacherId(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all focus:border-blue-500 appearance-none cursor-pointer"
+                        >
+                            <option value="">Sin profesor definido</option>
+                            {teachers && teachers.length > 0 ? (
+                                teachers.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>No hay profesores disponibles</option>
                             )}
                         </select>
                     </div>

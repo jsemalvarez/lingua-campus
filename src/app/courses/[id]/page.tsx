@@ -8,7 +8,6 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange } from "lucide-react";
 import { ScheduleList } from "./ScheduleList";
 import { LessonList } from "./lessons/components/LessonList";
-import { EditTeacherModal } from "../components/EditTeacherModal";
 import { EditCourseModal } from "../components/EditCourseModal";
 import { RemoveStudentButton } from "../components/RemoveStudentButton";
 
@@ -32,6 +31,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         where: { id },
         include: {
             teacher: { select: { id: true, name: true, email: true } },
+            classroom: { select: { id: true, name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
             lessons: { orderBy: { date: 'asc' } },
             enrollments: {
@@ -58,6 +58,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         orderBy: { name: 'asc' }
     });
 
+    const classrooms = await prisma.classroom.findMany({
+        where: { instituteId: user.instituteId },
+        orderBy: { name: 'asc' }
+    });
 
     const isTeacherOrAdmin = user.role === "ADMIN" || user.id === course.teacher?.id;
 
@@ -93,24 +97,21 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             currentName={course.name}
                                             currentLevel={course.level}
                                             levels={levels}
-                                        />
-                                    )}
-                                </div>
-                                <p className="text-sm font-semibold mt-0.5 text-muted-foreground flex items-center gap-2">
-                                    Nivel: <span className="text-primary">{course.level || "General"}</span>
-                                    <span className="text-border">•</span>
-                                    {user.role === "ADMIN" ? (
-                                        <EditTeacherModal
-                                            courseId={course.id}
+                                            currentClassroomId={course.classroomId}
+                                            currentClassroomName={course.classroom?.name || null}
+                                            classrooms={classrooms}
                                             currentTeacherId={course.teacher?.id || null}
                                             currentTeacherName={course.teacher?.name || null}
                                             teachers={instituteTeachers}
                                         />
-                                    ) : (
-                                        <>
-                                            <GraduationCap size={14} className="ml-1" /> Prof. {course.teacher?.name || "Sin Asignar"}
-                                        </>
                                     )}
+                                </div>
+                                <p className="text-sm font-semibold mt-0.5 text-muted-foreground flex items-center gap-2 flex-wrap">
+                                    Nivel: <span className="text-primary">{course.level || "General"}</span>
+                                    <span className="text-border">•</span>
+                                    Aula: <span className="text-emerald-600 dark:text-emerald-400">{course.classroom?.name || "No asignada"}</span>
+                                    <span className="text-border">•</span>
+                                    <GraduationCap size={14} className="ml-1" /> Prof. {course.teacher?.name || "Sin Asignar"}
                                 </p>
                             </div>
                         </div>

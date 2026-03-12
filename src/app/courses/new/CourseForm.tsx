@@ -4,7 +4,7 @@ import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCourseAction } from "../actions";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle, AlertCircle, UserSearch } from "lucide-react";
+import { CheckCircle, AlertCircle, UserSearch, Home } from "lucide-react";
 
 interface Teacher {
     id: string;
@@ -17,12 +17,19 @@ interface Level {
     name: string;
 }
 
+interface Classroom {
+    id: string;
+    name: string;
+    capacity: number | null;
+}
+
 interface CourseFormProps {
     teachers: Teacher[];
     levels: Level[];
+    classrooms: Classroom[];
 }
 
-export function CourseForm({ teachers, levels }: CourseFormProps) {
+export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [statusFeedback, setStatusFeedback] = useState<"idle" | "success" | "error">("idle");
@@ -95,6 +102,28 @@ export function CourseForm({ teachers, levels }: CourseFormProps) {
                             ))}
                         </select>
                         <p className="text-xs text-muted-foreground mt-1 text-right">Puedes asignarlo después</p>
+                    </div>
+
+                    <div className="space-y-1.5 min-w-[200px]">
+                        <label className="text-sm font-semibold flex items-center justify-between">
+                            Aula
+                            <Home size={14} className="text-muted-foreground" />
+                        </label>
+                        <select
+                            name="classroomId"
+                            className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring bg-background text-sm font-medium outline-none transition-all appearance-none"
+                            defaultValue=""
+                        >
+                            <option value="">Sin aula asignada</option>
+                            {classrooms && classrooms.length > 0 ? (
+                                classrooms.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name} {c.capacity ? `(Cap. ${c.capacity})` : ""}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>No hay aulas registradas</option>
+                            )}
+                        </select>
+                        <p className="text-xs text-muted-foreground mt-1 text-right">Opcional</p>
                     </div>
                 </div>
             </div>
