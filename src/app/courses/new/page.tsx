@@ -30,6 +30,13 @@ export default async function NewCoursePage() {
         select: { id: true, name: true, email: true }
     });
 
+    const levels = await prisma.level.findMany({
+        where: {
+            instituteId: user.instituteId
+        },
+        orderBy: { name: 'asc' }
+    });
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
@@ -62,7 +69,7 @@ export default async function NewCoursePage() {
                 <div className="max-w-2xl">
                     <Card className="shadow-md border-border/40 overflow-hidden bg-card/60 backdrop-blur-sm">
                         <div className="h-2 w-full premium-gradient" />
-                        <CourseForm teachers={teachers} />
+                        <CourseForm teachers={teachers} levels={levels} />
                     </Card>
                 </div>
             </main>

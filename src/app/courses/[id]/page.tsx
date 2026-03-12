@@ -53,6 +53,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         orderBy: { name: 'asc' }
     }) : [];
 
+    const levels = await prisma.level.findMany({
+        where: { instituteId: user.instituteId },
+        orderBy: { name: 'asc' }
+    });
+
+
     const isTeacherOrAdmin = user.role === "ADMIN" || user.id === course.teacher?.id;
 
     return (
@@ -86,6 +92,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             courseId={course.id}
                                             currentName={course.name}
                                             currentLevel={course.level}
+                                            levels={levels}
                                         />
                                     )}
                                 </div>

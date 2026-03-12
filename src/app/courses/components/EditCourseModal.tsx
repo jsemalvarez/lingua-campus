@@ -11,9 +11,10 @@ interface EditCourseModalProps {
     courseId: string;
     currentName: string;
     currentLevel: string | null;
+    levels: { id: string; name: string }[];
 }
 
-export function EditCourseModal({ courseId, currentName, currentLevel }: EditCourseModalProps) {
+export function EditCourseModal({ courseId, currentName, currentLevel, levels }: EditCourseModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
@@ -98,13 +99,13 @@ export function EditCourseModal({ courseId, currentName, currentLevel }: EditCou
                             className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all focus:border-blue-500 appearance-none cursor-pointer"
                         >
                             <option value="">Sin nivel definido</option>
-                            <option value="A1 (Principiante)">A1 (Principiante)</option>
-                            <option value="A2 (Básico)">A2 (Básico)</option>
-                            <option value="B1 (Intermedio)">B1 (Intermedio)</option>
-                            <option value="B2 (Intermedio Alto)">B2 (Intermedio Alto)</option>
-                            <option value="C1 (Avanzado)">C1 (Avanzado)</option>
-                            <option value="C2 (Maestría)">C2 (Maestría)</option>
-                            <option value="Kids / Especial">Kids / Especial</option>
+                            {levels && levels.length > 0 ? (
+                                levels.map(l => (
+                                    <option key={l.id} value={l.name}>{l.name}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>No hay niveles creados</option>
+                            )}
                         </select>
                     </div>
 

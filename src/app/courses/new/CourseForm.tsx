@@ -12,11 +12,17 @@ interface Teacher {
     email: string;
 }
 
-interface CourseFormProps {
-    teachers: Teacher[];
+interface Level {
+    id: string;
+    name: string;
 }
 
-export function CourseForm({ teachers }: CourseFormProps) {
+interface CourseFormProps {
+    teachers: Teacher[];
+    levels: Level[];
+}
+
+export function CourseForm({ teachers, levels }: CourseFormProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [statusFeedback, setStatusFeedback] = useState<"idle" | "success" | "error">("idle");
@@ -63,13 +69,13 @@ export function CourseForm({ teachers }: CourseFormProps) {
                             defaultValue=""
                         >
                             <option value="" disabled>Seleccionar nivel</option>
-                            <option value="A1 (Principiante)">A1 (Principiante)</option>
-                            <option value="A2 (Básico)">A2 (Básico)</option>
-                            <option value="B1 (Intermedio)">B1 (Intermedio)</option>
-                            <option value="B2 (Intermedio Alto)">B2 (Intermedio Alto)</option>
-                            <option value="C1 (Avanzado)">C1 (Avanzado)</option>
-                            <option value="C2 (Maestría)">C2 (Maestría)</option>
-                            <option value="Kids / Especial">Kids / Especial</option>
+                            {levels && levels.length > 0 ? (
+                                levels.map(l => (
+                                    <option key={l.id} value={l.name}>{l.name}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>No hay niveles creados</option>
+                            )}
                         </select>
                     </div>
 
