@@ -149,3 +149,75 @@ export async function softDeleteStudent(studentId: string) {
         return { success: false, error: "Error de base de datos al eliminar el estudiante" };
     }
 }
+
+export async function restoreStudentAction(studentId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+        return { success: false, error: "Sin permisos para restaurar estudiantes" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId }
+        });
+
+        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+            return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        await prisma.student.update({
+            where: { id: studentId },
+            data: { status: "ACTIVE" }
+        });
+
+        revalidatePath("/students");
+        return { success: true };
+    } catch {
+        return { success: false, error: "Error de base de datos al restaurar el estudiante" };
+    }
+}
+
+export async function hardDeleteStudentAction(studentId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+        return { success: false, error: "Sin permisos para eliminar permanentemente" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId }
+        });
+
+        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+            return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        // Transaction to delete relations
+        await prisma.$transaction([
+            prisma.attendance.deleteMany({ where: { studentId } }),
+            prisma.grade.deleteMany({ where: { studentId } }),
+            prisma.enrollment.deleteMany({ where: { studentId } }),
+            prisma.fee.deleteMany({ where: { studentId } }),
+            prisma.student.delete({ where: { id: studentId } })
+        ]);
+
+        revalidatePath("/students");
+        return { success: true };
+    } catch {
+        return { success: false, error: "Error al purgar los datos del estudiante" };
+    }
+}

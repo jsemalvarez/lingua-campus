@@ -6,8 +6,9 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Search, UserPlus, Filter, Eye, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users } from "lucide-react";
 import dayjs from "dayjs";
+import { StudentListActions } from "./components/StudentListActions";
 
 interface PageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -34,8 +35,14 @@ export default async function StudentsPage(props: PageProps) {
     const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
     const skip = (currentPage - 1) * PAGE_SIZE;
 
+    const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
+    const isActiveTab = tabParam !== 'inactive';
+
     // Build the query where clause
-    const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { instituteId: user.instituteId, status: "ACTIVE" };
+    const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { 
+        instituteId: user.instituteId, 
+        status: isActiveTab ? "ACTIVE" : "DELETED" 
+    };
 
     // Add simple text search if query is present
     const query = typeof searchParams.q === 'string' ? searchParams.q : undefined;
@@ -80,6 +87,26 @@ export default async function StudentsPage(props: PageProps) {
                         </Button>
                     </Link>
                 </header>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit mb-6 border border-border/40">
+                    <Link href="/students?tab=active">
+                        <Button
+                            variant="ghost"
+                            className={`px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <Users size={16} className="mr-2" /> Activos
+                        </Button>
+                    </Link>
+                    <Link href="/students?tab=inactive">
+                        <Button
+                            variant="ghost"
+                            className={`px-6 py-2 rounded-md transition-all ${!isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <UserMinus size={16} className="mr-2" /> Inactivos / Papelera
+                        </Button>
+                    </Link>
+                </div>
 
                 {/* Filters & Search */}
                 <Card className="p-4 mb-6 shadow-sm border-border/40">
@@ -138,7 +165,7 @@ export default async function StudentsPage(props: PageProps) {
                                         <tr className="bg-muted/30 border-b border-border/50">
                                             <th className="px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Nombre del Alumno</th>
                                             <th className="px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contacto</th>
-                                            <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Ingreso</th>
+                                            <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">{isActiveTab ? "Ingreso" : "Baja"}</th>
                                             <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Acciones</th>
                                         </tr>
                                     </thead>
@@ -199,11 +226,11 @@ export default async function StudentsPage(props: PageProps) {
                                                     </div>
                                                 </td>
                                                 <td className="hidden lg:table-cell px-3 sm:px-6 py-4 text-right">
-                                                    <Link href={`/students/${student.id}`}>
-                                                        <Button variant="ghost" size="icon" className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary transition-all rounded-full h-8 w-8">
-                                                            <Eye size={16} />
-                                                        </Button>
-                                                    </Link>
+                                                    <StudentListActions 
+                                                        studentId={student.id} 
+                                                        studentName={student.name} 
+                                                        isActive={isActiveTab} 
+                                                    />
                                                 </td>
                                             </tr>
                                         ))}

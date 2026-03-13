@@ -6,7 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, BookOpen, Clock, Users, GraduationCap, FileText } from "lucide-react";
+import { Plus, BookOpen, Clock, Users, GraduationCap, FileText, Layers, Home } from "lucide-react";
 import { DeleteCourseButton } from "./components/DeleteCourseButton";
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -55,13 +55,27 @@ export default async function CoursesPage() {
                             Administra las clases, niveles, y profesores de tu instituto.
                         </p>
                     </div>
-                    {/* Acción Principal */}
-                    <Link href="/courses/new">
-                        <Button className="w-full sm:w-auto premium-gradient shadow-md shadow-primary/20">
-                            <Plus className="mr-2" size={18} />
-                            Crear Nuevo Curso
-                        </Button>
-                    </Link>
+                    {/* Acciones Principales */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Link href="/courses/new">
+                            <Button className="premium-gradient shadow-md shadow-primary/20 flex items-center gap-2">
+                                <Plus size={18} />
+                                Curso
+                            </Button>
+                        </Link>
+                        <Link href="/courses/levels">
+                            <Button variant="outline" className="flex items-center gap-2">
+                                <Layers size={18} className="text-primary" />
+                                Niveles
+                            </Button>
+                        </Link>
+                        <Link href="/courses/classrooms">
+                            <Button variant="outline" className="flex items-center gap-2">
+                                <Home size={18} className="text-primary" />
+                                Aulas
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* ── Listado de Cursos ── */}
