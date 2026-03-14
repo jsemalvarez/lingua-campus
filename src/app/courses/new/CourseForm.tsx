@@ -35,6 +35,16 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
     const [statusFeedback, setStatusFeedback] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
 
+    // Searchable Select State for Teacher
+    const [teacherId, setTeacherId] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    const filteredTeachers = teachers.filter(t => 
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        t.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const handleSubmit = async (formData: FormData) => {
         setStatusFeedback("idle");
 
@@ -86,21 +96,54 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
                         </select>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors relative">
                         <label className="text-sm font-semibold flex items-center justify-between">
                             Profesor Asignado
                             <UserSearch size={14} className="text-muted-foreground" />
                         </label>
-                        <select
-                            name="teacherId"
-                            className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring bg-background text-sm font-medium outline-none transition-all appearance-none"
-                            defaultValue=""
-                        >
-                            <option value="">Aún sin definir</option>
-                            {teachers.map(t => (
-                                <option key={t.id} value={t.id}>{t.name} — {t.email}</option>
-                            ))}
-                        </select>
+                        <input type="hidden" name="teacherId" value={teacherId} />
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder={teachers.length > 0 ? "Buscar profesor..." : "No hay profesores"}
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setIsDropdownOpen(true);
+                                    if (teacherId) setTeacherId("");
+                                }}
+                                onFocus={() => setIsDropdownOpen(true)}
+                                className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring bg-background text-sm font-medium outline-none transition-all placeholder:font-normal"
+                                disabled={teachers.length === 0}
+                            />
+                            {teacherId && (
+                                <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
+                            )}
+                        </div>
+
+                        {isDropdownOpen && searchQuery && (
+                            <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-xl shadow-lg max-h-60 overflow-auto">
+                                {filteredTeachers.length > 0 ? (
+                                    filteredTeachers.map(t => (
+                                        <div
+                                            key={t.id}
+                                            className={`px-4 py-3 cursor-pointer text-sm hover:bg-muted transition-colors ${teacherId === t.id ? 'bg-primary/5 text-primary font-medium' : ''}`}
+                                            onClick={() => {
+                                                setTeacherId(t.id);
+                                                setSearchQuery(`${t.name} — ${t.email}`);
+                                                setIsDropdownOpen(false);
+                                            }}
+                                        >
+                                            {t.name} <span className="text-muted-foreground text-xs ml-1">({t.email})</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-3 text-sm text-muted-foreground italic">
+                                        No se encontraron profesores...
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-1 text-right">Puedes asignarlo después</p>
                     </div>
 
