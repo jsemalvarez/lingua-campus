@@ -53,6 +53,7 @@ model User {
   phone       String?    // Celular
   avatarUrl   String?
   status      String   @default("ACTIVE") // ACTIVE, DELETED
+  preferences Json?      // Almacena preferencias visuales como ordenamiento de cursos
   
   instituteId String?
   institute   Institute? @relation(fields: [instituteId], references: [id])
