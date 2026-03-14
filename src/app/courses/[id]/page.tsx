@@ -5,11 +5,12 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange, AlertTriangle } from "lucide-react";
 import { ScheduleList } from "./ScheduleList";
 import { LessonList } from "./lessons/components/LessonList";
 import { EditCourseModal } from "../components/EditCourseModal";
 import { RemoveStudentButton } from "../components/RemoveStudentButton";
+import { DeleteCourseButton } from "../components/DeleteCourseButton";
 
 // TODO: Create StudentList component to handle enrollments. For now we will create an empty block
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -154,64 +155,89 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                             </div>
                         </Card>
 
-                        {/* COLUMNA DERECHA: Alumnos Inscritos */}
-                        <Card className="p-6 shadow-md border-border/40 overflow-hidden flex flex-col h-full bg-card/60 backdrop-blur-sm">
-                            <div className="space-y-4 flex-1 flex flex-col min-h-0">
-                                <div className="flex items-center justify-between shrink-0">
-                                    <div>
-                                        <h2 className="text-lg font-bold flex items-center gap-2">
-                                            <Users size={20} className="text-blue-500" />
-                                            Alumnos Inscritos ({course.enrollments.length})
-                                        </h2>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Listado oficial de estudiantes activos en este grupo.
-                                        </p>
+                        {/* COLUMNA DERECHA: Alumnos Inscritos y Zona Peligrosa */}
+                        <div className="flex flex-col gap-6 lg:gap-8 min-h-0">
+                            <Card className="p-6 shadow-md border-border/40 overflow-hidden flex flex-col h-full bg-card/60 backdrop-blur-sm">
+                                <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                                    <div className="flex items-center justify-between shrink-0">
+                                        <div>
+                                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                                <Users size={20} className="text-blue-500" />
+                                                Alumnos Inscritos ({course.enrollments.length})
+                                            </h2>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                Listado oficial de estudiantes activos en este grupo.
+                                            </p>
+                                        </div>
+                                        <Link href={`/enrollments/new?course=${course.id}`}>
+                                            <div className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
+                                                Inscribir Alumno
+                                            </div>
+                                        </Link>
                                     </div>
-                                    <Link href={`/enrollments/new?course=${course.id}`}>
-                                        <div className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
-                                            Inscribir Alumno
-                                        </div>
-                                    </Link>
-                                </div>
 
-                                <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                                    {course.enrollments.length === 0 ? (
-                                        <div className="text-center p-10 border border-dashed rounded-xl border-border/50 text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
-                                            <Users size={32} className="mb-3 opacity-30" />
-                                            Todavía no hay ningún estudiante registrado en este curso.
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3 mt-4">
-                                            {course.enrollments.map(enrol => (
-                                                <div key={enrol.student.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors group">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-9 w-9 bg-primary/10 text-primary font-bold rounded-full flex items-center justify-center text-sm">
-                                                            {enrol.student.name.charAt(0).toUpperCase()}
+                                    <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar min-h-[300px]">
+                                        {course.enrollments.length === 0 ? (
+                                            <div className="text-center p-10 border border-dashed rounded-xl border-border/50 text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
+                                                <Users size={32} className="mb-3 opacity-30" />
+                                                Todavía no hay ningún estudiante registrado en este curso.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 mt-4">
+                                                {course.enrollments.map(enrol => (
+                                                    <div key={enrol.student.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors group">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-9 w-9 bg-primary/10 text-primary font-bold rounded-full flex items-center justify-center text-sm">
+                                                                {enrol.student.name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-sm">{enrol.student.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{enrol.student.phone || "Sin teléfono"}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="font-semibold text-sm">{enrol.student.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{enrol.student.phone || "Sin teléfono"}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="px-3 py-1 rounded border border-border/40 text-xs font-semibold text-muted-foreground bg-muted/20">
+                                                                Activo
+                                                            </div>
+                                                            {user.role === "ADMIN" && (
+                                                                <RemoveStudentButton
+                                                                    enrollmentId={enrol.id}
+                                                                    courseId={course.id}
+                                                                    studentName={enrol.student.name}
+                                                                />
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="px-3 py-1 rounded border border-border/40 text-xs font-semibold text-muted-foreground bg-muted/20">
-                                                            Activo
-                                                        </div>
-                                                        {user.role === "ADMIN" && (
-                                                            <RemoveStudentButton
-                                                                enrollmentId={enrol.id}
-                                                                courseId={course.id}
-                                                                studentName={enrol.student.name}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
+                            </Card>
+
+                            {/* DANGER ZONE */}
+                            {user.role === "ADMIN" && (
+                                <Card className="border-red-500/30 bg-red-500/5 shrink-0">
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-2 text-red-600 mb-4">
+                                            <AlertTriangle size={24} />
+                                            <h3 className="text-lg font-bold">Zona de Peligro</h3>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                            <div>
+                                                <h4 className="font-semibold text-foreground">Eliminar Curso</h4>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    Al eliminar el curso se borrarán de forma irreversible todos sus registros asociados, incluyendo horarios, dictados y las inscripciones de alumnos (los estudiantes seguirán existiendo en el sistema de todos modos).
+                                                </p>
+                                            </div>
+                                            <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                                                <DeleteCourseButton id={course.id} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            )}
+                        </div>
 
                     </div>
                 </div>
