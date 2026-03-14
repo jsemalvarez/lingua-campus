@@ -32,6 +32,14 @@ export function EditCourseModal({ courseId, currentName, currentLevel, levels, c
     const [classroomId, setClassroomId] = useState(currentClassroomId || "");
     const [teacherId, setTeacherId] = useState(currentTeacherId || "");
 
+    const [teacherSearchQuery, setTeacherSearchQuery] = useState(currentTeacherName || "");
+    const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false);
+
+    const filteredTeachers = (teachers || []).filter(t => 
+        t.name.toLowerCase().includes(teacherSearchQuery.toLowerCase()) || 
+        (t.email && t.email.toLowerCase().includes(teacherSearchQuery.toLowerCase()))
+    );
+
     useEffect(() => {
         setMounted(true);
     }, []);
@@ -137,24 +145,51 @@ export function EditCourseModal({ courseId, currentName, currentLevel, levels, c
                         </select>
                     </div>
 
-                    <div className="space-y-1.5 focus-within:text-blue-500 transition-colors">
+                    <div className="space-y-1.5 focus-within:text-blue-500 transition-colors relative">
                         <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                             Profesor Asignado
                         </label>
-                        <select
-                            value={teacherId}
-                            onChange={(e) => setTeacherId(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all focus:border-blue-500 appearance-none cursor-pointer"
-                        >
-                            <option value="">Sin profesor definido</option>
-                            {teachers && teachers.length > 0 ? (
-                                teachers.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))
-                            ) : (
-                                <option value="" disabled>No hay profesores disponibles</option>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder={teachers && teachers.length > 0 ? "Buscar Profesor..." : "No hay profesores"}
+                                value={teacherSearchQuery}
+                                onChange={(e) => {
+                                    setTeacherSearchQuery(e.target.value);
+                                    setIsTeacherDropdownOpen(true);
+                                    if (teacherId) setTeacherId("");
+                                }}
+                                onFocus={() => setIsTeacherDropdownOpen(true)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all focus:border-blue-500"
+                            />
+                            {teacherId && (
+                                <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
                             )}
-                        </select>
+                        </div>
+
+                        {isTeacherDropdownOpen && teacherSearchQuery !== undefined && (
+                            <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-xl shadow-lg max-h-60 overflow-auto">
+                                {filteredTeachers.length > 0 ? (
+                                    filteredTeachers.map(t => (
+                                        <div
+                                            key={t.id}
+                                            className={`px-4 py-3 cursor-pointer text-sm hover:bg-muted transition-colors ${teacherId === t.id ? 'bg-primary/5 text-primary font-medium' : ''}`}
+                                            onClick={() => {
+                                                setTeacherId(t.id);
+                                                setTeacherSearchQuery(t.name);
+                                                setIsTeacherDropdownOpen(false);
+                                            }}
+                                        >
+                                            {t.name}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-3 text-sm text-muted-foreground italic">
+                                        No se encontraron profesores...
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {status === "success" && (
