@@ -6,8 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, BookOpen, Clock, Users, GraduationCap, FileText, Layers, Home } from "lucide-react";
-import { DeleteCourseButton } from "./components/DeleteCourseButton";
+import { Plus, BookOpen, Clock, Users, GraduationCap, FileText, Layers, Home, MapPin } from "lucide-react";
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -30,7 +29,13 @@ export default async function CoursesPage() {
         where: { instituteId: user.instituteId },
         include: {
             teacher: { select: { name: true } },
+            classroom: { select: { name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
+            enrollments: {
+                where: { status: "ACTIVE", student: { status: "ACTIVE" } },
+                include: { student: { select: { name: true } } },
+                orderBy: { student: { name: 'asc' } }
+            },
             _count: {
                 select: { enrollments: { where: { status: "ACTIVE" } } }
             }
@@ -90,60 +95,97 @@ export default async function CoursesPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="flex flex-col gap-5 w-full">
                         {courses.map(course => (
-                            <Card key={course.id} className="group overflow-hidden flex flex-col hover:border-primary/40 transition-colors shadow-sm bg-card/60 backdrop-blur-sm">
+                            <Card key={course.id} className="group overflow-hidden flex flex-col hover:border-primary/40 transition-colors shadow-sm bg-card/60 backdrop-blur-sm relative">
                                 {/* Decoración de tarjeta */}
-                                <div className="h-2 w-full premium-gradient opacity-80" />
+                                <div className="absolute left-0 top-0 bottom-0 w-1.5 premium-gradient opacity-80" />
 
-                                <div className="p-5 flex-1 flex flex-col">
-                                    {/* Cabecera */}
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">
-                                                {course.name}
-                                            </h3>
-                                            <span className="inline-block px-2 py-0.5 mt-1.5 rounded-md text-xs font-semibold bg-muted text-muted-foreground">
-                                                Nivel: {course.level || "General"}
-                                            </span>
+                                <div className="p-0 flex flex-col sm:flex-row w-full h-full relative z-10">
+                                    
+                                    {/* Columna 1: Curso, Nivel y Horarios */}
+                                    <div className="flex-1 p-5 sm:p-6 sm:border-r border-border/40 flex flex-col justify-between">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 className="font-bold text-xl leading-tight group-hover:text-primary transition-colors">
+                                                    {course.name}
+                                                </h3>
+                                                <span className="inline-block px-2 py-1 mt-2 mb-4 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                                    Nivel: {course.level || "General"}
+                                                </span>
+                                            </div>
                                         </div>
-                                        {user.role === "ADMIN" && (
-                                            <DeleteCourseButton id={course.id} />
-                                        )}
-                                    </div>
 
-                                    {/* Estadísticas / Info */}
-                                    <div className="space-y-3 mb-6 flex-1 text-sm">
-                                        <div className="flex items-center text-muted-foreground gap-2">
-                                            <Users size={16} className="text-blue-500/80" />
-                                            <span className="font-medium text-foreground">{course._count.enrollments} alumnos</span> inscriptos
-                                        </div>
-                                        <div className="flex items-center text-muted-foreground gap-2">
-                                            <GraduationCap size={16} className="text-amber-500/80" />
-                                            <span>Prof: <span className="font-medium text-foreground">{course.teacher?.name || "No asignado"}</span></span>
-                                        </div>
-                                        <div className="flex items-start text-muted-foreground gap-2">
-                                            <Clock size={16} className="text-emerald-500/80 mt-0.5 shrink-0" />
-                                            <div className="flex flex-col">
-                                                {course.schedules.length === 0 ? (
-                                                    <span className="italic">Horarios a definir</span>
-                                                ) : (
-                                                    course.schedules.map(sch => (
-                                                        <span key={sch.id} className="text-xs">{DAYS_OF_WEEK[sch.dayOfWeek]} • {sch.startTime} - {sch.endTime}</span>
-                                                    ))
-                                                )}
+                                        <div className="space-y-2 mt-auto text-sm">
+                                            <div className="flex gap-2">
+                                                <div className="mt-0.5"><Clock size={16} className="text-emerald-500/80 shrink-0" /></div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-muted-foreground mb-1">Días y Horarios:</span>
+                                                    {course.schedules.length === 0 ? (
+                                                        <span className="italic text-muted-foreground">A definir</span>
+                                                    ) : (
+                                                        <ul className="space-y-1">
+                                                            {course.schedules.map(sch => (
+                                                                <li key={sch.id} className="text-foreground">
+                                                                    <span className="font-medium">{DAYS_OF_WEEK[sch.dayOfWeek]}</span> • {sch.startTime} - {sch.endTime}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Acciones de Footer */}
-                                    <div className="pt-4 border-t border-border/40 mt-auto flex gap-2">
-                                        <Link href={`/courses/${course.id}`} className="w-full">
-                                            <Button variant="outline" size="sm" className="w-full h-9 text-xs">
-                                                Administrar
-                                            </Button>
-                                        </Link>
+                                    {/* Columna 2: Lista de alumnos */}
+                                    <div className="flex-1 p-5 sm:p-6 sm:border-r border-border/40 bg-muted/10">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Users size={16} className="text-blue-500/80" />
+                                            <h4 className="font-semibold text-sm">Alumnos Inscriptos ({course._count.enrollments})</h4>
+                                        </div>
+                                        <div className="text-sm">
+                                            {course.enrollments.length === 0 ? (
+                                                <span className="italic text-muted-foreground">Sin alumnos cargados.</span>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1.5 max-h-[140px] overflow-y-auto scrollbar-hide">
+                                                    {course.enrollments.map(enr => (
+                                                        <span key={enr.id} className="inline-block px-2.5 py-1 text-xs bg-background border border-border/50 text-foreground rounded-full shadow-sm">
+                                                            {enr.student.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {/* Columna 3: Profesor, Aula y Acción Administrar */}
+                                    <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
+                                        <div className="space-y-4 text-sm">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                                    <GraduationCap size={16} className="text-amber-500/80" />
+                                                    <span className="font-semibold">Profesor a Cargo:</span>
+                                                </div>
+                                                <span className="text-foreground font-medium pl-6">{course.teacher?.name || "No asignado"}</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                                    <MapPin size={16} className="text-red-500/80" />
+                                                    <span className="font-semibold">Aula Asignada:</span>
+                                                </div>
+                                                <span className="text-foreground font-medium pl-6">{course.classroom?.name || "Sin aula asignada"}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-8 pt-4 border-t border-border/30">
+                                            <Link href={`/courses/${course.id}`} className="w-full inline-block">
+                                                <div className="w-full px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
+                                                    Administrar Curso
+                                                </div>
+                                            </Link>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </Card>
                         ))}
