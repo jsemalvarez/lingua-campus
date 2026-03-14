@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createEnrollmentAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, BookOpen, Search } from "lucide-react";
+import Link from "next/link";
 
 interface CourseOption {
     id: string;
@@ -33,6 +34,15 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
     // State
     const [courseId, setCourseId] = useState(preselectedCourseId || "");
     const [studentId, setStudentId] = useState("");
+
+    // Searchable Select State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    const filteredStudents = students.filter(s =>
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -86,25 +96,54 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
                     </select>
                 </div>
 
-                <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                <div className="space-y-1.5 focus-within:text-blue-600 transition-colors relative z-20">
                     <label className="text-sm font-semibold flex items-center gap-2">
-                        <Search size={16} /> Seleccionar Estudiante
+                        <Search size={16} /> Buscar Estudiante
                     </label>
-                    <select
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring bg-background text-sm font-medium outline-none transition-all appearance-none"
-                        required
-                    >
-                        <option value="" disabled>Busca y selecciona un alumno...</option>
-                        {students.map(s => (
-                            <option key={s.id} value={s.id}>
-                                {s.name} {s.email ? `- ${s.email}` : ""}
-                            </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
-                        ¿No lo encuentras? <span className="text-primary cursor-pointer hover:underline" onClick={() => router.push("/students/new")}>Regístralo primero</span>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Empieza a escribir el nombre..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setIsDropdownOpen(true);
+                                if (studentId) setStudentId(""); // Clear selection if writing again
+                            }}
+                            onFocus={() => setIsDropdownOpen(true)}
+                            className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring bg-background text-sm font-medium outline-none transition-all placeholder:font-normal"
+                        />
+                        {studentId && (
+                            <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
+                        )}
+                    </div>
+
+                    {isDropdownOpen && searchQuery && (
+                        <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                            {filteredStudents.length > 0 ? (
+                                filteredStudents.map(s => (
+                                    <div
+                                        key={s.id}
+                                        className={`px-4 py-3 cursor-pointer text-sm hover:bg-muted transition-colors ${studentId === s.id ? 'bg-primary/5 text-primary font-medium' : ''}`}
+                                        onClick={() => {
+                                            setStudentId(s.id);
+                                            setSearchQuery(s.name);
+                                            setIsDropdownOpen(false);
+                                        }}
+                                    >
+                                        {s.name} <span className="text-muted-foreground text-xs ml-1">{s.email ? `(${s.email})` : ""}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="px-4 py-3 text-sm text-muted-foreground italic">
+                                    No se encontraron alumnos con ese nombre...
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground mt-3 text-right relative z-10 w-full">
+                        ¿No lo encuentras? <Link href="/students/new" className="text-primary font-medium hover:underline cursor-pointer relative z-20">Regístralo primero</Link>
                     </p>
                 </div>
             </div>

@@ -84,8 +84,8 @@ export default async function NewEnrollmentPage({ searchParams }: { searchParams
                 </header>
 
                 <div className="max-w-xl">
-                    <Card className="shadow-md border-border/40 overflow-hidden bg-card/60 backdrop-blur-sm">
-                        <div className="h-2 w-full premium-gradient" />
+                    <Card className="shadow-md border-border/40 overflow-visible bg-card/60 backdrop-blur-sm relative z-10">
+                        <div className="h-2 w-full premium-gradient rounded-t-xl" />
 
                         <EnrollmentForm
                             courses={courses}
