@@ -33,7 +33,10 @@ export function SortableCourseCard({ course, userRole, DAYS_OF_WEEK }: SortableC
         <div ref={setNodeRef} style={style} className="relative">
             <Card className={`group overflow-hidden flex flex-col hover:border-primary/40 transition-colors shadow-sm bg-card/60 backdrop-blur-sm relative ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
                 {/* Decoración de tarjeta */}
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 premium-gradient opacity-80" />
+                <div 
+                    className={`absolute left-0 top-0 bottom-0 w-1.5 opacity-80 ${!course.color ? 'premium-gradient' : ''}`} 
+                    style={course.color ? { backgroundColor: course.color } : {}}
+                />
 
                 <div className="p-0 flex flex-col sm:flex-row w-full h-full relative z-10">
                     

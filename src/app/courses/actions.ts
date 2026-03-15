@@ -25,6 +25,7 @@ export async function createCourseAction(formData: FormData) {
 
     const name = formData.get("name") as string;
     const level = formData.get("level") as string;
+    const color = formData.get("color") as string;
     const teacherId = formData.get("teacherId") as string;
     const classroomId = formData.get("classroomId") as string;
 
@@ -37,6 +38,7 @@ export async function createCourseAction(formData: FormData) {
             data: {
                 name: name.trim(),
                 level: level ? level.trim() : null,
+                color: color || "#3b82f6",
                 teacherId: teacherId || null,
                 classroomId: classroomId || null,
                 instituteId: user.instituteId as string,
@@ -163,7 +165,7 @@ export async function updateCourseTeacherAction(courseId: string, teacherId: str
     }
 }
 
-export async function updateCourseAction(courseId: string, data: { name?: string; level?: string; classroomId?: string; teacherId?: string | null }) {
+export async function updateCourseAction(courseId: string, data: { name?: string; level?: string; color?: string; classroomId?: string; teacherId?: string | null }) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
     if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden editar el curso" };
@@ -183,6 +185,7 @@ export async function updateCourseAction(courseId: string, data: { name?: string
             data: {
                 name: data.name.trim(),
                 level: data.level?.trim() || null,
+                color: data.color || "#3b82f6",
                 classroomId: data.classroomId || null,
                 teacherId: data.teacherId || null,
             }

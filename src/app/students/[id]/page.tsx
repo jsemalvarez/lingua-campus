@@ -98,7 +98,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                             ) : (
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     {student.enrollments.map(e => (
-                                        <Card key={e.id} className="p-5 border-border/40 hover:border-primary/50 transition-colors group relative overflow-hidden bg-card/50">
+                                        <Card key={e.id} className="p-5 border-border/40 hover:border-primary/50 transition-colors group relative overflow-hidden bg-card/50" style={{ borderLeft: `4px solid ${e.course.color || "#3b82f6"}` }}>
                                             <div className="flex items-start justify-between">
                                                 <Link href={`/courses/${e.course.id}`} className="flex-1">
                                                     <div>

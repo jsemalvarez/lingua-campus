@@ -51,7 +51,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
     const instituteTeachers = user.role === "ADMIN" ? await prisma.user.findMany({
         where: { instituteId: user.instituteId, role: "TEACHER" },
-        select: { id: true, name: true },
+        select: { id: true, name: true, email: true },
         orderBy: { name: 'asc' }
     }) : [];
 
@@ -85,7 +85,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                            <div className="h-12 w-12 rounded-2xl flex items-center justify-center shadow-md text-white" style={{ backgroundColor: course.color || "#3b82f6" }}>
                                 <BookOpen size={24} />
                             </div>
                             <div>
@@ -105,6 +105,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             currentTeacherId={course.teacher?.id || null}
                                             currentTeacherName={course.teacher?.name || null}
                                             teachers={instituteTeachers}
+                                            currentColor={course.color}
                                         />
                                     )}
                                 </div>

@@ -111,6 +111,7 @@ model Course {
   id          String   @id @default(cuid())
   name        String
   level       String?
+  color       String   @default("#3b82f6") // Default blue-500
   
   teacherId   String?
   teacher     User?     @relation("CourseTeacher", fields: [teacherId], references: [id])

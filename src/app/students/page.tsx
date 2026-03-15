@@ -60,6 +60,16 @@ export default async function StudentsPage(props: PageProps) {
     const [students, totalStudents] = await Promise.all([
         prisma.student.findMany({
             where: whereClause,
+            include: {
+                enrollments: {
+                    where: { status: "ACTIVE" },
+                    select: {
+                        course: {
+                            select: { id: true, name: true, color: true }
+                        }
+                    }
+                }
+            },
             orderBy: { name: "asc" },
             skip,
             take: PAGE_SIZE,
@@ -184,16 +194,45 @@ export default async function StudentsPage(props: PageProps) {
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
                                         {students.map((student) => (
-                                            <tr key={student.id} className="hover:bg-muted/40 transition-colors group">
-                                                <td className="px-3 sm:px-2 py-4 sm:py-2">
+                                            <tr key={student.id} className="hover:bg-muted/40 transition-colors group relative border-b border-border/40">
+                                                    <td className="px-3 sm:px-6 py-4 sm:py-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="hidden md:flex h-10 w-10 flex-shrink-0 rounded-full bg-primary/10 items-center justify-center text-primary font-bold shadow-sm shadow-primary/5">
+                                                        <div className="hidden md:flex h-9 w-9 flex-shrink-0 rounded-full bg-primary/10 items-center justify-center text-primary text-xs font-black shadow-sm shadow-primary/5">
                                                             {student.name.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <div>
-                                                            <Link href={`/students/${student.id}`} className="font-semibold text-sm underline md:no-underline md:hover:underline hover:text-primary transition-colors text-foreground">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <Link href={`/students/${student.id}`} className="font-bold text-sm hover:text-primary transition-colors text-foreground">
                                                                 {student.name}
                                                             </Link>
+                                                            
+                                                            {/* Course Badge */}
+                                                            {student.enrollments && student.enrollments.length > 0 ? (
+                                                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                                                    {student.enrollments.map((e: any) => (
+                                                                        <span 
+                                                                            key={e.course.id}
+                                                                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider border transition-all shadow-sm"
+                                                                            style={{ 
+                                                                                backgroundColor: `${e.course.color}08`, 
+                                                                                color: e.course.color, 
+                                                                                borderColor: `${e.course.color}30` 
+                                                                            }}
+                                                                        >
+                                                                            <span 
+                                                                                className="w-1 h-1 rounded-full mr-1.5 animate-pulse" 
+                                                                                style={{ backgroundColor: e.course.color }}
+                                                                            />
+                                                                            {e.course.name.toUpperCase()}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="mt-0.5">
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider border border-border/40 bg-muted/30 text-muted-foreground/60 shadow-sm uppercase">
+                                                                        Sin curso
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </td>

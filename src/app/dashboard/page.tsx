@@ -377,40 +377,27 @@ export default async function DashboardPage() {
             student: { status: 'ACTIVE' }
         },
         include: {
-            course: { select: { name: true } }
+            course: { select: { name: true, color: true } }
         }
     });
 
     // Grouping by course name
-    const courseCounts: Record<string, number> = {};
+    const courseInfo: Record<string, { count: number; color: string }> = {};
     const enrolledStudentIds = new Set<string>();
 
     activeEnrollments.forEach(enrollment => {
         const courseName = enrollment.course.name;
-        courseCounts[courseName] = (courseCounts[courseName] || 0) + 1;
+        if (!courseInfo[courseName]) {
+            courseInfo[courseName] = { count: 0, color: enrollment.course.color || "#3b82f6" };
+        }
+        courseInfo[courseName].count += 1;
         enrolledStudentIds.add(enrollment.studentId);
     });
 
-    // Color Palette generator for courses
-    const generateColor = (index: number) => {
-        const colors = [
-            "#3b82f6", // blue-500
-            "#8b5cf6", // violet-500
-            "#ec4899", // pink-500
-            "#14b8a6", // teal-500
-            "#f59e0b", // amber-500
-            "#ef4444", // red-500
-            "#84cc16", // lime-500
-            "#0ea5e9"  // sky-500
-        ];
-        return colors[index % colors.length];
-    };
-
-    let colorIndex = 0;
-    const chartData = Object.entries(courseCounts).map(([name, count]) => ({
+    const chartData = Object.entries(courseInfo).map(([name, info]) => ({
         name,
-        studentCount: count,
-        color: generateColor(colorIndex++)
+        studentCount: info.count,
+        color: info.color
     }));
 
     // Find students without any ACTIVE courses
