@@ -23,7 +23,7 @@ export async function getClassroomsAction() {
     if (!user) return [];
 
     return await prisma.classroom.findMany({
-        where: { instituteId: user.instituteId },
+        where: { instituteId: user.instituteId as string },
         orderBy: { name: 'asc' }
     });
 }
@@ -41,7 +41,7 @@ export async function createClassroomAction(data: { name: string; capacity?: num
             data: {
                 name: data.name.trim(),
                 capacity: data.capacity || null,
-                instituteId: user.instituteId
+                instituteId: user.instituteId as string
             }
         });
 
