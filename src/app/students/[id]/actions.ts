@@ -221,3 +221,51 @@ export async function hardDeleteStudentAction(studentId: string) {
         return { success: false, error: "Error al purgar los datos del estudiante" };
     }
 }
+
+export async function changeStudentCourseAction(enrollmentId: string, newCourseId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || user.role !== "ADMIN" || !user.instituteId) {
+        return { success: false, error: "Solo administradores pueden cambiar el curso" };
+    }
+
+    try {
+        // Verificar que la inscripción existe y pertenece al instituto
+        const enrollment = await prisma.enrollment.findUnique({
+            where: { id: enrollmentId },
+            include: { student: true }
+        });
+
+        if (!enrollment || enrollment.student.instituteId !== user.instituteId) {
+            return { success: false, error: "Inscripción no encontrada o sin permisos" };
+        }
+
+        // Verificar que el nuevo curso existe y pertenece al instituto
+        const newCourse = await prisma.course.findUnique({
+            where: { id: newCourseId }
+        });
+
+        if (!newCourse || newCourse.instituteId !== user.instituteId) {
+            return { success: false, error: "El curso de destino no existe o no pertenece a tu instituto" };
+        }
+
+        // Actualizar la inscripción
+        await prisma.enrollment.update({
+            where: { id: enrollmentId },
+            data: { courseId: newCourseId }
+        });
+
+        revalidatePath(`/students/${enrollment.studentId}`);
+        revalidatePath("/courses");
+        return { success: true };
+    } catch (e: any) {
+        console.error("Error changing student course:", e);
+        return { success: false, error: "Error al cambiar el curso del estudiante" };
+    }
+}

@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 import { StudentProfileView } from "./StudentProfileView";
 import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
 import { StudentDangerZone } from "./StudentDangerZone";
+import { ChangeCourseModal } from "./components/ChangeCourseModal";
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
@@ -30,7 +31,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         where: { id: id },
         include: {
             enrollments: {
-                include: { course: true }
+                include: { course: true },
+                orderBy: { enrolledAt: 'desc' }
             },
             fees: {
                 orderBy: { createdAt: 'desc' },
@@ -42,6 +44,12 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     if (!student || student.instituteId !== user.instituteId) {
         notFound();
     }
+
+    const availableCourses = await prisma.course.findMany({
+        where: { instituteId: user.instituteId },
+        select: { id: true, name: true, level: true },
+        orderBy: { name: 'asc' }
+    });
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -90,24 +98,34 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                             ) : (
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     {student.enrollments.map(e => (
-                                        <Link href={`/courses/${e.course.id}`} key={e.id}>
-                                            <Card className="p-5 border-border/40 hover:border-primary/50 transition-colors group relative overflow-hidden bg-card/50">
-                                                <div className="flex items-start justify-between">
+                                        <Card key={e.id} className="p-5 border-border/40 hover:border-primary/50 transition-colors group relative overflow-hidden bg-card/50">
+                                            <div className="flex items-start justify-between">
+                                                <Link href={`/courses/${e.course.id}`} className="flex-1">
                                                     <div>
                                                         <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
                                                             {e.course.name}
                                                         </h4>
                                                         <p className="text-sm text-muted-foreground mt-0.5">Nivel: {e.course.level}</p>
                                                     </div>
+                                                </Link>
+                                                <div className="flex flex-col items-end gap-2">
                                                     <span className={`px-2 py-1 text-xs font-bold rounded-lg ${e.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-orange-500/10 text-orange-600'}`}>
                                                         {e.status}
                                                     </span>
+                                                    {(user.role === "ADMIN" || user.role === "SUPERADMIN") && (
+                                                        <ChangeCourseModal 
+                                                            enrollmentId={e.id}
+                                                            currentCourseId={e.course.id}
+                                                            currentCourseName={e.course.name}
+                                                            availableCourses={availableCourses}
+                                                        />
+                                                    )}
                                                 </div>
-                                                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                    <Clock size={14} /> Fecha de alta: {dayjs(e.enrolledAt).format("DD/MM/YYYY")}
-                                                </div>
-                                            </Card>
-                                        </Link>
+                                            </div>
+                                            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                                <Clock size={14} /> Fecha de alta: {dayjs(e.enrolledAt).format("DD/MM/YYYY")}
+                                            </div>
+                                        </Card>
                                     ))}
                                 </div>
                             )}
