@@ -19,6 +19,7 @@ model Institute {
   id          String   @id @default(cuid())
   name        String
   subdomain   String   @unique
+  customDomain String? @unique
   address     String?
   phone       String?
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
