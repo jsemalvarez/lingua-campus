@@ -8,6 +8,8 @@ import { ArrowLeft, BookOpen, Clock } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import dayjs from "dayjs";
 import { StudentProfileView } from "./StudentProfileView";
+import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
+import { StudentDangerZone } from "./StudentDangerZone";
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
@@ -56,6 +58,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     </Link>
                     <h1 className="text-3xl font-bold tracking-tight">Ficha del Estudiante</h1>
                 </header>
+
+                {student.status === "PRE_INSCRIBED" && (
+                    <ActivateStudentBanner studentId={student.id} studentName={student.name} />
+                )}
 
                 <div className="grid gap-8 lg:grid-cols-4 items-start">
                     <div className="lg:col-span-3">
@@ -108,38 +114,47 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                         </div>
                     </div>
 
-                    <div className="lg:col-span-1 space-y-6">
-                        <Card className="p-5 border-border/40 bg-card/60">
-                            <h3 className="font-bold flex items-center gap-2 mb-4 text-sm uppercase tracking-wider text-muted-foreground">
-                                Últimos Pagos Registrados
-                            </h3>
+                    {student.status !== "PRE_INSCRIBED" && (
+                        <div className="lg:col-span-1 space-y-6">
+                            <Card className="p-5 border-border/40 bg-card/60">
+                                <h3 className="font-bold flex items-center gap-2 mb-4 text-sm uppercase tracking-wider text-muted-foreground">
+                                    Últimos Pagos Registrados
+                                </h3>
 
-                            {student.fees.length === 0 ? (
-                                <p className="text-sm italic text-muted-foreground border-l-2 pl-3 border-border">Sin movimiento financiero.</p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {student.fees.map(f => (
-                                        <div key={f.id} className="flex justify-between items-center text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-emerald-600">${f.amount}</span>
-                                                <span className="text-xs text-muted-foreground">{f.month}/{f.year}</span>
+                                {student.fees.length === 0 ? (
+                                    <p className="text-sm italic text-muted-foreground border-l-2 pl-3 border-border">Sin movimiento financiero.</p>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {student.fees.map(f => (
+                                            <div key={f.id} className="flex justify-between items-center text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-emerald-600">${f.amount}</span>
+                                                    <span className="text-xs text-muted-foreground">{f.month}/{f.year}</span>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="font-medium text-foreground/80">{f.status}</span>
+                                                    <span className="text-xs text-muted-foreground">{dayjs(f.datePaid || f.createdAt).format("DD/MMM")}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col items-end">
-                                                <span className="font-medium text-foreground/80">{f.status}</span>
-                                                <span className="text-xs text-muted-foreground">{dayjs(f.datePaid || f.createdAt).format("DD/MMM")}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                )}
 
-                            <Link href="/payments" className="block w-full mt-4 text-center rounded-lg bg-primary/10 text-primary py-2 text-sm font-bold hover:bg-primary/20 transition-colors">
-                                Ir a Cobranzas
-                            </Link>
+                                <Link href="/payments" className="block w-full mt-4 text-center rounded-lg bg-primary/10 text-primary py-2 text-sm font-bold hover:bg-primary/20 transition-colors">
+                                    Ir a Cobranzas
+                                </Link>
 
-                        </Card>
-                    </div>
+                            </Card>
+                        </div>
+                    )}
                 </div>
+
+                {/* Danger Zone */}
+                {(user.role === "ADMIN" || user.role === "SUPERADMIN") && (
+                    <div className="lg:col-span-4 mt-8">
+                        <StudentDangerZone studentId={student.id} studentStatus={student.status} />
+                    </div>
+                )}
             </main>
         </div>
     );

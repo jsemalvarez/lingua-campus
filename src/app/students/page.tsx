@@ -36,12 +36,14 @@ export default async function StudentsPage(props: PageProps) {
     const skip = (currentPage - 1) * PAGE_SIZE;
 
     const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
-    const isActiveTab = tabParam !== 'inactive';
+    const isActiveTab = tabParam === 'active';
+    const isInactiveTab = tabParam === 'inactive';
+    const isPreEnrolledTab = tabParam === 'pre-enrolled';
 
     // Build the query where clause
     const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { 
         instituteId: user.instituteId, 
-        status: isActiveTab ? "ACTIVE" : "DELETED" 
+        status: isPreEnrolledTab ? "PRE_INSCRIBED" : (isInactiveTab ? "DELETED" : "ACTIVE")
     };
 
     // Add simple text search if query is present
@@ -89,21 +91,32 @@ export default async function StudentsPage(props: PageProps) {
                 </header>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit mb-6 border border-border/40">
+                <div className="flex flex-wrap items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit mb-6 border border-border/40">
                     <Link href="/students?tab=active">
                         <Button
                             variant="ghost"
-                            className={`px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
                         >
                             <Users size={16} className="mr-2" /> Activos
+                        </Button>
+                    </Link>
+                    <Link href="/students?tab=pre-enrolled">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isPreEnrolledTab ? "bg-background shadow-sm border border-border/60 text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <UserPlus size={16} className="mr-2" /> Pre-inscriptos
                         </Button>
                     </Link>
                     <Link href="/students?tab=inactive">
                         <Button
                             variant="ghost"
-                            className={`px-6 py-2 rounded-md transition-all ${!isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isInactiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
                         >
-                            <UserMinus size={16} className="mr-2" /> Inactivos / Papelera
+                            <UserMinus size={16} className="mr-2" /> Papelera
                         </Button>
                     </Link>
                 </div>
@@ -230,6 +243,7 @@ export default async function StudentsPage(props: PageProps) {
                                                         studentId={student.id} 
                                                         studentName={student.name} 
                                                         isActive={isActiveTab} 
+                                                        status={student.status}
                                                     />
                                                 </td>
                                             </tr>

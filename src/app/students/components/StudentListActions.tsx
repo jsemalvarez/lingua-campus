@@ -6,9 +6,21 @@ import { Eye, RotateCcw, Trash2, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { restoreStudentAction, hardDeleteStudentAction } from "../[id]/actions";
+import { activateStudentAction } from "../actions/activate";
 import { useRouter } from "next/navigation";
+import { UserCheck } from "lucide-react";
 
-export function StudentListActions({ studentId, studentName, isActive }: { studentId: string; studentName: string; isActive: boolean }) {
+export function StudentListActions({ 
+    studentId, 
+    studentName, 
+    isActive,
+    status: currentStatus 
+}: { 
+    studentId: string; 
+    studentName: string; 
+    isActive: boolean;
+    status: string;
+}) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,6 +59,19 @@ export function StudentListActions({ studentId, studentName, isActive }: { stude
         });
     };
 
+    const handleActivate = () => {
+        if (!confirm(`¿Activar a ${studentName} y moverlo a la lista de alumnos activos?`)) return;
+        
+        startTransition(async () => {
+            const res = await activateStudentAction(studentId);
+            if (res.success) {
+                router.refresh();
+            } else {
+                alert(res.error || "Ocurrió un error");
+            }
+        });
+    };
+
     if (isActive) {
         return (
             <Link href={`/students/${studentId}`}>
@@ -54,6 +79,28 @@ export function StudentListActions({ studentId, studentName, isActive }: { stude
                     <Eye size={16} />
                 </Button>
             </Link>
+        );
+    }
+
+    if (currentStatus === "PRE_INSCRIBED") {
+        return (
+            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Activar alumno"
+                    onClick={handleActivate}
+                    disabled={isPending}
+                    className="text-primary hover:text-primary/80 hover:bg-primary/5 h-8 w-8 rounded-full border border-primary/20"
+                >
+                    <UserCheck size={16} />
+                </Button>
+                <Link href={`/students/${studentId}`}>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-all rounded-full h-8 w-8">
+                        <Eye size={16} />
+                    </Button>
+                </Link>
+            </div>
         );
     }
 

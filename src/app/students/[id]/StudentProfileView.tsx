@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
 import { Mail, Phone, User, UserCheck, Edit3, Info } from "lucide-react";
 import dayjs from "dayjs";
-import { StudentDangerZone } from "./StudentDangerZone";
 
 interface StudentData {
     id: string;
@@ -167,12 +166,6 @@ export function StudentProfileView({ student, userRole }: { student: StudentData
                 </Card>
             </div>
 
-            {/* Danger Zone */}
-            {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (
-                <div className="md:col-span-3">
-                    <StudentDangerZone studentId={student.id} />
-                </div>
-            )}
         </div>
     );
 }
