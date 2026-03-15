@@ -37,7 +37,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             lessons: { orderBy: { date: 'asc' } },
             enrollments: {
                 where: { status: "ACTIVE" },
-                select: { id: true, student: { select: { id: true, name: true, phone: true } } }
+                select: { id: true, student: { select: { id: true, name: true, phone: true } } },
+                orderBy: { student: { name: 'asc' } }
             }
         }
     });

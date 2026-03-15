@@ -17,6 +17,7 @@ interface StudentOption {
     id: string;
     name: string;
     email: string | null;
+    _count: { enrollments: number };
 }
 
 interface EnrollmentFormProps {
@@ -34,15 +35,20 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
     // State
     const [courseId, setCourseId] = useState(preselectedCourseId || "");
     const [studentId, setStudentId] = useState("");
+    const [filterNoCourse, setFilterNoCourse] = useState(false);
 
     // Searchable Select State
     const [searchQuery, setSearchQuery] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const filteredStudents = students.filter(s =>
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const filteredStudents = students.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        const matchesFilter = filterNoCourse ? s._count.enrollments === 0 : true;
+        
+        return matchesSearch && matchesFilter;
+    });
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -96,14 +102,27 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
                     </select>
                 </div>
 
-                <div className="space-y-1.5 focus-within:text-blue-600 transition-colors relative z-20">
-                    <label className="text-sm font-semibold flex items-center gap-2">
-                        <Search size={16} /> Buscar Estudiante
-                    </label>
+                <div className="space-y-3 focus-within:text-blue-600 transition-colors relative z-20">
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-semibold flex items-center gap-2">
+                            <Search size={16} /> Buscar Estudiante
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => setFilterNoCourse(!filterNoCourse)}
+                            className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-md transition-all border ${
+                                filterNoCourse 
+                                ? "bg-primary/10 border-primary/30 text-primary shadow-sm" 
+                                : "bg-muted/30 border-border/40 text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            {filterNoCourse ? "Viendo: Sin Curso" : "Filtrar: Sin Curso"}
+                        </button>
+                    </div>
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="Empieza a escribir el nombre..."
+                            placeholder={filterNoCourse ? "Buscar alumnos sin curso..." : "Empieza a escribir el nombre..."}
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -131,7 +150,16 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
                                             setIsDropdownOpen(false);
                                         }}
                                     >
-                                        {s.name} <span className="text-muted-foreground text-xs ml-1">{s.email ? `(${s.email})` : ""}</span>
+                                        <div className="flex items-center justify-between">
+                                            <span>
+                                                {s.name} <span className="text-muted-foreground text-xs ml-1">{s.email ? `(${s.email})` : ""}</span>
+                                            </span>
+                                            {s._count.enrollments > 0 && (
+                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">
+                                                    {s._count.enrollments} {s._count.enrollments === 1 ? 'CURSO' : 'CURSOS'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             ) : (

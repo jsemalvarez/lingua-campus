@@ -60,7 +60,7 @@ export default async function StudentsPage(props: PageProps) {
     const [students, totalStudents] = await Promise.all([
         prisma.student.findMany({
             where: whereClause,
-            orderBy: { createdAt: "desc" },
+            orderBy: { name: "asc" },
             skip,
             take: PAGE_SIZE,
         }),
