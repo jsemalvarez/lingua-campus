@@ -6,8 +6,9 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Search, UserPlus, Filter, Eye, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users } from "lucide-react";
 import dayjs from "dayjs";
+import { StudentListActions } from "./components/StudentListActions";
 
 interface PageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -34,8 +35,16 @@ export default async function StudentsPage(props: PageProps) {
     const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
     const skip = (currentPage - 1) * PAGE_SIZE;
 
+    const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
+    const isActiveTab = tabParam === 'active';
+    const isInactiveTab = tabParam === 'inactive';
+    const isPreEnrolledTab = tabParam === 'pre-enrolled';
+
     // Build the query where clause
-    const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { instituteId: user.instituteId, status: "ACTIVE" };
+    const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { 
+        instituteId: user.instituteId, 
+        status: isPreEnrolledTab ? "PRE_INSCRIBED" : (isInactiveTab ? "DELETED" : "ACTIVE")
+    };
 
     // Add simple text search if query is present
     const query = typeof searchParams.q === 'string' ? searchParams.q : undefined;
@@ -51,7 +60,17 @@ export default async function StudentsPage(props: PageProps) {
     const [students, totalStudents] = await Promise.all([
         prisma.student.findMany({
             where: whereClause,
-            orderBy: { createdAt: "desc" },
+            include: {
+                enrollments: {
+                    where: { status: "ACTIVE" },
+                    select: {
+                        course: {
+                            select: { id: true, name: true, color: true }
+                        }
+                    }
+                }
+            },
+            orderBy: { name: "asc" },
             skip,
             take: PAGE_SIZE,
         }),
@@ -80,6 +99,37 @@ export default async function StudentsPage(props: PageProps) {
                         </Button>
                     </Link>
                 </header>
+
+                {/* Tabs */}
+                <div className="flex flex-wrap items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit mb-6 border border-border/40">
+                    <Link href="/students?tab=active">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <Users size={16} className="mr-2" /> Activos
+                        </Button>
+                    </Link>
+                    <Link href="/students?tab=pre-enrolled">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isPreEnrolledTab ? "bg-background shadow-sm border border-border/60 text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <UserPlus size={16} className="mr-2" /> Pre-inscriptos
+                        </Button>
+                    </Link>
+                    <Link href="/students?tab=inactive">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isInactiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <UserMinus size={16} className="mr-2" /> Papelera
+                        </Button>
+                    </Link>
+                </div>
 
                 {/* Filters & Search */}
                 <Card className="p-4 mb-6 shadow-sm border-border/40">
@@ -138,22 +188,51 @@ export default async function StudentsPage(props: PageProps) {
                                         <tr className="bg-muted/30 border-b border-border/50">
                                             <th className="px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Nombre del Alumno</th>
                                             <th className="px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contacto</th>
-                                            <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Ingreso</th>
+                                            <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">{isActiveTab ? "Ingreso" : "Baja"}</th>
                                             <th className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
                                         {students.map((student) => (
-                                            <tr key={student.id} className="hover:bg-muted/40 transition-colors group">
-                                                <td className="px-3 sm:px-2 py-4 sm:py-2">
+                                            <tr key={student.id} className="hover:bg-muted/40 transition-colors group relative border-b border-border/40">
+                                                    <td className="px-3 sm:px-6 py-4 sm:py-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="hidden md:flex h-10 w-10 flex-shrink-0 rounded-full bg-primary/10 items-center justify-center text-primary font-bold shadow-sm shadow-primary/5">
+                                                        <div className="hidden md:flex h-9 w-9 flex-shrink-0 rounded-full bg-primary/10 items-center justify-center text-primary text-xs font-black shadow-sm shadow-primary/5">
                                                             {student.name.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <div>
-                                                            <Link href={`/students/${student.id}`} className="font-semibold text-sm underline md:no-underline md:hover:underline hover:text-primary transition-colors text-foreground">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <Link href={`/students/${student.id}`} className="font-bold text-sm hover:text-primary transition-colors text-foreground">
                                                                 {student.name}
                                                             </Link>
+                                                            
+                                                            {/* Course Badge */}
+                                                            {student.enrollments && student.enrollments.length > 0 ? (
+                                                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                                                    {student.enrollments.map((e: any) => (
+                                                                        <span 
+                                                                            key={e.course.id}
+                                                                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider border transition-all shadow-sm"
+                                                                            style={{ 
+                                                                                backgroundColor: `${e.course.color}08`, 
+                                                                                color: e.course.color, 
+                                                                                borderColor: `${e.course.color}30` 
+                                                                            }}
+                                                                        >
+                                                                            <span 
+                                                                                className="w-1 h-1 rounded-full mr-1.5 animate-pulse" 
+                                                                                style={{ backgroundColor: e.course.color }}
+                                                                            />
+                                                                            {e.course.name.toUpperCase()}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="mt-0.5">
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider border border-border/40 bg-muted/30 text-muted-foreground/60 shadow-sm uppercase">
+                                                                        Sin curso
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -199,11 +278,12 @@ export default async function StudentsPage(props: PageProps) {
                                                     </div>
                                                 </td>
                                                 <td className="hidden lg:table-cell px-3 sm:px-6 py-4 text-right">
-                                                    <Link href={`/students/${student.id}`}>
-                                                        <Button variant="ghost" size="icon" className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary transition-all rounded-full h-8 w-8">
-                                                            <Eye size={16} />
-                                                        </Button>
-                                                    </Link>
+                                                    <StudentListActions 
+                                                        studentId={student.id} 
+                                                        studentName={student.name} 
+                                                        isActive={isActiveTab} 
+                                                        status={student.status}
+                                                    />
                                                 </td>
                                             </tr>
                                         ))}

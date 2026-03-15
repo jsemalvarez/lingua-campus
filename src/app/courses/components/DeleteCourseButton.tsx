@@ -21,14 +21,14 @@ export function DeleteCourseButton({ id }: { id: string }) {
 
     return (
         <Button
-            variant="ghost"
-            size="sm"
+            variant="destructive"
             onClick={handleDelete}
             disabled={isPending}
-            className="text-red-500 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-950/30"
+            className="bg-red-600 hover:bg-red-700 w-full sm:w-auto flex-shrink-0"
             title="Eliminar curso"
         >
-            <Trash2 size={16} />
+            <Trash2 size={16} className="mr-2" />
+            {isPending ? "Eliminando..." : "Eliminar Curso"}
         </Button>
     );
 }

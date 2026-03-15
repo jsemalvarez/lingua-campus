@@ -19,6 +19,7 @@ model Institute {
   id          String   @id @default(cuid())
   name        String
   subdomain   String   @unique
+  customDomain String? @unique
   address     String?
   phone       String?
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
@@ -30,6 +31,8 @@ model Institute {
   students    Student[]
   courses     Course[]
   expenses    Expense[]
+  classrooms  Classroom[]
+  levels      Level[]
 }
 
 // -----------------------------------------------------------------------------
@@ -51,6 +54,7 @@ model User {
   phone       String?    // Celular
   avatarUrl   String?
   status      String   @default("ACTIVE") // ACTIVE, DELETED
+  preferences Json?      // Almacena preferencias visuales como ordenamiento de cursos
   
   instituteId String?
   institute   Institute? @relation(fields: [instituteId], references: [id])
@@ -108,10 +112,14 @@ model Course {
   id          String   @id @default(cuid())
   name        String
   level       String?
+  color       String   @default("#3b82f6") // Default blue-500
   
   teacherId   String?
   teacher     User?     @relation("CourseTeacher", fields: [teacherId], references: [id])
   
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id])
+
   instituteId String
   institute   Institute @relation(fields: [instituteId], references: [id])
   
@@ -152,6 +160,35 @@ model Schedule {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Classroom {
+  id          String    @id @default(cuid())
+  name        String
+  capacity    Int?
+  
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+  
+  courses     Course[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([name, instituteId])
+}
+
+model Level {
+  id          String    @id @default(cuid())
+  name        String
+  
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([name, instituteId])
 }
 
 enum AttendanceStatus {

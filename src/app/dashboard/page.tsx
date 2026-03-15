@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { StudentsChart } from "./components/StudentsChart";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
                     instituteId: session.user.instituteId!
                 }
             },
-            select: { id: true, name: true, instituteId: true }
+            select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } }
         });
 
         if (!student) redirect("/login");
@@ -96,9 +97,12 @@ export default async function DashboardPage() {
                 <Navbar />
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">¡Hola, {student.name.split(" ")[0]}!</h1>
+                        <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
+                            {student.institute?.name || "Instituto"}
+                        </span>
+                        <h1 className="text-3xl font-bold tracking-tight mt-1">Panel de Control</h1>
                         <p className="text-muted-foreground mt-1">
-                            Aquí tenés un resumen de tu actividad académica.
+                            Bienvenido/a de nuevo, {student.name.split(" ")[0]}. Esto está pasando hoy.
                         </p>
                     </div>
 
@@ -182,7 +186,7 @@ export default async function DashboardPage() {
     // Flujo normal para Admin/Teacher
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, name: true, role: true, instituteId: true }
+        select: { id: true, name: true, role: true, instituteId: true, institute: { select: { name: true } } }
     });
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
@@ -236,9 +240,12 @@ export default async function DashboardPage() {
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Panel de Control</h1>
+                            <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
+                                {user.institute?.name || "Instituto"}
+                            </span>
+                            <h1 className="text-3xl font-bold tracking-tight mt-1">Panel de Control</h1>
                             <p className="text-muted-foreground mt-1">
-                                Bienvenido de nuevo, {user.name || "profesor"}. Aquí tenés un resumen de tus cursos.
+                                Bienvenido/a de nuevo, {user.name.split(" ")[0]}. Esto está pasando hoy.
                             </p>
                         </div>
                     </div>
@@ -361,15 +368,63 @@ export default async function DashboardPage() {
         return months[month - 1] || "";
     };
 
+    // 7. Data for the Wow-Factor Students Chart
+    // Get all Active Enrollments mapped by course
+    const activeEnrollments = await prisma.enrollment.findMany({
+        where: {
+            course: { instituteId: user.instituteId },
+            status: 'ACTIVE',
+            student: { status: 'ACTIVE' }
+        },
+        include: {
+            course: { select: { name: true, color: true } }
+        }
+    });
+
+    // Grouping by course name
+    const courseInfo: Record<string, { count: number; color: string }> = {};
+    const enrolledStudentIds = new Set<string>();
+
+    activeEnrollments.forEach(enrollment => {
+        const courseName = enrollment.course.name;
+        if (!courseInfo[courseName]) {
+            courseInfo[courseName] = { count: 0, color: enrollment.course.color || "#3b82f6" };
+        }
+        courseInfo[courseName].count += 1;
+        enrolledStudentIds.add(enrollment.studentId);
+    });
+
+    const chartData = Object.entries(courseInfo).map(([name, info]) => ({
+        name,
+        studentCount: info.count,
+        color: info.color
+    }));
+
+    // Find students without any ACTIVE courses
+    const studentsWithoutCourses = totalStudents - enrolledStudentIds.size;
+    if (studentsWithoutCourses > 0) {
+        chartData.push({
+            name: "Sin Curso Asignado",
+            studentCount: studentsWithoutCourses,
+            color: "#9ca3af" // gris neutral (gray-400)
+        });
+    }
+
+    // Sort by largest to smallest student count for better UI flow
+    chartData.sort((a, b) => b.studentCount - a.studentCount);
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Panel de Control</h1>
+                        <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
+                            {user.institute?.name || "Instituto"}
+                        </span>
+                        <h1 className="text-3xl font-bold tracking-tight mt-1">Panel de Control</h1>
                         <p className="text-muted-foreground mt-1">
-                            Bienvenido de nuevo, administrador. Esto está pasando en Lingua Campus hoy.
+                            Bienvenido/a de nuevo, {user.name.split(" ")[0]}. Esto está pasando hoy.
                         </p>
                     </div>
                 </div>
@@ -389,6 +444,11 @@ export default async function DashboardPage() {
                             </div>
                         </Card>
                     ))}
+                </div>
+
+                {/* Enhanced Wow-Factor Graphics Section */}
+                <div className="mb-6">
+                    <StudentsChart data={chartData} totalActive={totalStudents} />
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">

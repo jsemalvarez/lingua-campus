@@ -32,9 +32,17 @@ export default async function NewEnrollmentPage({ searchParams }: { searchParams
 
     // Obtener alumnos del instituto, excluyendo aquellos que ya tengan inscripciones en TODOS los cursos
     // (Por ahora traemos a todos, permitiendo que el form bloquee el submit en el backend si hay colisión)
+    // Obtener alumnos del instituto, incluyendo el conteo de inscripciones activas
     const students = await prisma.student.findMany({
         where: { instituteId: user.instituteId, status: "ACTIVE" },
-        select: { id: true, name: true, email: true },
+        select: { 
+            id: true, 
+            name: true, 
+            email: true,
+            _count: {
+                select: { enrollments: { where: { status: "ACTIVE" } } }
+            }
+        },
         orderBy: { name: "asc" }
     });
 
@@ -84,8 +92,8 @@ export default async function NewEnrollmentPage({ searchParams }: { searchParams
                 </header>
 
                 <div className="max-w-xl">
-                    <Card className="shadow-md border-border/40 overflow-hidden bg-card/60 backdrop-blur-sm">
-                        <div className="h-2 w-full premium-gradient" />
+                    <Card className="shadow-md border-border/40 overflow-visible bg-card/60 backdrop-blur-sm relative z-10">
+                        <div className="h-2 w-full premium-gradient rounded-t-xl" />
 
                         <EnrollmentForm
                             courses={courses}
