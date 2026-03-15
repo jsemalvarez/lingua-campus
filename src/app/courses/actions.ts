@@ -165,12 +165,20 @@ export async function updateCourseTeacherAction(courseId: string, teacherId: str
     }
 }
 
-export async function updateCourseAction(courseId: string, data: { name?: string; level?: string; color?: string; classroomId?: string; teacherId?: string | null }) {
+export async function updateCourseAction(formData: FormData) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
     if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden editar el curso" };
 
-    if (!data.name?.trim()) {
+    const courseId = formData.get("id") as string;
+    const name = formData.get("name") as string;
+    const level = formData.get("level") as string;
+    const color = formData.get("color") as string;
+    const classroomId = formData.get("classroomId") as string;
+    const teacherId = formData.get("teacherId") as string;
+
+    if (!courseId) return { success: false, error: "ID de curso no proporcionado" };
+    if (!name?.trim()) {
         return { success: false, error: "El nombre del curso es obligatorio" };
     }
 
@@ -183,11 +191,11 @@ export async function updateCourseAction(courseId: string, data: { name?: string
         await prisma.course.update({
             where: { id: courseId },
             data: {
-                name: data.name.trim(),
-                level: data.level?.trim() || null,
-                color: data.color || "#3b82f6",
-                classroomId: data.classroomId || null,
-                teacherId: data.teacherId || null,
+                name: name.trim(),
+                level: level?.trim() || null,
+                color: color || "#3b82f6",
+                classroomId: classroomId || null,
+                teacherId: teacherId || null,
             }
         });
 
