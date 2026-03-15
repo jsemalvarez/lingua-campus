@@ -168,7 +168,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 </div>
 
                 {/* Danger Zone */}
-                {(user.role === "ADMIN" || user.role === "SUPERADMIN") && (
+                {user.role === "ADMIN" && (
                     <div className="lg:col-span-4 mt-8">
                         <StudentDangerZone studentId={student.id} studentStatus={student.status} />
                     </div>

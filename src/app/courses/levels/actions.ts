@@ -30,7 +30,7 @@ export async function createLevelAction(data: { name: string }) {
         await prisma.level.create({
             data: {
                 name: data.name.trim(),
-                instituteId: user.instituteId
+                instituteId: user.instituteId as string
             }
         });
 

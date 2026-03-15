@@ -100,10 +100,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             currentLevel={course.level}
                                             levels={levels}
                                             currentClassroomId={course.classroomId}
-                                            currentClassroomName={course.classroom?.name || null}
                                             classrooms={classrooms}
                                             currentTeacherId={course.teacher?.id || null}
-                                            currentTeacherName={course.teacher?.name || null}
                                             teachers={instituteTeachers}
                                             currentColor={course.color}
                                         />
