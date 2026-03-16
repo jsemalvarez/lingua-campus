@@ -16,11 +16,14 @@ export default async function InscriptionPage() {
         institute = await prisma.institute.findFirst();
     } else {
         const subdomain = host.split(".")[0];
+        // Buscamos coincidencia exacta por subdominio o por dominio personalizado (limpiando protocolos)
         institute = await prisma.institute.findFirst({
             where: {
                 OR: [
                     { subdomain: subdomain },
-                    { customDomain: host }
+                    { customDomain: host },
+                    { customDomain: `https://${host}` },
+                    { customDomain: `http://${host}` }
                 ]
             }
         });
