@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, BookOpen } from "lucide-react";
+import { Plus, BookOpen, Layers, MapPin } from "lucide-react";
 import { CourseListClientRenderer } from "./components/CourseListClientRenderer";
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -53,14 +53,14 @@ export default async function CoursesPage() {
         sortedCourses = [...courses].sort((a, b) => {
             const indexA = courseOrder.indexOf(a.id);
             const indexB = courseOrder.indexOf(b.id);
-            
+
             // Si ambos están en el orden guardado, respetarlo
             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-            
+
             // Si solo uno está, ese va primero
             if (indexA !== -1) return -1;
             if (indexB !== -1) return 1;
-            
+
             // Si ninguno está (cursos nuevos), mantener el orden por createdAt desc (que ya trae la query)
             return 0;
         });
@@ -85,11 +85,27 @@ export default async function CoursesPage() {
                     </div>
 
                     {user.role === "ADMIN" && (
-                        <Link href="/courses/new">
-                            <Button className="w-full sm:w-auto h-11 px-6 shadow-lg shadow-primary/20 premium-gradient border-none hover:opacity-90 font-bold transition-all hover:scale-[1.02]">
-                                <Plus className="mr-2 h-5 w-5" /> Crear Nuevo Curso
-                            </Button>
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Link href="/courses/new">
+                                <Button className="h-11 px-6 shadow-lg shadow-primary/20 premium-gradient border-none hover:opacity-90 font-bold transition-all hover:scale-[1.02]">
+                                    <Plus className="mr-2 h-5 w-5" />Curso
+                                </Button>
+                            </Link>
+                            <Link href="/courses/levels">
+                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4">
+                                    <Layers size={18} className="text-primary" />
+                                    <span className="hidden xs:inline">Niveles</span>
+                                    <span className="xs:hidden">Niv.</span>
+                                </Button>
+                            </Link>
+                            <Link href="/courses/classrooms">
+                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4">
+                                    <MapPin size={18} className="text-primary" />
+                                    <span className="hidden xs:inline">Aulas</span>
+                                    <span className="xs:hidden">Aul.</span>
+                                </Button>
+                            </Link>
+                        </div>
                     )}
                 </div>
 
@@ -105,10 +121,10 @@ export default async function CoursesPage() {
                         </p>
                     </div>
                 ) : (
-                    <CourseListClientRenderer 
-                        initialCourses={sortedCourses} 
-                        userRole={user.role} 
-                        DAYS_OF_WEEK={DAYS_OF_WEEK} 
+                    <CourseListClientRenderer
+                        initialCourses={sortedCourses}
+                        userRole={user.role}
+                        DAYS_OF_WEEK={DAYS_OF_WEEK}
                     />
                 )}
             </main>
