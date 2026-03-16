@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableCourseCard } from "./SortableCourseCard";
 import { updateCourseSortOrderAction } from "../actions/sortOrder";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Search, X } from "lucide-react";
 
 interface CourseListClientRendererProps {
     initialCourses: any[];
@@ -28,8 +28,14 @@ interface CourseListClientRendererProps {
 
 export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEEK }: CourseListClientRendererProps) {
     const [courses, setCourses] = useState(initialCourses);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
+
+    // Filtrar cursos por el texto del buscador
+    const filteredCourses = courses.filter(course => 
+        course.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -82,6 +88,28 @@ export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEE
                 </div>
             )}
 
+            {/* ── Buscador ── */}
+            <div className="relative group max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                </div>
+                <input
+                    type="text"
+                    placeholder="Buscar curso por nombre..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-2.5 bg-background/50 border border-border/60 rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 hover:border-border group-focus-within:bg-background"
+                />
+                {searchQuery && (
+                    <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
+
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -92,14 +120,27 @@ export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEE
                     strategy={verticalListSortingStrategy}
                 >
                     <div className="flex flex-col gap-5 w-full">
-                        {courses.map((course) => (
-                            <SortableCourseCard 
-                                key={course.id} 
-                                course={course} 
-                                userRole={userRole}
-                                DAYS_OF_WEEK={DAYS_OF_WEEK}
-                            />
-                        ))}
+                        {filteredCourses.length === 0 ? (
+                            <div className="text-center py-12 bg-muted/10 rounded-2xl border border-dashed border-border/40">
+                                <Search className="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
+                                <p className="text-muted-foreground font-medium">No se encontraron cursos que coincidan con &quot;{searchQuery}&quot;</p>
+                                <button 
+                                    onClick={() => setSearchQuery("")}
+                                    className="text-primary text-sm font-semibold mt-2 hover:underline"
+                                >
+                                    Limpiar búsqueda
+                                </button>
+                            </div>
+                        ) : (
+                            filteredCourses.map((course) => (
+                                <SortableCourseCard 
+                                    key={course.id} 
+                                    course={course} 
+                                    userRole={userRole}
+                                    DAYS_OF_WEEK={DAYS_OF_WEEK}
+                                />
+                            ))
+                        )}
                     </div>
                 </SortableContext>
             </DndContext>
