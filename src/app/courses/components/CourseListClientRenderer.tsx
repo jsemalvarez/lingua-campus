@@ -24,13 +24,32 @@ interface CourseListClientRendererProps {
     initialCourses: any[];
     userRole: string;
     DAYS_OF_WEEK: string[];
+    isDraggable?: boolean;
 }
 
-export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEEK }: CourseListClientRendererProps) {
+export function CourseListClientRenderer({ 
+    initialCourses, 
+    userRole, 
+    DAYS_OF_WEEK, 
+    isDraggable = true 
+}: CourseListClientRendererProps) {
     const [courses, setCourses] = useState(initialCourses);
     const [searchQuery, setSearchQuery] = useState("");
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
+
+    // Sync courses if initialCourses change (useful when switching tabs)
+    useState(() => {
+        if (initialCourses !== courses) {
+            setCourses(initialCourses);
+        }
+    });
+
+    // Update state when initialCourses prop changes (e.g. switching tabs)
+    // We use a simple useEffect-like pattern with the state update to ensure UI stays in sync
+    if (initialCourses !== courses && !isPending) {
+        setCourses(initialCourses);
+    }
 
     // Filtrar cursos por el texto del buscador
     const filteredCourses = courses.filter(course => 
@@ -40,7 +59,7 @@ export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEE
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Una pequeña distancia para evitar arrastres accidentales al hacer clic
+                distance: 8,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -49,6 +68,7 @@ export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEE
     );
 
     const handleDragEnd = (event: DragEndEvent) => {
+        if (!isDraggable) return;
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
@@ -58,21 +78,45 @@ export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEE
             const newOrderedCourses = arrayMove(courses, oldIndex, newIndex);
             setCourses(newOrderedCourses);
 
-            // Guardar el nuevo orden de forma persistente
             const sortedIds = newOrderedCourses.map(c => c.id);
             
             startTransition(async () => {
                 const result = await updateCourseSortOrderAction(sortedIds);
                 if (!result.success) {
                     setError("No se pudo guardar el nuevo orden. Intenta nuevamente.");
-                    // Opcional: Revertir el orden si falla el guardado
-                    // setCourses(courses);
                 } else {
                     setError(null);
                 }
             });
         }
     };
+
+    const courseList = (
+        <div className="flex flex-col gap-5 w-full">
+            {filteredCourses.length === 0 ? (
+                <div className="text-center py-12 bg-muted/10 rounded-2xl border border-dashed border-border/40">
+                    <Search className="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground font-medium">No se encontraron cursos que coincidan con &quot;{searchQuery}&quot;</p>
+                    <button 
+                        onClick={() => setSearchQuery("")}
+                        className="text-primary text-sm font-semibold mt-2 hover:underline"
+                    >
+                        Limpiar búsqueda
+                    </button>
+                </div>
+            ) : (
+                filteredCourses.map((course) => (
+                    <SortableCourseCard 
+                        key={course.id} 
+                        course={course} 
+                        userRole={userRole}
+                        DAYS_OF_WEEK={DAYS_OF_WEEK}
+                        isDraggable={isDraggable}
+                    />
+                ))
+            )}
+        </div>
+    );
 
     return (
         <div className="space-y-4">
@@ -110,40 +154,22 @@ export function CourseListClientRenderer({ initialCourses, userRole, DAYS_OF_WEE
                 )}
             </div>
 
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <SortableContext
-                    items={courses.map(c => c.id)}
-                    strategy={verticalListSortingStrategy}
+            {isDraggable ? (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                 >
-                    <div className="flex flex-col gap-5 w-full">
-                        {filteredCourses.length === 0 ? (
-                            <div className="text-center py-12 bg-muted/10 rounded-2xl border border-dashed border-border/40">
-                                <Search className="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
-                                <p className="text-muted-foreground font-medium">No se encontraron cursos que coincidan con &quot;{searchQuery}&quot;</p>
-                                <button 
-                                    onClick={() => setSearchQuery("")}
-                                    className="text-primary text-sm font-semibold mt-2 hover:underline"
-                                >
-                                    Limpiar búsqueda
-                                </button>
-                            </div>
-                        ) : (
-                            filteredCourses.map((course) => (
-                                <SortableCourseCard 
-                                    key={course.id} 
-                                    course={course} 
-                                    userRole={userRole}
-                                    DAYS_OF_WEEK={DAYS_OF_WEEK}
-                                />
-                            ))
-                        )}
-                    </div>
-                </SortableContext>
-            </DndContext>
+                    <SortableContext
+                        items={courses.map(c => c.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {courseList}
+                    </SortableContext>
+                </DndContext>
+            ) : (
+                courseList
+            )}
         </div>
     );
 }

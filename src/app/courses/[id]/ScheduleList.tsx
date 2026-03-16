@@ -16,15 +16,18 @@ interface ScheduleListProps {
     courseId: string;
     schedules: Schedule[];
     isTeacherOrAdmin: boolean;
+    courseStatus?: string;
 }
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-export function ScheduleList({ courseId, schedules, isTeacherOrAdmin }: ScheduleListProps) {
+export function ScheduleList({ courseId, schedules, isTeacherOrAdmin, courseStatus }: ScheduleListProps) {
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const [isAdding, setIsAdding] = useState(false);
+
+    const isFinished = courseStatus === "FINISHED";
 
     const handleAddSchedule = async (formData: FormData) => {
         setStatus("idle");
@@ -62,7 +65,7 @@ export function ScheduleList({ courseId, schedules, isTeacherOrAdmin }: Schedule
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">Configura la agenda regular del curso.</p>
                 </div>
-                {isTeacherOrAdmin && !isAdding && (
+                {isTeacherOrAdmin && !isAdding && !isFinished && (
                     <div
                         onClick={() => setIsAdding(true)}
                         className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap"
@@ -91,7 +94,7 @@ export function ScheduleList({ courseId, schedules, isTeacherOrAdmin }: Schedule
                                         <p className="text-xs text-muted-foreground font-medium">{schedule.startTime} - {schedule.endTime}</p>
                                     </div>
                                 </div>
-                                {isTeacherOrAdmin && (
+                                {isTeacherOrAdmin && !isFinished && (
                                     <Button
                                         variant="ghost"
                                         size="icon"

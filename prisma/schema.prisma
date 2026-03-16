@@ -113,6 +113,7 @@ model Course {
   name        String
   level       String?
   color       String   @default("#3b82f6") // Default blue-500
+  status      String   @default("ACTIVE") // ACTIVE, FINISHED
   
   teacherId   String?
   teacher     User?     @relation("CourseTeacher", fields: [teacherId], references: [id])
@@ -139,7 +140,7 @@ model Enrollment {
   course      Course   @relation(fields: [courseId], references: [id])
   
   enrolledAt  DateTime @default(now())
-  status      String   @default("ACTIVE") // ACTIVE, DROPPED, FINISHED
+  status      String   @default("ACTIVE") // ACTIVE, FINISHED, INCOMPLETE
 
   @@unique([studentId, courseId])
 }

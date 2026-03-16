@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { saveLessonGradesAction } from "./actions";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle, AlertCircle, Save } from "lucide-react";
+import { CheckCircle, AlertCircle, Save, FileText } from "lucide-react";
 
 type StudentData = { id: string; name: string };
 type GradeRecord = { score: string | null; feedback: string | null };
@@ -12,12 +12,14 @@ export function GradeForm({
     lessonId,
     courseId,
     students,
-    existingGrades
+    existingGrades,
+    readOnly = false
 }: {
     lessonId: string;
     courseId: string;
     students: StudentData[];
-    existingGrades: Record<string, GradeRecord>
+    existingGrades: Record<string, GradeRecord>;
+    readOnly?: boolean;
 }) {
     const [isPending, startTransition] = useTransition();
     const [statusIndicator, setStatusIndicator] = useState<"idle" | "success" | "error">("idle");
@@ -45,6 +47,7 @@ export function GradeForm({
     }, [students, existingGrades]);
 
     const handleScoreChange = (studentId: string, score: string) => {
+        if (readOnly) return;
         setGradeState(prev => ({
             ...prev,
             [studentId]: { ...prev[studentId], score }
@@ -52,6 +55,7 @@ export function GradeForm({
     };
 
     const handleFeedbackChange = (studentId: string, feedback: string) => {
+        if (readOnly) return;
         setGradeState(prev => ({
             ...prev,
             [studentId]: { ...prev[studentId], feedback }
@@ -59,6 +63,7 @@ export function GradeForm({
     };
 
     const handleSave = () => {
+        if (readOnly) return;
         setStatusIndicator("idle");
 
         // Formatear payload
@@ -114,19 +119,21 @@ export function GradeForm({
                                         <td className="px-5 py-4">
                                             <input
                                                 type="text"
-                                                placeholder="Ej: 8, B+, Aprobado"
+                                                placeholder={readOnly ? "-" : "Ej: 8, B+, Aprobado"}
                                                 value={currentData.score}
                                                 onChange={(e) => handleScoreChange(student.id, e.target.value)}
-                                                className="w-full px-3 py-2 text-center font-bold rounded-lg border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
+                                                disabled={readOnly}
+                                                className={`w-full px-3 py-2 text-center font-bold rounded-lg border border-input/60 bg-background text-sm outline-none transition-all ${readOnly ? "cursor-default opacity-80" : "focus:ring-2 focus:ring-primary/20 focus:border-primary"}`}
                                             />
                                         </td>
                                         <td className="px-5 py-4 w-full">
                                             <input
                                                 type="text"
-                                                placeholder="Correcciones o comentarios sobre su desempeño..."
+                                                placeholder={readOnly ? "-" : "Correcciones o comentarios sobre su desempeño..."}
                                                 value={currentData.feedback}
                                                 onChange={(e) => handleFeedbackChange(student.id, e.target.value)}
-                                                className="w-full px-3 py-2 rounded-lg border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
+                                                disabled={readOnly}
+                                                className={`w-full px-3 py-2 rounded-lg border border-input/60 bg-background text-sm outline-none transition-all ${readOnly ? "cursor-default opacity-70 bg-muted/20" : "focus:ring-2 focus:ring-primary/20 focus:border-primary"}`}
                                             />
                                         </td>
                                     </tr>
@@ -154,13 +161,17 @@ export function GradeForm({
 
                 <Button
                     onClick={handleSave}
-                    disabled={isPending}
-                    className="w-full sm:w-auto premium-gradient shadow-md shadow-primary/20 px-8 flex items-center gap-2"
+                    disabled={isPending || readOnly}
+                    className={`w-full sm:w-auto px-8 flex items-center gap-2 ${readOnly ? "bg-muted text-muted-foreground hover:bg-muted cursor-default border-border" : "premium-gradient shadow-md shadow-primary/20"}`}
                 >
                     {isPending ? (
                         <>
                             <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
                             Guardando...
+                        </>
+                    ) : readOnly ? (
+                        <>
+                            <FileText size={18} /> Registro Histórico (Lectura)
                         </>
                     ) : (
                         <>

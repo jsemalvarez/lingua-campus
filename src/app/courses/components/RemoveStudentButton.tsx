@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { removeStudentFromCourseAction } from "../actions";
+import { removeStudentFromCourseAction, markEnrollmentIncompleteAction } from "../actions";
 import { Button } from "@/components/ui/Button";
-import { Trash2 } from "lucide-react";
+import { Trash2, UserX, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface RemoveStudentButtonProps {
@@ -15,57 +15,74 @@ interface RemoveStudentButtonProps {
 export function RemoveStudentButton({ enrollmentId, courseId, studentName }: RemoveStudentButtonProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
-    const [showConfirm, setShowConfirm] = useState(false);
+    const [actionType, setActionType] = useState<"INCOMPLETE" | "DELETE" | null>(null);
 
-    const handleRemove = () => {
+    const handleAction = () => {
+        if (!actionType) return;
+        
         startTransition(async () => {
-            const result = await removeStudentFromCourseAction(enrollmentId, courseId);
+            const result = actionType === "DELETE" 
+                ? await removeStudentFromCourseAction(enrollmentId, courseId)
+                : await markEnrollmentIncompleteAction(enrollmentId, courseId);
+                
             if (result.success) {
                 router.refresh();
             } else {
-                alert(result.error || "Error al desinscribir");
+                alert(result.error || "Error al procesar acción");
             }
-            setShowConfirm(false);
+            setActionType(null);
         });
     };
 
-    if (showConfirm) {
+    if (actionType) {
         return (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-200">
-                <span className="text-xs text-red-600 dark:text-red-400 font-medium whitespace-nowrap">
-                    ¿Confirmar?
+            <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    {actionType === "DELETE" ? "¿Eliminar?" : "¿Incompleto?"}
                 </span>
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 font-bold"
-                    onClick={handleRemove}
+                    className={`h-7 px-2 text-[11px] font-bold ${actionType === "DELETE" ? "text-red-600 hover:bg-red-50" : "text-amber-600 hover:bg-amber-50"}`}
+                    onClick={handleAction}
                     disabled={isPending}
                 >
-                    {isPending ? "..." : "Sí"}
+                    {isPending ? "..." : "Confirmar"}
                 </Button>
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowConfirm(false)}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setActionType(null)}
                     disabled={isPending}
                 >
-                    No
+                    <X size={14} />
                 </Button>
             </div>
         );
     }
 
     return (
-        <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 opacity-0 group-hover:opacity-100 transition-all"
-            onClick={() => setShowConfirm(true)}
-            title={`Desinscribir a ${studentName}`}
-        >
-            <Trash2 size={16} />
-        </Button>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                onClick={() => setActionType("INCOMPLETE")}
+                title="Marcar Incompleto (No terminó)"
+            >
+                <UserX size={16} />
+            </Button>
+
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                onClick={() => setActionType("DELETE")}
+                title="Eliminar inscripción (Error de carga)"
+            >
+                <Trash2 size={16} />
+            </Button>
+        </div>
     );
 }

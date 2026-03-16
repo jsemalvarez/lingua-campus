@@ -21,12 +21,15 @@ interface LessonListProps {
     courseId: string;
     lessons: Lesson[];
     isTeacherOrAdmin: boolean;
+    courseStatus?: string;
 }
 
-export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListProps) {
+export function LessonList({ courseId, lessons, isTeacherOrAdmin, courseStatus }: LessonListProps) {
+    const isFinished = courseStatus === "FINISHED";
+
     return (
         <div className="space-y-4">
-            {isTeacherOrAdmin && (
+            {isTeacherOrAdmin && !isFinished && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-6 relative z-10">
                     <CreateLessonModal courseId={courseId} lessonType="CLASS" />
                     <CreateLessonModal courseId={courseId} lessonType="TP" />
@@ -58,7 +61,7 @@ export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListPr
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-base font-bold leading-tight">{lesson.topic}</h3>
-                                            {isTeacherOrAdmin && (
+                                            {isTeacherOrAdmin && !isFinished && (
                                                 <div className="flex items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
                                                     <EditLessonModal courseId={courseId} lesson={lesson} />
                                                     <DeleteLessonButton courseId={courseId} lessonId={lesson.id} />
@@ -76,7 +79,7 @@ export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListPr
                                         <div className="shrink-0 flex sm:flex-col justify-end gap-2 w-full sm:w-auto">
                                             <Link href={`/courses/${courseId}/lessons/${lesson.id}/attendance`} className="w-full">
                                                 <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border whitespace-nowrap">
-                                                    <ClipboardCheck size={16} /> Asistencia
+                                                    <ClipboardCheck size={16} /> {isFinished ? "Ver Asistencia" : "Asistencia"}
                                                 </div>
                                             </Link>
 
@@ -92,7 +95,7 @@ export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListPr
                                                         ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20"
                                                         : "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20"
                                                         }`}>
-                                                        <FileText size={16} /> Notas
+                                                        <FileText size={16} /> {isFinished ? "Ver Notas" : "Notas"}
                                                     </div>
                                                 </Link>
                                             )}

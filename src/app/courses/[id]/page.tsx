@@ -11,6 +11,8 @@ import { LessonList } from "./lessons/components/LessonList";
 import { EditCourseModal } from "../components/EditCourseModal";
 import { RemoveStudentButton } from "../components/RemoveStudentButton";
 import { DeleteCourseButton } from "../components/DeleteCourseButton";
+import { FinishCourseButton } from "../components/FinishCourseButton";
+import { BadgeCheck, Info } from "lucide-react";
 
 // TODO: Create StudentList component to handle enrollments. For now we will create an empty block
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,8 +38,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             schedules: { orderBy: { dayOfWeek: 'asc' } },
             lessons: { orderBy: { date: 'asc' } },
             enrollments: {
-                where: { status: "ACTIVE" },
-                select: { id: true, student: { select: { id: true, name: true, phone: true } } },
+                // where: { status: "ACTIVE" }, // We want to see ALL for the detail page history
+                select: { id: true, status: true, student: { select: { id: true, name: true, phone: true } } },
                 orderBy: { student: { name: 'asc' } }
             }
         }
@@ -66,6 +68,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     });
 
     const isTeacherOrAdmin = user.role === "ADMIN" || user.id === course.teacher?.id;
+    const isFinished = course.status === "FINISHED";
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -93,7 +96,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                     <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                                         {course.name}
                                     </h1>
-                                    {user.role === "ADMIN" && (
+                                    {user.role === "ADMIN" && !isFinished && (
                                         <EditCourseModal
                                             courseId={course.id}
                                             currentName={course.name}
@@ -113,11 +116,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                     Aula: <span className="text-emerald-600 dark:text-emerald-400">{course.classroom?.name || "No asignada"}</span>
                                     <span className="text-border">•</span>
                                     <GraduationCap size={14} className="ml-1" /> Prof. {course.teacher?.name || "Sin Asignar"}
+                                    {isFinished && (
+                                        <>
+                                            <span className="text-border">•</span>
+                                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-full text-[10px] uppercase font-bold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                                                <BadgeCheck size={10} /> Finalizado
+                                            </span>
+                                        </>
+                                    )}
                                 </p>
                             </div>
                         </div>
-
-                        {/* Right Actions - Moved Attendance to Class Session (Lesson) level */}
                     </div>
                 </header>
 
@@ -128,7 +137,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                         <ScheduleList
                             courseId={course.id}
                             schedules={course.schedules}
-                            isTeacherOrAdmin={isTeacherOrAdmin}
+                            isTeacherOrAdmin={isTeacherOrAdmin && !isFinished}
                         />
                     </Card>
 
@@ -150,12 +159,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                 <LessonList
                                     courseId={course.id}
                                     lessons={course.lessons}
-                                    isTeacherOrAdmin={isTeacherOrAdmin}
+                                    isTeacherOrAdmin={isTeacherOrAdmin && !isFinished}
+                                    courseStatus={course.status}
                                 />
                             </div>
                         </Card>
 
-                        {/* COLUMNA DERECHA: Alumnos Inscritos y Zona Peligrosa */}
+                        {/* COLUMNA DERECHA: Alumnos Inscritos */}
                         <div className="flex flex-col gap-6 lg:gap-8 min-h-0">
                             <Card className="p-6 shadow-md border-border/40 overflow-hidden flex flex-col h-full bg-card/60 backdrop-blur-sm">
                                 <div className="space-y-4 flex-1 flex flex-col min-h-0">
@@ -169,11 +179,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                                 Listado oficial de estudiantes activos en este grupo.
                                             </p>
                                         </div>
-                                        <Link href={`/enrollments/new?course=${course.id}`}>
-                                            <div className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
-                                                Inscribir Alumno
-                                            </div>
-                                        </Link>
+                                        {!isFinished && (
+                                            <Link href={`/enrollments/new?course=${course.id}`}>
+                                                <div className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
+                                                    Inscribir Alumno
+                                                </div>
+                                            </Link>
+                                        )}
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar min-h-[300px]">
@@ -184,7 +196,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             </div>
                                         ) : (
                                             <div className="space-y-3 mt-4">
-                                                {course.enrollments.map(enrol => (
+                                                {course.enrollments.map((enrol: any) => (
                                                     <div key={enrol.student.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors group">
                                                         <div className="flex items-center gap-3">
                                                             <div className="h-9 w-9 bg-primary/10 text-primary font-bold rounded-full flex items-center justify-center text-sm">
@@ -201,10 +213,22 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <div className="px-3 py-1 rounded border border-border/40 text-xs font-semibold text-muted-foreground bg-muted/20">
-                                                                Activo
-                                                            </div>
-                                                            {user.role === "ADMIN" && (
+                                                            {enrol.status === "FINISHED" && (
+                                                                <div className="px-2 py-1 rounded border border-emerald-500/30 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 uppercase tracking-tighter">
+                                                                    Finalizado
+                                                                </div>
+                                                            )}
+                                                            {enrol.status === "INCOMPLETE" && (
+                                                                <div className="px-2 py-1 rounded border border-amber-500/30 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 uppercase tracking-tighter">
+                                                                    Incompleto
+                                                                </div>
+                                                            )}
+                                                            {enrol.status === "ACTIVE" && (
+                                                                <div className="px-2 py-1 rounded border border-blue-500/20 text-[10px] font-bold text-blue-500 bg-blue-50/50 dark:bg-blue-950/10 uppercase tracking-tighter">
+                                                                    Activo
+                                                                </div>
+                                                            )}
+                                                            {user.role === "ADMIN" && enrol.status === "ACTIVE" && !isFinished && (
                                                                 <RemoveStudentButton
                                                                     enrollmentId={enrol.id}
                                                                     courseId={course.id}
@@ -219,31 +243,71 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                     </div>
                                 </div>
                             </Card>
+                        </div>
+                    </div>
 
-                            {/* DANGER ZONE */}
-                            {user.role === "ADMIN" && (
-                                <Card className="border-red-500/30 bg-red-500/5 shrink-0">
-                                    <div className="p-6">
-                                        <div className="flex items-center gap-2 text-red-600 mb-4">
+                    {/* ── SECCIÓN DE GESTIÓN Y PELIGRO (ANCHO COMPLETO) ── */}
+                    <div className="space-y-6 lg:space-y-8 mt-12 pt-8 border-t border-border/40">
+                        {/* GESTIÓN DE CICLO (WARNING) */}
+                        {user.role === "ADMIN" && !isFinished && (
+                            <Card className="border-amber-500/30 bg-amber-500/5 overflow-hidden">
+                                <div className="p-6 sm:p-8">
+                                    <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 mb-6">
+                                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
                                             <AlertTriangle size={24} />
-                                            <h3 className="text-lg font-bold">Zona de Peligro</h3>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                            <div>
-                                                <h4 className="font-semibold text-foreground">Eliminar Curso</h4>
-                                                <p className="text-sm text-muted-foreground mt-1">
-                                                    Al eliminar el curso se borrarán de forma irreversible todos sus registros asociados, incluyendo horarios, dictados y las inscripciones de alumnos (los estudiantes seguirán existiendo en el sistema de todos modos).
-                                                </p>
-                                            </div>
-                                            <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                                                <DeleteCourseButton id={course.id} />
-                                            </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold">Gestión de Ciclo Académico</h3>
+                                            <p className="text-sm text-amber-700/70 dark:text-amber-400/70">Esta acción afecta a todos los alumnos del curso</p>
                                         </div>
                                     </div>
-                                </Card>
-                            )}
-                        </div>
+                                    
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                        <div className="max-w-3xl">
+                                            <h4 className="font-bold text-foreground text-lg">Finalizar Ciclo del Curso</h4>
+                                            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                                                Al finalizar el curso, el estado del grupo pasará a <strong>"Finalizado"</strong> y se archivará. 
+                                                Todos los alumnos con estado "Activo" serán marcados automáticamente como <strong>"Finalizados"</strong>. 
+                                                Esta acción es ideal para cerrar el año o un nivel específico, permitiendo mantener un historial limpio sin borrar los datos del profesor o las notas obtenidas.
+                                            </p>
+                                        </div>
+                                        <div className="shrink-0">
+                                            <FinishCourseButton courseId={course.id} courseName={course.name} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
 
+                        {/* DANGER ZONE (ANCHO COMPLETO) */}
+                        {user.role === "ADMIN" && (
+                            <Card className="border-red-500/30 bg-red-500/5 overflow-hidden">
+                                <div className="p-6 sm:p-8">
+                                    <div className="flex items-center gap-3 text-red-600 mb-6">
+                                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                            <AlertTriangle size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold">Zona de Peligro</h3>
+                                            <p className="text-sm text-red-600/70">Acciones irreversibles y críticas</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                        <div className="max-w-3xl">
+                                            <h4 className="font-bold text-foreground text-lg">Eliminar Curso por Completo</h4>
+                                            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                                                Esta acción <strong>borrará de forma irreversible</strong> todos los registros asociados: horarios, clases dictadas (asistencias/temas) e inscripciones. 
+                                                Los estudiantes NO serán borrados del sistema, pero su historial vinculado a este curso desaparecerá para siempre. Solo usa esto si el curso fue creado por error.
+                                            </p>
+                                        </div>
+                                        <div className="shrink-0">
+                                            <DeleteCourseButton id={course.id} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
                     </div>
                 </div>
             </main>

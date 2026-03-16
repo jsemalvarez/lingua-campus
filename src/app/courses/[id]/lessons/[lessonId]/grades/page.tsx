@@ -33,11 +33,13 @@ export default async function GradesPage({
         include: {
             teacher: { select: { id: true, name: true } },
             enrollments: {
-                where: { status: "ACTIVE" },
+                where: { 
+                    status: { in: ["ACTIVE", "FINISHED"] }
+                },
                 include: { student: { select: { id: true, name: true } } }
             }
         }
-    });
+    }) as any;
 
     if (!course || course.instituteId !== user.instituteId) {
         redirect("/courses");
@@ -48,7 +50,8 @@ export default async function GradesPage({
         redirect(`/courses/${courseId}`);
     }
 
-    const students = course.enrollments.map(e => e.student);
+    const isReadOnly = course.status === "FINISHED";
+    const students = course.enrollments.map((e: any) => e.student);
 
     const lesson = await prisma.lesson.findUnique({
         where: { id: lessonId }
@@ -96,7 +99,7 @@ export default async function GradesPage({
                             </div>
                             <div>
                                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                                    Cargar Notas
+                                    {isReadOnly ? "Registros de Notas" : "Cargar Notas"}
                                 </h1>
                                 <p className="text-sm font-semibold mt-0.5 text-muted-foreground flex items-center gap-2">
                                     <span className="text-foreground">{course.name}</span>
@@ -124,6 +127,7 @@ export default async function GradesPage({
                     courseId={courseId}
                     students={students}
                     existingGrades={formattedRecords}
+                    readOnly={isReadOnly}
                 />
             </main>
         </div>
