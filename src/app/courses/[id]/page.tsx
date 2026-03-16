@@ -191,7 +191,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                                                 {enrol.student.name.charAt(0).toUpperCase()}
                                                             </div>
                                                             <div>
-                                                                <p className="font-semibold text-sm">{enrol.student.name}</p>
+                                                                <Link 
+                                                                    href={`/students/${enrol.student.id}`}
+                                                                    className="font-semibold text-sm hover:text-primary transition-colors cursor-pointer"
+                                                                >
+                                                                    {enrol.student.name}
+                                                                </Link>
                                                                 <p className="text-xs text-muted-foreground">{enrol.student.phone || "Sin teléfono"}</p>
                                                             </div>
                                                         </div>

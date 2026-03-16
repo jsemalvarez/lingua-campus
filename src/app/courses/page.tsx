@@ -33,7 +33,7 @@ export default async function CoursesPage() {
             schedules: { orderBy: { dayOfWeek: 'asc' } },
             enrollments: {
                 where: { status: "ACTIVE", student: { status: "ACTIVE" } },
-                include: { student: { select: { name: true } } },
+                include: { student: { select: { id: true, name: true } } },
                 orderBy: { student: { name: 'asc' } }
             },
             _count: {

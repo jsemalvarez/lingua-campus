@@ -97,9 +97,13 @@ export function SortableCourseCard({ course, userRole, DAYS_OF_WEEK }: SortableC
                             ) : (
                                 <div className="flex flex-wrap gap-1.5 max-h-[140px] overflow-y-auto scrollbar-hide">
                                     {course.enrollments.map((enr: any) => (
-                                        <span key={enr.id} className="inline-block px-2.5 py-1 text-xs bg-background border border-border/50 text-foreground rounded-full shadow-sm">
+                                        <Link 
+                                            key={enr.id} 
+                                            href={`/students/${enr.student.id}`}
+                                            className="inline-block px-2.5 py-1 text-xs bg-background border border-border/50 text-foreground rounded-full shadow-sm hover:border-primary/50 hover:text-primary transition-all hover:scale-105 active:scale-95"
+                                        >
                                             {enr.student.name}
-                                        </span>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
