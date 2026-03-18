@@ -28,6 +28,8 @@ export async function createCourseAction(formData: FormData) {
     const color = formData.get("color") as string;
     const teacherId = formData.get("teacherId") as string;
     const classroomId = formData.get("classroomId") as string;
+    const startDateStr = formData.get("startDate") as string;
+    const endDateStr = formData.get("endDate") as string;
 
     if (!name) {
         return { success: false, error: "El nombre del curso es obligatorio" };
@@ -41,6 +43,8 @@ export async function createCourseAction(formData: FormData) {
                 color: color || "#3b82f6",
                 teacherId: teacherId || null,
                 classroomId: classroomId || null,
+                startDate: startDateStr ? new Date(startDateStr) : null,
+                endDate: endDateStr ? new Date(endDateStr) : null,
                 instituteId: user.instituteId as string,
             }
         });
@@ -176,6 +180,8 @@ export async function updateCourseAction(formData: FormData) {
     const color = formData.get("color") as string;
     const classroomId = formData.get("classroomId") as string;
     const teacherId = formData.get("teacherId") as string;
+    const startDateStr = formData.get("startDate") as string;
+    const endDateStr = formData.get("endDate") as string;
 
     if (!courseId) return { success: false, error: "ID de curso no proporcionado" };
     if (!name?.trim()) {
@@ -196,6 +202,8 @@ export async function updateCourseAction(formData: FormData) {
                 color: color || "#3b82f6",
                 classroomId: classroomId || null,
                 teacherId: teacherId || null,
+                startDate: startDateStr ? new Date(startDateStr) : null,
+                endDate: endDateStr ? new Date(endDateStr) : null,
             }
         });
 

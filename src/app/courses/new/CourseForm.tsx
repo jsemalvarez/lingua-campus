@@ -44,6 +44,8 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
     const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
     const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false);
     const [color, setColor] = useState("#3b82f6");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     const palette = [
         { name: "Rojo 300", value: "#fca5a5" }, { name: "Rojo 500", value: "#ef4444" }, { name: "Rojo 700", value: "#b91c1c" }, { name: "Rojo 900", value: "#7f1d1d" },
@@ -76,6 +78,8 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
         formData.append("level", level);
         formData.append("teacherId", teacherId);
         formData.append("color", color);
+        formData.append("startDate", startDate);
+        formData.append("endDate", endDate);
 
         setStatusFeedback("idle");
         startTransition(async () => {
@@ -144,6 +148,30 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
                                         <option key={c.id} value={c.id}>{c.name} {c.capacity ? `(Cap. ${c.capacity})` : ""}</option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div className="space-y-1.5 group">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1 transition-colors group-focus-within:text-foreground">
+                                    Fecha de Inicio
+                                </label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 transition-all focus:border-primary shadow-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5 group">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1 transition-colors group-focus-within:text-foreground">
+                                    Fecha de Fin (Opcional)
+                                </label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 transition-all focus:border-primary shadow-sm"
+                                />
                             </div>
                         </div>
                     </div>

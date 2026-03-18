@@ -128,6 +128,10 @@ model Course {
   schedules   Schedule[]
   lessons     Lesson[]
 
+
+  startDate   DateTime?
+  endDate     DateTime?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -161,6 +165,8 @@ model Schedule {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
 }
 
 model Classroom {
@@ -217,6 +223,9 @@ model Lesson {
   
   attendances Attendance[]
   grades      Grade[]
+
+  scheduleId  String?
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

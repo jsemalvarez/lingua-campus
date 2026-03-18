@@ -107,12 +107,26 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             currentTeacherId={course.teacher?.id || null}
                                             teachers={instituteTeachers}
                                             currentColor={course.color}
+                                            currentStartDate={course.startDate}
+                                            currentEndDate={course.endDate}
                                         />
                                     )}
                                 </div>
                                 <p className="text-sm font-semibold mt-0.5 text-muted-foreground flex items-center gap-2 flex-wrap">
                                     Nivel: <span className="text-primary">{course.level || "General"}</span>
                                     <span className="text-border">•</span>
+                                    {course.startDate && (
+                                        <>
+                                            <span className="text-muted-foreground">Vigencia: </span>
+                                            <span className="text-primary font-bold">{new Date(course.startDate).toLocaleDateString('es-ES')}</span>
+                                            {course.endDate ? (
+                                                <> - <span className="text-primary font-bold">{new Date(course.endDate).toLocaleDateString('es-ES')}</span></>
+                                            ) : (
+                                                " en adelante"
+                                            )}
+                                            <span className="text-border">•</span>
+                                        </>
+                                    )}
                                     Aula: <span className="text-emerald-600 dark:text-emerald-400">{course.classroom?.name || "No asignada"}</span>
                                     <span className="text-border">•</span>
                                     <GraduationCap size={14} className="ml-1" /> Prof. {course.teacher?.name || "Sin Asignar"}
@@ -159,8 +173,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                 <LessonList
                                     courseId={course.id}
                                     lessons={course.lessons}
+                                    schedules={course.schedules}
                                     isTeacherOrAdmin={isTeacherOrAdmin && !isFinished}
                                     courseStatus={course.status}
+                                    startDate={course.startDate || undefined}
+                                    endDate={course.endDate || undefined}
                                 />
                             </div>
                         </Card>
