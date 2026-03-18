@@ -33,6 +33,11 @@ export default async function InscriptionPage() {
         notFound();
     }
 
+    const instituteLevels = await prisma.level.findMany({
+        where: { instituteId: institute.id },
+        orderBy: { name: 'asc' }
+    });
+
     return (
         <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] selection:bg-primary/20 relative overflow-x-hidden">
             <PublicNavbar instituteName={institute.name} landingUrl="/" />
@@ -81,7 +86,11 @@ export default async function InscriptionPage() {
                 {/* ── Contenedor del Formulario con Glassmorphism Mejorado ── */}
                 <Card className="w-full max-w-4xl p-1 md:p-2 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border-white/20 dark:border-slate-800/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] rounded-[2.5rem] overflow-hidden group">
                     <div className="bg-white/80 dark:bg-slate-900/80 p-6 md:p-12 rounded-[2rem] border border-white/40 dark:border-slate-800/20">
-                        <RegistrationForm instituteId={institute.id} instituteName={institute.name} />
+                        <RegistrationForm 
+                            instituteId={institute.id} 
+                            instituteName={institute.name} 
+                            instituteLevels={instituteLevels}
+                        />
                     </div>
                 </Card>
 

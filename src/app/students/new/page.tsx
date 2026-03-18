@@ -3,15 +3,30 @@ import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
-import { StudentForm } from "./StudentForm";
+import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { ArrowLeft, UserPlus } from "lucide-react";
+import { StudentForm } from "./StudentForm";
 
 export default async function NewStudentPage() {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    if (!session || !session.user?.email) {
         redirect("/login");
     }
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { instituteId: true }
+    });
+
+    if (!user || !user.instituteId) {
+        redirect("/dashboard");
+    }
+
+    const instituteLevels = await prisma.level.findMany({
+        where: { instituteId: user.instituteId as string },
+        orderBy: { name: 'asc' }
+    });
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -45,7 +60,7 @@ export default async function NewStudentPage() {
 
                 <div className="max-w-4xl">
                     <Card className="border-border/40 shadow-sm">
-                        <StudentForm />
+                        <StudentForm instituteLevels={instituteLevels} />
                     </Card>
                 </div>
             </main>

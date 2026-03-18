@@ -6,12 +6,18 @@ import { Button } from "@/components/ui/Button";
 import { User, Phone, Mail, Calendar, Users, CheckCircle, AlertCircle, Heart, MapPin, Inbox, GraduationCap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Level {
+    id: string;
+    name: string;
+}
+
 interface RegistrationFormProps {
     instituteId: string;
     instituteName: string;
+    instituteLevels: Level[];
 }
 
-export function RegistrationForm({ instituteId, instituteName }: RegistrationFormProps) {
+export function RegistrationForm({ instituteId, instituteName, instituteLevels }: RegistrationFormProps) {
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
@@ -142,11 +148,9 @@ export function RegistrationForm({ instituteId, instituteName }: RegistrationFor
                                 className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 appearance-none shadow-sm cursor-pointer"
                             >
                                 <option value="">Seleccionar nivel...</option>
-                                <option value="Kinder">Kinder</option>
-                                <option value="Children">Children</option>
-                                <option value="Adolescents">Adolescents</option>
-                                <option value="Adults">Adults</option>
-                                <option value="Otro / No sabe">Otro</option>
+                                {instituteLevels.map(level => (
+                                    <option key={level.id} value={level.id}>{level.name}</option>
+                                ))}
                             </select>
                             <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
                         </div>
