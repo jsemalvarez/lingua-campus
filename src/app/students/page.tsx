@@ -35,16 +35,36 @@ export default async function StudentsPage(props: PageProps) {
     const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
     const skip = (currentPage - 1) * PAGE_SIZE;
 
+    const isTeacher = user.role === "TEACHER";
+
     const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
     const isActiveTab = tabParam === 'active';
     const isInactiveTab = tabParam === 'inactive';
     const isPreEnrolledTab = tabParam === 'pre-enrolled';
+
+    // Force active tab for teachers (they shouldn't see pre-enrolled or deleted students)
+    if (isTeacher && (isInactiveTab || isPreEnrolledTab)) {
+        redirect("/students?tab=active");
+    }
 
     // Build the query where clause
     const whereClause: import("@prisma/client").Prisma.StudentWhereInput = { 
         instituteId: user.instituteId, 
         status: isPreEnrolledTab ? "PRE_INSCRIBED" : (isInactiveTab ? "DELETED" : "ACTIVE")
     };
+
+    // If teacher, restrict to students enrolled in their active courses
+    if (isTeacher) {
+        whereClause.status = "ACTIVE";
+        whereClause.enrollments = {
+            some: {
+                course: {
+                    teacherId: user.id,
+                    status: "ACTIVE"
+                }
+            }
+        };
+    }
 
     // Add simple text search if query is present
     const query = typeof searchParams.q === 'string' ? searchParams.q : undefined;
@@ -62,7 +82,10 @@ export default async function StudentsPage(props: PageProps) {
             where: whereClause,
             include: {
                 enrollments: {
-                    where: { status: "ACTIVE" },
+                    where: { 
+                        status: "ACTIVE",
+                        ...(isTeacher ? { course: { teacherId: user.id } } : {})
+                    },
                     select: {
                         course: {
                             select: { id: true, name: true, color: true }
@@ -90,14 +113,19 @@ export default async function StudentsPage(props: PageProps) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Estudiantes</h1>
                         <p className="text-muted-foreground mt-1">
-                            Administra la base de datos de tus alumnos. Hay {totalStudents} registrados en total.
+                            {isTeacher 
+                                ? `Gestioná tus alumnos. Tenés ${totalStudents} alumnos asignados.`
+                                : `Administra la base de datos de tus alumnos. Hay ${totalStudents} registrados en total.`
+                            }
                         </p>
                     </div>
-                    <Link href="/students/new">
-                        <Button className="premium-gradient shadow-md shadow-primary/20">
-                            <UserPlus className="mr-2 h-4 w-4" /> Nuevo Estudiante
-                        </Button>
-                    </Link>
+                    {!isTeacher && (
+                        <Link href="/students/new">
+                            <Button className="premium-gradient shadow-md shadow-primary/20">
+                                <UserPlus className="mr-2 h-4 w-4" /> Nuevo Estudiante
+                            </Button>
+                        </Link>
+                    )}
                 </header>
 
                 {/* Tabs */}
@@ -111,24 +139,28 @@ export default async function StudentsPage(props: PageProps) {
                             <Users size={16} className="mr-2" /> Activos
                         </Button>
                     </Link>
-                    <Link href="/students?tab=pre-enrolled">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isPreEnrolledTab ? "bg-background shadow-sm border border-border/60 text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                            <UserPlus size={16} className="mr-2" /> Pre-inscriptos
-                        </Button>
-                    </Link>
-                    <Link href="/students?tab=inactive">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isInactiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                            <UserMinus size={16} className="mr-2" /> Papelera
-                        </Button>
-                    </Link>
+                    {!isTeacher && (
+                        <>
+                            <Link href="/students?tab=pre-enrolled">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isPreEnrolledTab ? "bg-background shadow-sm border border-border/60 text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                                >
+                                    <UserPlus size={16} className="mr-2" /> Pre-inscriptos
+                                </Button>
+                            </Link>
+                            <Link href="/students?tab=inactive">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isInactiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                                >
+                                    <UserMinus size={16} className="mr-2" /> Papelera
+                                </Button>
+                            </Link>
+                        </>
+                    )}
                 </div>
 
                 {/* Filters & Search */}
