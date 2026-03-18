@@ -24,15 +24,33 @@ interface StudentData {
     dni: string | null;
     schoolInfo: string | null;
     registeredLevel: string | null;
+    registeredLevelName?: string;
 }
 
-export function StudentProfileView({ student, userRole }: { student: StudentData; userRole: string }) {
+interface Level {
+    id: string;
+    name: string;
+}
+
+export function StudentProfileView({ 
+    student, 
+    userRole,
+    instituteLevels
+}: { 
+    student: StudentData; 
+    userRole: string;
+    instituteLevels: Level[];
+}) {
     const [isEditing, setIsEditing] = useState(false);
 
     if (isEditing) {
         return (
             <div className="max-w-3xl mx-auto">
-                <EditStudentForm student={student} onCancel={() => setIsEditing(false)} />
+                <EditStudentForm 
+                    student={student} 
+                    onCancel={() => setIsEditing(false)} 
+                    instituteLevels={instituteLevels}
+                />
             </div>
         );
     }
@@ -53,9 +71,11 @@ export function StudentProfileView({ student, userRole }: { student: StudentData
                         Ingresó el {dayjs(student.joinDate).format("DD MMM, YYYY")}
                     </p>
 
-                    <Button variant="outline" className="w-full mt-6 shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>
-                        <Edit3 size={16} className="mr-2" /> Editar Perfil
-                    </Button>
+                    {userRole !== "TEACHER" && (
+                        <Button variant="outline" className="w-full mt-6 shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>
+                            <Edit3 size={16} className="mr-2" /> Editar Perfil
+                        </Button>
+                    )}
                 </Card>
 
                 <Card className="p-5 border-border/40 bg-card/50 space-y-4">
@@ -110,7 +130,7 @@ export function StudentProfileView({ student, userRole }: { student: StudentData
                         </div>
                         <div className="space-y-1 sm:col-span-2">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Nivel Inscripto (Censo Inicial)</span>
-                            <p className="font-medium text-sm capitalize">{student.registeredLevel || "-"}</p>
+                            <p className="font-medium text-sm capitalize">{student.registeredLevelName || student.registeredLevel || "-"}</p>
                         </div>
                     </div>
                 </Card>
