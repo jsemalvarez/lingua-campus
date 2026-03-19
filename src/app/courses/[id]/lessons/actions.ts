@@ -35,6 +35,16 @@ export async function createLessonAction(formData: FormData) {
         // Store as UTC noon to avoid timezone shift on the date boundary anywhere in the world
         const date = new Date(`${dateStr}T12:00:00Z`);
 
+        // Verify course belongs to same institute
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: { instituteId: true }
+        });
+
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "No autorizado (El curso no pertenece a tu instituto)" };
+        }
+
         await prisma.lesson.create({
             data: {
                 courseId,
@@ -85,6 +95,16 @@ export async function editLessonAction(formData: FormData) {
         // Store as UTC noon
         const date = new Date(`${dateStr}T12:00:00Z`);
 
+        // Verify lesson and course belong to same institute
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            include: { course: { select: { instituteId: true } } }
+        });
+
+        if (!lesson || lesson.course.instituteId !== user.instituteId) {
+            return { success: false, error: "No autorizado (La clase no pertenece a tu instituto)" };
+        }
+
         await prisma.lesson.update({
             where: { id: lessonId },
             data: {
@@ -117,6 +137,16 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
         });
 
         if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+            return { success: false, error: "No autorizado" };
+        }
+
+        // Verify lesson belongs to same institute
+        const lesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            include: { course: { select: { instituteId: true } } }
+        });
+
+        if (!lesson || lesson.course.instituteId !== user.instituteId) {
             return { success: false, error: "No autorizado" };
         }
 

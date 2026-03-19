@@ -33,9 +33,15 @@ export default async function CoursesPage(props: PageProps) {
     const isActiveTab = tab === 'active';
     const status = isActiveTab ? "ACTIVE" : "FINISHED";
 
+    const isTeacher = user.role === "TEACHER";
+    const whereClause: any = { instituteId: user.instituteId, status };
+    if (isTeacher) {
+        whereClause.teacherId = user.id;
+    }
+
     // Listar cursos del instituto según el estado seleccionado
     const courses = await prisma.course.findMany({
-        where: { instituteId: user.instituteId, status },
+        where: whereClause,
         include: {
             teacher: { select: { name: true } },
             classroom: { select: { name: true } },
