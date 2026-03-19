@@ -57,14 +57,25 @@ export default async function SchedulePage({
         redirect("/dashboard");
     }
 
+    const isTeacher = user.role === "TEACHER";
+    const effectiveTeacherId = isTeacher ? user.id : params.teacherId;
+
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
         prisma.course.findMany({
-            where: { instituteId: user.instituteId, status: "ACTIVE" },
+            where: { 
+                instituteId: user.instituteId, 
+                status: "ACTIVE",
+                ...(isTeacher ? { teacherId: user.id } : {})
+            },
             orderBy: { name: "asc" }
         }),
         prisma.user.findMany({
-            where: { instituteId: user.instituteId, role: "TEACHER", status: "ACTIVE" },
+            where: { 
+                instituteId: user.instituteId, 
+                role: "TEACHER", 
+                status: "ACTIVE"
+            },
             orderBy: { name: "asc" }
         }),
         prisma.classroom.findMany({
@@ -74,7 +85,7 @@ export default async function SchedulePage({
     ]);
 
     const activeCourseId = params.courseId;
-    const activeTeacherId = params.teacherId;
+    const activeTeacherId = effectiveTeacherId;
     const activeClassroomId = params.classroomId;
 
     const displayDayIndex = displayDateNoon.getUTCDay();
@@ -249,18 +260,19 @@ export default async function SchedulePage({
                                         {allCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Profesor</label>
-                                    <select 
-                                        name="teacherId" 
-                                        defaultValue={activeTeacherId || ""}
-                                        className="w-full bg-muted/30 border-border/40 rounded-xl px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Todos los Profesores</option>
-                                        {allTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                    </select>
-                                </div>
+                                {!isTeacher && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Profesor</label>
+                                        <select 
+                                            name="teacherId" 
+                                            defaultValue={activeTeacherId || ""}
+                                            className="w-full bg-muted/30 border-border/40 rounded-xl px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Todos los Profesores</option>
+                                            {allTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Aula</label>
