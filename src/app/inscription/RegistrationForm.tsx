@@ -6,15 +6,22 @@ import { Button } from "@/components/ui/Button";
 import { User, Phone, Mail, Calendar, Users, CheckCircle, AlertCircle, Heart, MapPin, Inbox, GraduationCap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Level {
+    id: string;
+    name: string;
+}
+
 interface RegistrationFormProps {
     instituteId: string;
     instituteName: string;
+    instituteLevels: Level[];
 }
 
-export function RegistrationForm({ instituteId, instituteName }: RegistrationFormProps) {
+export function RegistrationForm({ instituteId, instituteName, instituteLevels }: RegistrationFormProps) {
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
+    const [formType, setFormType] = useState<"adult" | "minor">("adult");
 
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");
@@ -48,6 +55,55 @@ export function RegistrationForm({ instituteId, instituteName }: RegistrationFor
 
     return (
         <form action={handleSubmit} className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-4">
+            <input type="hidden" name="formType" value={formType} />
+
+            {/* ── 0. Selección de Tipo de Inscripción ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 bg-slate-100/50 dark:bg-slate-900/50 rounded-[2.2rem] border border-border/50">
+                <button
+                    type="button"
+                    onClick={() => setFormType("adult")}
+                    className={cn(
+                        "flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] transition-all duration-500 border-2",
+                        formType === "adult"
+                            ? "bg-white dark:bg-slate-800 border-primary shadow-xl shadow-primary/10 scale-[1.02]"
+                            : "bg-transparent border-transparent opacity-60 hover:opacity-100"
+                    )}
+                >
+                    <div className={cn(
+                        "p-3 rounded-2xl transition-colors",
+                        formType === "adult" ? "bg-primary text-white" : "bg-primary/10 text-primary"
+                    )}>
+                        <User size={28} />
+                    </div>
+                    <div className="text-center">
+                        <p className={cn("text-lg font-black tracking-tight", formType === "adult" ? "text-primary" : "text-foreground")}>Estudiante Adulto</p>
+                        <p className="text-xs font-medium opacity-60">Uso mis propios datos</p>
+                    </div>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setFormType("minor")}
+                    className={cn(
+                        "flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] transition-all duration-500 border-2",
+                        formType === "minor"
+                            ? "bg-white dark:bg-slate-800 border-emerald-500 shadow-xl shadow-emerald-500/10 scale-[1.02]"
+                            : "bg-transparent border-transparent opacity-60 hover:opacity-100"
+                    )}
+                >
+                    <div className={cn(
+                        "p-3 rounded-2xl transition-colors",
+                        formType === "minor" ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-500"
+                    )}>
+                        <Users size={28} />
+                    </div>
+                    <div className="text-center">
+                        <p className={cn("text-lg font-black tracking-tight", formType === "minor" ? "text-emerald-500" : "text-foreground")}>Estudiante Menor</p>
+                        <p className="text-xs font-medium opacity-60">Requiere tutor responsable</p>
+                    </div>
+                </button>
+            </div>
+
             {/* ── 1. Datos del Alumno ── */}
             <div className="space-y-8">
                 <div className="flex items-center gap-4 group">
@@ -86,10 +142,11 @@ export function RegistrationForm({ instituteId, instituteName }: RegistrationFor
                     </div>
 
                     <div className="flex flex-col gap-2.5">
-                        <label className="text-[0.95rem] font-bold ml-1 text-muted-foreground">DNI (Opcional)</label>
+                        <label className="text-[0.95rem] font-bold ml-1 text-muted-foreground">DNI *</label>
                         <input
                             name="dni"
-                            placeholder="Ej: 45.123.456"
+                            required
+                            placeholder="Ej: 45123456"
                             className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                         />
                     </div>
@@ -102,7 +159,7 @@ export function RegistrationForm({ instituteId, instituteName }: RegistrationFor
                             <input
                                 name="phone"
                                 type="tel"
-                                placeholder="+54 9 11 ..."
+                                placeholder="+54 9 223 ..."
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                             />
                         </div>
@@ -142,137 +199,144 @@ export function RegistrationForm({ instituteId, instituteName }: RegistrationFor
                                 className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 appearance-none shadow-sm cursor-pointer"
                             >
                                 <option value="">Seleccionar nivel...</option>
-                                <option value="Kinder">Kinder</option>
-                                <option value="Children">Children</option>
-                                <option value="Adolescents">Adolescents</option>
-                                <option value="Adults">Adults</option>
-                                <option value="Otro / No sabe">Otro</option>
+                                {instituteLevels.map(level => (
+                                    <option key={level.id} value={level.id}>{level.name}</option>
+                                ))}
                             </select>
                             <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
                         </div>
                     </div>
 
-                    {/* Fila 5: Colegio/Turno */}
-                    <div className="flex flex-col gap-2.5 sm:col-span-2">
-                        <label className="text-[0.95rem] font-bold ml-1 text-muted-foreground">Colegio / Turno Actual</label>
-                        <div className="relative group/input">
-                            <GraduationCap className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-primary transition-colors" />
-                            <input
-                                name="schoolInfo"
-                                placeholder="Ej: Instituto San José / Turno Tarde"
-                                className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
-                            />
+                    {/* Fila 5: Colegio/Turno (Solo para menores) */}
+                    {formType === "minor" && (
+                        <div className="flex flex-col gap-2.5 sm:col-span-2 animate-in fade-in slide-in-from-top-2">
+                            <label className="text-[0.95rem] font-bold ml-1 text-muted-foreground">Colegio / Turno Actual</label>
+                            <div className="relative group/input">
+                                <GraduationCap className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-primary transition-colors" />
+                                <input
+                                    name="schoolInfo"
+                                    placeholder="Ej: Instituto San José / Turno Tarde"
+                                    className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
 
-            {/* ── 2. Tutor Legal 1 (Opcional) ── */}
-            <div className="space-y-8 pt-4">
-                <div className="flex items-center gap-4 group">
-                    <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500 shadow-[0_8px_16px_-4px_rgba(16,185,129,0.2)] group-hover:scale-110 transition-transform duration-300">
-                        <Users size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 uppercase text-[0.85rem] opacity-50 mb-1">Paso 02</h2>
-                        <p className="text-xl font-bold">Responsable de Referencia <span className="text-sm font-normal text-muted-foreground pl-1 decoration-dotted underline underline-offset-4">(Adultos opcional)</span></p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 pt-2">
-                    <div className="flex flex-col gap-2.5 sm:col-span-2">
-                        <label className="text-[0.95rem] font-bold ml-1">Nombre Completo del Tutor</label>
-                        <input
-                            name="g1Name"
-                            placeholder="Nombre del adulto responsable"
-                            className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-2.5">
-                        <label className="text-[0.95rem] font-bold ml-1">Vínculo / Parentesco</label>
-                        <div className="relative">
-                            <select
-                                name="g1Relation"
-                                className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 appearance-none shadow-sm cursor-pointer"
-                            >
-                                <option value="">Seleccionar...</option>
-                                <option value="Madre">Madre</option>
-                                <option value="Padre">Padre</option>
-                                <option value="Abuelo/a">Abuelo/a</option>
-                                <option value="Tutor">Representante</option>
-                                <option value="Otro">Otro</option>
-                            </select>
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+            {/* ── 2. Tutor Legal 1 (Opcional para adultos, Obligatorio para menores) ── */}
+            {formType === "minor" && (
+                <div className="space-y-8 pt-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-4 group">
+                        <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500 shadow-[0_8px_16px_-4px_rgba(16,185,129,0.2)] group-hover:scale-110 transition-transform duration-300">
+                            <Users size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 uppercase text-[0.85rem] opacity-50 mb-1">Paso 02</h2>
+                            <p className="text-xl font-bold">Responsable de Referencia <span className="text-sm font-normal text-muted-foreground pl-1 decoration-dotted underline underline-offset-4">{formType === 'adult' ? '(Adultos opcional)' : '(Obligatorio para menores)'}</span></p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2.5">
-                        <label className="text-[0.95rem] font-bold ml-1">Teléfono Móvil</label>
-                        <div className="relative group/input">
-                            <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-emerald-500 transition-colors" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 pt-2">
+                        <div className="flex flex-col gap-2.5 sm:col-span-2">
+                            <label className="text-[0.95rem] font-bold ml-1">Nombre Completo del Tutor {formType === 'minor' && "*"}</label>
                             <input
-                                name="g1Phone"
-                                type="tel"
-                                placeholder="Ej: +54 9 11 0000-0000"
-                                className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
+                                name="g1Name"
+                                required={formType === 'minor'}
+                                placeholder="Nombre del adulto responsable"
+                                className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                             />
                         </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1">Vínculo / Parentesco {formType === 'minor' && "*"}</label>
+                            <div className="relative">
+                                <select
+                                    name="g1Relation"
+                                    required={formType === 'minor'}
+                                    className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 appearance-none shadow-sm cursor-pointer"
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Madre">Madre</option>
+                                    <option value="Padre">Padre</option>
+                                    <option value="Abuelo/a">Abuelo/a</option>
+                                    <option value="Tutor">Representante</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1">Teléfono Móvil {formType === 'minor' && "*"}</label>
+                            <div className="relative group/input">
+                                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-emerald-500 transition-colors" />
+                                <input
+                                    name="g1Phone"
+                                    required={formType === 'minor'}
+                                    type="tel"
+                                    placeholder="Ej: +54 9 223 ...."
+                                    className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* ── 3. Tutor Legal 2 (Opcional) ── */}
-            <div className="space-y-8 pt-4">
-                <div className="flex items-center gap-4 group">
-                    <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-[0_8px_16px_-4px_rgba(59,130,246,0.2)] group-hover:scale-110 transition-transform duration-300">
-                        <Inbox size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400 uppercase text-[0.85rem] opacity-50 mb-1">Opcional</h2>
-                        <p className="text-xl font-bold">Segundo Contacto de Emergencia</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 pt-2 p-6 md:p-10 bg-slate-500/5 dark:bg-slate-400/5 rounded-[2.5rem] border border-border/10 shadow-inner">
-                    <div className="flex flex-col gap-2.5 sm:col-span-2">
-                        <label className="text-[0.95rem] font-bold ml-1 opacity-70">Nombre Completo</label>
-                        <input
-                            name="g2Name"
-                            placeholder="Nombre del segundo tutor"
-                            className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
-                        />
-                    </div>
-                    <div className="flex flex-col gap-2.5">
-                        <label className="text-[0.95rem] font-bold ml-1 opacity-70">Parentesco</label>
-                        <div className="relative">
-                            <select
-                                name="g2Relation"
-                                className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13 appearance-none cursor-pointer"
-                            >
-                                <option value="">Seleccionar...</option>
-                                <option value="Madre">Madre</option>
-                                <option value="Padre">Padre</option>
-                                <option value="Abuelo/a">Abuelo/a</option>
-                                <option value="Otro">Otro</option>
-                            </select>
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">▼</div>
+            {formType === "minor" && (
+                <div className="space-y-8 pt-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-4 group">
+                        <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-[0_8px_16px_-4px_rgba(59,130,246,0.2)] group-hover:scale-110 transition-transform duration-300">
+                            <Inbox size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400 uppercase text-[0.85rem] opacity-50 mb-1">Opcional</h2>
+                            <p className="text-xl font-bold">Segundo Contacto de Emergencia</p>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2.5">
-                        <label className="text-[0.95rem] font-bold ml-1 opacity-70">Celular</label>
-                        <div className="relative group/input">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 pt-2 p-6 md:p-10 bg-slate-500/5 dark:bg-slate-400/5 rounded-[2.5rem] border border-border/10 shadow-inner">
+                        <div className="flex flex-col gap-2.5 sm:col-span-2">
+                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Nombre Completo</label>
                             <input
-                                name="g2Phone"
-                                type="tel"
-                                placeholder="+54 9 11 ..."
+                                name="g2Name"
+                                placeholder="Nombre del segundo tutor"
                                 className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
                             />
                         </div>
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Parentesco</label>
+                            <div className="relative">
+                                <select
+                                    name="g2Relation"
+                                    className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13 appearance-none cursor-pointer"
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Madre">Madre</option>
+                                    <option value="Padre">Padre</option>
+                                    <option value="Abuelo/a">Abuelo/a</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">▼</div>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Celular</label>
+                            <div className="relative group/input">
+                                <input
+                                    name="g2Phone"
+                                    type="tel"
+                                    placeholder="+54 9 223 ..."
+                                    className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             <div className="pt-12">
                 {status === "error" && (

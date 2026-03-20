@@ -35,6 +35,8 @@ interface EditCourseModalProps {
     teachers: Teacher[];
     levels: Level[];
     classrooms: Classroom[];
+    currentStartDate: Date | null;
+    currentEndDate: Date | null;
 }
 
 export function EditCourseModal({ 
@@ -46,7 +48,9 @@ export function EditCourseModal({
     currentColor,
     teachers, 
     levels, 
-    classrooms 
+    classrooms,
+    currentStartDate,
+    currentEndDate
 }: EditCourseModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +68,8 @@ export function EditCourseModal({
     );
     const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false);
     const [color, setColor] = useState(currentColor || "#3b82f6");
+    const [startDate, setStartDate] = useState(currentStartDate ? new Date(currentStartDate).toISOString().split('T')[0] : "");
+    const [endDate, setEndDate] = useState(currentEndDate ? new Date(currentEndDate).toISOString().split('T')[0] : "");
 
     const palette = [
         { name: "Rojo 300", value: "#fca5a5" }, { name: "Rojo 500", value: "#ef4444" }, { name: "Rojo 700", value: "#b91c1c" }, { name: "Rojo 900", value: "#7f1d1d" },
@@ -97,6 +103,8 @@ export function EditCourseModal({
         formData.append("level", level);
         formData.append("teacherId", teacherId);
         formData.append("color", color);
+        formData.append("startDate", startDate);
+        formData.append("endDate", endDate);
 
         setStatus("idle");
         startTransition(async () => {
@@ -247,6 +255,32 @@ export function EditCourseModal({
                                                 ))}
                                             </div>
                                         )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4">
+                                    <div className="space-y-1.5 focus-within:text-indigo-500 transition-colors">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
+                                            Fecha de Inicio
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5 focus-within:text-indigo-500 transition-colors">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
+                                            Fecha de Fin
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
+                                        />
                                     </div>
                                 </div>
                             </div>

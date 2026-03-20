@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { User, Phone, Mail, Calendar, Users, Shield, CheckCircle, AlertCircle, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export function StudentForm() {
+interface Level {
+    id: string;
+    name: string;
+}
+
+export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -136,23 +141,9 @@ export function StudentForm() {
                             className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm appearance-none"
                         >
                             <option value="">Seleccionar...</option>
-                            <option value="Kinder">Kinder</option>
-                            <option value="Children 1">Children 1</option>
-                            <option value="Children 2">Children 2</option>
-                            <option value="Children 3">Children 3</option>
-                            <option value="Children 4">Children 4</option>
-                            <option value="Pre-adolescents 1">Pre-adolescents 1</option>
-                            <option value="Pre-adolescents 2">Pre-adolescents 2</option>
-                            <option value="Adolescents 1">Adolescents 1</option>
-                            <option value="Adolescents 2">Adolescents 2</option>
-                            <option value="Adolescents 3">Adolescents 3</option>
-                            <option value="Adults 1">Adults 1</option>
-                            <option value="Adults 2">Adults 2</option>
-                            <option value="Adults 3">Adults 3</option>
-                            <option value="Pre-intermediate">Pre-intermediate</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Upper-intermediate">Upper-intermediate</option>
-                            <option value="A Confirmar">A Confirmar</option>
+                            {instituteLevels.map(level => (
+                                <option key={level.id} value={level.id}>{level.name}</option>
+                            ))}
                         </select>
                     </div>
                 </div>

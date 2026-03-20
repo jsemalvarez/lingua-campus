@@ -24,7 +24,20 @@ interface StudentData {
     birthDate: Date | null;
 }
 
-export function EditStudentForm({ student, onCancel }: { student: StudentData, onCancel: () => void }) {
+interface Level {
+    id: string;
+    name: string;
+}
+
+export function EditStudentForm({ 
+    student, 
+    onCancel, 
+    instituteLevels 
+}: { 
+    student: StudentData, 
+    onCancel: () => void, 
+    instituteLevels: Level[] 
+}) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -102,23 +115,13 @@ export function EditStudentForm({ student, onCancel }: { student: StudentData, o
                             className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm flex items-center font-medium focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
                         >
                             <option value="">Seleccionar...</option>
-                            <option value="Kinder">Kinder</option>
-                            <option value="Children 1">Children 1</option>
-                            <option value="Children 2">Children 2</option>
-                            <option value="Children 3">Children 3</option>
-                            <option value="Children 4">Children 4</option>
-                            <option value="Pre-adolescents 1">Pre-adolescents 1</option>
-                            <option value="Pre-adolescents 2">Pre-adolescents 2</option>
-                            <option value="Adolescents 1">Adolescents 1</option>
-                            <option value="Adolescents 2">Adolescents 2</option>
-                            <option value="Adolescents 3">Adolescents 3</option>
-                            <option value="Adults 1">Adults 1</option>
-                            <option value="Adults 2">Adults 2</option>
-                            <option value="Adults 3">Adults 3</option>
-                            <option value="Pre-intermediate">Pre-intermediate</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Upper-intermediate">Upper-intermediate</option>
-                            <option value="A Confirmar">A Confirmar</option>
+                            {instituteLevels.map(level => (
+                                <option key={level.id} value={level.id}>{level.name}</option>
+                            ))}
+                            {/* Fallback for existing string values that are not IDs */}
+                            {student.registeredLevel && !instituteLevels.find(l => l.id === student.registeredLevel) && (
+                                <option value={student.registeredLevel}>{student.registeredLevel}</option>
+                            )}
                         </select>
                     </div>
                 </div>

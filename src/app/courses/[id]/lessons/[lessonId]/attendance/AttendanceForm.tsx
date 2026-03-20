@@ -12,12 +12,14 @@ export function AttendanceForm({
     lessonId,
     courseId,
     students,
-    existingAttendances
+    existingAttendances,
+    readOnly = false
 }: {
     lessonId: string;
     courseId: string;
     students: StudentData[];
-    existingAttendances: Record<string, AttendanceRecord>
+    existingAttendances: Record<string, AttendanceRecord>;
+    readOnly?: boolean;
 }) {
     const [isPending, startTransition] = useTransition();
     const [statusIndicator, setStatusIndicator] = useState<"idle" | "success" | "error">("idle");
@@ -46,6 +48,7 @@ export function AttendanceForm({
     }, [students, existingAttendances]);
 
     const handleStatusChange = (studentId: string, newStatus: "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED") => {
+        if (readOnly) return;
         setAttendanceState(prev => ({
             ...prev,
             [studentId]: { ...prev[studentId], status: newStatus }
@@ -53,6 +56,7 @@ export function AttendanceForm({
     };
 
     const handleNotesChange = (studentId: string, notes: string) => {
+        if (readOnly) return;
         setAttendanceState(prev => ({
             ...prev,
             [studentId]: { ...prev[studentId], notes }
@@ -60,6 +64,7 @@ export function AttendanceForm({
     };
 
     const handleSave = () => {
+        if (readOnly) return;
         setStatusIndicator("idle");
 
         // Formatear payload
@@ -117,37 +122,41 @@ export function AttendanceForm({
                                                 {/* Botones de Estado Rápidos */}
                                                 <button
                                                     onClick={() => handleStatusChange(student.id, "PRESENT")}
+                                                    disabled={readOnly}
                                                     className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${currentData.status === "PRESENT"
                                                             ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
                                                             : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                                        }`}
+                                                        } ${readOnly ? "cursor-default opacity-80" : ""}`}
                                                 >
                                                     <Check size={14} /> P
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusChange(student.id, "ABSENT")}
+                                                    disabled={readOnly}
                                                     className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${currentData.status === "ABSENT"
                                                             ? "bg-red-500 text-white shadow-md shadow-red-500/20"
                                                             : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                                        }`}
+                                                        } ${readOnly ? "cursor-default opacity-80" : ""}`}
                                                 >
                                                     <X size={14} /> A
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusChange(student.id, "LATE")}
+                                                    disabled={readOnly}
                                                     className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${currentData.status === "LATE"
                                                             ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
                                                             : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                                        }`}
+                                                        } ${readOnly ? "cursor-default opacity-80" : ""}`}
                                                 >
                                                     <Clock size={14} /> T
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusChange(student.id, "JUSTIFIED")}
+                                                    disabled={readOnly}
                                                     className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${currentData.status === "JUSTIFIED"
                                                             ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
                                                             : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                                        }`}
+                                                        } ${readOnly ? "cursor-default opacity-80" : ""}`}
                                                 >
                                                     <FileWarning size={14} /> J
                                                 </button>
@@ -156,10 +165,11 @@ export function AttendanceForm({
                                         <td className="px-5 py-4 w-full">
                                             <input
                                                 type="text"
-                                                placeholder="Ej: Faltó por enfermedad, llovió..."
+                                                placeholder={readOnly ? "Sin notas" : "Ej: Faltó por enfermedad, llovió..."}
                                                 value={currentData.notes}
                                                 onChange={(e) => handleNotesChange(student.id, e.target.value)}
-                                                className="w-full px-3 py-2 rounded-lg border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
+                                                disabled={readOnly}
+                                                className={`w-full px-3 py-2 rounded-lg border border-input/60 bg-background text-sm outline-none transition-all ${readOnly ? "cursor-default opacity-70 bg-muted/20" : "focus:ring-2 focus:ring-primary/20 focus:border-primary"}`}
                                             />
                                         </td>
                                     </tr>
@@ -187,13 +197,17 @@ export function AttendanceForm({
 
                 <Button
                     onClick={handleSave}
-                    disabled={isPending}
-                    className="w-full sm:w-auto premium-gradient shadow-md shadow-primary/20 px-8 flex items-center gap-2"
+                    disabled={isPending || readOnly}
+                    className={`w-full sm:w-auto px-8 flex items-center gap-2 ${readOnly ? "bg-muted text-muted-foreground hover:bg-muted cursor-default border-border" : "premium-gradient shadow-md shadow-primary/20"}`}
                 >
                     {isPending ? (
                         <>
                             <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
                             Guardando...
+                        </>
+                    ) : readOnly ? (
+                        <>
+                            <FileWarning size={18} /> Registro Histórico (Lectura)
                         </>
                     ) : (
                         <>

@@ -51,6 +51,19 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         orderBy: { name: 'asc' }
     });
 
+    const instituteLevels = await prisma.level.findMany({
+        where: { instituteId: user.instituteId },
+        orderBy: { name: 'asc' }
+    });
+
+    // Resolve registeredLevel display name
+    if (student.registeredLevel) {
+        const levelData = instituteLevels.find(l => l.id === student.registeredLevel);
+        (student as any).registeredLevelName = levelData ? levelData.name : student.registeredLevel;
+    } else {
+        (student as any).registeredLevelName = "-";
+    }
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <Navbar />
@@ -74,7 +87,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 <div className="grid gap-8 lg:grid-cols-4 items-start">
                     <div className="lg:col-span-3">
                         {/* Seccion 1: Perfil Interactivo (Vista / Edicion) */}
-                        <StudentProfileView student={student as any} userRole={user.role} />
+                        <StudentProfileView 
+                            student={student as any} 
+                            userRole={user.role} 
+                            instituteLevels={instituteLevels}
+                        />
 
                         {/* Seccion 2: Cursos inscriptos */}
                         <div className="mt-8 max-w-5xl mx-auto space-y-4">
@@ -132,7 +149,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                         </div>
                     </div>
 
-                    {student.status !== "PRE_INSCRIBED" && (
+                    {user.role !== "TEACHER" && student.status !== "PRE_INSCRIBED" && (
                         <div className="lg:col-span-1 space-y-6">
                             <Card className="p-5 border-border/40 bg-card/60">
                                 <h3 className="font-bold flex items-center gap-2 mb-4 text-sm uppercase tracking-wider text-muted-foreground">

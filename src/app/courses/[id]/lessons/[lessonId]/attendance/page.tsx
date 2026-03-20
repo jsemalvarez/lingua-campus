@@ -33,11 +33,13 @@ export default async function AttendancePage({
         include: {
             teacher: { select: { id: true, name: true } },
             enrollments: {
-                where: { status: "ACTIVE" },
+                where: { 
+                    status: { in: ["ACTIVE", "FINISHED"] }
+                },
                 include: { student: { select: { id: true, name: true } } }
             }
         }
-    });
+    }) as any; // Cast as any to bypass latent status field sync issues
 
     if (!course || course.instituteId !== user.instituteId) {
         redirect("/courses");
@@ -48,7 +50,8 @@ export default async function AttendancePage({
         redirect(`/courses/${courseId}`);
     }
 
-    const students = course.enrollments.map(e => e.student);
+    const isReadOnly = course.status === "FINISHED";
+    const students = course.enrollments.map((e: any) => e.student);
 
     const lesson = await prisma.lesson.findUnique({
         where: { id: lessonId }
@@ -121,6 +124,7 @@ export default async function AttendancePage({
                     courseId={courseId}
                     students={students}
                     existingAttendances={formattedRecords}
+                    readOnly={isReadOnly}
                 />
             </main>
         </div>

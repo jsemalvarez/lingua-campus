@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/Button";
 import { X, Calendar, BookOpen, FileText, CheckCircle, AlertCircle, Edit2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+interface Schedule {
+    id: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    room: string | null;
+}
+
+const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
 interface EditLessonModalProps {
     courseId: string;
     lesson: {
@@ -15,10 +25,12 @@ interface EditLessonModalProps {
         topic: string;
         content: string | null;
         type: "CLASS" | "TP" | "EXAM";
+        scheduleId: string | null;
     };
+    schedules?: Schedule[];
 }
 
-export function EditLessonModal({ courseId, lesson }: EditLessonModalProps) {
+export function EditLessonModal({ courseId, lesson, schedules = [] }: EditLessonModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
@@ -89,6 +101,24 @@ export function EditLessonModal({ courseId, lesson }: EditLessonModalProps) {
                         <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">Fecha</label>
                         <input type="date" name="date" defaultValue={initialDateStr} required className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-text focus:border-blue-500" />
                     </div>
+
+                    {schedules.length > 0 && (
+                        <div className="space-y-1.5 focus-within:text-blue-500 transition-colors">
+                            <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">Horario Correspondiente</label>
+                            <select 
+                                name="scheduleId" 
+                                className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all focus:border-blue-500"
+                                defaultValue={lesson.scheduleId || ""}
+                            >
+                                <option value="">Seleccionar horario (Opcional)</option>
+                                {schedules.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {daysMapping[s.dayOfWeek]} {s.startTime} - {s.endTime} {s.room ? `(${s.room})` : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="space-y-1.5 focus-within:text-blue-500 transition-colors">
                         <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1"><BookOpen size={14} /> Tema / Título Principal</label>

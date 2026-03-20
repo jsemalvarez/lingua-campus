@@ -5,12 +5,17 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, BookOpen, Layers, MapPin } from "lucide-react";
+import { Plus, BookOpen, Layers, MapPin, Archive, CheckCircle2 } from "lucide-react";
 import { CourseListClientRenderer } from "./components/CourseListClientRenderer";
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-export default async function CoursesPage() {
+interface PageProps {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function CoursesPage(props: PageProps) {
+    const searchParams = await props.searchParams;
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
 
@@ -24,44 +29,49 @@ export default async function CoursesPage() {
         redirect("/dashboard"); // Si sos superadmin andá a tu panel
     }
 
-    // Listar todos los cursos del instituto
+    const tab = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
+    const isActiveTab = tab === 'active';
+    const status = isActiveTab ? "ACTIVE" : "FINISHED";
+
+    const isTeacher = user.role === "TEACHER";
+    const whereClause: any = { instituteId: user.instituteId, status };
+    if (isTeacher) {
+        whereClause.teacherId = user.id;
+    }
+
+    // Listar cursos del instituto según el estado seleccionado
     const courses = await prisma.course.findMany({
-        where: { instituteId: user.instituteId },
+        where: whereClause,
         include: {
             teacher: { select: { name: true } },
             classroom: { select: { name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
             enrollments: {
-                where: { status: "ACTIVE", student: { status: "ACTIVE" } },
-                include: { student: { select: { name: true } } },
+                // For finished courses, we might want to see who WAS active, but for cards we show summary
+                where: { status: "ACTIVE" },
+                select: { id: true, student: { select: { id: true, name: true } } },
                 orderBy: { student: { name: 'asc' } }
             },
             _count: {
                 select: { enrollments: { where: { status: "ACTIVE" } } }
             }
         },
-        orderBy: { createdAt: "desc" }
+        orderBy: isActiveTab ? { createdAt: "desc" } : { updatedAt: "desc" }
     });
 
-    // Aplicar orden persistente del usuario si existe
+    // Aplicar orden persistente del usuario si existe (Solo para Activos)
     const preferences = user.preferences as any;
     const courseOrder = preferences?.courseOrder as string[] | undefined;
 
     let sortedCourses = courses;
-    if (courseOrder && Array.isArray(courseOrder)) {
+    if (isActiveTab && courseOrder && Array.isArray(courseOrder)) {
         // Ordenar basándonos en el array de IDs guardado
         sortedCourses = [...courses].sort((a, b) => {
             const indexA = courseOrder.indexOf(a.id);
             const indexB = courseOrder.indexOf(b.id);
-
-            // Si ambos están en el orden guardado, respetarlo
             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-
-            // Si solo uno está, ese va primero
             if (indexA !== -1) return -1;
             if (indexB !== -1) return 1;
-
-            // Si ninguno está (cursos nuevos), mantener el orden por createdAt desc (que ya trae la query)
             return 0;
         });
     }
@@ -92,14 +102,14 @@ export default async function CoursesPage() {
                                 </Button>
                             </Link>
                             <Link href="/courses/levels">
-                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4">
+                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4 border-border/60">
                                     <Layers size={18} className="text-primary" />
                                     <span className="hidden xs:inline">Niveles</span>
                                     <span className="xs:hidden">Niv.</span>
                                 </Button>
                             </Link>
                             <Link href="/courses/classrooms">
-                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4">
+                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4 border-border/60">
                                     <MapPin size={18} className="text-primary" />
                                     <span className="hidden xs:inline">Aulas</span>
                                     <span className="xs:hidden">Aul.</span>
@@ -109,15 +119,39 @@ export default async function CoursesPage() {
                     )}
                 </div>
 
+                {/* Tabs de Estado */}
+                <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl w-fit border border-border/40">
+                    <Link href="/courses?tab=active">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <CheckCircle2 size={16} className="mr-2 text-emerald-500" /> Activos
+                        </Button>
+                    </Link>
+                    <Link href="/courses?tab=finished">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${!isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                            <Archive size={16} className="mr-2 text-amber-500" /> Historial
+                        </Button>
+                    </Link>
+                </div>
+
                 {/* ── Listado de Cursos ── */}
                 {courses.length === 0 ? (
                     <div className="text-center py-20 bg-muted/20 rounded-3xl border border-dashed border-border/60">
                         <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                            <BookOpen size={32} />
+                            <Archive size={32} />
                         </div>
-                        <h2 className="text-xl font-bold">No hay cursos registrados</h2>
+                        <h2 className="text-xl font-bold">{isActiveTab ? "No hay cursos activos" : "El historial está vacío"}</h2>
                         <p className="text-muted-foreground mt-2 max-w-xs mx-auto text-sm">
-                            Comienza creando tu primer curso para empezar a gestionar los niveles y alumnos.
+                            {isActiveTab 
+                                ? "Comienza creando tu primer curso para empezar a gestionar los niveles y alumnos."
+                                : "Aquí aparecerán los cursos que hayas finalizado para su consulta histórica."}
                         </p>
                     </div>
                 ) : (
@@ -125,6 +159,7 @@ export default async function CoursesPage() {
                         initialCourses={sortedCourses}
                         userRole={user.role}
                         DAYS_OF_WEEK={DAYS_OF_WEEK}
+                        isDraggable={isActiveTab}
                     />
                 )}
             </main>

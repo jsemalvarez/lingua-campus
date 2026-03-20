@@ -1,12 +1,21 @@
 "use client";
 
 import { CreateLessonModal } from "./CreateLessonModal";
-import { ClipboardCheck, Calendar, BookOpen, FileText, FileEdit } from "lucide-react";
+import { GenerateLessonsModal } from "./GenerateLessonsModal";
+import { ClipboardCheck, Calendar, BookOpen, FileText, FileEdit, CalendarRange } from "lucide-react";
 import { EditLessonModal } from "./EditLessonModal";
 import { DeleteLessonButton } from "./DeleteLessonButton";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, addHours } from "date-fns";
 import { es } from "date-fns/locale";
+
+interface Schedule {
+    id: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    room: string | null;
+}
 
 interface Lesson {
     id: string;
@@ -15,22 +24,34 @@ interface Lesson {
     date: Date;
     topic: string;
     content: string | null;
+    scheduleId: string | null;
 }
 
 interface LessonListProps {
     courseId: string;
     lessons: Lesson[];
+    schedules: Schedule[];
     isTeacherOrAdmin: boolean;
+    courseStatus?: string;
+    startDate?: Date;
+    endDate?: Date;
 }
 
-export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListProps) {
+export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, courseStatus, startDate, endDate }: LessonListProps) {
+    const isFinished = courseStatus === "FINISHED";
+
     return (
         <div className="space-y-4">
-            {isTeacherOrAdmin && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-6 relative z-10">
-                    <CreateLessonModal courseId={courseId} lessonType="CLASS" />
-                    <CreateLessonModal courseId={courseId} lessonType="TP" />
-                    <CreateLessonModal courseId={courseId} lessonType="EXAM" />
+            {isTeacherOrAdmin && !isFinished && (
+                <div className="flex flex-col gap-4 mb-6 relative z-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                        <CreateLessonModal courseId={courseId} lessonType="CLASS" schedules={schedules} />
+                        <CreateLessonModal courseId={courseId} lessonType="TP" schedules={schedules} />
+                        <CreateLessonModal courseId={courseId} lessonType="EXAM" schedules={schedules} />
+                    </div>
+                    {schedules.length > 0 && (
+                        <GenerateLessonsModal courseId={courseId} startDate={startDate} endDate={endDate} />
+                    )}
                 </div>
             )}
 
@@ -54,13 +75,14 @@ export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListPr
                                     <div className="space-y-1.5 pl-2">
                                         <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                                             <Calendar size={14} className={lesson.type === "CLASS" ? "text-blue-500" : lesson.type === "TP" ? "text-amber-500" : "text-red-500"} />
-                                            {format(new Date(lesson.date), "EEEE, d 'de' MMMM, yyyy", { locale: es })}
+                                            {/* Normalize to Noon before formatting to avoid GMT shifts (e.g. 00:00 UTC showing as previous day) */}
+                                            {format(addHours(new Date(lesson.date), 12), "EEEE, d 'de' MMMM, yyyy", { locale: es })}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-base font-bold leading-tight">{lesson.topic}</h3>
-                                            {isTeacherOrAdmin && (
+                                            {isTeacherOrAdmin && !isFinished && (
                                                 <div className="flex items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
-                                                    <EditLessonModal courseId={courseId} lesson={lesson} />
+                                                    <EditLessonModal courseId={courseId} lesson={lesson} schedules={schedules} />
                                                     <DeleteLessonButton courseId={courseId} lessonId={lesson.id} />
                                                 </div>
                                             )}
@@ -76,7 +98,7 @@ export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListPr
                                         <div className="shrink-0 flex sm:flex-col justify-end gap-2 w-full sm:w-auto">
                                             <Link href={`/courses/${courseId}/lessons/${lesson.id}/attendance`} className="w-full">
                                                 <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border whitespace-nowrap">
-                                                    <ClipboardCheck size={16} /> Asistencia
+                                                    <ClipboardCheck size={16} /> {isFinished ? "Ver Asistencia" : "Asistencia"}
                                                 </div>
                                             </Link>
 
@@ -92,7 +114,7 @@ export function LessonList({ courseId, lessons, isTeacherOrAdmin }: LessonListPr
                                                         ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20"
                                                         : "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20"
                                                         }`}>
-                                                        <FileText size={16} /> Notas
+                                                        <FileText size={16} /> {isFinished ? "Ver Notas" : "Notas"}
                                                     </div>
                                                 </Link>
                                             )}

@@ -28,6 +28,8 @@ export async function createCourseAction(formData: FormData) {
     const color = formData.get("color") as string;
     const teacherId = formData.get("teacherId") as string;
     const classroomId = formData.get("classroomId") as string;
+    const startDateStr = formData.get("startDate") as string;
+    const endDateStr = formData.get("endDate") as string;
 
     if (!name) {
         return { success: false, error: "El nombre del curso es obligatorio" };
@@ -41,6 +43,8 @@ export async function createCourseAction(formData: FormData) {
                 color: color || "#3b82f6",
                 teacherId: teacherId || null,
                 classroomId: classroomId || null,
+                startDate: startDateStr ? new Date(startDateStr) : null,
+                endDate: endDateStr ? new Date(endDateStr) : null,
                 instituteId: user.instituteId as string,
             }
         });
@@ -176,6 +180,8 @@ export async function updateCourseAction(formData: FormData) {
     const color = formData.get("color") as string;
     const classroomId = formData.get("classroomId") as string;
     const teacherId = formData.get("teacherId") as string;
+    const startDateStr = formData.get("startDate") as string;
+    const endDateStr = formData.get("endDate") as string;
 
     if (!courseId) return { success: false, error: "ID de curso no proporcionado" };
     if (!name?.trim()) {
@@ -196,6 +202,8 @@ export async function updateCourseAction(formData: FormData) {
                 color: color || "#3b82f6",
                 classroomId: classroomId || null,
                 teacherId: teacherId || null,
+                startDate: startDateStr ? new Date(startDateStr) : null,
+                endDate: endDateStr ? new Date(endDateStr) : null,
             }
         });
 
@@ -218,10 +226,9 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
             return { success: false, error: "Curso no encontrado o sin acceso" };
         }
 
-        // Soft-drop: mark as DROPPED instead of deleting
-        await prisma.enrollment.update({
-            where: { id: enrollmentId },
-            data: { status: "DROPPED" }
+        // Hard-delete: used for errors
+        await prisma.enrollment.delete({
+            where: { id: enrollmentId }
         });
 
         revalidatePath(`/courses/${courseId}`);
@@ -229,6 +236,63 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
         revalidatePath("/students");
         return { success: true };
     } catch (e: any) {
-        return { success: false, error: "Error al desinscribir al estudiante" };
+        return { success: false, error: "Error al eliminar la inscripción" };
+    }
+}
+
+export async function markEnrollmentIncompleteAction(enrollmentId: string, courseId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden modificar inscripciones" };
+
+    try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "Curso no encontrado o sin acceso" };
+        }
+
+        await prisma.enrollment.update({
+            where: { id: enrollmentId },
+            data: { status: "INCOMPLETE" }
+        });
+
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath("/students");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al marcar como incompleto" };
+    }
+}
+
+export async function finishCourseAction(courseId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden finalizar cursos" };
+
+    try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "Curso no encontrado o sin acceso" };
+        }
+
+        // 1. Mark the course as FINISHED
+        // 2. Mark all currently ACTIVE enrollments as FINISHED
+        await prisma.$transaction([
+            prisma.course.update({
+                where: { id: courseId },
+                data: { status: "FINISHED" }
+            }),
+            prisma.enrollment.updateMany({
+                where: { courseId: courseId, status: "ACTIVE" },
+                data: { status: "FINISHED" }
+            })
+        ]);
+
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath("/courses");
+        revalidatePath("/students");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Error al finalizar el curso" };
     }
 }

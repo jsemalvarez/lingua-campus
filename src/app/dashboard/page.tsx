@@ -10,7 +10,8 @@ import {
     DollarSign,
     GraduationCap,
     Clock,
-    Plus
+    Plus,
+    ClipboardCheck
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -200,10 +201,15 @@ export default async function DashboardPage() {
 
     // ─── TEACHER-specific dashboard ───
     if (isTeacher) {
-        // Cursos asignados al profesor
+        // Cursos asignados al profesor con sus horarios
         const teacherCourses = await prisma.course.findMany({
-            where: { teacherId: user.id, instituteId: user.instituteId },
-            select: { id: true, name: true }
+            where: { teacherId: user.id, instituteId: user.instituteId, status: "ACTIVE" },
+            include: {
+                schedules: { 
+                    select: { dayOfWeek: true, startTime: true, endTime: true, room: true }, 
+                    orderBy: { dayOfWeek: 'asc' } 
+                }
+            }
         });
         const teacherCourseIds = teacherCourses.map(c => c.id);
 
@@ -216,18 +222,21 @@ export default async function DashboardPage() {
             }
         });
 
-        // Próximas clases solo de sus cursos
+        // Próximas clases solo de sus cursos, incluyendo horario y aula
         const myUpcomingLessons = await prisma.lesson.findMany({
             where: {
                 courseId: { in: teacherCourseIds },
                 date: { gte: today }
             },
             orderBy: { date: 'asc' },
-            take: 5,
+            take: 10,
             include: {
-                course: { select: { name: true } }
+                course: { select: { name: true, color: true } },
+                schedule: { select: { startTime: true, endTime: true, room: true } }
             }
         });
+
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
         const teacherStats = [
             { label: "Mis Cursos", value: teacherCourses.length.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
@@ -235,7 +244,7 @@ export default async function DashboardPage() {
         ];
 
         return (
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background pb-24">
                 <Navbar />
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -267,29 +276,95 @@ export default async function DashboardPage() {
                         ))}
                     </div>
 
-                    {/* Próximas Clases del profesor */}
-                    <Card className="p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-semibold text-lg flex items-center gap-2">
-                                <Clock className="text-blue-500" size={20} /> Mis Próximas Clases
+                    <div className="grid gap-6 md:grid-cols-2">
+                         {/* Mis Cursos */}
+                         <Card className="p-6">
+                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                                <BookOpen className="text-purple-500" size={20} /> Mis Cursos
                             </h3>
-                        </div>
-                        <div className="space-y-4">
-                            {myUpcomingLessons.length === 0 ? (
-                                <p className="text-sm text-muted-foreground italic text-center py-4">No tenés próximas clases programadas.</p>
-                            ) : myUpcomingLessons.map((lesson) => (
-                                <div key={lesson.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-sm">{lesson.course.name}</span>
-                                        <span className="text-xs text-muted-foreground">{lesson.topic}</span>
+                            <div className="space-y-3">
+                                {teacherCourses.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground italic text-center py-4">No tenés cursos asignados actualmente.</p>
+                                ) : teacherCourses.map((course) => (
+                                    <Link key={course.id} href={`/courses/${course.id}`} className="block">
+                                        <div className="p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-sm">{course.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {course.level || "Sin nivel"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {course.schedules.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {course.schedules.map((s, i) => (
+                                                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex items-center gap-1">
+                                                            <Clock size={10} /> {dayNames[s.dayOfWeek]} {s.startTime}–{s.endTime}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </Card>
+
+                        {/* Próximas Clases del profesor */}
+                        <Card className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-lg flex items-center gap-2">
+                                    <Clock className="text-blue-500" size={20} /> Mis Próximas Clases
+                                </h3>
+                            </div>
+                            <div className="space-y-3">
+                                {myUpcomingLessons.length === 0 ? (
+                                    <div className="text-center py-8 space-y-3">
+                                        <p className="text-sm text-muted-foreground italic">No hay clases programadas próximamente.</p>
+                                        <p className="text-xs text-muted-foreground">Si ya configuraste los horarios de tus cursos, asegurate de generar la agenda.</p>
+                                        <div className="pt-2">
+                                            <Link href="/courses">
+                                                <Button variant="outline" size="sm" className="text-xs">
+                                                    Ir a mis cursos para generar agenda
+                                                </Button>
+                                            </Link>
+                                        </div>
                                     </div>
-                                    <div className="text-sm font-semibold tabular-nums">
-                                        {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                ) : myUpcomingLessons.map((lesson) => (
+                                    <div 
+                                        key={lesson.id} 
+                                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-all border-l-4 group relative"
+                                        style={{ borderLeftColor: lesson.course.color || "#3b82f6" }}
+                                    >
+                                        <div className="flex flex-col gap-0.5">
+                                            <Link href={`/courses/${lesson.courseId}`} className="hover:underline decoration-primary/30 underline-offset-2 transition-all">
+                                                <span className="font-bold text-sm text-foreground/90">{lesson.course.name}</span>
+                                            </Link>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <span className="flex items-center gap-1"><Clock size={12} /> {lesson.schedule?.startTime || '--:--'}</span>
+                                                {lesson.schedule?.room && (
+                                                    <span className="flex items-center gap-1">• {lesson.schedule.room}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-[11px] text-muted-foreground/80 line-clamp-1">{lesson.topic}</span>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Link href={`/courses/${lesson.courseId}/lessons/${lesson.id}/attendance`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                <Button variant="outline" size="sm" className="h-8 px-2 text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1.5 flex items-center shadow-sm">
+                                                    <ClipboardCheck size={14} /> Asis.
+                                                </Button>
+                                            </Link>
+                                            <div className="text-[10px] font-bold tabular-nums bg-muted px-2 py-1.5 rounded-md sm:group-hover:hidden transition-all whitespace-nowrap">
+                                                {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
                 </main>
             </div>
         );

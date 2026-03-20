@@ -10,6 +10,8 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
     }
 
     try {
+        const formType = formData.get("formType") as string;
+        
         // Datos del Alumno
         const name = formData.get("name") as string;
         const birthDateStr = formData.get("birthDate") as string;
@@ -32,6 +34,16 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
 
         if (!name) {
             return { success: false, error: "El nombre es obligatorio" };
+        }
+
+        if (!dni) {
+            return { success: false, error: "El DNI es obligatorio" };
+        }
+
+        if (formType === "minor") {
+            if (!g1Name || !g1Phone) {
+                return { success: false, error: "Para inscripciones de menores, los datos del tutor son obligatorios" };
+            }
         }
 
         // Para pre-inscripciones públicas, usamos una contraseña genérica
