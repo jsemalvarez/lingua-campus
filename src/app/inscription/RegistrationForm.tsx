@@ -234,7 +234,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         </div>
                         <div>
                             <h2 className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 uppercase text-[0.85rem] opacity-50 mb-1">Paso 02</h2>
-                            <p className="text-xl font-bold">Responsable de Referencia <span className="text-sm font-normal text-muted-foreground pl-1 decoration-dotted underline underline-offset-4">{formType === 'adult' ? '(Adultos opcional)' : '(Obligatorio para menores)'}</span></p>
+                            <p className="text-xl font-bold">Responsable de Referencia <span className="text-sm font-normal text-muted-foreground pl-1 decoration-dotted underline underline-offset-4">(Obligatorio para menores)</span></p>
                         </div>
                     </div>
 
