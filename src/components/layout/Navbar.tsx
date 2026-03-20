@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle } from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
 /**
@@ -25,6 +25,7 @@ export function Navbar({ className }: { className?: string }) {
         { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER"] },
         { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "STUDENT"] },
         { href: "/payments", label: "Pagos", icon: DollarSign, roles: ["ADMIN", "STUDENT"] },
+        { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN"] },
     ];
 
     const userRole = (session?.user as any)?.role || "TEACHER"; // Default fallback

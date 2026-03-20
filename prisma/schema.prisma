@@ -22,6 +22,12 @@ model Institute {
   customDomain String? @unique
   address     String?
   phone       String?
+  email       String?
+  description String?
+  logoUrl     String?
+  facebookUrl String?
+  instagramUrl String?
+  whatsappNumber String?
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
