@@ -12,6 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Lingua Campus — Gestión Administrativa",
   description: "Plataforma de gestión para institutos de idiomas. Administrá alumnos, cursos, pagos y más.",
+  manifest: "/manifest.json",
   applicationName: "Lingua Campus",
   appleWebApp: {
     capable: true,

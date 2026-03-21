@@ -2,37 +2,46 @@ import { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
 
-  let institute;
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    institute = await prisma.institute.findFirst({
-        orderBy: { createdAt: 'asc' }
-    });
-  } else {
-    const subdomain = host.split('.')[0];
-    institute = await prisma.institute.findFirst({
-      where: {
-        OR: [
-          { subdomain: subdomain },
-          { customDomain: host },
-          { customDomain: `https://${host}` },
-          { customDomain: `http://${host}` },
-        ],
-      },
-    });
+  let institute = null;
+  try {
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      institute = await prisma.institute.findFirst({
+          orderBy: { createdAt: 'asc' }
+      });
+    } else {
+      const subdomain = host.split('.')[0];
+      institute = await prisma.institute.findFirst({
+        where: {
+          OR: [
+            { subdomain: subdomain },
+            { customDomain: host },
+            { customDomain: `https://${host}` },
+            { customDomain: `http://${host}` },
+          ],
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching institute for manifest:", error);
+    // Continue with institute = null
   }
 
   // Branding por defecto (Lingua Campus) 
   // Solo permitimos marca personalizada si:
   // 1. El instituto tiene un plan PREMIUM.
-  // 2. NO están usando nuestro subdominio (lingua-campus.com.ar).
+  // 2. NO están usando nuestro subdominio (lingua-campus.com.ar o vercel.app para pruebas).
   // 3. NO están en localhost (opcional, para desarrollo).
-  // @ts-ignore - plan field is newly added
+  
+  // @ts-ignore
   const isPremium = institute?.plan === 'PREMIUM';
-  const isCustomDomain = !host.includes('lingua-campus') && !host.includes('localhost');
+  const isInternalDomain = host.includes('lingua-campus') || host.includes('vercel.app') || host.includes('localhost');
+  const isCustomDomain = !isInternalDomain;
   
   const isDefaultBrand = !institute || !isPremium || !isCustomDomain;
   
