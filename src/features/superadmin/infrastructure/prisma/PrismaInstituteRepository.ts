@@ -7,6 +7,10 @@ export class PrismaInstituteRepository implements IInstituteRepository {
             data: {
                 name: data.name,
                 subdomain: data.subdomain,
+                plan: (data.plan as any) || "BASIC",
+                customDomain: data.customDomain || null,
+                pwaIcon192: data.pwaIcon192 || null,
+                pwaIcon512: data.pwaIcon512 || null,
                 address: data.address,
                 phone: data.phone,
             },

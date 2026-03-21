@@ -43,35 +43,92 @@ export function CreateInstituteForm() {
                     <Building2 size={11} /> Datos del Instituto
                 </h3>
 
-                <div className="space-y-1.5">
-                    <label htmlFor="instituteName" className="text-sm font-semibold">
-                        Nombre del Instituto
-                    </label>
-                    <input
-                        id="instituteName"
-                        name="instituteName"
-                        placeholder="Ej: Instituto Oxford"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
-                        required
-                    />
-                </div>
-
-                <div className="space-y-1.5">
-                    <label htmlFor="subdomain" className="text-sm font-semibold">
-                        Subdominio
-                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">(único por instituto)</span>
-                    </label>
-                    <div className="flex items-center rounded-xl border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring/30 focus-within:border-ring transition-all">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label htmlFor="instituteName" className="text-sm font-semibold">
+                            Nombre del Instituto
+                        </label>
                         <input
-                            id="subdomain"
-                            name="subdomain"
-                            placeholder="oxford"
-                            className="flex-1 px-3.5 py-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
+                            id="instituteName"
+                            name="instituteName"
+                            placeholder="Ej: Instituto Oxford"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
                             required
                         />
-                        <span className="px-3 text-xs text-muted-foreground bg-muted border-l border-border py-2.5 whitespace-nowrap">
-                            .linguacampus.com
-                        </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label htmlFor="plan" className="text-sm font-semibold">
+                            Plan Comercial
+                        </label>
+                        <select
+                            id="plan"
+                            name="plan"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                            required
+                            defaultValue="BASIC"
+                        >
+                            <option value="BASIC">Básico (Gestión)</option>
+                            <option value="STANDARD">Estándar (Playground)</option>
+                            <option value="PREMIUM">Premium (Marca Blanca)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label htmlFor="subdomain" className="text-sm font-semibold">
+                            Subdominio
+                        </label>
+                        <div className="flex items-center rounded-xl border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring/30 focus-within:border-ring transition-all">
+                            <input
+                                id="subdomain"
+                                name="subdomain"
+                                placeholder="oxford"
+                                className="flex-1 px-3.5 py-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
+                                required
+                            />
+                            <span className="px-3 text-xs text-muted-foreground bg-muted border-l border-border py-2.5 whitespace-nowrap">
+                                .linguacampus.com
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label htmlFor="customDomain" className="text-sm font-semibold">
+                            Dominio Personalizado (Premium)
+                        </label>
+                        <input
+                            id="customDomain"
+                            name="customDomain"
+                            placeholder="Ej: academiaoxford.com"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label htmlFor="pwaIcon192" className="text-sm font-semibold">
+                            Ícono PWA 192px (URL)
+                        </label>
+                        <input
+                            id="pwaIcon192"
+                            name="pwaIcon192"
+                            placeholder="https://..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label htmlFor="pwaIcon512" className="text-sm font-semibold">
+                            Ícono PWA 512px (URL)
+                        </label>
+                        <input
+                            id="pwaIcon512"
+                            name="pwaIcon512"
+                            placeholder="https://..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                        />
                     </div>
                 </div>
             </div>

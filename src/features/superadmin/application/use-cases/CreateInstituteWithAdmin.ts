@@ -4,6 +4,10 @@ import { PrismaUserRepository } from "../../infrastructure/prisma/PrismaUserRepo
 export interface CreateFullInstituteDTO {
     instituteName: string;
     subdomain: string;
+    plan?: string;
+    customDomain?: string;
+    pwaIcon192?: string;
+    pwaIcon512?: string;
     adminName: string;
     adminEmail: string;
 }
@@ -19,6 +23,10 @@ export class CreateInstituteWithAdmin {
         const institute = await this.instRepo.create({
             name: dto.instituteName,
             subdomain: dto.subdomain,
+            plan: dto.plan,
+            customDomain: dto.customDomain,
+            pwaIcon192: dto.pwaIcon192,
+            pwaIcon512: dto.pwaIcon512,
         });
 
         // 2. Create Admin for this Institute

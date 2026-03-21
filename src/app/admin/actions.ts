@@ -18,6 +18,10 @@ export async function createInstituteAction(formData: FormData) {
     const subdomain = formData.get("subdomain") as string;
     const adminName = formData.get("adminName") as string;
     const adminEmail = formData.get("adminEmail") as string;
+    const plan = formData.get("plan") as string;
+    const customDomain = formData.get("customDomain") as string;
+    const pwaIcon192 = formData.get("pwaIcon192") as string;
+    const pwaIcon512 = formData.get("pwaIcon512") as string;
 
     if (!instituteName || !subdomain || !adminName || !adminEmail) {
         return { success: false, error: "Todos los campos son requeridos" };
@@ -31,6 +35,10 @@ export async function createInstituteAction(formData: FormData) {
             subdomain,
             adminName,
             adminEmail,
+            plan,
+            customDomain,
+            pwaIcon192,
+            pwaIcon512,
         });
 
         revalidatePath("/admin/institutes");
@@ -52,6 +60,10 @@ export async function editInstituteAction(formData: FormData) {
     const address = formData.get("address") as string;
     const status = formData.get("status") as string;
     const subdomain = formData.get("subdomain") as string;
+    const plan = formData.get("plan") as string;
+    const customDomain = formData.get("customDomain") as string;
+    const pwaIcon192 = formData.get("pwaIcon192") as string;
+    const pwaIcon512 = formData.get("pwaIcon512") as string;
 
     if (!id || !name || !subdomain) {
         return { success: false, error: "El ID, nombre y subdominio son obligatorios" };
@@ -71,6 +83,10 @@ export async function editInstituteAction(formData: FormData) {
                 phone: phone ? phone.trim() : null,
                 address: address ? address.trim() : null,
                 status: status === "ACTIVE" || status === "INACTIVE" ? status : "ACTIVE",
+                plan: (plan as any) || "BASIC",
+                customDomain: customDomain ? customDomain.trim() : null,
+                pwaIcon192: pwaIcon192 ? pwaIcon192.trim() : null,
+                pwaIcon512: pwaIcon512 ? pwaIcon512.trim() : null,
             }
         });
 

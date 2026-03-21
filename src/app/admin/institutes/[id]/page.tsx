@@ -80,6 +80,10 @@ export default async function EditInstitutePage({ params }: { params: Promise<{ 
                                 phone: institute.phone ?? null,
                                 address: institute.address ?? null,
                                 status: institute.status,
+                                plan: (institute as any).plan,
+                                customDomain: (institute as any).customDomain,
+                                pwaIcon192: (institute as any).pwaIcon192,
+                                pwaIcon512: (institute as any).pwaIcon512,
                             }} />
                         </Card>
                     </div>
