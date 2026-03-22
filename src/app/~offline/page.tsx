@@ -24,7 +24,7 @@ export default function OfflinePage() {
                     <h1 className="text-3xl font-extrabold tracking-tight">Sin Conexión</h1>
                     <p className="text-muted-foreground font-medium text-sm leading-relaxed">
                         Parece que perdiste la conexión a internet. Verificá tu red y volvé a intentarlo. 
-                        Lingua Campus requiere conexión para sincronizar los datos.
+                        La plataforma requiere conexión para sincronizar los datos.
                     </p>
                 </div>
 
