@@ -24,27 +24,40 @@ export default async function IndexPage({
   }
 
   // 2. Identify the tenant by host
-  const isMainDomain = 
-    (host.includes("localhost") && !host.includes(".localhost")) || 
-    host === "lingua-campus.com.ar" || 
-    host.includes("vercel.app");
+  const cleanHost = host.split(":")[0]; 
+  const hostWithoutWww = cleanHost.replace(/^www\./, '');
   
-  if (!isMainDomain) {
-    // It's a custom domain, format it to match what's in DB (remove port if any)
-    const cleanHost = host.split(":")[0]; 
-    
-    // Find the institute by custom domain
-    const institute = await prisma.institute.findFirst({
-      where: {
-        customDomain: cleanHost
-      }
-    });
-
-    if (institute) {
-      return <InstituteLanding institute={institute} />;
-    }
+  // Si están entrando directamente al dominio principal del SaaS, mostramos Lingua Campus
+  if (hostWithoutWww === "lingua-campus.com.ar" || hostWithoutWww === "localhost" || hostWithoutWww === "lingua-campus.vercel.app") {
+    return <LinguaCampusLanding />;
   }
 
-  // 3. Fallback to the main SaaS landing
+  // Extraer posible subdominio
+  let subdomainMatch = null;
+  if (hostWithoutWww.endsWith(".lingua-campus.com.ar")) {
+    subdomainMatch = hostWithoutWww.replace(".lingua-campus.com.ar", "");
+  } else if (hostWithoutWww.endsWith(".localhost")) {
+    subdomainMatch = hostWithoutWww.replace(".localhost", "");
+  } else if (hostWithoutWww.endsWith(".vercel.app")) {
+    subdomainMatch = hostWithoutWww.replace(".vercel.app", "");
+  }
+
+  // Find the institute by custom domain OR subdomain
+  const institute = await prisma.institute.findFirst({
+    where: {
+      OR: [
+        { customDomain: cleanHost },
+        { customDomain: hostWithoutWww },
+        { subdomain: cleanHost }, 
+        ...(subdomainMatch && subdomainMatch !== "" ? [{ subdomain: subdomainMatch }] : [])
+      ]
+    }
+  });
+
+  if (institute) {
+    return <InstituteLanding institute={institute} />;
+  }
+
+  // 3. Fallback to the main SaaS landing si no encontró el instituto
   return <LinguaCampusLanding />;
 }
