@@ -12,15 +12,20 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   try {
     if (host.includes('localhost') || host.includes('127.0.0.1')) {
       institute = await prisma.institute.findFirst({
-          orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: 'asc' },
       });
     } else {
-      const subdomain = host.split('.')[0];
+      // Strip www. prefix to normalize host for DB lookup
+      const normalizedHost = host.replace(/^www\./, '');
+      const subdomain = normalizedHost.split('.')[0];
       institute = await prisma.institute.findFirst({
         where: {
           OR: [
             { subdomain: subdomain },
+            { customDomain: normalizedHost },
             { customDomain: host },
+            { customDomain: `https://${normalizedHost}` },
+            { customDomain: `http://${normalizedHost}` },
             { customDomain: `https://${host}` },
             { customDomain: `http://${host}` },
           ],
@@ -32,12 +37,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     // Continue with institute = null
   }
 
-  // Branding por defecto (Lingua Campus) 
+  // Branding por defecto (Lingua Campus)
   // Solo permitimos marca personalizada si:
   // 1. El instituto tiene un plan PREMIUM.
-  // 2. NO están usando nuestro subdominio (lingua-campus.com.ar o vercel.app para pruebas).
-  // 3. NO están en localhost (opcional, para desarrollo).
-  
+  // 2. NO están usando nuestro subdominio (lingua-campus.com.ar o vercel.app).
+  // 3. NO están en localhost.
+
   // @ts-ignore
   const isPremium = institute?.plan === 'PREMIUM';
   const isInternalDomain = host.includes('lingua-campus') || host.includes('vercel.app') || host.includes('localhost');
@@ -55,11 +60,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   // Si el instituto tiene logoUrl de Cloudinary, generamos los íconos automáticamente
   // usando las transformaciones de Cloudinary en la URL (sin campos extra en DB)
   function buildCloudinaryIcon(logoUrl: string, size: number): string {
-    // Inserta la transformación justo después de "/upload/"
-    return logoUrl.replace(
-      '/upload/',
-      `/upload/c_fill,w_${size},h_${size},f_png/`
-    );
+    return logoUrl.replace('/upload/', `/upload/c_fill,w_${size},h_${size},f_png/`);
   }
 
   const hasCloudinaryLogo = !isDefaultBrand && institute?.logoUrl?.includes('res.cloudinary.com');
