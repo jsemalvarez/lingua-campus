@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { 
@@ -38,12 +39,24 @@ export default function InstituteLanding({ institute }: { institute: Institute }
       <nav className="fixed top-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 transition-all">
         <div className="container mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <Link href="#" className="flex items-center gap-3">
-            <div 
-              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-md"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {institute.name.charAt(0).toUpperCase()}
-            </div>
+            {institute.logoUrl ? (
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md bg-white dark:bg-slate-900 overflow-hidden border border-slate-100 dark:border-slate-800 p-1">
+                <Image 
+                  src={institute.logoUrl} 
+                  alt={`Logo de ${institute.name}`}
+                  width={44}
+                  height={44}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div 
+                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-md"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {institute.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
               {institute.name}
             </span>
