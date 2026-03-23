@@ -42,19 +42,36 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const isPremium = institute?.plan === 'PREMIUM';
   const isInternalDomain = host.includes('lingua-campus') || host.includes('vercel.app') || host.includes('localhost');
   const isCustomDomain = !isInternalDomain;
-  
+
+  // Solo los planes PREMIUM con dominio propio reciben su marca personalizada
   const isDefaultBrand = !institute || !isPremium || !isCustomDomain;
-  
+
   const name = (isDefaultBrand || !institute) ? 'Lingua Campus' : institute.name;
   const shortName = (isDefaultBrand || !institute) ? 'LinguaCampus' : (institute.name.split(' ')[0] || 'Instituto');
   const description = (isDefaultBrand || !institute)
-    ? 'Gestión Administrativa para Institutos de Idiomas' 
+    ? 'Gestión Administrativa para Institutos de Idiomas'
     : `Plataforma de gestión para ${institute.name}`;
 
+  // Si el instituto tiene logoUrl de Cloudinary, generamos los íconos automáticamente
+  // usando las transformaciones de Cloudinary en la URL (sin campos extra en DB)
+  function buildCloudinaryIcon(logoUrl: string, size: number): string {
+    // Inserta la transformación justo después de "/upload/"
+    return logoUrl.replace(
+      '/upload/',
+      `/upload/c_fill,w_${size},h_${size},f_png/`
+    );
+  }
+
+  const hasCloudinaryLogo = !isDefaultBrand && institute?.logoUrl?.includes('res.cloudinary.com');
+
   // @ts-ignore - pwaIcon fields are newly added
-  const icon192 = !isDefaultBrand && institute?.pwaIcon192 ? institute.pwaIcon192 : '/icon-192x192.png';
+  const icon192 = hasCloudinaryLogo
+    ? buildCloudinaryIcon(institute!.logoUrl!, 192)
+    : (!isDefaultBrand && institute?.pwaIcon192 ? institute.pwaIcon192 : '/icon-192x192.png');
   // @ts-ignore
-  const icon512 = !isDefaultBrand && institute?.pwaIcon512 ? institute.pwaIcon512 : '/icon-512x512.png';
+  const icon512 = hasCloudinaryLogo
+    ? buildCloudinaryIcon(institute!.logoUrl!, 512)
+    : (!isDefaultBrand && institute?.pwaIcon512 ? institute.pwaIcon512 : '/icon-512x512.png');
 
   return {
     name: name,
