@@ -85,9 +85,8 @@ export default function LoginForm({ institute }: LoginFormProps) {
                         </div>
                     ) : (
                         <div 
-                            className="h-16 w-16 rounded-2xl mx-auto flex items-center justify-center text-white font-extrabold text-3xl mb-5 shadow-lg shadow-primary/30 transform transition-transform hover:scale-105"
+                            className={`h-16 w-16 rounded-2xl mx-auto flex items-center justify-center text-white font-extrabold text-3xl mb-5 shadow-lg shadow-primary/30 transform transition-transform hover:scale-105 ${!institute ? 'premium-gradient' : ''}`}
                             style={institute ? { backgroundColor: primaryColor } : {}}
-                            {...(!institute ? { className: "h-16 w-16 premium-gradient rounded-2xl mx-auto flex items-center justify-center text-white font-extrabold text-3xl mb-5 shadow-lg shadow-primary/30 transform transition-transform hover:scale-105" } : {})}
                         >
                             {institute ? institute.name.charAt(0).toUpperCase() : "L"}
                         </div>
