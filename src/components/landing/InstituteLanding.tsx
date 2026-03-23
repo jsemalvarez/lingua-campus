@@ -40,13 +40,13 @@ export default function InstituteLanding({ institute }: { institute: Institute }
         <div className="container mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <Link href="#" className="flex items-center gap-3">
             {institute.logoUrl ? (
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md bg-white dark:bg-slate-900 overflow-hidden border border-slate-100 dark:border-slate-800 p-1">
+              <div className="relative w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-800 bg-white">
                 <Image 
                   src={institute.logoUrl} 
                   alt={`Logo de ${institute.name}`}
-                  width={44}
-                  height={44}
-                  className="w-full h-full object-contain"
+                  fill
+                  sizes="44px"
+                  className="object-cover"
                 />
               </div>
             ) : (
