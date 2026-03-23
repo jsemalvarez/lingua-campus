@@ -1,6 +1,10 @@
 export interface CreateInstituteData {
     name: string;
     subdomain: string;
+    plan?: string;
+    customDomain?: string | null;
+    pwaIcon192?: string | null;
+    pwaIcon512?: string | null;
     address?: string;
     phone?: string;
 }

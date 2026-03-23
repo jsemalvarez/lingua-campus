@@ -13,6 +13,10 @@ interface EditInstituteFormProps {
         phone: string | null;
         address: string | null;
         status: string;
+        plan: string;
+        customDomain: string | null;
+        pwaIcon192: string | null;
+        pwaIcon512: string | null;
     };
 }
 
@@ -75,6 +79,49 @@ export function EditInstituteForm({ institute }: EditInstituteFormProps) {
                         name="phone"
                         defaultValue={institute.phone ?? ""}
                         placeholder="Ej: +54 9 11..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-ring/30 transition-all"
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Plan Comercial</label>
+                    <select
+                        name="plan"
+                        defaultValue={institute.plan}
+                        className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-ring/30 transition-all appearance-none"
+                    >
+                        <option value="BASIC">Básico (Gestión)</option>
+                        <option value="STANDARD">Estándar (Playground)</option>
+                        <option value="PREMIUM">Premium (Marca Blanca)</option>
+                    </select>
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-sm font-semibold">Dominio Personalizado (Premium)</label>
+                    <input
+                        name="customDomain"
+                        defaultValue={institute.customDomain ?? ""}
+                        placeholder="Ej: academiaoxford.com"
+                        className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-ring/30 transition-all"
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Ícono PWA 192px (URL)</label>
+                    <input
+                        name="pwaIcon192"
+                        defaultValue={institute.pwaIcon192 ?? ""}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-ring/30 transition-all"
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Ícono PWA 512px (URL)</label>
+                    <input
+                        name="pwaIcon512"
+                        defaultValue={institute.pwaIcon512 ?? ""}
+                        placeholder="https://..."
                         className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-ring/30 transition-all"
                     />
                 </div>

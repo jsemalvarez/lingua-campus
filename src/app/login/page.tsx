@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -16,8 +17,16 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
+    const isOnline = useOnlineStatus();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!isOnline) {
+            setError("No tienes conexión a internet.");
+            return;
+        }
+
         setLoading(true);
         setError("");
 
@@ -74,9 +83,10 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="tu@email.com"
-                            className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all bg-background text-foreground text-sm font-medium placeholder:text-muted-foreground/50"
+                            className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all bg-background text-foreground text-sm font-medium placeholder:text-muted-foreground/50 disabled:opacity-50"
                             required
                             autoComplete="email"
+                            disabled={!isOnline || loading}
                         />
                     </div>
 
@@ -97,15 +107,17 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full px-4 py-3 pr-11 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all bg-background text-foreground text-sm font-medium placeholder:text-muted-foreground/50"
+                                className="w-full px-4 py-3 pr-11 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all bg-background text-foreground text-sm font-medium placeholder:text-muted-foreground/50 disabled:opacity-50"
                                 required
                                 autoComplete="current-password"
+                                disabled={!isOnline || loading}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
                                 tabIndex={-1}
+                                disabled={!isOnline || loading}
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
@@ -122,13 +134,18 @@ export default function LoginPage() {
 
                     <Button
                         type="submit"
-                        className="w-full premium-gradient h-12 text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2 mt-4 transition-all hover:shadow-primary/30"
-                        disabled={loading}
+                        className="w-full premium-gradient h-12 text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2 mt-4 transition-all hover:shadow-primary/30 disabled:opacity-70 disabled:grayscale-[0.5]"
+                        disabled={loading || !isOnline}
                     >
                         {loading ? (
                             <>
                                 <span className="w-5 h-5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
                                 Ingresando...
+                            </>
+                        ) : !isOnline ? (
+                            <>
+                                <AlertCircle size={18} />
+                                Sin Conexión
                             </>
                         ) : (
                             <>

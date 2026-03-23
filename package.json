@@ -3,9 +3,9 @@
   "version": "1.0.2",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build:dev": "next build",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "dev": "next dev --webpack",
+    "build:dev": "next build --webpack",
+    "build": "prisma generate && prisma migrate deploy && next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
@@ -13,6 +13,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@prisma/client": "^5.0.0",
     "@types/bcryptjs": "^3.0.0",
     "bcryptjs": "^3.0.3",
@@ -26,6 +27,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
