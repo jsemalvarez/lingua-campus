@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { headers } from "next/headers";
+import { getTenantByHost } from "@/lib/tenant";
+import { TenantProvider } from "@/components/providers/TenantProvider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -61,11 +63,17 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const host = headersList.get("host") || "";
+  const institute = await getTenantByHost(host);
+  
+  const tenant = institute ? { name: institute.name, logoUrl: institute.logoUrl } : null;
+
   return (
     <html lang="es" suppressHydrationWarning className="scroll-smooth">
       <head>
@@ -73,9 +81,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className={`${inter.variable} antialiased min-h-screen bg-background text-foreground`}>
-        <Providers>
-          {children}
-        </Providers>
+        <TenantProvider tenant={tenant}>
+          <Providers>
+            {children}
+          </Providers>
+        </TenantProvider>
       </body>
     </html>
   );

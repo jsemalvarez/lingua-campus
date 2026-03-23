@@ -5,41 +5,7 @@ import prisma from "@/lib/prisma";
 import LinguaCampusLanding from "@/components/landing/LinguaCampusLanding";
 import InstituteLanding from "@/components/landing/InstituteLanding";
 
-// Usamos cache de React para que no se ejecute dos veces en la misma request (una por generateMetadata y otra por IndexPage)
-const getTenantByHost = cache(async (host: string, previewTenantId?: string) => {
-  if (previewTenantId) {
-    return prisma.institute.findUnique({
-      where: { id: previewTenantId },
-    });
-  }
-
-  const cleanHost = host.split(":")[0]; 
-  const hostWithoutWww = cleanHost.replace(/^www\./, '');
-  
-  if (hostWithoutWww === "lingua-campus.com.ar" || hostWithoutWww === "localhost" || hostWithoutWww === "lingua-campus.vercel.app") {
-    return null;
-  }
-
-  let subdomainMatch = null;
-  if (hostWithoutWww.endsWith(".lingua-campus.com.ar")) {
-    subdomainMatch = hostWithoutWww.replace(".lingua-campus.com.ar", "");
-  } else if (hostWithoutWww.endsWith(".localhost")) {
-    subdomainMatch = hostWithoutWww.replace(".localhost", "");
-  } else if (hostWithoutWww.endsWith(".vercel.app")) {
-    subdomainMatch = hostWithoutWww.replace(".vercel.app", "");
-  }
-
-  return prisma.institute.findFirst({
-    where: {
-      OR: [
-        { customDomain: cleanHost },
-        { customDomain: hostWithoutWww },
-        { subdomain: cleanHost }, 
-        ...(subdomainMatch && subdomainMatch !== "" ? [{ subdomain: subdomainMatch }] : [])
-      ]
-    }
-  });
-});
+import { getTenantByHost } from "@/lib/tenant";
 
 export async function generateMetadata({
   searchParams,

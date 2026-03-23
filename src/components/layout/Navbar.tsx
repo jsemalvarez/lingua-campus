@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { useTenant } from "@/components/providers/TenantProvider";
+import Image from "next/image";
 
 /**
  * Premium dashboard navigation bar.
@@ -17,6 +19,10 @@ import { signOut, useSession } from "next-auth/react";
 export function Navbar({ className }: { className?: string }) {
     const pathname = usePathname();
     const { data: session, status } = useSession();
+    const tenant = useTenant();
+
+    const brandName = tenant ? tenant.name : "Lingua Campus";
+    const primaryColor = "#4F46E5";
 
     const allNavLinks = [
         { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
@@ -46,11 +52,26 @@ export function Navbar({ className }: { className?: string }) {
 
                     {/* ── Logo ── */}
                     <Link href="/dashboard" className="flex items-center gap-2 group shrink-0">
-                        <div className="h-7 w-7 sm:h-8 sm:w-8 premium-gradient rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform">
-                            L
-                        </div>
+                        {tenant?.logoUrl ? (
+                            <div className="relative h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 shadow-sm bg-white overflow-hidden border border-border/50 rounded-lg group-hover:scale-105 transition-transform">
+                                <Image src={tenant.logoUrl} alt={brandName} fill sizes="32px" className="object-cover" />
+                            </div>
+                        ) : (
+                            <div 
+                                className="h-7 w-7 sm:h-8 sm:w-8 premium-gradient rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform"
+                                style={tenant ? { backgroundColor: primaryColor, backgroundImage: 'none' } : {}}
+                            >
+                                {tenant ? tenant.name.charAt(0).toUpperCase() : "L"}
+                            </div>
+                        )}
                         <span className="text-lg sm:text-xl font-bold tracking-tight text-foreground/90 group-hover:text-primary transition-colors">
-                            Lingua <span className="text-primary">Campus</span>
+                            {tenant ? (
+                                <>
+                                    <span>{brandName.split(' ')[0]}</span> <span className="text-primary">{brandName.split(' ').slice(1).join(' ')}</span>
+                                </>
+                            ) : (
+                                <>Lingua <span className="text-primary">Campus</span></>
+                            )}
                         </span>
                     </Link>
 
