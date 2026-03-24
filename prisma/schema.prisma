@@ -40,12 +40,13 @@ model Institute {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  users       User[]
-  students    Student[]
-  courses     Course[]
-  expenses    Expense[]
-  classrooms  Classroom[]
-  levels      Level[]
+  users         User[]
+  students      Student[]
+  courses       Course[]
+  expenses      Expense[]
+  classrooms    Classroom[]
+  levels        Level[]
+  notifications Notification[]
 }
 
 // -----------------------------------------------------------------------------
@@ -323,3 +324,23 @@ model Expense {
 
   @@index([recipientId])
 }
+
+// -----------------------------------------------------------------------------
+// NOTIFICATIONS
+// -----------------------------------------------------------------------------
+
+model Notification {
+  id          String   @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+  type        String   // "NEW_ENROLLMENT", "PAYMENT_RECEIVED", etc.
+  title       String
+  body        String
+  read        Boolean  @default(false)
+  link        String?  // URL a donde navegar al hacer clic
+
+  createdAt   DateTime @default(now())
+
+  @@index([instituteId, read])
+}
+

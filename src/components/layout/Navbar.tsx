@@ -10,6 +10,7 @@ import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, Log
 import { signOut, useSession } from "next-auth/react";
 import { useTenant } from "@/components/providers/TenantProvider";
 import Image from "next/image";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 /**
  * Premium dashboard navigation bar.
@@ -104,6 +105,10 @@ export function Navbar({ className }: { className?: string }) {
 
                         {status === "authenticated" ? (
                             <>
+                                {/* Notification Bell — solo ADMIN */}
+                                {(userRole === "ADMIN" || userRole === "SUPERADMIN") && (session?.user as any)?.instituteId && (
+                                    <NotificationBell instituteId={(session.user as any).instituteId} />
+                                )}
                                 {/* Perfil — siempre visible */}
                                 <Link href="/profile"
                                     className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"

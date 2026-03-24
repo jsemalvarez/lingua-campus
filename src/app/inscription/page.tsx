@@ -86,7 +86,7 @@ export default async function InscriptionPage() {
                     <div className="flex items-center justify-center gap-4 grayscale hover:grayscale-0 transition-all duration-500">
                         <div className="h-0.5 w-12 bg-border" />
                         <div className="px-3 py-1 bg-muted rounded-full text-[10px] font-bold tracking-widest uppercase">
-                            Lingua Campus
+                            {institute.name}
                         </div>
                         <div className="h-0.5 w-12 bg-border" />
                     </div>
