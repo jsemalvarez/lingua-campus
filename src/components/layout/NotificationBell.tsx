@@ -43,32 +43,24 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
         loadInitial();
     }, [instituteId]);
 
-    // ── Supabase Realtime subscription ──
+    // ── Supabase Broadcast subscription ──
     useEffect(() => {
         const channel = supabaseClient
-            .channel(`notifications:${instituteId}`)
+            .channel(`institute:${instituteId}`)
             .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "Notification",
-                    // Note: client-side filter used instead of server-side
-                    // because camelCase column names can silently fail in Realtime filter syntax
-                },
+                "broadcast",
+                { event: "new_notification" },
                 (payload) => {
-                    const newNotif = payload.new as Notification & { instituteId: string };
-                    // Only process notifications for this institute
-                    if (newNotif.instituteId !== instituteId) return;
+                    const newNotif = payload.payload as Notification;
                     setNotifications((prev) => [newNotif, ...prev.slice(0, 14)]);
                     setUnreadCount((prev) => prev + 1);
                 }
             )
             .subscribe((status) => {
                 if (status === "SUBSCRIBED") {
-                    console.log("[NotificationBell] Realtime connected ✓");
+                    console.log("[NotificationBell] Broadcast channel connected ✓");
                 } else if (status === "CHANNEL_ERROR") {
-                    console.error("[NotificationBell] Realtime connection error");
+                    console.error("[NotificationBell] Broadcast channel error");
                 }
             });
 
