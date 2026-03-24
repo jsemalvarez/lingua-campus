@@ -75,6 +75,19 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         });
 
         revalidatePath("/students");
+
+        // 🔔 Notificar al admin en tiempo real
+        const levelLabel = registeredLevel ? ` — Nivel: ${registeredLevel}` : "";
+        await prisma.notification.create({
+            data: {
+                instituteId,
+                type: "NEW_ENROLLMENT",
+                title: "Nueva pre-inscripción recibida",
+                body: `${name}${levelLabel} se pre-inscribió al instituto`,
+                link: "/students",
+            },
+        });
+
         return { success: true };
     } catch (e: any) {
         console.error("Error in pre-enrollment:", e);
