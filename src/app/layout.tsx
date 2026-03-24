@@ -12,23 +12,37 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Lingua Campus — Gestión Administrativa",
-  description: "Plataforma de gestión para institutos de idiomas. Administrá alumnos, cursos, pagos y más.",
-  manifest: "/manifest.json",
-  applicationName: "Lingua Campus",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Lingua Campus",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  icons: {
-    apple: "/icon-192x192.png",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const host = headersList.get("host") || "";
+  const institute = await getTenantByHost(host);
+
+  const brandName = institute?.name ?? "Lingua Campus";
+  const description = institute
+    ? `Plataforma de gestión para ${institute.name}. Administrá alumnos, cursos, pagos y más.`
+    : "Plataforma de gestión para institutos de idiomas. Administrá alumnos, cursos, pagos y más.";
+
+  return {
+    title: {
+      default: `${brandName} — Gestión Administrativa`,
+      template: `%s | ${brandName}`,
+    },
+    description,
+    manifest: "/manifest.json",
+    applicationName: brandName,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: brandName,
+    },
+    formatDetection: {
+      telephone: false,
+    },
+    icons: {
+      apple: "/icon-192x192.png",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
