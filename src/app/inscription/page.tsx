@@ -1,3 +1,4 @@
+import { getTenantByHost } from "@/lib/tenant";
 import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -10,24 +11,7 @@ export default async function InscriptionPage() {
     const headersList = await headers();
     const host = headersList.get("host") || "";
 
-    // ── Detección de Instituto ──
-    let institute;
-    if (host.includes("localhost") || host.includes("127.0.0.1")) {
-        institute = await prisma.institute.findFirst();
-    } else {
-        const subdomain = host.split(".")[0];
-        // Buscamos coincidencia exacta por subdominio o por dominio personalizado (limpiando protocolos)
-        institute = await prisma.institute.findFirst({
-            where: {
-                OR: [
-                    { subdomain: subdomain },
-                    { customDomain: host },
-                    { customDomain: `https://${host}` },
-                    { customDomain: `http://${host}` }
-                ]
-            }
-        });
-    }
+    const institute = await getTenantByHost(host);
 
     if (!institute) {
         notFound();
