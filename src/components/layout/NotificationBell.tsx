@@ -53,15 +53,24 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
                     event: "INSERT",
                     schema: "public",
                     table: "Notification",
-                    filter: `instituteId=eq.${instituteId}`,
+                    // Note: client-side filter used instead of server-side
+                    // because camelCase column names can silently fail in Realtime filter syntax
                 },
                 (payload) => {
-                    const newNotif = payload.new as Notification;
+                    const newNotif = payload.new as Notification & { instituteId: string };
+                    // Only process notifications for this institute
+                    if (newNotif.instituteId !== instituteId) return;
                     setNotifications((prev) => [newNotif, ...prev.slice(0, 14)]);
                     setUnreadCount((prev) => prev + 1);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                if (status === "SUBSCRIBED") {
+                    console.log("[NotificationBell] Realtime connected ✓");
+                } else if (status === "CHANNEL_ERROR") {
+                    console.error("[NotificationBell] Realtime connection error");
+                }
+            });
 
         return () => {
             supabaseClient.removeChannel(channel);
