@@ -1,10 +1,12 @@
 "use client";
 
 import { useTransition, useState, useRef, useEffect } from "react";
-import { createPaymentAction } from "../actions";
+import { createPaymentAction, getStudentPendingFeesAction } from "../actions";
+import { generateMonthlyFeesAction } from "../billingActions";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle, AlertCircle, Search, ChevronDown } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
+import { EntitySearch } from "./EntitySearch";
 
 interface StudentListOption {
     id: string;
@@ -17,41 +19,68 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
 
-    // Custom searchable dropdown state
-    const [searchQuery, setSearchQuery] = useState("");
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<StudentListOption | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const [pendingFees, setPendingFees] = useState<any[]>([]);
+    const [selectedFeeId, setSelectedFeeId] = useState("");
+    const [isLoadingFees, setIsLoadingFees] = useState(false);
 
+    // Form states for dynamic calculation
+    const [baseAmount, setBaseAmount] = useState<number>(0);
+    const [surcharge, setSurcharge] = useState<number>(0);
+    const [discount, setDiscount] = useState<number>(0);
+    
+    // Auto-select fee and populate base amount
     useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsDropdownOpen(false);
+        if (selectedFeeId && pendingFees.length > 0) {
+            const fee = pendingFees.find(f => f.id === selectedFeeId);
+            if (fee) {
+                setBaseAmount(fee.originalAmount - fee.paidAmount);
             }
         }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [selectedFeeId, pendingFees]);
 
-    const normalizeString = (str: string) => {
-        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    };
+    useEffect(() => {
+        if (selectedStudent) {
+            loadFees(selectedStudent.id);
+        } else {
+            setPendingFees([]);
+            setSelectedFeeId("");
+        }
+    }, [selectedStudent]);
 
-    const filteredStudents = searchQuery.trim() === ""
-        ? students
-        : students.filter(s => normalizeString(s.name).includes(normalizeString(searchQuery)));
+    async function loadFees(studentId: string) {
+        setIsLoadingFees(true);
+        const res = await getStudentPendingFeesAction(studentId);
+        if (res.success) {
+            setPendingFees(res.fees || []);
+            if (res.fees?.[0]) {
+                setSelectedFeeId(res.fees[0].id);
+            }
+        }
+        setIsLoadingFees(false);
+    }
+
 
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");
 
-        if (!selectedStudent) {
+        if (!selectedStudent || !selectedFeeId) {
             setStatus("error");
-            setErrorMsg("Debes seleccionar un estudiante");
+            setErrorMsg("Debes seleccionar un estudiante y una cuota pendiente");
             return;
         }
 
-        formData.append("status", "PAID");
-        formData.append("studentId", selectedStudent.id);
+        if (totalToCollect < 0) {
+            setStatus("error");
+            setErrorMsg("El monto total a cobrar no puede ser negativo");
+            return;
+        }
+
+        formData.append("feeId", selectedFeeId);
+        // We overwrite 'amount' to be the exact cash collected (Total a Cobrar)
+        formData.set("amount", totalToCollect.toString());
+        formData.set("surcharge", surcharge.toString());
+        formData.set("discount", discount.toString());
 
         startTransition(async () => {
             const result = await createPaymentAction(formData);
@@ -60,7 +89,9 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                 setTimeout(() => {
                     setStatus("idle");
                     setSelectedStudent(null);
-                    setSearchQuery("");
+                    setBaseAmount(0);
+                    setSurcharge(0);
+                    setDiscount(0);
                     const formEl = document.getElementById("fee-form") as HTMLFormElement;
                     if (formEl) formEl.reset();
                 }, 2000);
@@ -71,78 +102,115 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         });
     };
 
+    const totalToCollect = Math.max(0, baseAmount + surcharge - discount);
+
     return (
         <form id="fee-form" action={handleSubmit} className="space-y-4">
-            <h3 className="font-semibold text-lg border-b border-border/50 pb-2 mb-4 text-emerald-600 dark:text-emerald-400">Ingresar Pago de Cuota</h3>
 
             {/* Buscador de Estudiantes Autocompletable */}
-            <div className="space-y-1.5 relative" ref={dropdownRef}>
-                <label className="text-sm font-semibold">Estudiante</label>
-                <div
-                    className={`relative w-full min-h-[44px] px-3 py-2 rounded-lg border text-sm flex items-center justify-between transition-all cursor-text ${isDropdownOpen ? 'border-primary ring-2 ring-primary/20 bg-background' : 'border-input bg-background/50 hover:bg-background shadow-sm'}`}
-                    onClick={() => setIsDropdownOpen(true)}
-                >
-                    <div className="flex-1 flex items-center gap-2 overflow-hidden w-full">
-                        {isDropdownOpen ? (
-                            <>
-                                <Search size={16} className="text-muted-foreground shrink-0" />
-                                <input
-                                    autoFocus
-                                    className="w-full bg-transparent outline-none border-none p-0 text-sm focus:ring-0 text-foreground"
-                                    placeholder="Buscar por nombre..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </>
-                        ) : (
-                            <span className={`truncate w-full block ${selectedStudent ? "text-foreground font-bold" : "text-muted-foreground"}`}>
-                                {selectedStudent ? selectedStudent.name : "🔍 Buscar un estudiante..."}
-                            </span>
-                        )}
-                    </div>
-                    <ChevronDown size={16} className={`text-muted-foreground shrink-0 ml-2 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
-                </div>
+            <EntitySearch
+                entities={students}
+                selectedEntity={selectedStudent}
+                onSelect={(s) => setSelectedStudent(s)}
+                name="studentId"
+                colorTheme="emerald"
+                placeholder="🔍 Buscar un estudiante..."
+                label="Estudiante"
+            />
 
-                {isDropdownOpen && (
-                    <div className="absolute top-[calc(100%+4px)] left-0 w-full max-h-56 overflow-y-auto bg-card border border-border shadow-xl rounded-xl z-[100] animate-in fade-in slide-in-from-top-1 p-1">
-                        {filteredStudents.length === 0 ? (
-                            <div className="p-4 text-sm text-center text-muted-foreground">
-                                No se encontraron resultados.
+            {selectedStudent && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold">Cuota Pendiente</label>
+                        {isLoadingFees ? (
+                            <div className="h-10 w-full animate-pulse bg-muted rounded-lg" />
+                        ) : pendingFees.length === 0 ? (
+                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-lg text-xs font-medium border border-amber-200/50">
+                                Este alumno no tiene cuotas pendientes registradas.
                             </div>
                         ) : (
-                            filteredStudents.map(s => (
-                                <div
-                                    key={s.id}
-                                    className="px-3 py-2.5 text-sm rounded-lg hover:bg-primary/10 hover:text-primary font-medium cursor-pointer transition-colors"
-                                    onClick={() => {
-                                        setSelectedStudent(s);
-                                        setSearchQuery("");
-                                        setIsDropdownOpen(false);
-                                    }}
-                                >
-                                    {s.name}
-                                </div>
-                            ))
+                            <select
+                                value={selectedFeeId}
+                                onChange={(e) => setSelectedFeeId(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20"
+                            >
+                                {pendingFees.map(f => {
+                                    const feeLabel = f.type === "ENROLLMENT" && !f.enrollment?.course?.name
+                                        ? `Matrícula Anual ${f.year}`
+                                        : f.enrollment?.course?.name || f.type;
+                                    
+                                    return (
+                                        <option key={f.id} value={f.id}>
+                                            {f.month}/{f.year} - {feeLabel} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
+                                        </option>
+                                    );
+                                })}
+                            </select>
                         )}
                     </div>
-                )}
+                </div>
+            )}
+
+            <div className="space-y-4">
+                <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Monto a cancelar de la deuda ($)</label>
+                    <input 
+                        type="number" 
+                        min="1" 
+                        step="0.01" 
+                        required 
+                        value={baseAmount || ""}
+                        onChange={(e) => setBaseAmount(parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20" 
+                    />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-red-600 dark:text-red-400">Recargo (+)</label>
+                        <input 
+                            type="number" 
+                            min="0" 
+                            step="0.01" 
+                            value={surcharge || ""}
+                            onChange={(e) => setSurcharge(parseFloat(e.target.value) || 0)}
+                            className="w-full px-4 py-2 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-950/20 text-sm outline-none shadow-sm focus:ring-2 focus:ring-red-500/20" 
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Descuento (-)</label>
+                        <input 
+                            type="number" 
+                            min="0" 
+                            step="0.01" 
+                            value={discount || ""}
+                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                            className="w-full px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-950/20 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20" 
+                        />
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                    <label className="text-sm font-semibold">Monto cobrado ($)</label>
-                    <input type="number" name="amount" min="1" step="0.01" required placeholder="Ej: 15000" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-primary/20" />
-                </div>
-                <div className="space-y-1.5">
-                    <label className="text-sm font-semibold">Método de Pago</label>
-                    <select name="method" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-primary/20">
-                        <option value="EFECTIVO">Efectivo</option>
-                        <option value="TRANSFERENCIA">Transferencia</option>
-                        <option value="TARJETA">Tarjeta C/D</option>
-                        <option value="MERCADOPAGO">MercadoPago</option>
-                        <option value="OTROS">Otros</option>
-                    </select>
-                </div>
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 rounded-xl flex items-center justify-between">
+                <span className="font-semibold text-emerald-900 dark:text-emerald-100">Dinero total a cobrar al alumno:</span>
+                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    ${totalToCollect.toLocaleString()}
+                </span>
+            </div>
+
+            <div className="space-y-1.5">
+                <label className="text-sm font-semibold">Método de Pago</label>
+                <select name="method" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20">
+                    <option value="EFECTIVO">Efectivo 💵</option>
+                    <option value="TRANSFERENCIA">Transferencia 🏦</option>
+                    <option value="TARJETA">Tarjeta 💳</option>
+                    <option value="MERCADOPAGO">MercadoPago 📱</option>
+                    <option value="OTROS">Otros 💠</option>
+                </select>
+            </div>
+
+            <div className="space-y-1.5">
+                <label className="text-sm font-semibold">Notas / Concepto</label>
+                <input name="notes" placeholder="Ej: Pago parcial, adelantado, etc." className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20" />
             </div>
 
             {status === "success" && (
