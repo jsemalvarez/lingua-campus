@@ -109,6 +109,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             currentColor={course.color}
                                             currentStartDate={course.startDate}
                                             currentEndDate={course.endDate}
+                                            currentMonthlyPrice={course.monthlyPrice}
+                                            currentEnrollmentPrice={course.enrollmentPrice}
                                         />
                                     )}
                                 </div>

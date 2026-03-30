@@ -20,6 +20,8 @@ export async function createEnrollmentAction(formData: FormData) {
 
     const studentId = formData.get("studentId") as string;
     const courseId = formData.get("courseId") as string;
+    const customMonthlyPriceStr = formData.get("customMonthlyPrice") as string;
+    const customEnrollmentPriceStr = formData.get("customEnrollmentPrice") as string;
 
     if (!studentId || !courseId) {
         return { success: false, error: "Debe seleccionar un alumno y un curso" };
@@ -36,13 +38,59 @@ export async function createEnrollmentAction(formData: FormData) {
         }
 
         // Crear la inscripción oficial
-        await prisma.enrollment.create({
+        const enrollment = await prisma.enrollment.create({
             data: {
                 studentId,
                 courseId,
-                status: "ACTIVE"
+                status: "ACTIVE",
+                customMonthlyPrice: customMonthlyPriceStr ? parseFloat(customMonthlyPriceStr) : null,
+                customEnrollmentPrice: customEnrollmentPriceStr ? parseFloat(customEnrollmentPriceStr) : null,
+            },
+            include: {
+                course: true
             }
         });
+
+        // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
+        const currentYear = new Date().getFullYear();
+        const finalEnrollmentPrice = enrollment.customEnrollmentPrice !== null 
+            ? enrollment.customEnrollmentPrice 
+            : enrollment.course.enrollmentPrice;
+
+        if (finalEnrollmentPrice > 0) {
+            // Buscamos si ya existe una matrícula sin vincular (anticipada) para este alumno y año
+            const existingStandaloneFee = await prisma.fee.findFirst({
+                where: {
+                    studentId,
+                    type: "ENROLLMENT",
+                    year: currentYear,
+                    enrollmentId: null
+                }
+            });
+
+            if (existingStandaloneFee) {
+                // Vincular la existente
+                await prisma.fee.update({
+                    where: { id: existingStandaloneFee.id },
+                    data: { enrollmentId: enrollment.id }
+                });
+            } else {
+                // Crear una nueva
+                await prisma.fee.create({
+                    data: {
+                        studentId,
+                        enrollmentId: enrollment.id,
+                        type: "ENROLLMENT",
+                        originalAmount: finalEnrollmentPrice,
+                        paidAmount: 0,
+                        status: "PENDING",
+                        month: new Date().getMonth() + 1,
+                        year: currentYear,
+                        instituteId: user.instituteId as string
+                    }
+                });
+            }
+        }
 
         // Revalidamos las pantallas afectadas
         revalidatePath(`/courses/${courseId}`);

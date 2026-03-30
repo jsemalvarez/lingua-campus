@@ -30,6 +30,8 @@ export async function createCourseAction(formData: FormData) {
     const classroomId = formData.get("classroomId") as string;
     const startDateStr = formData.get("startDate") as string;
     const endDateStr = formData.get("endDate") as string;
+    const monthlyPriceStr = formData.get("monthlyPrice") as string;
+    const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
 
     if (!name) {
         return { success: false, error: "El nombre del curso es obligatorio" };
@@ -46,6 +48,8 @@ export async function createCourseAction(formData: FormData) {
                 startDate: startDateStr ? new Date(startDateStr) : null,
                 endDate: endDateStr ? new Date(endDateStr) : null,
                 instituteId: user.instituteId as string,
+                monthlyPrice: parseFloat(monthlyPriceStr) || 0,
+                enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
             }
         });
 
@@ -182,6 +186,8 @@ export async function updateCourseAction(formData: FormData) {
     const teacherId = formData.get("teacherId") as string;
     const startDateStr = formData.get("startDate") as string;
     const endDateStr = formData.get("endDate") as string;
+    const monthlyPriceStr = formData.get("monthlyPrice") as string;
+    const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
 
     if (!courseId) return { success: false, error: "ID de curso no proporcionado" };
     if (!name?.trim()) {
@@ -204,6 +210,8 @@ export async function updateCourseAction(formData: FormData) {
                 teacherId: teacherId || null,
                 startDate: startDateStr ? new Date(startDateStr) : null,
                 endDate: endDateStr ? new Date(endDateStr) : null,
+                monthlyPrice: parseFloat(monthlyPriceStr) || 0,
+                enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
             }
         });
 

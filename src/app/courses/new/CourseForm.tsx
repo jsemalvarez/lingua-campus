@@ -46,6 +46,8 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
     const [color, setColor] = useState("#3b82f6");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [monthlyPrice, setMonthlyPrice] = useState("0");
+    const [enrollmentPrice, setEnrollmentPrice] = useState("0");
 
     const palette = [
         { name: "Rojo 300", value: "#fca5a5" }, { name: "Rojo 500", value: "#ef4444" }, { name: "Rojo 700", value: "#b91c1c" }, { name: "Rojo 900", value: "#7f1d1d" },
@@ -80,6 +82,8 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
         formData.append("color", color);
         formData.append("startDate", startDate);
         formData.append("endDate", endDate);
+        formData.append("monthlyPrice", monthlyPrice);
+        formData.append("enrollmentPrice", enrollmentPrice);
 
         setStatusFeedback("idle");
         startTransition(async () => {
@@ -171,6 +175,36 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
                                     className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 transition-all focus:border-primary shadow-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5 group">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 px-1 transition-colors group-focus-within:text-foreground">
+                                    Cuota Mensual ($)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={monthlyPrice}
+                                    onChange={(e) => setMonthlyPrice(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all focus:border-emerald-500 shadow-sm"
+                                    placeholder="Ej: 25000"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5 group">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-amber-600 px-1 transition-colors group-focus-within:text-foreground">
+                                    Matrícula (Inscripción) ($)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={enrollmentPrice}
+                                    onChange={(e) => setEnrollmentPrice(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-amber-500/30 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-amber-500/5 transition-all focus:border-amber-500 shadow-sm"
+                                    placeholder="Ej: 5000"
                                 />
                             </div>
                         </div>

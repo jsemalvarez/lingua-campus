@@ -163,7 +163,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                         {student.fees.map(f => (
                                             <div key={f.id} className="flex justify-between items-center text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-emerald-600">${f.amount}</span>
+                                                    <span className="font-semibold text-emerald-600">${f.paidAmount}</span>
                                                     <span className="text-xs text-muted-foreground">{f.month}/{f.year}</span>
                                                 </div>
                                                 <div className="flex flex-col items-end">
