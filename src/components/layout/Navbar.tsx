@@ -31,7 +31,7 @@ export function Navbar({ className }: { className?: string }) {
         { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "TEACHER"] },
         { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER"] },
         { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-        { href: "/payments", label: "Pagos", icon: DollarSign, roles: ["ADMIN", "STUDENT"] },
+        { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "STUDENT"] },
         { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN"] },
     ];
 
