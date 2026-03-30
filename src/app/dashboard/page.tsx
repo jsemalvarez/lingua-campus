@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -16,6 +18,7 @@ import {
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { StudentsChart } from "./components/StudentsChart";
+import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -82,7 +85,7 @@ export default async function DashboardPage() {
 
         // Cuotas pendientes
         const pendingFees = await prisma.fee.count({
-            where: { studentId: student.id, status: { in: ["PENDING", "OVERDUE"] } }
+            where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } }
         });
 
         const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -397,13 +400,13 @@ export default async function DashboardPage() {
     const monthlyFees = await prisma.fee.findMany({
         where: {
             instituteId: user.instituteId,
-            status: "PAID",
+            status: { in: ["PAID", "PARTIAL"] },
             year: currentYear,
             month: currentMonth
         },
-        select: { amount: true }
+        select: { paidAmount: true }
     });
-    const monthlyIncome = monthlyFees.reduce((acc, curr) => acc + curr.amount, 0);
+    const monthlyIncome = monthlyFees.reduce((acc, curr) => acc + curr.paidAmount, 0);
 
     const stats = [
         { label: "Estudiantes Activos", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
@@ -429,7 +432,7 @@ export default async function DashboardPage() {
     const recentPayments = await prisma.fee.findMany({
         where: {
             instituteId: user.instituteId,
-            status: "PAID"
+            status: { in: ["PAID", "PARTIAL"] }
         },
         orderBy: { datePaid: 'desc' },
         take: 3,
@@ -522,8 +525,11 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Enhanced Wow-Factor Graphics Section */}
-                <div className="mb-6">
+                <div className="mb-6 space-y-6">
                     <StudentsChart data={chartData} totalActive={totalStudents} />
+                    <Suspense fallback={<Card className="h-[450px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                        <AnnualFinanceChartServer instituteId={user.instituteId} />
+                    </Suspense>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -568,7 +574,7 @@ export default async function DashboardPage() {
                                         <span className="text-xs text-muted-foreground">Cuota {getMonthName(payment.month)} {payment.year}</span>
                                     </div>
                                     <div className="text-sm font-bold text-green-600">
-                                        +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.amount)}
+                                        +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.paidAmount)}
                                     </div>
                                 </div>
                             ))}
