@@ -164,7 +164,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                             <div key={f.id} className="flex justify-between items-center text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold text-emerald-600">${f.paidAmount}</span>
-                                                    <span className="text-xs text-muted-foreground">{f.month}/{f.year}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {f.type === "ENROLLMENT" ? `Matrícula ${f.year}` : `${f.month}/${f.year}`}
+                                                    </span>
                                                 </div>
                                                 <div className="flex flex-col items-end">
                                                     <span className="font-medium text-foreground/80">{f.status}</span>

@@ -212,7 +212,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         }
 
         if (t.type === "PAYMENT" && t.payment?.fee?.student) {
-            title = `Cuota ${t.payment.fee.month}/${t.payment.fee.year} - ${t.payment.fee.student.name}`;
+            const fee = t.payment.fee;
+            const feeLabel = fee.type === "ENROLLMENT" ? `Matrícula ${fee.year}` : `Cuota ${fee.month}/${fee.year}`;
+            title = `${feeLabel} - ${fee.student.name}`;
             if (t.payment.notes) title += ` (${t.payment.notes})`;
         } else if (t.type === "EXPENSE" && t.expense) {
             title = `${t.expense.category}: ${t.expense.description}`;

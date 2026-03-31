@@ -49,7 +49,7 @@ export default async function DebtorsPage() {
 
         acc[sid].months.push({
             feeId: fee.id,
-            label: `${fee.month}/${fee.year} (${fee.enrollment?.course.name || 'Matrícula'})`,
+            label: fee.type === 'ENROLLMENT' ? `Matrícula ${fee.year}` : `${fee.month}/${fee.year} (${fee.enrollment?.course.name || 'Sin curso'})`,
             isCurrent,
             amount: owed,
             isPaid: fee.paidAmount > 0

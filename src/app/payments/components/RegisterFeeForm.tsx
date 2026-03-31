@@ -141,7 +141,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                     
                                     return (
                                         <option key={f.id} value={f.id}>
-                                            {f.month}/{f.year} - {feeLabel} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
+                                            {f.type === "ENROLLMENT" ? `Matrícula ${f.year}` : `${f.month}/${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
                                         </option>
                                     );
                                 })}
