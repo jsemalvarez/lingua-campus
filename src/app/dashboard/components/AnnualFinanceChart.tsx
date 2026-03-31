@@ -82,7 +82,7 @@ export function AnnualFinanceChart({ data, year }: AnnualFinanceChartProps) {
                                 borderRadius: '8px',
                                 padding: '12px'
                             }}
-                            formatter={(value: number) => formatCurrency(value)}
+                            formatter={(value: any) => formatCurrency(Number(value))}
                         />
                         <Legend 
                             wrapperStyle={{ paddingTop: '20px' }}

@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { AttendanceForm } from "./AttendanceForm";
 import Link from "next/link";
-import { ArrowLeft, ClipboardCheck, BookOpen, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, BookOpen, Calendar as CalendarIcon, QrCode } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -105,6 +105,17 @@ export default async function AttendancePage({
                                 </p>
                             </div>
                         </div>
+
+                        {!isReadOnly && (
+                            <div className="shrink-0 flex md:pt-1">
+                                <Link href={`/courses/${courseId}/lessons/${lessonId}/attendance/scanner`}>
+                                    <div className="px-5 py-3 rounded-xl bg-slate-900 dark:bg-slate-100 text-slate-50 dark:text-slate-900 font-bold hover:scale-105 transition-transform flex items-center gap-2 shadow-lg cursor-pointer hover:shadow-primary/20">
+                                        <QrCode size={20} />
+                                        Modo Escáner QR
+                                    </div>
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </header>
 

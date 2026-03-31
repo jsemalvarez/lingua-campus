@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
 import { Mail, Phone, User, UserCheck, Edit3, Info } from "lucide-react";
 import dayjs from "dayjs";
+import { StudentQRCard } from "./components/StudentQRCard";
 
 interface StudentData {
     id: string;
@@ -101,6 +102,9 @@ export function StudentProfileView({
                         </div>
                     </div>
                 </Card>
+
+                {/* Tarjeta de Credencial QR */}
+                <StudentQRCard studentId={student.id} studentName={student.name} />
             </div>
 
             {/* Columna Derecha: Información Adicional y Tutores */}

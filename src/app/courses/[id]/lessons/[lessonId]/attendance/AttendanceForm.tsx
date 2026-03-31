@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, Save, Check, X, Clock, FileWarning } from "lucide-react";
 
 type StudentData = { id: string; name: string };
-type AttendanceRecord = { status: "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED"; notes: string | null };
+type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED";
+type AttendanceRecord = { status: AttendanceStatus; notes: string | null };
 
 export function AttendanceForm({
     lessonId,
@@ -26,7 +27,7 @@ export function AttendanceForm({
     const [errorMsg, setErrorMsg] = useState("");
 
     // State dictionary map representing internal form
-    const [attendanceState, setAttendanceState] = useState<Record<string, { status: "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED", notes: string }>>({});
+    const [attendanceState, setAttendanceState] = useState<Record<string, { status: AttendanceStatus | null, notes: string }>>({});
 
     useEffect(() => {
         // Inicializar el estado de presentismo por default a PRESENT, a menos que exista un registro previo
@@ -39,7 +40,7 @@ export function AttendanceForm({
                 };
             } else {
                 initialState[student.id] = {
-                    status: "PRESENT",
+                    status: null, // "Sin Marcar"
                     notes: ""
                 };
             }
@@ -47,7 +48,7 @@ export function AttendanceForm({
         setAttendanceState(initialState);
     }, [students, existingAttendances]);
 
-    const handleStatusChange = (studentId: string, newStatus: "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED") => {
+    const handleStatusChange = (studentId: string, newStatus: AttendanceStatus) => {
         if (readOnly) return;
         setAttendanceState(prev => ({
             ...prev,
@@ -67,12 +68,14 @@ export function AttendanceForm({
         if (readOnly) return;
         setStatusIndicator("idle");
 
-        // Formatear payload
-        const payload = Object.entries(attendanceState).map(([studentId, data]) => ({
-            studentId,
-            status: data.status,
-            notes: data.notes.trim() || undefined
-        }));
+        // Formatear payload (Solo enviar los que tienen status definido)
+        const payload = Object.entries(attendanceState)
+            .filter(([_, data]) => data.status !== null)
+            .map(([studentId, data]) => ({
+                studentId,
+                status: data.status as AttendanceStatus,
+                notes: data.notes.trim() || undefined
+            }));
 
         startTransition(async () => {
             const result = await saveLessonAttendanceAction(lessonId, courseId, payload);
