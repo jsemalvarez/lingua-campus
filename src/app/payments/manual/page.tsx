@@ -32,19 +32,61 @@ export default function FinanceManualPage() {
                     {/* Generar Matrículas */}
                     <section>
                         <h2 className="text-2xl font-bold flex items-center gap-2 mb-4 text-foreground/90">
-                            <Wand2 className="text-blue-500" size={24} /> 1. Generar Matrículas Anuales
+                            <Wand2 className="text-blue-500" size={24} /> 1. Gestión de Matrículas Anuales
                         </h2>
-                        <Card className="p-6 border-border/40 bg-card/40 leading-relaxed shadow-sm">
-                            <p className="mb-4">
-                                Las matrículas se deben generar habitualmente a principio de año lectivo. En lugar de cargar alumno por alumno, el sistema dispone de un <strong>Generador Masivo de Matrículas</strong>.
-                            </p>
-                            <h4 className="font-semibold mb-2">¿Cómo hacerlo?</h4>
-                            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-2">
-                                <li>Ve a <i>Finanzas</i> y haz clic en el botón verde <strong>&quot;Generar Cuotas&quot;</strong>.</li>
-                                <li>En el panel emergente, selecciona la pestaña <strong>Matrícula Anual</strong>.</li>
-                                <li>Elige el <span className="text-foreground font-medium">año lectivo</span> correspondiente y fija el <span className="text-foreground font-medium">precio general</span>.</li>
-                                <li>Al clicar <i>Generar Matrículas a Todos</i>, el sistema creará una deuda de matrícula para <b>todo alumno Activo/Egresado</b> que no posea ya una matrícula para ese año.</li>
-                            </ul>
+                        <Card className="p-6 border-border/40 bg-card/40 leading-relaxed shadow-sm space-y-6">
+                            
+                            {/* Caso 1: Generación Masiva */}
+                            <div>
+                                <h4 className="font-bold mb-2 flex items-center gap-2 text-primary">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">A</span> 
+                                    Generación Masiva (Principio de Año)
+                                </h4>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    Ideal para cargar la deuda de inscripción a todo el alumnado activo de una sola vez.
+                                </p>
+                                <ul className="list-disc list-inside space-y-1.5 text-xs text-muted-foreground ml-2">
+                                    <li>Botón <strong>"Generar Cuotas"</strong> &rarr; Pestaña <strong>Matrícula Anual</strong>.</li>
+                                    <li>Al ejecutarlo, se creará el recibo pendiente para <b>todos los alumnos Activos</b> que aún no la tengan.</li>
+                                </ul>
+                            </div>
+
+                            <hr className="border-border/40" />
+
+                            {/* Caso 2: Matrícula Anticipada */}
+                            <div>
+                                <h4 className="font-bold mb-2 flex items-center gap-2 text-primary">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">B</span> 
+                                    Matrícula Anticipada (Sin Curso)
+                                </h4>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    ¿Un alumno nuevo quiere asegurar su lugar para el <strong>próximo año</strong> pero aún no definiste los horarios ni cursos?
+                                </p>
+                                <ul className="list-disc list-inside space-y-1.5 text-xs text-muted-foreground ml-2">
+                                    <li>En el panel de Finanzas, ve a la caja verde de la izquierda y haz clic en la pestaña <strong>"Matrícula"</strong>.</li>
+                                    <li>Busca al alumno, elige el año (Actual o Próximo) y el monto.</li>
+                                    <li>Esto genera una deuda "Standalone". Cuando luego inscribas al alumno a un curso, el sistema <b>detectará que ya pagó/debe la matrícula</b> y las vinculará automáticamente.</li>
+                                </ul>
+                            </div>
+
+                            <hr className="border-border/40" />
+
+                            {/* Caso 3: Autogeneración por Inscripción */}
+                            <div>
+                                <h4 className="font-bold mb-2 flex items-center gap-2 text-primary">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">C</span> 
+                                    Autogeneración al Inscribir
+                                </h4>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    Si inscribes a un alumno desde el formulario de <strong>"Nueva Inscripción"</strong>:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1.5 text-xs text-muted-foreground ml-2">
+                                    <li>El sistema verificará el <strong>Precio de Matrícula</strong> configurado en ese Curso.</li>
+                                    <li>Si el alumno no tiene matrícula para este año, la creará en ese mismo instante.</li>
+                                    <li>Puedes sobreescribir este precio (Beca de Inscripción) directamente en el formulario de inscripción.</li>
+                                </ul>
+                            </div>
+
                         </Card>
                     </section>
 
