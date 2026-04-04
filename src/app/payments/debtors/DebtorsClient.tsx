@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import {
     AlertTriangle, Phone, Calendar, User, Clock,
     Search, X, ChevronLeft, ChevronRight, FileDown,
+    ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { PendingFeeActions } from "./PendingFeeActions";
 
@@ -38,6 +39,23 @@ export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, curr
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
+    const [sortField, setSortField] = useState<"name" | "debt">("debt");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+    const toggleSort = (field: "name" | "debt") => {
+        if (sortField === field) {
+            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        } else {
+            setSortField(field);
+            setSortDir(field === "debt" ? "desc" : "asc");
+        }
+        setPage(1);
+    };
+
+    const SortIcon = ({ field }: { field: "name" | "debt" }) => {
+        if (sortField !== field) return <ArrowUpDown size={13} className="opacity-40" />;
+        return sortDir === "asc" ? <ArrowUp size={13} /> : <ArrowDown size={13} />;
+    };
 
     // ── Exportar PDF ──────────────────────────────────────────────────────────
     const exportPdf = async () => {
@@ -142,11 +160,20 @@ export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, curr
         }
     };
 
-    // ── Filtrado ──────────────────────────────────────────────────────────────
+    // ── Filtrado + Ordenamiento ───────────────────────────────────────────────
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
-        return q ? summaryList.filter((s) => s.name.toLowerCase().includes(q)) : summaryList;
-    }, [search, summaryList]);
+        const list = q ? summaryList.filter((s) => s.name.toLowerCase().includes(q)) : [...summaryList];
+        list.sort((a, b) => {
+            if (sortField === "name") {
+                return sortDir === "asc"
+                    ? a.name.localeCompare(b.name, "es")
+                    : b.name.localeCompare(a.name, "es");
+            }
+            return sortDir === "asc" ? a.totalOwed - b.totalOwed : b.totalOwed - a.totalOwed;
+        });
+        return list;
+    }, [search, summaryList, sortField, sortDir]);
 
     // Resetear a página 1 cuando cambia la búsqueda
     const handleSearch = (value: string) => {
@@ -248,6 +275,35 @@ export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, curr
                     >
                         <FileDown size={16} />
                         {exporting ? "Generando…" : "Exportar PDF"}
+                    </button>
+                </div>
+            )}
+
+            {/* ── Ordenamiento ─────────────────────────────────────────────── */}
+            {summaryList.length > 0 && (
+                <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs text-muted-foreground font-medium mr-1">Ordenar:</span>
+                    <button
+                        onClick={() => toggleSort("name")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                            sortField === "name"
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "border-border text-foreground hover:bg-muted/60"
+                        }`}
+                    >
+                        <SortIcon field="name" />
+                        Nombre
+                    </button>
+                    <button
+                        onClick={() => toggleSort("debt")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                            sortField === "debt"
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "border-border text-foreground hover:bg-muted/60"
+                        }`}
+                    >
+                        <SortIcon field="debt" />
+                        Monto de deuda
                     </button>
                 </div>
             )}
