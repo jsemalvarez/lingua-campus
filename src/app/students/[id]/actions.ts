@@ -101,7 +101,7 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
-        const newPassword = customPassword || "lingua1234";
+        const newPassword = customPassword || student.dni || "lingua1234";
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await prisma.student.update({

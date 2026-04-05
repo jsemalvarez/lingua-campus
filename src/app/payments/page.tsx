@@ -19,10 +19,18 @@ import { Users, BookOpen } from "lucide-react";
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    if (!session || !session.user) redirect("/login");
+
+    const role = (session.user as any).role;
+
+    if (role === "STUDENT") {
+        // Por ahora, redirigimos a los alumnos al dashboard ya que esta página es administrativa.
+        // En el futuro se creará una vista de pagos específica para el alumno.
+        redirect("/dashboard");
+    }
 
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
+        where: { id: (session.user as any).id },
         select: { id: true, role: true, instituteId: true }
     });
 

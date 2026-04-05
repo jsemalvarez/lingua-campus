@@ -23,20 +23,15 @@ import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer"
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user?.email) {
+    if (!session || !session.user) {
         redirect("/login");
     }
 
     // Si es estudiante, armamos una vista personalizada
     if ((session.user as any).role === "STUDENT") {
         const student = await prisma.student.findUnique({
-            where: {
-                email_instituteId: {
-                    email: session.user.email!,
-                    instituteId: session.user.instituteId!
-                }
-            },
-            select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } }
+            where: { id: (session.user as any).id },
+            select: { id: true, name: true, birthDate: true, instituteId: true, institute: { select: { name: true } } }
         });
 
         if (!student) redirect("/login");
@@ -90,11 +85,26 @@ export default async function DashboardPage() {
 
         const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+        // Calcular edad
+        let isMinor = false;
+        if (student.birthDate) {
+            const birth = new Date(student.birthDate);
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            isMinor = age < 18;
+        }
+
         const studentStats = [
             { label: "Mis Cursos", value: enrollments.length.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
             { label: "Asistencia", value: totalAttendances > 0 ? `${attendanceRate}%` : "—", icon: GraduationCap, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Cuotas Pendientes", value: pendingFees.toString(), icon: DollarSign, color: pendingFees > 0 ? "text-amber-600" : "text-green-600", bg: pendingFees > 0 ? "bg-amber-50" : "bg-green-50" },
+            // Solo mostrar cuotas si es mayor de 18
+            ...(!isMinor ? [{ label: "Cuotas Pendientes", value: pendingFees.toString(), icon: DollarSign, color: pendingFees > 0 ? "text-amber-600" : "text-green-600", bg: pendingFees > 0 ? "bg-amber-50" : "bg-green-50" }] : []),
         ];
+
 
         return (
             <div className="min-h-screen bg-background">
@@ -111,7 +121,11 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Stats */}
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className={`grid gap-4 ${
+                        studentStats.length === 1 ? "grid-cols-1" : 
+                        studentStats.length === 2 ? "md:grid-cols-2" : 
+                        "md:grid-cols-3"
+                    }`}>
                         {studentStats.map((stat, i) => (
                             <Card key={i} className="p-6 hover:shadow-md transition-shadow">
                                 <div className="flex items-center justify-between">

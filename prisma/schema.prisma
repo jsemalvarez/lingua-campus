@@ -125,6 +125,7 @@ model Student {
   updatedAt     DateTime @updatedAt
 
   @@unique([email, instituteId])
+  @@unique([dni, instituteId])
 }
 
 model Course {

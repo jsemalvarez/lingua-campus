@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 
 export default async function ProfilePage() {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
+    if (!session || !session.user) {
         redirect("/login");
     }
 
@@ -18,20 +18,18 @@ export default async function ProfilePage() {
     let userData: any = null;
 
     if (role === "STUDENT") {
-        const student = await prisma.student.findFirst({
-            where: { email: session.user.email },
+        const student = await prisma.student.findUnique({
+            where: { id: (session.user as any).id },
         });
         if (student) {
             userData = {
-                name: student.name,
-                phone: student.phone,
-                email: student.email,
+                ...student,
                 role: "STUDENT",
             };
         }
     } else {
         const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
+            where: { id: (session.user as any).id },
             select: {
                 name: true,
                 phone: true,
@@ -64,12 +62,8 @@ export default async function ProfilePage() {
                 </header>
 
                 <Card className="p-5 sm:p-8 border-border/40 shadow-sm animate-in">
-                    <ProfileForm initialData={{
-                        name: userData.name,
-                        phone: userData.phone,
-                        email: userData.email,
-                        role: userData.role,
-                    }} />
+                    <ProfileForm initialData={userData} />
+
 
                     {/* Formulario de Cambio de Contraseña */}
                     <ChangePasswordForm />

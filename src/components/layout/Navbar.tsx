@@ -35,8 +35,35 @@ export function Navbar({ className }: { className?: string }) {
         { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN"] },
     ];
 
-    const userRole = (session?.user as any)?.role || "TEACHER"; // Default fallback
-    const navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
+    const sessionUser = session?.user as any;
+    const userRole = sessionUser?.role || "TEACHER"; // Default fallback
+    
+    // Calcular edad si es estudiante
+    let isMinor = true; // Por seguridad, asumimos menor si no hay fecha
+    if (userRole === "STUDENT") {
+        if (sessionUser?.birthDate) {
+            const birthDate = new Date(sessionUser.birthDate);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            isMinor = age < 18;
+        } else {
+            isMinor = true; // Sin fecha = tratamos como menor para ocultar finanzas
+        }
+    } else {
+        isMinor = false; // Staff/Admin no son alumnos
+    }
+
+    const navLinks = allNavLinks.filter(link => {
+        // Ocultar Finanzas si es estudiante menor de 18
+        if (link.href === "/payments" && userRole === "STUDENT" && isMinor) {
+            return false;
+        }
+        return link.roles.includes(userRole);
+    });
 
     return (
         <>
