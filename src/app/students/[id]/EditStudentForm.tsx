@@ -22,6 +22,7 @@ interface StudentData {
     schoolInfo: string | null;
     registeredLevel: string | null;
     birthDate: Date | null;
+    guardianLinks?: any[];
 }
 
 interface Level {
@@ -42,6 +43,18 @@ export function EditStudentForm({
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
+
+    const g1Link = student.guardianLinks?.find((l: any) => 
+        l.relation?.trim().toLowerCase() === student.guardian1Relation?.trim().toLowerCase()
+    ) || student.guardianLinks?.find((l: any) => 
+        l.guardian?.name?.trim().toLowerCase() === student.guardian1Name?.trim().toLowerCase()
+    );
+
+    const g2Link = student.guardianLinks?.find((l: any) => 
+        l.relation?.trim().toLowerCase() === student.guardian2Relation?.trim().toLowerCase()
+    ) || student.guardianLinks?.find((l: any) => 
+        l.guardian?.name?.trim().toLowerCase() === student.guardian2Name?.trim().toLowerCase()
+    );
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -131,18 +144,23 @@ export function EditStudentForm({
                 <h4 className="text-sm font-bold text-primary flex items-center gap-2">
                     Tutor Legal Principal
                 </h4>
+                {g1Link && (
+                    <div className="text-xs text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg inline-block">
+                        * Este tutor tiene una cuenta vinculada. Sus datos solo se pueden editar desde su propia cuenta.
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre / Apellido</label>
-                        <input type="text" name="guardian1Name" defaultValue={student.guardian1Name || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <input type="text" name="guardian1Name" defaultValue={student.guardian1Name || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
-                        <input type="text" name="guardian1Relation" defaultValue={student.guardian1Relation || ""} placeholder="Eg: Madre" className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <input type="text" name="guardian1Relation" defaultValue={student.guardian1Relation || ""} placeholder="Eg: Madre" disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular Confirmado</label>
-                        <input type="tel" name="guardian1Phone" defaultValue={student.guardian1Phone || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                        <input type="tel" name="guardian1Phone" defaultValue={student.guardian1Phone || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
                 </div>
             </div>
@@ -151,18 +169,23 @@ export function EditStudentForm({
                 <h4 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                     Segundo Tutor (Opcional)
                 </h4>
+                {g2Link && (
+                    <div className="text-xs text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg inline-block">
+                        * Este tutor tiene una cuenta vinculada. Sus datos solo se pueden editar desde su propia cuenta.
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre / Apellido</label>
-                        <input type="text" name="guardian2Name" defaultValue={student.guardian2Name || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all opacity-80 focus:opacity-100" />
+                        <input type="text" name="guardian2Name" defaultValue={student.guardian2Name || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
-                        <input type="text" name="guardian2Relation" defaultValue={student.guardian2Relation || ""} placeholder="Eg: Padre" className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all opacity-80 focus:opacity-100" />
+                        <input type="text" name="guardian2Relation" defaultValue={student.guardian2Relation || ""} placeholder="Eg: Padre" disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular</label>
-                        <input type="tel" name="guardian2Phone" defaultValue={student.guardian2Phone || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all opacity-80 focus:opacity-100" />
+                        <input type="tel" name="guardian2Phone" defaultValue={student.guardian2Phone || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
                     </div>
                 </div>
             </div>

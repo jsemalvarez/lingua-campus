@@ -159,16 +159,10 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
                 {/* Rol e Email (Sólo lectura) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-border/50">
-                    <div className="space-y-1.5 opacity-70">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email</label>
+                    <div className="space-y-1.5 opacity-70 sm:col-span-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email de cuenta</label>
                         <div className="px-4 py-2.5 rounded-xl border border-input bg-muted/50 text-sm font-medium">
                             {initialData.email || "No registrado"}
-                        </div>
-                    </div>
-                    <div className="space-y-1.5 opacity-70">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rol</label>
-                        <div className="px-4 py-2.5 rounded-xl border border-input bg-muted/50 text-sm font-medium">
-                            {initialData.role}
                         </div>
                     </div>
                 </div>

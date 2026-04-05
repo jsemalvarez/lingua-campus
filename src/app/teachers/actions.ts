@@ -34,7 +34,30 @@ export async function createTeacherAction(formData: FormData) {
         });
 
         if (existingEmail) {
-            return { success: false, error: "El correo electrónico ya está registrado." };
+            // Verificar si pertenece al mismo instituto
+            if (existingEmail.instituteId !== user.instituteId) {
+                return { success: false, error: "El correo electrónico ya está registrado en otro instituto." };
+            }
+
+            // Verificar si ya tiene el rol de profesor
+            if (existingEmail.roles.includes("TEACHER" as any) || existingEmail.role === "TEACHER") {
+                return { success: false, error: "Este usuario ya cuenta con el rol de Profesor." };
+            }
+
+            // Inyectar el rol de profesor y mantener los datos y base existentes
+            await prisma.user.update({
+                where: { email },
+                data: {
+                    roles: {
+                        set: [...existingEmail.roles, "TEACHER" as any]
+                    }
+                }
+            });
+
+            revalidatePath("/teachers");
+            revalidatePath("/courses/new");
+            revalidatePath("/courses");
+            return { success: true };
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -47,6 +70,7 @@ export async function createTeacherAction(formData: FormData) {
                 password: hashedPassword,
                 phone: phone || null,
                 role: "TEACHER",
+                roles: ["TEACHER" as any],
                 instituteId: user.instituteId
             }
         });
@@ -172,15 +196,33 @@ export async function softDeleteTeacher(teacherId: string) {
             where: { id: teacherId }
         });
 
-        if (!teacher || teacher.role !== "TEACHER" || (admin.role === "ADMIN" && teacher.instituteId !== admin.instituteId)) {
+        if (!teacher || (!teacher.roles.includes("TEACHER" as any) && teacher.role !== "TEACHER") || (admin.role === "ADMIN" && teacher.instituteId !== admin.instituteId)) {
             return { success: false, error: "Profesor no encontrado o sin permisos" };
         }
 
-        await prisma.user.update({
-            where: { id: teacherId },
-            // @ts-ignore - Prisma type not updated due to windows file lock
-            data: { status: "DELETED" }
-        });
+        // Check if the user has other active roles besides TEACHER
+        const remainingRoles = teacher.roles.filter(r => r !== "TEACHER");
+
+        if (remainingRoles.length > 0) {
+            // The user is multi-role (e.g. they are also a GUARDIAN)
+            // We just remove the TEACHER role from their array, keeping the account ACTIVE.
+            await prisma.user.update({
+                where: { id: teacherId },
+                data: {
+                    roles: {
+                        set: remainingRoles as any[]
+                    }
+                }
+            });
+        } else {
+            // The user was strictly a TEACHER and nothing else.
+            // We can safely soft-delete the entire account.
+            await prisma.user.update({
+                where: { id: teacherId },
+                // @ts-ignore - Prisma type not updated due to windows file lock
+                data: { status: "DELETED", roles: { set: [] } }
+            });
+        }
 
         revalidatePath("/teachers");
         revalidatePath("/dashboard");

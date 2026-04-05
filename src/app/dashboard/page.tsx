@@ -19,6 +19,8 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
+import { GuardianDashboardView } from "./components/GuardianDashboardView";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -27,8 +29,116 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    // Si es estudiante, armamos una vista personalizada
-    if ((session.user as any).role === "STUDENT") {
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    // ─── GUARDIAN View ───
+    if (activeRole === "GUARDIAN") {
+        const guardianId = sessionUser.id;
+        
+        const guardianLinks = await prisma.guardianStudentLink.findMany({
+            where: { guardianId },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        name: true,
+                        institute: { select: { name: true } },
+                        enrollments: {
+                            where: { status: "ACTIVE" },
+                            include: {
+                                course: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        lessons: {
+                                            where: { date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
+                                            orderBy: { date: 'asc' },
+                                            take: 5,
+                                            select: { id: true, date: true, topic: true }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        fees: {
+                            orderBy: [{ year: 'desc' }, { month: 'desc' }],
+                            take: 10,
+                            select: {
+                                id: true,
+                                month: true,
+                                year: true,
+                                originalAmount: true,
+                                paidAmount: true,
+                                status: true,
+                                datePaid: true,
+                                student: { select: { name: true } }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (guardianLinks.length === 0) {
+            // No hay vinculación aún
+            return (
+                <div className="min-h-screen bg-background">
+                    <Navbar currentActiveRole={activeRole} />
+                    <main className="container mx-auto px-4 py-20 text-center">
+                        <div className="max-w-md mx-auto space-y-4">
+                            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                                <Users className="text-muted-foreground" size={32} />
+                            </div>
+                            <h2 className="text-2xl font-bold">Portal de Tutores</h2>
+                            <p className="text-muted-foreground">
+                                Todavía no tenés alumnos asociados a tu cuenta. Por favor, contactate con la secretaría del instituto.
+                            </p>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const students = guardianLinks.map(l => l.student);
+        const instituteName = students[0]?.institute?.name || "Lingua Campus";
+        
+        // Flatten lessons
+        const allLessons = guardianLinks.flatMap(l => 
+            l.student.enrollments.flatMap(e => 
+                e.course.lessons.map(lesson => ({
+                    ...lesson,
+                    course: { name: e.course.name },
+                    studentName: l.student.name
+                }))
+            )
+        ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 6);
+
+        // Flatten fees
+        const allFees = guardianLinks.flatMap(l => l.student.fees)
+            .sort((a,b) => {
+                if (a.year !== b.year) return b.year - a.year;
+                return b.month - a.month;
+            });
+
+        return (
+            <div className="min-h-screen bg-background">
+                <Navbar currentActiveRole={activeRole} />
+                <GuardianDashboardView 
+                    guardianName={sessionUser.name || "Tutor"}
+                    instituteName={instituteName}
+                    students={students}
+                    upcomingLessons={allLessons}
+                    fees={allFees}
+                />
+            </div>
+        );
+    }
+
+    // ─── STUDENT View ───
+    if (activeRole === "STUDENT") {
         const student = await prisma.student.findUnique({
             where: { id: (session.user as any).id },
             select: { id: true, name: true, birthDate: true, instituteId: true, institute: { select: { name: true } } }
@@ -108,7 +218,7 @@ export default async function DashboardPage() {
 
         return (
             <div className="min-h-screen bg-background">
-                <Navbar />
+                <Navbar currentActiveRole={activeRole} />
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
                         <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
@@ -211,13 +321,13 @@ export default async function DashboardPage() {
         redirect("/admin/institutes");
     }
 
-    const isTeacher = user.role === "TEACHER";
+    const isActiveTeacher = activeRole === "TEACHER";
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // ─── TEACHER-specific dashboard ───
-    if (isTeacher) {
+    if (isActiveTeacher) {
         // Cursos asignados al profesor con sus horarios
         const teacherCourses = await prisma.course.findMany({
             where: { teacherId: user.id, instituteId: user.instituteId, status: "ACTIVE" },
@@ -262,7 +372,7 @@ export default async function DashboardPage() {
 
         return (
             <div className="min-h-screen bg-background pb-24">
-                <Navbar />
+                <Navbar currentActiveRole={activeRole} />
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
@@ -507,7 +617,7 @@ export default async function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>

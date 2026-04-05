@@ -11,21 +11,54 @@ import { StudentProfileView } from "./StudentProfileView";
 import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
 import { StudentDangerZone } from "./StudentDangerZone";
 import { ChangeCourseModal } from "./components/ChangeCourseModal";
+import { getActiveRole } from "@/lib/roles";
+
+export const dynamic = "force-dynamic";
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
+        select: { id: true, role: true, roles: true, instituteId: true }
+    }) as any;
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+    if (!user || (user.roles && user.roles.includes("SUPERADMIN")) || !user.instituteId) {
         redirect("/dashboard");
     }
 
-    const { id } = await params;
+    const userRoles = user.roles || [user.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    const isAdmin = ["ADMIN", "SECRETARY"].includes(activeRole);
+    const isGuardian = activeRole === "GUARDIAN";
+
+    // Si NO es admin, verificar si es el tutor de ESTE alumno específico
+    if (!isAdmin) {
+        if (isGuardian) {
+            const link = await prisma.guardianStudentLink.findUnique({
+                where: {
+                    guardianId_studentId: {
+                        guardianId: user.id,
+                        studentId: id
+                    }
+                }
+            });
+            if (!link) redirect("/dashboard");
+        } else {
+            // No es admin ni tutor vinculado (o docente en modo docente)
+            // Permitir el flujo si es admin real pero está en otro modo? 
+            // Para seguridad, si no es Admin en activeRole, restringimos.
+            const realIsAdmin = userRoles.some((r: any) => ["ADMIN", "SECRETARY"].includes(r));
+            if (!realIsAdmin) {
+                redirect("/dashboard");
+            }
+        }
+    }
+
+    const canManage = isAdmin; // Solo admins (en su rol activo) pueden editar o ver zona peligrosa
 
     const student = await prisma.student.findUnique({
         where: { id: id },
@@ -37,24 +70,29 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             fees: {
                 orderBy: { createdAt: 'desc' },
                 take: 5
+            },
+            guardianLinks: {
+                include: { guardian: true }
             }
         }
     });
 
-    if (!student || student.instituteId !== user.instituteId) {
+    if (!student || (user.instituteId && student.instituteId !== user.instituteId)) {
         notFound();
     }
 
-    const availableCourses = await prisma.course.findMany({
-        where: { instituteId: user.instituteId },
-        select: { id: true, name: true, level: true },
-        orderBy: { name: 'asc' }
-    });
-
-    const instituteLevels = await prisma.level.findMany({
-        where: { instituteId: user.instituteId },
-        orderBy: { name: 'asc' }
-    });
+    // Parallelize metadata fetching to reduce database connection hold time
+    const [availableCourses, instituteLevels] = await Promise.all([
+        prisma.course.findMany({
+            where: { instituteId: user.instituteId },
+            select: { id: true, name: true, level: true },
+            orderBy: { name: 'asc' }
+        }),
+        prisma.level.findMany({
+            where: { instituteId: user.instituteId },
+            orderBy: { name: 'asc' }
+        })
+    ]);
 
     // Resolve registeredLevel display name
     if (student.registeredLevel) {
@@ -64,36 +102,38 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         (student as any).registeredLevelName = "-";
     }
 
+    const canSeeFinancials = isAdmin || isGuardian;
+
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="mb-8">
-                    <Link
-                        href="/students"
-                        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4"
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Volver a la lista de estudiantes
-                    </Link>
+                    {!isGuardian && (
+                        <Link
+                            href="/students"
+                            className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4"
+                        >
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver a la lista de estudiantes
+                        </Link>
+                    )}
                     <h1 className="text-3xl font-bold tracking-tight">Ficha del Estudiante</h1>
                 </header>
 
-                {student.status === "PRE_INSCRIBED" && (
+                {student.status === "PRE_INSCRIBED" && isAdmin && (
                     <ActivateStudentBanner studentId={student.id} studentName={student.name} />
                 )}
 
                 <div className="grid gap-8 lg:grid-cols-4 items-start">
                     <div className="lg:col-span-3">
-                        {/* Seccion 1: Perfil Interactivo (Vista / Edicion) */}
                         <StudentProfileView 
                             student={student as any} 
-                            userRole={user.role} 
+                            userRoles={[activeRole]} 
                             instituteLevels={instituteLevels}
                         />
 
-                        {/* Seccion 2: Cursos inscriptos */}
                         <div className="mt-8 max-w-5xl mx-auto space-y-4">
                             <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
                                 <BookOpen className="text-primary" size={24} /> Desempeño y Cursos
@@ -108,16 +148,18 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                     <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
                                         Este estudiante no está asignado a ningún curso todavía.
                                     </p>
-                                    <Link href={`/enrollments/new?student=${student.id}`} className="text-primary hover:underline text-sm font-semibold">
-                                        Inscribir en un Curso &rarr;
-                                    </Link>
+                                    {isAdmin && (
+                                        <Link href={`/enrollments/new?student=${student.id}`} className="text-primary hover:underline text-sm font-semibold">
+                                            Inscribir en un Curso &rarr;
+                                        </Link>
+                                    )}
                                 </Card>
                             ) : (
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     {student.enrollments.map(e => (
                                         <Card key={e.id} className="p-5 border-border/40 hover:border-primary/50 transition-colors group relative overflow-hidden bg-card/50" style={{ borderLeft: `4px solid ${e.course.color || "#3b82f6"}` }}>
                                             <div className="flex items-start justify-between">
-                                                <Link href={`/courses/${e.course.id}`} className="flex-1">
+                                                <Link href={isAdmin ? `/courses/${e.course.id}` : "#"} className={isAdmin ? "" : "pointer-events-none"}>
                                                     <div>
                                                         <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
                                                             {e.course.name}
@@ -129,7 +171,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                     <span className={`px-2 py-1 text-xs font-bold rounded-lg ${e.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-orange-500/10 text-orange-600'}`}>
                                                         {e.status}
                                                     </span>
-                                                    {(user.role === "ADMIN" || user.role === "SUPERADMIN") && (
+                                                    {isAdmin && (
                                                         <ChangeCourseModal 
                                                             enrollmentId={e.id}
                                                             currentCourseId={e.course.id}
@@ -149,7 +191,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                         </div>
                     </div>
 
-                    {user.role !== "TEACHER" && student.status !== "PRE_INSCRIBED" && (
+                    {canSeeFinancials && student.status !== "PRE_INSCRIBED" && (
                         <div className="lg:col-span-1 space-y-6">
                             <Card className="p-5 border-border/40 bg-card/60">
                                 <h3 className="font-bold flex items-center gap-2 mb-4 text-sm uppercase tracking-wider text-muted-foreground">
@@ -178,7 +220,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 )}
 
                                 <Link href="/payments" className="block w-full mt-4 text-center rounded-lg bg-primary/10 text-primary py-2 text-sm font-bold hover:bg-primary/20 transition-colors">
-                                    Ir a Cobranzas
+                                    {isAdmin ? "Ir a Cobranzas" : "Ver detalle de pagos"}
                                 </Link>
 
                             </Card>
@@ -186,8 +228,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     )}
                 </div>
 
-                {/* Danger Zone */}
-                {user.role === "ADMIN" && (
+                {canManage && (
                     <div className="lg:col-span-4 mt-8">
                         <StudentDangerZone studentId={student.id} studentStatus={student.status} />
                     </div>

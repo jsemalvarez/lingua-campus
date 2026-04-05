@@ -269,3 +269,89 @@ export async function changeStudentCourseAction(enrollmentId: string, newCourseI
         return { success: false, error: "Error al cambiar el curso del estudiante" };
     }
 }
+
+export async function createGuardianAccount(studentId: string, guardianName: string, relation: string, email: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true, roles: true }
+    });
+
+    // Validar permisos (solo ADMIN o SUPERADMIN)
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN" || user?.roles.includes("ADMIN") || user?.roles.includes("SUPERADMIN");
+    if (!user || !isAdmin || !user.instituteId) {
+        return { success: false, error: "Sin permisos" };
+    }
+
+    if (!email || !studentId) {
+        return { success: false, error: "Email y Estudiante son obligatorios" };
+    }
+
+    try {
+        const normalizedEmail = email.toLowerCase().trim();
+        const defaultPassword = "Lingua2026";
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+        // 1. Buscar si ya existe el usuario
+        const existingUser = await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        });
+
+        let targetUserId = "";
+
+        if (existingUser) {
+            targetUserId = existingUser.id;
+            // 2. Si existe, asegurar que tenga el rol GUARDIAN
+            if (!existingUser.roles.includes("GUARDIAN")) {
+                await prisma.user.update({
+                    where: { id: existingUser.id },
+                    data: {
+                        roles: {
+                            set: [...existingUser.roles, "GUARDIAN" as any]
+                        }
+                    }
+                });
+            }
+        } else {
+            // 3. Si no existe, crear el usuario
+            const newUser = await prisma.user.create({
+                data: {
+                    email: normalizedEmail,
+                    name: guardianName,
+                    password: hashedPassword,
+                    roles: ["GUARDIAN" as any],
+                    instituteId: user.instituteId,
+                    status: "ACTIVE"
+                }
+            });
+            targetUserId = newUser.id;
+        }
+
+        // 4. Crear el vínculo Guardian-Student si no existe
+        await prisma.guardianStudentLink.upsert({
+            where: {
+                guardianId_studentId: {
+                    guardianId: targetUserId,
+                    studentId: studentId
+                }
+            },
+            create: {
+                guardianId: targetUserId,
+                studentId: studentId,
+                relation: relation
+            },
+            update: {
+                relation: relation
+            }
+        });
+
+        revalidatePath(`/students/${studentId}`);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error creating guardian account:", error);
+        return { success: false, error: "Error al crear la cuenta del tutor" };
+    }
+}
+

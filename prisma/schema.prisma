@@ -58,13 +58,17 @@ enum UserRole {
   SUPERADMIN // All access (L-C devs)
   ADMIN      // Institute owner/admin
   TEACHER    // Staff member
+  SECRETARY  // Administrative staff
+  GUARDIAN   // Parent / Guardian
 }
 
 model User {
   id          String   @id @default(cuid())
   email       String   @unique
   password    String
-  role        UserRole @default(ADMIN)
+  role        UserRole @default(ADMIN) // @deprecated - Use roles instead
+  roles       UserRole[] @default([ADMIN])
+  dni         String?    @unique
   name        String     // Nombre Completo
   phone       String?    // Celular
   avatarUrl   String?
@@ -76,6 +80,9 @@ model User {
   
   courses     Course[]   @relation("CourseTeacher")
   expensesReceived Expense[]  @relation("RecipientExpenses")
+  
+  // Relation for Guardian Portal
+  guardianLinks GuardianStudentLink[] @relation("GuardianToStudent")
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -120,12 +127,29 @@ model Student {
   grades        Grade[]
   fees          Fee[]
   miscellaneousIncome MiscellaneousIncome[]
+  
+  // Relation for Guardian Portal
+  guardianLinks GuardianStudentLink[] @relation("StudentToGuardian")
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([email, instituteId])
   @@unique([dni, instituteId])
+}
+
+model GuardianStudentLink {
+  id          String   @id @default(cuid())
+  guardianId  String
+  guardian    User     @relation("GuardianToStudent", fields: [guardianId], references: [id])
+  studentId   String
+  student     Student  @relation("StudentToGuardian", fields: [studentId], references: [id])
+  relation    String?  // Madre, Padre, Tío, etc.
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([guardianId, studentId])
 }
 
 model Course {

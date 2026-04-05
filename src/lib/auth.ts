@@ -19,11 +19,11 @@ export const authOptions: NextAuthOptions = {
                 const instituteId = credentials.instituteId?.trim() || undefined;
                 const isEmail     = identifier.includes("@");
 
-                // ── 1. Buscar en la tabla User (staff: ADMIN, TEACHER, SUPERADMIN) ──────
-                // El staff siempre usa email
+                // ── 1. Buscar en la tabla User (staff: ADMIN, TEACHER, SECRETARY, GUARDIAN) ──
                 if (isEmail) {
                     const user = await prisma.user.findUnique({
                         where: { email: identifier },
+                        select: { id: true, name: true, email: true, password: true, roles: true, instituteId: true }
                     });
 
                     if (user?.password) {
@@ -33,7 +33,8 @@ export const authOptions: NextAuthOptions = {
                                 id:          user.id,
                                 name:        user.name,
                                 email:       user.email,
-                                role:        user.role,
+                                role:        user.roles[0], // Compatibilidad
+                                roles:       user.roles,
                                 instituteId: user.instituteId,
                             };
                         }
@@ -41,17 +42,13 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 // ── 2. Buscar en la tabla Student ─────────────────────────────────────
-                // Puede ingresar por email O por DNI
-                // @ts-ignore: Prisma cache issue in Windows
                 const student = await prisma.student.findFirst({
                     where: isEmail
                         ? { email: identifier }                          // buscar por email
                         : { dni: identifier, instituteId: instituteId }, // buscar por DNI + instituto
                 });
 
-                // @ts-ignore: Prisma cache issue in Windows
                 if (student?.password) {
-                    // @ts-ignore: Prisma cache issue in Windows
                     const ok = await bcrypt.compare(credentials.password, student.password);
                     if (ok) {
                         return {
@@ -59,6 +56,7 @@ export const authOptions: NextAuthOptions = {
                             name:        student.name,
                             email:       student.email,
                             role:        "STUDENT",
+                            roles:       ["STUDENT"],
                             instituteId: student.instituteId,
                             birthDate:   student.birthDate,
                         };
@@ -74,6 +72,7 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.id          = user.id;
                 token.role        = (user as any).role;
+                token.roles       = (user as any).roles;
                 token.instituteId = (user as any).instituteId;
                 token.birthDate   = (user as any).birthDate;
             }
@@ -83,11 +82,13 @@ export const authOptions: NextAuthOptions = {
             if (session.user) {
                 (session.user as any).id          = token.id;
                 (session.user as any).role        = token.role;
+                (session.user as any).roles       = token.roles;
                 (session.user as any).instituteId = token.instituteId;
                 (session.user as any).birthDate   = token.birthDate;
             }
             return session;
         },
+
     },
     pages: {
         signIn: "/login",

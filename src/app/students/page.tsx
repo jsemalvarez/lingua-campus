@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users } from "lucide-react";
 import dayjs from "dayjs";
 import { StudentListActions } from "./components/StudentListActions";
+import { getActiveRole } from "@/lib/roles";
 
 interface PageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -26,6 +27,14 @@ export default async function StudentsPage(props: PageProps) {
     });
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        redirect("/dashboard");
+    }
+
+    const userRoles = session.user.roles || [user.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    // Si está en modo Tutor, no puede ver la lista completa de alumnos
+    if (activeRole === "GUARDIAN") {
         redirect("/dashboard");
     }
 
@@ -106,7 +115,7 @@ export default async function StudentsPage(props: PageProps) {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-2 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

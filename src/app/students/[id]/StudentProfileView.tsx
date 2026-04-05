@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
-import { Mail, Phone, User, UserCheck, Edit3, Info } from "lucide-react";
+import { User, Phone, Mail, UserCheck, Edit3, Info } from "lucide-react";
+import { CreateGuardianModal } from "./components/CreateGuardianModal";
 import dayjs from "dayjs";
 import { StudentQRCard } from "./components/StudentQRCard";
 
@@ -26,6 +27,7 @@ interface StudentData {
     schoolInfo: string | null;
     registeredLevel: string | null;
     registeredLevelName?: string;
+    guardianLinks?: any[];
 }
 
 interface Level {
@@ -35,14 +37,30 @@ interface Level {
 
 export function StudentProfileView({ 
     student, 
-    userRole,
+    userRoles,
     instituteLevels
 }: { 
     student: StudentData; 
-    userRole: string;
+    userRoles: string[];
     instituteLevels: Level[];
 }) {
     const [isEditing, setIsEditing] = useState(false);
+
+    // Buscar si ya tienen accesos habilitados de forma más flexible
+    // Primero intentamos por relación exacta, si no existe, por nombre
+    const g1Link = student.guardianLinks?.find((l: any) => 
+        l.relation?.trim().toLowerCase() === student.guardian1Relation?.trim().toLowerCase()
+    ) || student.guardianLinks?.find((l: any) => 
+        l.guardian.name?.trim().toLowerCase() === student.guardian1Name?.trim().toLowerCase()
+    );
+
+    const g2Link = student.guardianLinks?.find((l: any) => 
+        l.relation?.trim().toLowerCase() === student.guardian2Relation?.trim().toLowerCase()
+    ) || student.guardianLinks?.find((l: any) => 
+        l.guardian.name?.trim().toLowerCase() === student.guardian2Name?.trim().toLowerCase()
+    );
+
+    const canManageAccess = userRoles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r));
 
     if (isEditing) {
         return (
@@ -72,7 +90,7 @@ export function StudentProfileView({
                         Ingresó el {dayjs(student.joinDate).format("DD MMM, YYYY")}
                     </p>
 
-                    {userRole !== "TEACHER" && (
+                    {userRoles?.every(r => r === "TEACHER") === false && (
                         <Button variant="outline" className="w-full mt-6 shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>
                             <Edit3 size={16} className="mr-2" /> Editar Perfil
                         </Button>
@@ -146,7 +164,7 @@ export function StudentProfileView({
 
                     <div className="grid sm:grid-cols-2 gap-6">
                         <div className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border/50">
-                            <div className="font-semibold text-sm flex items-center gap-2 text-primary">
+                             <div className="font-semibold text-sm flex items-center gap-2 text-primary">
                                 <User size={16} /> Tutor Principal
                             </div>
                             {student.guardian1Name ? (
@@ -156,10 +174,33 @@ export function StudentProfileView({
                                         <span className="font-medium capitalize">{student.guardian1Name}</span>
                                         {student.guardian1Relation && <span className="text-muted-foreground ml-1 capitalize">({student.guardian1Relation})</span>}
                                     </div>
-                                    <div className="text-sm">
+                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
                                         <span className="font-medium">{student.guardian1Phone ? <a href={`https://wa.me/${student.guardian1Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian1Phone}</a> : "-"}</span>
                                     </div>
+                                    {canManageAccess && !g1Link && (
+                                        <div className="pt-2">
+                                            <CreateGuardianModal 
+                                                studentId={student.id} 
+                                                guardianName={student.guardian1Name} 
+                                                relation={student.guardian1Relation || "Tutor"} 
+                                                isFullWidth={true}
+                                            />
+                                        </div>
+                                    )}
+                                    {g1Link && (
+                                        canManageAccess ? (
+                                            <a href={`/guardians/${g1Link.guardian.id}`} className="text-[10px] hover:underline bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors hover:bg-emerald-200 dark:hover:bg-emerald-900/50">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Cuenta: {g1Link.guardian.email}
+                                            </a>
+                                        ) : (
+                                            <div className="text-[10px] bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Cuenta: {g1Link.guardian.email}
+                                            </div>
+                                        )
+                                    )}
                                 </>
                             ) : (
                                 <p className="text-sm italic text-muted-foreground">Sin datos registrados.</p>
@@ -167,7 +208,7 @@ export function StudentProfileView({
                         </div>
 
                         <div className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border/50">
-                            <div className="font-semibold text-sm flex items-center gap-2 text-foreground/80">
+                             <div className="font-semibold text-sm flex items-center gap-2 text-foreground/80">
                                 <User size={16} /> Tutor Secundario
                             </div>
                             {student.guardian2Name ? (
@@ -177,15 +218,39 @@ export function StudentProfileView({
                                         <span className="font-medium capitalize">{student.guardian2Name}</span>
                                         {student.guardian2Relation && <span className="text-muted-foreground ml-1 capitalize">({student.guardian2Relation})</span>}
                                     </div>
-                                    <div className="text-sm">
+                                     <div className="text-sm">
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
                                         <span className="font-medium">{student.guardian2Phone ? <a href={`https://wa.me/${student.guardian2Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian2Phone}</a> : "-"}</span>
                                     </div>
+                                    {canManageAccess && !g2Link && (
+                                        <div className="pt-2">
+                                            <CreateGuardianModal 
+                                                studentId={student.id} 
+                                                guardianName={student.guardian2Name} 
+                                                relation={student.guardian2Relation || "Tutor"} 
+                                                isFullWidth={true}
+                                            />
+                                        </div>
+                                    )}
+                                    {g2Link && (
+                                        canManageAccess ? (
+                                            <a href={`/guardians/${g2Link.guardian.id}`} className="text-[10px] hover:underline bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors hover:bg-emerald-200 dark:hover:bg-emerald-900/50">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Cuenta: {g2Link.guardian.email}
+                                            </a>
+                                        ) : (
+                                            <div className="text-[10px] bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Cuenta: {g2Link.guardian.email}
+                                            </div>
+                                        )
+                                    )}
                                 </>
                             ) : (
                                 <p className="text-sm italic text-muted-foreground">Opcional. Sin datos registrados.</p>
                             )}
                         </div>
+
                     </div>
                 </Card>
             </div>
