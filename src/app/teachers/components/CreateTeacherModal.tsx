@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Plus, X, CheckCircle, AlertCircle, User, Mail, Lock, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { HelpTooltip } from "@/components/ui/HelpTooltip";
+
 export function CreateTeacherModal() {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +65,15 @@ export function CreateTeacherModal() {
                     </div>
 
                     <div className="space-y-1.5 focus-within:text-primary transition-colors">
-                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Mail size={14} /> Correo Electrónico</label>
+                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            <Mail size={14} /> Correo Electrónico
+                            <HelpTooltip 
+                                title="Asignación Multi-Rol"
+                                description="Si ingresas el correo de alguien que ya es Tutor en el instituto, el sistema no creará duplicados, simplemente le añadirá el botón de acceso como Profesor."
+                                href="/dashboard/help#roles"
+                                linkText="Ver Documentación"
+                            />
+                        </label>
                         <input type="email" name="email" required placeholder="laura@instituto.com" className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-text focus:border-primary" />
                     </div>
 

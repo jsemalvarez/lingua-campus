@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings } from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTenant } from "@/components/providers/TenantProvider";
 import Image from "next/image";
@@ -143,6 +143,13 @@ export function Navbar({
                                 {(activeRole === "ADMIN" || activeRole === "SUPERADMIN") && sessionUser?.instituteId && (
                                     <NotificationBell instituteId={sessionUser.instituteId} />
                                 )}
+
+                                <Link href="/dashboard/help"
+                                    className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border border-transparent hover:border-primary/20"
+                                    title="Centro de Ayuda"
+                                >
+                                    <HelpCircle size={20} />
+                                </Link>
 
                                 <Link href="/profile"
                                     className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border border-transparent hover:border-primary/20"

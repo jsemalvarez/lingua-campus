@@ -276,7 +276,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                        <Link href="/payments/manual">
+                        <Link href="/dashboard/help#pagos">
                             <Button variant="secondary" className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 shadow-sm border border-emerald-500/20 font-bold">
                                 <BookOpen size={16} className="text-emerald-500" />
                                 Manual de Uso
