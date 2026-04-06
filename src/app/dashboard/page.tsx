@@ -532,11 +532,13 @@ export default async function DashboardPage() {
     });
     const monthlyIncome = monthlyFees.reduce((acc, curr) => acc + curr.paidAmount, 0);
 
+    const isSecretary = activeRole === "SECRETARY";
+
     const stats = [
         { label: "Estudiantes Activos", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
         { label: "Cursos Activos", value: totalCourses.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
         { label: "Profesores", value: totalTeachers.toString(), icon: GraduationCap, color: "text-orange-600", bg: "bg-orange-50" },
-        { label: "Ingresos del Mes", value: new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyIncome), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+        ...(!isSecretary ? [{ label: "Ingresos del Mes", value: new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyIncome), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" }] : []),
     ];
 
     // 5. Fetch upcoming lessons
@@ -632,7 +634,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className={`grid gap-4 md:grid-cols-2 ${stats.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
                     {stats.map((stat, i) => (
                         <Card key={i} className="p-6 hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
@@ -651,9 +653,11 @@ export default async function DashboardPage() {
                 {/* Enhanced Wow-Factor Graphics Section */}
                 <div className="mb-6 space-y-6">
                     <StudentsChart data={chartData} totalActive={totalStudents} />
-                    <Suspense fallback={<Card className="h-[450px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
-                        <AnnualFinanceChartServer instituteId={user.instituteId} />
-                    </Suspense>
+                    {!isSecretary && (
+                        <Suspense fallback={<Card className="h-[450px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                            <AnnualFinanceChartServer instituteId={user.instituteId} />
+                        </Suspense>
+                    )}
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">

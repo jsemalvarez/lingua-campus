@@ -23,6 +23,7 @@ export async function createTeacherAction(formData: FormData) {
     const email = formData.get("email") as string;
     const phone = formData.get("phone") as string;
     const password = formData.get("password") as string;
+    const role = (formData.get("role") as string) || "TEACHER";
 
     if (!name || !email || !password) {
         return { success: false, error: "Nombre, Email y Contraseña son obligatorios" };
@@ -39,17 +40,17 @@ export async function createTeacherAction(formData: FormData) {
                 return { success: false, error: "El correo electrónico ya está registrado en otro instituto." };
             }
 
-            // Verificar si ya tiene el rol de profesor
-            if (existingEmail.roles.includes("TEACHER" as any) || existingEmail.role === "TEACHER") {
-                return { success: false, error: "Este usuario ya cuenta con el rol de Profesor." };
+            // Verificar si ya tiene el rol asignado
+            if (existingEmail.roles.includes(role as any) || existingEmail.role === role) {
+                return { success: false, error: `Este usuario ya cuenta con el rol.` };
             }
 
-            // Inyectar el rol de profesor y mantener los datos y base existentes
+            // Inyectar el rol seleccionado y mantener los datos y base existentes
             await prisma.user.update({
                 where: { email },
                 data: {
                     roles: {
-                        set: [...existingEmail.roles, "TEACHER" as any]
+                        set: [...existingEmail.roles, role as any]
                     }
                 }
             });
@@ -69,8 +70,8 @@ export async function createTeacherAction(formData: FormData) {
                 email,
                 password: hashedPassword,
                 phone: phone || null,
-                role: "TEACHER",
-                roles: ["TEACHER" as any],
+                role: role as any,
+                roles: [role as any],
                 instituteId: user.instituteId
             }
         });

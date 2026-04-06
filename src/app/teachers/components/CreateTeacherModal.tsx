@@ -40,7 +40,7 @@ export function CreateTeacherModal() {
     if (!isOpen) {
         return (
             <Button className="premium-gradient shadow-md shadow-primary/20" onClick={() => setIsOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Registrar Profesor
+                <Plus className="mr-2 h-4 w-4" /> Registrar Personal
             </Button>
         );
     }
@@ -50,7 +50,7 @@ export function CreateTeacherModal() {
             <div className="bg-card w-full max-w-[500px] rounded-2xl shadow-xl border border-border/60 overflow-hidden animate-in zoom-in-95">
                 <div className="px-6 py-4 border-b border-border/40 flex items-center justify-between">
                     <h2 className="text-xl font-bold flex items-center gap-2">
-                        <User className="text-primary" /> Registrar Nuevo Profesor
+                        <User className="text-primary" /> Registrar Nuevo Miembro del Personal
                     </h2>
                     <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
                         <X size={20} />
@@ -62,6 +62,14 @@ export function CreateTeacherModal() {
                     <div className="space-y-1.5 focus-within:text-primary transition-colors">
                         <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">Nombre Completo</label>
                         <input type="text" name="name" required placeholder="Ej: Laura Martinez" className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-text focus:border-primary" />
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-primary transition-colors">
+                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">Cargo / Rol</label>
+                        <select name="role" required className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer focus:border-primary">
+                            <option value="TEACHER">Profesor/a</option>
+                            <option value="SECRETARY">Secretaría</option>
+                        </select>
                     </div>
 
                     <div className="space-y-1.5 focus-within:text-primary transition-colors">
@@ -89,7 +97,7 @@ export function CreateTeacherModal() {
 
                     {status === "success" && (
                         <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-sm font-medium animate-in slide-in-from-bottom-2">
-                            <CheckCircle size={18} /> Profesor registrado con éxito.
+                            <CheckCircle size={18} /> Personal registrado con éxito.
                         </div>
                     )}
                     {status === "error" && (
