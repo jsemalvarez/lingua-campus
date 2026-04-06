@@ -115,6 +115,7 @@ export async function getStudentPendingFeesAction(studentId: string) {
             where: {
                 studentId,
                 status: { in: ["PENDING", "PARTIAL"] },
+                originalAmount: { gt: 0 },
                 instituteId: user.instituteId as string
             },
             include: {

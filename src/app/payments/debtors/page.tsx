@@ -55,7 +55,9 @@ export default async function DebtorsPage() {
             label:
                 fee.type === "ENROLLMENT"
                     ? `Matrícula ${fee.year}`
-                    : `${fee.month}/${fee.year} (${fee.enrollment?.course.name || "Sin curso"})`,
+                    : fee.type === "EXAM"
+                        ? `Derecho de Examen ${fee.year}`
+                        : `${fee.month}/${fee.year} (${fee.enrollment?.course.name || "Sin curso"})`,
             isCurrent,
             amount: owed,
             isPaid: fee.paidAmount > 0,

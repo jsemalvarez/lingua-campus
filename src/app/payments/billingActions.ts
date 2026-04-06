@@ -162,6 +162,7 @@ export async function getDebtorsReportAction() {
             where: {
                 instituteId: user.instituteId as string,
                 status: { in: ["PENDING", "PARTIAL"] },
+                originalAmount: { gt: 0 },
                 // Filtramos por cuotas que ya deberían haber vencido (meses anteriores o actual)
                 OR: [
                     { year: { lt: new Date().getFullYear() } },

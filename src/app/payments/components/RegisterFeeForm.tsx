@@ -135,13 +135,18 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                 className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20"
                             >
                                 {pendingFees.map(f => {
-                                    const feeLabel = f.type === "ENROLLMENT" && !f.enrollment?.course?.name
-                                        ? `Matrícula Anual ${f.year}`
-                                        : f.enrollment?.course?.name || f.type;
+                                    let label = "";
+                                    if (f.type === "ENROLLMENT") {
+                                        label = `Matrícula ${f.year}`;
+                                    } else if (f.type === "EXAM") {
+                                        label = `Derecho de Examen ${f.year}`;
+                                    } else {
+                                        label = `Cuota ${f.month}/${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
+                                    }
                                     
                                     return (
                                         <option key={f.id} value={f.id}>
-                                            {f.type === "ENROLLMENT" ? `Matrícula ${f.year}` : `${f.month}/${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
+                                            {label} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
                                         </option>
                                     );
                                 })}

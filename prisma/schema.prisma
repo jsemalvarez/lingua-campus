@@ -179,6 +179,7 @@ model Course {
   // Financials
   monthlyPrice   Float @default(0)
   enrollmentPrice Float @default(0)
+  examPrice      Float @default(0)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -197,6 +198,9 @@ model Enrollment {
   // Custom Pricing (Scholarships)
   customMonthlyPrice   Float?
   customEnrollmentPrice Float?
+  customExamPrice      Float?
+
+  takesExam   Boolean  @default(false)
 
   fees        Fee[]
 
@@ -375,6 +379,7 @@ enum PaymentStatus {
 enum FeeType {
   MONTHLY
   ENROLLMENT
+  EXAM
 }
 
 model Fee {

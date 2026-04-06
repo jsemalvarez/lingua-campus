@@ -2,7 +2,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { BookOpen, Users, CreditCard, GraduationCap, Info, CalendarPlus, Wand2, ShieldAlert, Undo2, Trash2, Edit2 } from "lucide-react";
+import { BookOpen, Users, CreditCard, GraduationCap, Info, CalendarPlus, Wand2, ShieldAlert, Undo2, Trash2, Edit2, FileText } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 
 export default async function HelpCenterPage() {
@@ -93,11 +93,11 @@ export default async function HelpCenterPage() {
                                     <Wand2 className="text-blue-500" size={20} /> 1. Gestión de Matrículas Anuales
                                 </h3>
                                 <Card className="p-6 border-border/40 bg-card/40 leading-relaxed shadow-sm space-y-6">
-                                    
+
                                     {/* Caso 1: Generación Masiva */}
                                     <div>
                                         <h4 className="font-bold mb-2 flex items-center gap-2 text-primary">
-                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">A</span> 
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">A</span>
                                             Generación Masiva (Principio de Año)
                                         </h4>
                                         <p className="text-sm text-muted-foreground mb-3">
@@ -114,7 +114,7 @@ export default async function HelpCenterPage() {
                                     {/* Caso 2: Matrícula Anticipada */}
                                     <div>
                                         <h4 className="font-bold mb-2 flex items-center gap-2 text-primary">
-                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">B</span> 
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">B</span>
                                             Matrícula Anticipada (Sin Curso)
                                         </h4>
                                         <p className="text-sm text-muted-foreground mb-3">
@@ -132,7 +132,7 @@ export default async function HelpCenterPage() {
                                     {/* Caso 3: Autogeneración por Inscripción */}
                                     <div>
                                         <h4 className="font-bold mb-2 flex items-center gap-2 text-primary">
-                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">C</span> 
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs">C</span>
                                             Autogeneración al Inscribir
                                         </h4>
                                         <p className="text-sm text-muted-foreground mb-3">
@@ -182,13 +182,13 @@ export default async function HelpCenterPage() {
                                     <h4 className="font-semibold mb-2">Pasos para Corregir:</h4>
                                     <ul className="list-none space-y-3 text-muted-foreground ml-2 mt-3 text-sm">
                                         <li className="flex items-start gap-2">
-                                            <Edit2 size={16} className="text-muted-foreground" /> 
+                                            <Edit2 size={16} className="text-muted-foreground" />
                                             <span>
                                                 <strong>Para modificar el precio base:</strong> Ve a <i>Ver Deudores</i>, posa el mouse (o pulsa) sobre la cuota pendiente del alumno y haz clic en el <b>ícono del lápiz</b>. Sobreescribe el monto correcto.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2">
-                                            <Trash2 size={16} className="text-muted-foreground" /> 
+                                            <Trash2 size={16} className="text-muted-foreground" />
                                             <span>
                                                 <strong>Para borrar la deuda "fantasma":</strong> En <i>Ver Deudores</i>, posa el mouse en la cuota y haz clic en el <b>ícono del tacho de basura</b>. Desaparecerá de tu base contable para siempre.
                                             </span>
@@ -225,7 +225,7 @@ export default async function HelpCenterPage() {
                                         Sabiendo que los ingresos no se pueden borrar pero <i>los humanos se equivocan</i>, nuestro sistema resuelve esto mediante las <strong>Anulaciones Financieras</strong>.
                                     </p>
                                     <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl my-4 text-rose-900 dark:text-rose-100 text-sm">
-                                        <strong>¿Qué sucede cuando anulas un cobro encarecido o erróneo?</strong> <br/>
+                                        <strong>¿Qué sucede cuando anulas un cobro encarecido o erróneo?</strong> <br />
                                         <div className="mt-2 text-xs space-y-1">
                                             <p>1. La transacción original recibe un cartel rojo de <b>Anulado</b>.</p>
                                             <p>2. El sistema inyecta en la caja un <b>contra-asiento automático</b> con dinero negativo (reembolso) para dejar la tesorería a cero.</p>
@@ -256,9 +256,57 @@ export default async function HelpCenterPage() {
                         <Card className="p-6 border-border/50 shadow-sm space-y-4 bg-card/60">
                             <h3 className="text-lg font-bold text-foreground">¿Qué ocurre comercialmente al dar de baja a un alumno?</h3>
                             <p className="text-muted-foreground text-sm leading-relaxed">
-                                Cuando marcas a un estudiante como inactivo o eliminado, su perfil financiero y académico se archiva. <br/><br/>
+                                Cuando marcas a un estudiante como inactivo o eliminado, su perfil financiero y académico se archiva. <br /><br />
                                 <b>Importante:</b> La cuenta del padre/madre (Tutor) <b>NO se elimina</b>. Hemos diseñado esta regla para que el tutor pueda seguir iniciando sesión y saldar deudas pendientes (o consultar recibos viejos) mediante un panel de lectura histórico, protegiendo las finanzas de tu instituto.
                             </p>
+                        </Card>
+                    </section>
+
+                    {/* Sección 4: Exámenes Finales */}
+                    <section id="examenes" className="scroll-mt-24 space-y-4 mt-8">
+                        <div className="flex items-center gap-3 border-b border-border/60 pb-3 mb-6">
+                            <div className="p-2.5 bg-fuchsia-500/10 text-fuchsia-500 rounded-xl">
+                                <FileText size={24} />
+                            </div>
+                            <h2 className="text-2xl font-bold tracking-tight">Exámenes Finales</h2>
+                        </div>
+
+                        <Card className="p-6 border-border/50 shadow-sm space-y-6 bg-card/60">
+                            <div>
+                                <h3 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
+                                    <Info size={18} className="text-fuchsia-500" /> Funcionamiento Integrado (Académico y Contable)
+                                </h3>
+                                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                                    El flujo de fin de año está automatizado para evitar carga manual duplicada. Al habilitar a un alumno para rendir, se afectan simultáneamente sus finanzas y libretas de asistencia.
+                                </p>
+                            </div>
+
+                            <div className="pl-4 border-l-2 border-fuchsia-500/30 space-y-4 text-sm text-muted-foreground">
+                                <div>
+                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">1. Configurar el valor Base</h4>
+                                    <p>
+                                        Al crear o editar un Curso, verás el campo <strong>Derecho de Examen ($)</strong>. Todos los alumnos inscriptos en ese curso heredarán este precio al habilitarles el examen.
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">2. Activar a un Alumno (Inscripción al Examen)</h4>
+                                    <p>
+                                        Ingresa a la <strong>Ficha del Alumno</strong>. En la lista de sus cursos activos notarás un interruptor o <i>switch</i> de <strong>"Examen Final"</strong>. Al encenderlo ocurren tres cosas en tiempo real:
+                                    </p>
+                                    <ul className="list-disc list-inside mt-2 space-y-1 ml-2">
+                                        <li>Se activa administrativamente para rendir.</li>
+                                        <li>Aparece automáticamente el cargo o deuda etiquetada como <strong>"Derecho de Examen"</strong> en su cuenta bancaria/corriente.</li>
+                                        <li>El profesor de su curso verá generada la clase especial (Libro de temas de tipo <i>EXAM</i>) para cargar notas/asistencias.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="mt-6 p-4 bg-fuchsia-50 dark:bg-fuchsia-950/20 border border-fuchsia-200 dark:border-fuchsia-800/50 rounded-xl">
+                                    <h4 className="text-[14px] font-semibold mb-1 text-fuchsia-800 dark:text-fuchsia-400">¿Me equivoqué al inscribirlo?</h4>
+                                    <p className="text-fuchsia-700/80 dark:text-fuchsia-300/80 leading-relaxed">
+                                        Simplemente <b>apaga el interruptor</b> en la ficha del alumno. Si el estudiante aún no abonó el derecho de examen, la deuda "fantasma" será eliminada inmediatamente del sistema para no alterar tu contabilidad. <i>(Si ya había pagado, deberás generar un reintegro anulando su pago en la pestaña de Finanzas primero).</i>
+                                    </p>
+                                </div>
+                            </div>
                         </Card>
                     </section>
                 </div>

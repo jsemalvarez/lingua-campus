@@ -32,6 +32,7 @@ export async function createCourseAction(formData: FormData) {
     const endDateStr = formData.get("endDate") as string;
     const monthlyPriceStr = formData.get("monthlyPrice") as string;
     const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
+    const examPriceStr = formData.get("examPrice") as string;
 
     if (!name) {
         return { success: false, error: "El nombre del curso es obligatorio" };
@@ -50,6 +51,7 @@ export async function createCourseAction(formData: FormData) {
                 instituteId: user.instituteId as string,
                 monthlyPrice: parseFloat(monthlyPriceStr) || 0,
                 enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
+                examPrice: parseFloat(examPriceStr) || 0,
             }
         });
 
@@ -188,6 +190,7 @@ export async function updateCourseAction(formData: FormData) {
     const endDateStr = formData.get("endDate") as string;
     const monthlyPriceStr = formData.get("monthlyPrice") as string;
     const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
+    const examPriceStr = formData.get("examPrice") as string;
 
     if (!courseId) return { success: false, error: "ID de curso no proporcionado" };
     if (!name?.trim()) {
@@ -212,6 +215,7 @@ export async function updateCourseAction(formData: FormData) {
                 endDate: endDateStr ? new Date(endDateStr) : null,
                 monthlyPrice: parseFloat(monthlyPriceStr) || 0,
                 enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
+                examPrice: parseFloat(examPriceStr) || 0,
             }
         });
 

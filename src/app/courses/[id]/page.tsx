@@ -111,6 +111,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                             currentEndDate={course.endDate}
                                             currentMonthlyPrice={course.monthlyPrice}
                                             currentEnrollmentPrice={course.enrollmentPrice}
+                                            currentExamPrice={course.examPrice}
                                         />
                                     )}
                                 </div>

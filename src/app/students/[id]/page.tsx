@@ -11,6 +11,7 @@ import { StudentProfileView } from "./StudentProfileView";
 import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
 import { StudentDangerZone } from "./StudentDangerZone";
 import { ChangeCourseModal } from "./components/ChangeCourseModal";
+import { ExamRegistrationToggle } from "./components/ExamRegistrationToggle";
 import { getActiveRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -128,9 +129,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
                 <div className="grid gap-8 lg:grid-cols-4 items-start">
                     <div className="lg:col-span-3">
-                        <StudentProfileView 
-                            student={student as any} 
-                            userRoles={[activeRole]} 
+                        <StudentProfileView
+                            student={student as any}
+                            userRoles={[activeRole]}
                             instituteLevels={instituteLevels}
                         />
 
@@ -172,7 +173,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                         {e.status}
                                                     </span>
                                                     {isAdmin && (
-                                                        <ChangeCourseModal 
+                                                        <ChangeCourseModal
                                                             enrollmentId={e.id}
                                                             currentCourseId={e.course.id}
                                                             currentCourseName={e.course.name}
@@ -181,9 +182,16 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground font-medium border-t border-border/20 pt-3">
                                                 <Clock size={14} /> Fecha de alta: {dayjs(e.enrolledAt).format("DD/MM/YYYY")}
                                             </div>
+                                            {(isAdmin || e.takesExam) && (
+                                                <ExamRegistrationToggle
+                                                    enrollmentId={e.id}
+                                                    takesExam={e.takesExam}
+                                                    isAdmin={isAdmin}
+                                                />
+                                            )}
                                         </Card>
                                     ))}
                                 </div>
@@ -198,21 +206,25 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                     Últimos Pagos Registrados
                                 </h3>
 
-                                {student.fees.length === 0 ? (
+                                {student.fees.filter(f => f.originalAmount > 0).length === 0 ? (
                                     <p className="text-sm italic text-muted-foreground border-l-2 pl-3 border-border">Sin movimiento financiero.</p>
                                 ) : (
                                     <div className="space-y-4">
-                                        {student.fees.map(f => (
-                                            <div key={f.id} className="flex justify-between items-center text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold text-emerald-600">${f.paidAmount}</span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {f.type === "ENROLLMENT" ? `Matrícula ${f.year}` : `${f.month}/${f.year}`}
+                                        {student.fees.filter(f => f.originalAmount > 0).map(f => (
+                                            <div key={f.id} className="flex flex-col gap-1.5 text-sm border-b border-border/30 pb-3 pt-2 first:pt-0 last:border-0 last:pb-0">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="font-medium text-foreground/90 leading-tight">
+                                                        {f.type === "ENROLLMENT"
+                                                            ? `Matrícula ${f.year}`
+                                                            : f.type === "EXAM"
+                                                                ? `Derecho de Examen ${f.year}`
+                                                                : `Cuota ${f.month}/${f.year}`
+                                                        }
                                                     </span>
+                                                    <span className="text-xs text-muted-foreground shrink-0">{dayjs(f.datePaid || f.createdAt).format("DD/MM")}</span>
                                                 </div>
-                                                <div className="flex flex-col items-end">
-                                                    <span className="font-medium text-foreground/80">{f.status}</span>
-                                                    <span className="text-xs text-muted-foreground">{dayjs(f.datePaid || f.createdAt).format("DD/MMM")}</span>
+                                                <div className="flex justify-between items-center mt-0.5">
+                                                    <span className="font-bold text-emerald-600">${f.paidAmount.toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         ))}

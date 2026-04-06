@@ -130,6 +130,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         where: {
             instituteId: user.instituteId,
             status: { in: ["PENDING", "PARTIAL"] },
+            originalAmount: { gt: 0 },
             OR: [
                 { year: { lt: currentYear } },
                 { year: currentYear, month: { lte: currentMonth } }
@@ -230,7 +231,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
         if (t.type === "PAYMENT" && t.payment?.fee?.student) {
             const fee = t.payment.fee;
-            const feeLabel = fee.type === "ENROLLMENT" ? `Matrícula ${fee.year}` : `Cuota ${fee.month}/${fee.year}`;
+            let feeLabel = `Cuota ${fee.month}/${fee.year}`;
+            if (fee.type === "ENROLLMENT") feeLabel = `Matrícula ${fee.year}`;
+            else if (fee.type === "EXAM") feeLabel = `Derecho de Examen ${fee.year}`;
+            
             title = `${feeLabel} - ${fee.student.name}`;
             if (t.payment.notes) title += ` (${t.payment.notes})`;
         } else if (t.type === "EXPENSE" && t.expense) {
@@ -262,7 +266,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             category: t.type,
             operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema"
         };
-    });
+    }).filter(t => t.amount > 0);
 
     const totalTransactions = allTransactionsRaw.length;
     const totalPages = Math.ceil(totalTransactions / ITEMS_PER_PAGE);
