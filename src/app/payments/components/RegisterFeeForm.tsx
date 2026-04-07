@@ -1,11 +1,11 @@
 "use client";
 
 import { useTransition, useState, useRef, useEffect } from "react";
-import { createPaymentAction, getStudentPendingFeesAction } from "../actions";
+import { createPaymentAction, getStudentPendingFeesAction, applyCreditToFeeAction } from "../actions";
 import { generateMonthlyFeesAction } from "../billingActions";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Wallet } from "lucide-react";
 import { EntitySearch } from "./EntitySearch";
 
 interface StudentListOption {
@@ -23,6 +23,8 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
     const [pendingFees, setPendingFees] = useState<any[]>([]);
     const [selectedFeeId, setSelectedFeeId] = useState("");
     const [isLoadingFees, setIsLoadingFees] = useState(false);
+    const [studentCredit, setStudentCredit] = useState(0);
+    const [isApplyingCredit, setIsApplyingCredit] = useState(false);
 
     // Form states for dynamic calculation
     const [baseAmount, setBaseAmount] = useState<number>(0);
@@ -53,12 +55,34 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         const res = await getStudentPendingFeesAction(studentId);
         if (res.success) {
             setPendingFees(res.fees || []);
+            setStudentCredit(res.creditBalance || 0);
             if (res.fees?.[0]) {
                 setSelectedFeeId(res.fees[0].id);
             }
         }
         setIsLoadingFees(false);
     }
+
+    const handleApplyCredit = async () => {
+        if (!selectedFeeId || studentCredit <= 0) return;
+        
+        setIsApplyingCredit(true);
+        const fee = pendingFees.find(f => f.id === selectedFeeId);
+        const debt = fee.originalAmount - fee.paidAmount;
+        const toApply = Math.min(studentCredit, debt);
+
+        const res = await applyCreditToFeeAction(selectedFeeId, toApply);
+        if (res.success) {
+            setStatus("success");
+            // Reload fees and credit
+            loadFees(selectedStudent!.id);
+            setTimeout(() => setStatus("idle"), 2000);
+        } else {
+            setStatus("error");
+            setErrorMsg(res.error || "Error al aplicar saldo");
+        }
+        setIsApplyingCredit(false);
+    };
 
 
     const handleSubmit = async (formData: FormData) => {
@@ -153,6 +177,30 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                             </select>
                         )}
                     </div>
+
+                    {/* Credit Balance Alert Section */}
+                    {studentCredit > 0 && (
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between animate-in zoom-in-95 duration-300">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600 dark:text-blue-300">
+                                    <Wallet size={16} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600/70 dark:text-blue-400/70">Saldo a Favor</p>
+                                    <p className="text-sm font-bold text-blue-700 dark:text-blue-300">${studentCredit.toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <Button 
+                                type="button"
+                                size="sm" 
+                                onClick={handleApplyCredit}
+                                disabled={isApplyingCredit || !selectedFeeId}
+                                className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-3"
+                            >
+                                {isApplyingCredit ? "Aplicando..." : "Usar Saldo"}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -195,11 +243,26 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                 </div>
             </div>
 
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 rounded-xl flex items-center justify-between">
-                <span className="font-semibold text-emerald-900 dark:text-emerald-100">Dinero total a cobrar al alumno:</span>
-                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    ${totalToCollect.toLocaleString()}
-                </span>
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                    <span className="font-semibold text-emerald-900 dark:text-emerald-100 italic text-sm">Base + Recargo - Desc:</span>
+                    <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        ${totalToCollect.toLocaleString()}
+                    </span>
+                </div>
+                {selectedFeeId && (
+                    <div className="pt-2 border-t border-emerald-200/30">
+                        {totalToCollect > (pendingFees.find(f => f.id === selectedFeeId)?.originalAmount - pendingFees.find(f => f.id === selectedFeeId)?.paidAmount) ? (
+                            <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1.5">
+                                <AlertCircle size={12} /> El excedente de ${(totalToCollect - (pendingFees.find(f => f.id === selectedFeeId).originalAmount - pendingFees.find(f => f.id === selectedFeeId).paidAmount)).toLocaleString()} se guardará como Saldo a Favor.
+                            </p>
+                        ) : (
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                                <CheckCircle size={12} /> Se cancela parte de la deuda.
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="space-y-1.5">

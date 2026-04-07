@@ -2,7 +2,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { BookOpen, Users, CreditCard, GraduationCap, Info, CalendarPlus, Wand2, ShieldAlert, Undo2, Trash2, Edit2, FileText } from "lucide-react";
+import { BookOpen, Users, CreditCard, GraduationCap, Info, CalendarPlus, Wand2, ShieldAlert, Undo2, Trash2, Edit2, FileText, Wallet, PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 
 export default async function HelpCenterPage() {
@@ -239,6 +239,48 @@ export default async function HelpCenterPage() {
                                         <li>Dale clic y el sistema te pedirá el "Motivo" de la baja (ej. <i>Monto equivocado</i>).</li>
                                         <li>Terminado esto, los KPI se descontarán y el informe se reseteará.</li>
                                     </ul>
+                                </Card>
+                            </section>
+
+                            {/* Adelantos y Saldo a Favor */}
+                            <section>
+                                <h3 className="text-xl font-bold flex items-center gap-2 mb-4 text-foreground/90">
+                                    <Wallet className="text-emerald-500" size={20} /> 6. Adelantos y Saldo a Favor (Crédito)
+                                </h3>
+                                <Card className="p-6 border-border/40 bg-card/40 leading-relaxed shadow-sm space-y-6">
+                                    <p className="text-sm text-muted-foreground">
+                                        Lingua Campus permite gestionar dinero que el alumno tiene &quot;a favor&quot;, ya sea porque pagó de más una cuota o porque realizó un adelanto de meses futuros.
+                                    </p>
+
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2 text-emerald-600">
+                                                <PlusCircle size={16} /> Registro de Adelanto
+                                            </h4>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Usa la pestaña <strong>&quot;Adelantos&quot;</strong> en Finanzas para cargar dinero que aún no se aplicará a una cuota. El monto irá directo al <b>Saldo a Favor</b> del alumno y quedará guardado para el futuro.
+                                            </p>
+                                        </div>
+                                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2 text-blue-600">
+                                                <Undo2 size={16} /> Excedente Automático
+                                            </h4>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Si una cuota es de $5.000 y el padre paga $6.000, el sistema marcará la cuota como pagada e inyectará los $1.000 restantes automáticamente al saldo del alumno.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <h4 className="font-semibold mb-2 flex gap-1 items-center">¿Cómo usar el saldo acumulado?</h4>
+                                        <p className="text-sm text-muted-foreground mb-3">
+                                            Cuando el alumno tiene saldo, aparecerá un botón azul <strong>&quot;Usar Saldo&quot;</strong> en el formulario de cobro de cuotas habitual.
+                                        </p>
+                                        <ul className="list-disc list-inside space-y-2 text-xs text-muted-foreground ml-2">
+                                            <li>Al presionarlo, el sistema descontará el monto necesario de su crédito y marcará la cuota como pagada sin pedirte dinero físico.</li>
+                                            <li>Esta operación genera un registro, que podras ver en los ultimos movimientos, para que siempre sepas quién aplicó ese crédito.</li>
+                                        </ul>
+                                    </div>
                                 </Card>
                             </section>
                         </div>

@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
-import { ArrowLeft, BookOpen, Clock } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import dayjs from "dayjs";
 import { StudentProfileView } from "./StudentProfileView";
@@ -201,6 +201,25 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
                     {canSeeFinancials && student.status !== "PRE_INSCRIBED" && (
                         <div className="lg:col-span-1 space-y-6">
+                            {student.creditBalance > 0 && (
+                                <Card className="p-5 border-emerald-500/30 bg-emerald-500/5 border-l-4 border-l-emerald-500">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-sm">
+                                            <Wallet size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/70 leading-none mb-1">Saldo a Favor</p>
+                                            <h3 className="text-xl font-bold text-emerald-600 leading-tight">
+                                                ${student.creditBalance.toLocaleString()}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-emerald-600/60 mt-3 font-medium italic">
+                                        * Este monto puede ser utilizado para pagar futuras cuotas o conceptos.
+                                    </p>
+                                </Card>
+                            )}
+
                             <Card className="p-5 border-border/40 bg-card/60">
                                 <h3 className="font-bold flex items-center gap-2 mb-4 text-sm uppercase tracking-wider text-muted-foreground">
                                     Últimos Pagos Registrados

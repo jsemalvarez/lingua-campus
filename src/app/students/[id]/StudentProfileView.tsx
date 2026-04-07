@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
-import { User, Phone, Mail, UserCheck, Edit3, Info } from "lucide-react";
+import { User, Phone, Mail, UserCheck, Edit3, Info, Wallet } from "lucide-react";
 import { CreateGuardianModal } from "./components/CreateGuardianModal";
 import dayjs from "dayjs";
 import { StudentQRCard } from "./components/StudentQRCard";
@@ -27,6 +27,7 @@ interface StudentData {
     schoolInfo: string | null;
     registeredLevel: string | null;
     registeredLevelName?: string;
+    creditBalance: number;
     guardianLinks?: any[];
 }
 
@@ -89,6 +90,7 @@ export function StudentProfileView({
                     <p className="text-sm text-muted-foreground mt-1">
                         Ingresó el {dayjs(student.joinDate).format("DD MMM, YYYY")}
                     </p>
+
 
                     {userRoles?.every(r => r === "TEACHER") === false && (
                         <Button variant="outline" className="w-full mt-6 shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>

@@ -139,7 +139,7 @@ export function TransactionTable({ transactions, totalPages, currentPage }: Tran
                                                             )}
                                                             {tx.status === "VOIDED" && <span className="text-rose-500 border border-rose-500 px-1.5 py-0.5 rounded text-[10px]">ANULADO</span>}
 
-                                                            {/* Íconos Adicionales: Motivo y Operador */}
+                                                            {/* Íconos Adicionales: Motivo y Operador (Visibles al hacer hover en la fila) */}
                                                             <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                                                                 {noteStr && (
                                                                     <div className="relative group/tooltip flex">
@@ -160,7 +160,7 @@ export function TransactionTable({ transactions, totalPages, currentPage }: Tran
                                                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                                                         </button>
                                                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block sm:group-focus-within/tooltip:block w-max bg-slate-800 text-white text-[10px] sm:text-xs px-3 py-1.5 rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none">
-                                                                            User: <span className="font-bold">{tx.operatorName}</span>
+                                                                            Operador: <span className="font-bold">{tx.operatorName}</span>
                                                                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                                                                         </div>
                                                                     </div>

@@ -236,7 +236,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             else if (fee.type === "EXAM") feeLabel = `Derecho de Examen ${fee.year}`;
             
             title = `${feeLabel} - ${fee.student.name}`;
-            if (t.payment.notes) title += ` (${t.payment.notes})`;
+            if (t.payment.notes) {
+                note = t.payment.notes;
+            }
         } else if (t.type === "EXPENSE" && t.expense) {
             title = `${t.expense.category}: ${t.expense.description}`;
             recipientName = t.expense.recipient?.name || null;
@@ -247,8 +249,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
              recipientName = t.expense.recipient?.name || null;
              ticketNumber = t.expense.ticketNumber || null;
         } else if (t.type === "MISC_INCOME" && t.miscIncome) {
-            title = t.miscIncome.student ? `${t.miscIncome.category}: ${t.miscIncome.description} - ${t.miscIncome.student.name}` : `${t.miscIncome.category}: ${t.miscIncome.description}`;
-            ticketNumber = t.miscIncome.ticketNumber || null;
+            const mi = t.miscIncome;
+            if (mi.category === "ADELANTO") {
+                title = mi.student ? `Adelanto - ${mi.student.name}` : `Adelanto de Pago`;
+                note = mi.description;
+            } else {
+                title = mi.student ? `${mi.category}: ${mi.description} - ${mi.student.name}` : `${mi.category}: ${mi.description}`;
+            }
+            ticketNumber = mi.ticketNumber || null;
         }
 
         return {

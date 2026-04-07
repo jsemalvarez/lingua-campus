@@ -4,7 +4,8 @@ import { useState } from "react";
 import { RegisterFeeForm } from "./RegisterFeeForm";
 import { RegisterIncomeForm } from "./RegisterIncomeForm";
 import { RegisterEnrollmentFeeForm } from "./RegisterEnrollmentFeeForm";
-import { Wallet, ShoppingBag, GraduationCap } from "lucide-react";
+import { RegisterAdvanceForm } from "./RegisterAdvanceForm";
+import { Wallet, ShoppingBag, GraduationCap, PlusCircle } from "lucide-react";
 
 interface StudentListOption {
     id: string;
@@ -16,42 +17,57 @@ interface RegisterIncomesFormProps {
 }
 
 export function RegisterIncomesForm({ students }: RegisterIncomesFormProps) {
-    const [activeTab, setActiveTab] = useState<"fees" | "misc" | "enrollment">("fees");
+    const [activeTab, setActiveTab] = useState<"fees" | "misc" | "enrollment" | "advance">("fees");
 
     return (
         <div className="space-y-6">
-            {/* Tabs Header */}
-            <div className="flex p-1 bg-muted/50 rounded-xl gap-1">
+            {/* Tab Navigation */}
+            <div className="flex flex-col gap-2">
+                {/* Cuotas: Full width row */}
                 <button
                     onClick={() => setActiveTab("fees")}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all ${
+                    className={`w-full flex items-center justify-center gap-2 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all shadow-sm ${
                         activeTab === "fees"
-                            ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5"
-                            : "text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800"
+                            ? "bg-white dark:bg-zinc-900 text-emerald-600 ring-1 ring-black/5"
+                            : "bg-zinc-100/50 dark:bg-zinc-800/50 text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800 border border-transparent"
                     }`}
                 >
-                    <Wallet size={16} /> Cuotas
+                    <Wallet size={18} /> Pago de Cuotas Mensuales
                 </button>
-                <button
-                    onClick={() => setActiveTab("enrollment")}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all ${
-                        activeTab === "enrollment"
-                            ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5"
-                            : "text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800"
-                    }`}
-                >
-                    <GraduationCap size={16} /> Matrícula
-                </button>
-                <button
-                    onClick={() => setActiveTab("misc")}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all ${
-                        activeTab === "misc"
-                            ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5"
-                            : "text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800"
-                    }`}
-                >
-                    <ShoppingBag size={16} /> Ventas
-                </button>
+
+                {/* Sub-options: 3 columns row */}
+                <div className="grid grid-cols-3 gap-2">
+                    <button
+                        onClick={() => setActiveTab("enrollment")}
+                        className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all border ${
+                            activeTab === "enrollment"
+                                ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5 border-transparent"
+                                : "bg-zinc-100/30 dark:bg-zinc-800/30 text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800 border-border/40"
+                        }`}
+                    >
+                        <GraduationCap size={16} /> Matrícula
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("misc")}
+                        className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all border ${
+                            activeTab === "misc"
+                                ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5 border-transparent"
+                                : "bg-zinc-100/30 dark:bg-zinc-800/30 text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800 border-border/40"
+                        }`}
+                    >
+                        <ShoppingBag size={16} /> Ventas
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("advance")}
+                        className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all border ${
+                            activeTab === "advance"
+                                ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5 border-transparent"
+                                : "bg-zinc-100/30 dark:bg-zinc-800/30 text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800 border-border/40"
+                        }`}
+                    >
+                        <PlusCircle size={16} /> Adelantos
+                    </button>
+                </div>
             </div>
 
             {/* Tab Content */}
@@ -64,6 +80,9 @@ export function RegisterIncomesForm({ students }: RegisterIncomesFormProps) {
                 )}
                 {activeTab === "misc" && (
                     <RegisterIncomeForm students={students} />
+                )}
+                {activeTab === "advance" && (
+                    <RegisterAdvanceForm students={students} />
                 )}
             </div>
         </div>
