@@ -123,29 +123,38 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                 </Card>
                             ) : (
                                 <div className="space-y-3">
-                                    {teacher.expensesReceived.map(payment => (
-                                        <Card key={payment.id} className="p-4 border-border/40 bg-card/50 flex items-center justify-between">
+                                    {teacher.expensesReceived.map(payment => {
+                                        const isVoided = (payment as any).status === "VOIDED";
+                                        return (
+                                        <Card key={payment.id} className={`p-4 border-border/40 bg-card/50 flex items-center justify-between ${isVoided ? 'opacity-60' : ''}`}>
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-600">
+                                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isVoided ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-600'}`}>
                                                     <CalendarIcon size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-sm">{payment.description}</p>
+                                                    <p className={`font-bold text-sm ${isVoided ? 'line-through text-muted-foreground' : ''}`}>{payment.description}</p>
                                                     <p className="text-xs text-muted-foreground">
                                                         {dayjs(payment.date).format("DD [de] MMMM, YYYY")}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-black text-emerald-600 dark:text-emerald-400">
+                                                <p className={`font-black ${isVoided ? 'line-through text-muted-foreground' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                                     ${payment.amount.toLocaleString()}
                                                 </p>
-                                                <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
-                                                    Pagado
-                                                </span>
+                                                {isVoided ? (
+                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-rose-600 px-2 py-0.5 bg-rose-50 dark:bg-rose-950/40 rounded-full border border-rose-500/20">
+                                                        Anulado
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                                                        Pagado
+                                                    </span>
+                                                )}
                                             </div>
                                         </Card>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
