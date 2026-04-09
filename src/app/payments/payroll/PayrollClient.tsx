@@ -197,7 +197,8 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                 </div>
             </Card>
 
-            {/* Total Summary Sticky Bar */}
+            {/* Total Summary Sticky Bar — solo visible luego de calcular */}
+            {Object.keys(settlements).length > 0 && (
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl z-50">
                 <Card className="p-4 border-primary/20 shadow-2xl bg-background/95 backdrop-blur-md border-t-4 border-t-primary animate-in slide-in-from-bottom-8 duration-500">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -276,6 +277,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                     </div>
                 </Card>
             </div>
+            )}
 
             <div className="grid gap-4">
                 {filteredTeachers.length === 0 ? (
