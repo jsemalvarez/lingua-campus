@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { UserRole } from "@prisma/client";
 
 export async function createTeacherAction(formData: FormData) {
     const session = await getServerSession(authOptions);
@@ -64,14 +65,13 @@ export async function createTeacherAction(formData: FormData) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await prisma.user.create({
-            // @ts-ignore: Prisma dll locked in Windows, type not generated but table exists
             data: {
                 name,
                 email,
                 password: hashedPassword,
                 phone: phone || null,
-                role: role as any,
-                roles: [role as any],
+                role: role as UserRole,
+                roles: [role as UserRole],
                 instituteId: user.instituteId,
                 hourlyRate: formData.get("hourlyRate") ? parseFloat(formData.get("hourlyRate") as string) : 0
             }
@@ -222,8 +222,7 @@ export async function softDeleteTeacher(teacherId: string) {
             // We can safely soft-delete the entire account.
             await prisma.user.update({
                 where: { id: teacherId },
-                // @ts-ignore - Prisma type not updated due to windows file lock
-                data: { status: "DELETED", roles: { set: [] } }
+                data: { status: "DELETED" as any, roles: { set: [] } }
             });
         }
 

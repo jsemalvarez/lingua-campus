@@ -24,8 +24,7 @@ export default async function PayrollPage() {
     const teachers = await prisma.user.findMany({
         where: {
             instituteId: user.instituteId,
-            // @ts-ignore
-            status: "ACTIVE",
+            status: "ACTIVE" as any,
             OR: [
                 { role: "TEACHER" },
                 { roles: { has: "TEACHER" } }
@@ -59,7 +58,7 @@ export default async function PayrollPage() {
                     </p>
                 </header>
 
-                <PayrollClient teachers={teachers as any[]} />
+                <PayrollClient teachers={teachers as { id: string; name: string; email: string | null; hourlyRate: number | null }[]} />
             </main>
         </div>
     );
