@@ -25,8 +25,8 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");
 
-        // El campo category es fijo para sueldos
-        formData.append("category", "NOMINA");
+        // El campo category es fijo para sueldos (debe coincidir con la detección en createExpenseAction)
+        formData.append("category", "Payroll");
 
         startTransition(async () => {
             const result = await createExpenseAction(formData);
