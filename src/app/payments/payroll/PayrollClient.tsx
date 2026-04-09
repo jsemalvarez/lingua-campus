@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback } from "react";
 import Link from "next/link";
-import { Search, ChevronDown, ChevronUp, DollarSign, Wallet, CheckCircle, AlertCircle, Loader2, Calculator } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, DollarSign, Wallet, CheckCircle, AlertCircle, AlertTriangle, Loader2, Calculator } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -48,6 +48,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
     const [isPending, startTransition] = useTransition();
     const [calculating, setCalculating] = useState(false);
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const filteredTeachers = teachers.filter(t => 
         t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -225,13 +226,52 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                             )}
                             
                             <Button 
-                                onClick={handleBulkPayment}
+                                onClick={() => setShowConfirm(true)}
                                 disabled={isPending || selectedTeachers.length === 0 || status === "success" || calculating}
                                 className="premium-gradient font-bold h-12 px-8 shadow-xl shadow-primary/20 w-full sm:w-auto"
                             >
                                 {isPending ? <Loader2 className="animate-spin mr-2" /> : <DollarSign className="mr-2" />}
                                 Registrar {selectedTeachers.length} Pagos Masivos
                             </Button>
+
+                            {/* Modal de Confirmación de Pago Masivo */}
+                            {showConfirm && (
+                                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                                    <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+                                        <div className="p-6 text-center">
+                                            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <AlertTriangle size={24} />
+                                            </div>
+                                            <h3 className="text-xl font-bold mb-2">¿Confirmar liquidación?</h3>
+                                            <p className="text-muted-foreground text-sm">
+                                                Estás a punto de registrar <span className="font-semibold text-foreground">{selectedTeachers.length} pagos</span> por un total de <span className="font-bold text-foreground">${totalToPay.toLocaleString()}</span>.
+                                            </p>
+                                            <p className="text-muted-foreground text-xs mt-2">
+                                                Período: <span className="font-semibold">{dayjs().month(globalMonth - 1).format("MMMM")} {globalYear}</span>
+                                            </p>
+                                            <p className="text-muted-foreground text-xs mt-3">
+                                                Esta operación no puede deshacerse directamente. Para revertir un pago, deberás anularlo individualmente desde el libro mayor.
+                                            </p>
+                                        </div>
+                                        <div className="flex border-t border-border/50">
+                                            <button
+                                                onClick={() => setShowConfirm(false)}
+                                                className="flex-1 py-4 text-sm font-medium hover:bg-muted transition-colors border-r border-border/50"
+                                                disabled={isPending}
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowConfirm(false); handleBulkPayment(); }}
+                                                className="flex-1 py-4 text-sm font-bold text-primary hover:bg-primary/5 transition-colors"
+                                                disabled={isPending}
+                                            >
+                                                {isPending ? "Procesando..." : "Sí, Registrar Pagos"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Card>
