@@ -39,7 +39,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         }
     });
 
-    if (!teacher || teacher.role !== "TEACHER" || teacher.instituteId !== user.instituteId) {
+    const isTeacher = teacher?.role === "TEACHER" || teacher?.roles?.includes("TEACHER" as any);
+    if (!teacher || !isTeacher || teacher.instituteId !== user.instituteId) {
         notFound();
     }
 

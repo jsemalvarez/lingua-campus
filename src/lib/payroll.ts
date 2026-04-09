@@ -79,8 +79,11 @@ export async function calculateBulkTeacherPayroll(instituteId: string, startDate
     const teachers = await prisma.user.findMany({
         where: { 
             instituteId, 
-            role: "TEACHER", 
-            status: "ACTIVE" 
+            status: "ACTIVE",
+            OR: [
+                { role: "TEACHER" },
+                { roles: { has: "TEACHER" } }
+            ]
         },
         select: { 
             id: true, 
@@ -143,6 +146,7 @@ export async function calculateBulkTeacherPayroll(instituteId: string, startDate
         }
 
         results[tId].lessonCount++;
+        results[tId].unpaidCount++;
         results[tId].totalHours += minutes / 60;
     });
 
