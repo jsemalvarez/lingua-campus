@@ -244,6 +244,13 @@ export async function voidExpenseAction(expenseId: string, reason?: string) {
                     operatorId: user.id
                 }
             });
+
+            // Desmarcar lecciones asociadas al expense anulado
+            // para que vuelvan a aparecer como pendientes en la próxima liquidación
+            await tx.lesson.updateMany({
+                where: { expenseId: expense.id },
+                data: { expenseId: null }
+            });
         });
 
         revalidatePath("/payments");
