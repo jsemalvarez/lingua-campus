@@ -53,7 +53,8 @@ export async function calculateTeacherPayroll(teacherId: string, startDate: Date
             courseName: lesson.course.name,
             durationMinutes: minutes,
             amount: (minutes / 60) * rate,
-            isPaid: isPaid
+            isPaid: isPaid,
+            hasSchedule: !!lesson.schedule
         };
     });
 

@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { DollarSign, Clock, Calendar as CalendarIcon, Loader2, CheckCircle, AlertCircle, Calculator } from "lucide-react";
+import { DollarSign, Clock, Calendar as CalendarIcon, Loader2, CheckCircle, AlertCircle, AlertTriangle, Calculator } from "lucide-react";
 import dayjs from "dayjs";
 import { processTeacherPayment } from "../actions";
 
@@ -15,6 +15,7 @@ interface PayrollItem {
     durationMinutes: number;
     amount: number;
     isPaid: boolean;
+    hasSchedule: boolean;
 }
 
 interface PayrollData {
@@ -327,7 +328,13 @@ export function TeacherPayrollSection({
                                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{lesson.topic}</p>
                                         </td>
                                         <td className="px-4 py-3 text-center text-muted-foreground">
-                                            {lesson.durationMinutes} min
+                                            {!lesson.hasSchedule ? (
+                                                <span className="inline-flex items-center gap-1 text-amber-600" title="Esta clase no tiene horario asignado. Asigná un horario al curso para incluirla en el cálculo.">
+                                                    <AlertTriangle size={14} /> 0 min
+                                                </span>
+                                            ) : (
+                                                <>{lesson.durationMinutes} min</>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {lesson.isPaid ? (
