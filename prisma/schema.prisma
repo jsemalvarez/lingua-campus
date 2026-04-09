@@ -75,6 +75,8 @@ model User {
   status      String   @default("ACTIVE") // ACTIVE, DELETED
   preferences Json?      // Almacena preferencias visuales como ordenamiento de cursos
   
+  hourlyRate  Float?   @default(0)
+  
   instituteId String?
   institute   Institute? @relation(fields: [instituteId], references: [id])
   
@@ -285,6 +287,9 @@ model Lesson {
   scheduleId  String?
   schedule    Schedule? @relation(fields: [scheduleId], references: [id])
 
+  expenseId   String?
+  expense     Expense? @relation(fields: [expenseId], references: [id])
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -441,6 +446,7 @@ model Expense {
   recipientId String?
   recipient   User?     @relation("RecipientExpenses", fields: [recipientId], references: [id])
 
+  lessons     Lesson[]
   transactions Transaction[]
 
   createdAt   DateTime @default(now())

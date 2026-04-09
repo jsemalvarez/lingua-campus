@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditTeacherForm } from "./EditTeacherForm";
-import { Mail, Phone, Edit3, AlertTriangle } from "lucide-react";
+import { Mail, Phone, Edit3, AlertTriangle, DollarSign } from "lucide-react";
 import { TeacherDangerZone } from "./TeacherDangerZone";
 
 interface TeacherData {
@@ -12,6 +12,7 @@ interface TeacherData {
     name: string;
     email: string;
     phone: string | null;
+    hourlyRate?: number | null;
 }
 
 export function TeacherProfileView({ teacher }: { teacher: TeacherData }) {

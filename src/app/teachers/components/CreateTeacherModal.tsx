@@ -95,6 +95,11 @@ export function CreateTeacherModal() {
                         <input type="tel" name="phone" placeholder="+54 9 11 1234..." className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-text focus:border-primary" />
                     </div>
 
+                    <div className="space-y-1.5 focus-within:text-primary transition-colors">
+                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">Valor Hora ($)</label>
+                        <input type="number" step="0.01" name="hourlyRate" placeholder="0.00" className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-text focus:border-primary" />
+                    </div>
+
                     {status === "success" && (
                         <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-sm font-medium animate-in slide-in-from-bottom-2">
                             <CheckCircle size={18} /> Personal registrado con éxito.

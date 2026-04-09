@@ -67,12 +67,16 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     // 3. Traer todos los Usuarios (para mapear Operadores) y Empleados (para sueldos)
     const allUsers = await prisma.user.findMany({
-        where: { instituteId: user.instituteId },
-        select: { id: true, name: true, role: true },
+        where: { instituteId: user.instituteId, status: "ACTIVE" },
+        select: { id: true, name: true, role: true, roles: true },
         orderBy: { name: "asc" }
     });
     
-    const employees = allUsers.filter(u => u.role === "ADMIN" || u.role === "TEACHER");
+    const staffRoles = ["ADMIN", "TEACHER", "SECRETARY"];
+    const employees = allUsers.filter(u => 
+        staffRoles.includes(u.role) || 
+        (u.roles && u.roles.some((r: string) => staffRoles.includes(r)))
+    );
     
     // Mapeo rápido de operador
     const userMap = Object.fromEntries(allUsers.map(u => [u.id, u.name]));
@@ -309,7 +313,16 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                 Ver Deudores
                             </Button>
                         </Link>
+                        {!isSecretary && (
+                            <Link href="/payments/payroll">
+                                <Button variant="outline" className="flex items-center gap-2 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
+                                    <DollarSign size={16} />
+                                    Pago de Sueldos
+                                </Button>
+                            </Link>
+                        )}
                         {!isSecretary && <GenerateFeesButton />}
+
                     </div>
                 </header>
 

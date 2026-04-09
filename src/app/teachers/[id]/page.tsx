@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import dayjs from "dayjs";
 import { TeacherProfileView } from "./TeacherProfileView";
 import { TeacherDangerZone } from "./TeacherDangerZone";
+import { TeacherPayrollSection } from "./TeacherPayrollSection";
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
@@ -98,6 +99,10 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                     ))}
                                 </div>
                             )}
+                        </div>
+
+                        <div className="mt-12 max-w-5xl mx-auto space-y-4">
+                            <TeacherPayrollSection teacherId={teacher.id} />
                         </div>
 
                         <div className="mt-12 max-w-5xl mx-auto space-y-4">
