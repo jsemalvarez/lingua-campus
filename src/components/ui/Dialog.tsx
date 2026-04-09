@@ -43,9 +43,9 @@ const DialogTrigger = ({
   const context = React.useContext(DialogContext);
   if (!context) throw new Error("DialogTrigger must be used within a Dialog");
 
-  return React.cloneElement(children, {
+  return React.cloneElement(children as React.ReactElement<any>, {
     onClick: (e: any) => {
-      children.props.onClick?.(e);
+      (children as any).props.onClick?.(e);
       context.setOpen(true);
     }
   });

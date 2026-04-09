@@ -25,7 +25,7 @@ import { getActiveRole } from "@/lib/roles";
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    if (!session || !session.user || !session.user.email) {
         redirect("/login");
     }
 

@@ -12,6 +12,7 @@ import { useOnlineStatus } from "@/hooks/use-online-status";
 
 interface LoginFormProps {
   institute?: {
+    id: string;
     name: string;
     logoUrl: string | null;
   } | null;

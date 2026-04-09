@@ -369,7 +369,7 @@ export async function processBulkPayrollAction(
                         date: new Date(p.date),
                         category: "Payroll",
                         recipientId: p.teacherId,
-                        instituteId: admin.instituteId,
+                        instituteId: admin.instituteId!,
                         status: "VALID"
                     }
                 });
@@ -382,7 +382,7 @@ export async function processBulkPayrollAction(
                         date: new Date(p.date),
                         description: finalDescription,
                         expenseId: expense.id,
-                        instituteId: admin.instituteId,
+                        instituteId: admin.instituteId!,
                         operatorId: admin.id
                     }
                 });

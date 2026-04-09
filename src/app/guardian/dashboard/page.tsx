@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 import { GraduationCap, Users, User, ArrowRight, Calendar, CreditCard } from "lucide-react";
 import Link from "next/link";
 import dayjs from "dayjs";

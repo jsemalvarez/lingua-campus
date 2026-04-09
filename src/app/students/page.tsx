@@ -30,7 +30,8 @@ export default async function StudentsPage(props: PageProps) {
         redirect("/dashboard");
     }
 
-    const userRoles = session.user.roles || [user.role];
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user.role];
     const activeRole = await getActiveRole(userRoles);
 
     // Si está en modo Tutor, no puede ver la lista completa de alumnos
