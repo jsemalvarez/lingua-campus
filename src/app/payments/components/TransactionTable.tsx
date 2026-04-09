@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
 import dayjs from "dayjs";
 import { TransactionActions } from "./TransactionActions";
 import { useRouter, usePathname } from "next/navigation";
@@ -21,6 +21,7 @@ interface Transaction {
     method: string;
     operatorName?: string;
     note?: string | null;
+    relatedTitle?: string | null;
 }
 
 interface TransactionTableProps {
@@ -31,6 +32,7 @@ interface TransactionTableProps {
 
 export function TransactionTable({ transactions, totalPages, currentPage }: TransactionTableProps) {
     const [searchQuery, setSearchQuery] = useState("");
+    const [hoveredOriginalId, setHoveredOriginalId] = useState<string | null>(null);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -102,15 +104,27 @@ export function TransactionTable({ transactions, totalPages, currentPage }: Tran
                                         const displayTitle = tx.title;
                                         const noteStr = tx.note || null;
 
-                                        return (
-                                        <tr key={tx.id} className="hover:bg-muted/30 transition-colors group">
+                                            const isCancellation = tx.category === "ADJUSTMENT" || tx.category === "REFUND";
+                                            const isHighlighted = hoveredOriginalId && tx.originalId === hoveredOriginalId;
+
+                                            return (
+                                        <tr 
+                                            key={tx.id} 
+                                            className={`transition-all duration-200 group relative ${
+                                                isHighlighted 
+                                                    ? "bg-primary/5 ring-1 ring-inset ring-primary/20 z-10" 
+                                                    : "hover:bg-muted/30"
+                                            }`}
+                                            onMouseEnter={() => tx.originalId && setHoveredOriginalId(tx.originalId)}
+                                            onMouseLeave={() => setHoveredOriginalId(null)}
+                                        >
                                             <td className="px-5 py-4">
                                                 <div className={`flex items-center gap-3 ${tx.status === "VOIDED" ? "opacity-50 grayscale" : ""}`}>
                                                     <div className={`p-2 rounded-full ${
-                                                        tx.type === "INCOME" 
-                                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                                                            : tx.category === "PAYROLL"
-                                                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                        isCancellation
+                                                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                            : tx.type === "INCOME" 
+                                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                                                                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                                                     }`}>
                                                         {tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
@@ -121,14 +135,23 @@ export function TransactionTable({ transactions, totalPages, currentPage }: Tran
                                                         </span>
                                                         <div className="flex items-center gap-2 text-xs font-medium mt-0.5">
                                                             <span className={
-                                                                tx.type === "INCOME" 
-                                                                    ? "text-emerald-500" 
-                                                                    : tx.category === "PAYROLL"
-                                                                        ? "text-amber-500"
+                                                                isCancellation
+                                                                    ? "text-amber-500"
+                                                                    : tx.type === "INCOME" 
+                                                                        ? "text-emerald-500" 
                                                                         : "text-rose-500"
                                                             }>
-                                                                {tx.type === "INCOME" ? "INGRESO" : "GASTO"}
+                                                                {isCancellation ? "ANULACIÓN" : tx.type === "INCOME" ? "INGRESO" : "GASTO"}
                                                             </span>
+                                                            {tx.relatedTitle && (
+                                                                <>
+                                                                    <span className="text-muted-foreground/30">·</span>
+                                                                    <span className="text-amber-600/80 flex items-center gap-1 italic">
+                                                                        <Link2 size={10} />
+                                                                        Anula a: {tx.relatedTitle}
+                                                                    </span>
+                                                                </>
+                                                            )}
                                                             {tx.ticketNumber && (
                                                                 <>
                                                                     <span className="text-muted-foreground/30">·</span>
@@ -175,10 +198,10 @@ export function TransactionTable({ transactions, totalPages, currentPage }: Tran
                                             </td>
                                             <td className={`px-5 py-4 text-right ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
                                                 <span className={`font-bold tabular-nums tracking-tight ${
-                                                    tx.type === "INCOME" 
-                                                        ? "text-emerald-600 dark:text-emerald-400" 
-                                                        : tx.category === "PAYROLL"
-                                                            ? "text-amber-600 dark:text-amber-400"
+                                                    isCancellation
+                                                        ? "text-amber-600 dark:text-amber-400"
+                                                        : tx.type === "INCOME" 
+                                                            ? "text-emerald-600 dark:text-emerald-400" 
                                                             : "text-rose-600 dark:text-rose-400"
                                                 } ${tx.status === "VOIDED" ? "line-through" : ""}`}>
                                                     {tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}

@@ -218,13 +218,34 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         filteredLedger = ledger.filter(t => t.type !== "EXPENSE" && t.type !== "PAYROLL" && t.amount >= 0);
     }
 
+    // Mapeo de títulos originales para transacciones anuladas
+    const voidedTitlesMap = new Map<string, string>();
+    ledger.filter(t => t.status === "VOIDED").forEach(t => {
+        const oid = t.paymentId || t.expenseId || t.miscIncomeId;
+        if (!oid) return;
+
+        let vTitle = t.description || "";
+        if (t.type === "PAYMENT" && t.payment?.fee?.student) {
+            const fee = t.payment.fee;
+            vTitle = `${fee.type === "ENROLLMENT" ? "Matrícula" : fee.type === "EXAM" ? "Examen" : "Cuota"} ${fee.month}/${fee.year} - ${fee.student.name}`;
+        } else if ((t.type === "EXPENSE" || t.type === "PAYROLL") && t.expense) {
+            vTitle = t.type === "PAYROLL" && t.expense.recipient?.name 
+                ? `Sueldo: ${t.expense.recipient.name}` 
+                : `${t.expense.category}: ${t.expense.description}`;
+        } else if (t.type === "MISC_INCOME" && t.miscIncome) {
+             vTitle = t.miscIncome.student ? `${t.miscIncome.category} - ${t.miscIncome.student.name}` : t.miscIncome.description;
+        }
+        voidedTitlesMap.set(oid, vTitle);
+    });
+
     // Combinar y Sortear desde el Ledger
     const allTransactionsRaw = filteredLedger.map(t => {
         let title = t.description || "";
         let note = null;
         let recipientName = null;
         let ticketNumber = null;
-        let originalId = t.paymentId || t.expenseId || t.miscIncomeId || t.id;
+        let entityId = t.paymentId || t.expenseId || t.miscIncomeId;
+        let originalId = entityId || t.id;
 
         // Extraer motivo de anulación si existe
         if (title.includes(" - Motivo: ")) {
@@ -263,6 +284,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             ticketNumber = mi.ticketNumber || null;
         }
 
+        const relatedTitle = (t.type === "ADJUSTMENT" || t.type === "REFUND") ? voidedTitlesMap.get(entityId || "") : null;
+
         return {
             id: t.id,
             originalId,
@@ -276,7 +299,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             status: t.status,
             method: t.method,
             category: t.type,
-            operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema"
+            operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema",
+            relatedTitle
         };
     }).filter(t => t.amount > 0);
 
