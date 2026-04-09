@@ -249,6 +249,20 @@ export function TeacherPayrollSection({
                         </div>
                     </div>
 
+                    {data.unpaidCount === 0 && data.lessonCount > 0 && (
+                        <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20 animate-in fade-in slide-in-from-top-2">
+                            <div className="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <CheckCircle size={20} className="text-emerald-600" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm text-emerald-700 dark:text-emerald-400">Período completamente liquidado</p>
+                                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/60">
+                                    Las {data.lessonCount} clases de este período ya fueron pagadas. Total liquidado: ${data.allItems.reduce((acc, i) => acc + i.amount, 0).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {data.unpaidCount > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-muted/30 border border-border/40">
                             <div className="space-y-1.5">
