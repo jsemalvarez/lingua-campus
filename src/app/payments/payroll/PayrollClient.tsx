@@ -181,7 +181,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                         onChange={(e) => handlePeriodChange(globalMonth, parseInt(e.target.value))}
                         className="bg-background border border-border/60 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
                     >
-                        {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                        {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
 
                     <Button 
