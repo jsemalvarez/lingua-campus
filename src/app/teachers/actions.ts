@@ -264,58 +264,60 @@ export async function processTeacherPayment(
         const totalAmount = amount + bonus - deduction;
         const finalDescription = notes ? `${description} (${notes})` : description;
 
-        const expense = await prisma.expense.create({
-            data: {
-                description: finalDescription,
-                amount: totalAmount,
-                date: new Date(date),
-                category: "Payroll",
-                recipientId: teacherId,
-                instituteId: admin.instituteId,
-                status: "VALID"
-            }
-        });
-
-        // Registrar la transacción
-        await prisma.transaction.create({
-            data: {
-                amount: -totalAmount,
-                type: "PAYROLL",
-                method: "EFECTIVO",
-                date: new Date(date),
-                description: finalDescription,
-                expenseId: expense.id,
-                instituteId: admin.instituteId,
-                operatorId: admin.id
-            }
-        });
-
-        // MARCAR CLASES COMO PAGADAS
-        if (lessonIds && lessonIds.length > 0) {
-            await prisma.lesson.updateMany({
-                where: {
-                    id: { in: lessonIds },
-                    expenseId: null
-                },
+        await prisma.$transaction(async (tx) => {
+            const expense = await tx.expense.create({
                 data: {
-                    expenseId: expense.id
+                    description: finalDescription,
+                    amount: totalAmount,
+                    date: new Date(date),
+                    category: "Payroll",
+                    recipientId: teacherId,
+                    instituteId: admin.instituteId,
+                    status: "VALID"
                 }
             });
-        } else if (startDate && endDate) {
-            await prisma.lesson.updateMany({
-                where: {
-                    course: { teacherId },
-                    date: {
-                        gte: new Date(startDate),
-                        lte: new Date(endDate)
+
+            // Registrar la transacción
+            await tx.transaction.create({
+                data: {
+                    amount: -totalAmount,
+                    type: "PAYROLL",
+                    method: "EFECTIVO",
+                    date: new Date(date),
+                    description: finalDescription,
+                    expenseId: expense.id,
+                    instituteId: admin.instituteId,
+                    operatorId: admin.id
+                }
+            });
+
+            // MARCAR CLASES COMO PAGADAS
+            if (lessonIds && lessonIds.length > 0) {
+                await tx.lesson.updateMany({
+                    where: {
+                        id: { in: lessonIds },
+                        expenseId: null
                     },
-                    expenseId: null
-                },
-                data: {
-                    expenseId: expense.id
-                }
-            });
-        }
+                    data: {
+                        expenseId: expense.id
+                    }
+                });
+            } else if (startDate && endDate) {
+                await tx.lesson.updateMany({
+                    where: {
+                        course: { teacherId },
+                        date: {
+                            gte: new Date(startDate),
+                            lte: new Date(endDate)
+                        },
+                        expenseId: null
+                    },
+                    data: {
+                        expenseId: expense.id
+                    }
+                });
+            }
+        });
 
         revalidatePath(`/teachers/${teacherId}`);
         revalidatePath("/dashboard");
