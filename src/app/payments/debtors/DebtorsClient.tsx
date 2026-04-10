@@ -8,6 +8,7 @@ import {
     ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { PendingFeeActions } from "./PendingFeeActions";
+import { getMonthName } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -31,11 +32,10 @@ type DebtorSummary = {
 type Props = {
     summaryList: DebtorSummary[];
     currentMonthLabel: string;
-    monthNames: string[];
     currentMonth: number;
 };
 
-export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, currentMonth }: Props) {
+export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: Props) {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
@@ -95,7 +95,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, curr
 
             autoTable(doc, {
                 startY: 33,
-                head: [["Mora Histórica", `Pendiente ${monthNames[currentMonth - 1]}`, "Deuda Total Global"]],
+                head: [["Mora Histórica", `Pendiente ${getMonthName(currentMonth)}`, "Deuda Total Global"]],
                 body: [[
                     `$${totalHistorical.toLocaleString()}`,
                     `$${totalCurrent.toLocaleString()}`,
@@ -125,7 +125,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, curr
 
             autoTable(doc, {
                 startY: afterSummary + 3,
-                head: [["Alumno", "Teléfono", "Mora histórica", monthNames[currentMonth - 1], "Deuda total", "Cuotas pendientes"]],
+                head: [["Alumno", "Teléfono", "Mora histórica", getMonthName(currentMonth), "Deuda total", "Cuotas pendientes"]],
                 body: rows,
                 theme: "striped",
                 headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
@@ -377,7 +377,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, monthNames, curr
                                         )}
                                         <div className="bg-amber-50 dark:bg-amber-950/20 px-4 py-3 rounded-2xl border border-amber-200 dark:border-amber-900/40 text-center min-w-[140px]">
                                             <p className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-tighter mb-1">
-                                                {monthNames[currentMonth - 1]}
+                                                {getMonthName(currentMonth)}
                                             </p>
                                             <h4 className="text-lg font-black text-amber-600">${s.currentMonthOwed.toLocaleString()}</h4>
                                         </div>

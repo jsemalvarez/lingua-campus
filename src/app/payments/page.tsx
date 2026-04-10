@@ -13,6 +13,7 @@ import { TransactionTable } from "./components/TransactionTable";
 import { GenerateFeesButton } from "./components/GenerateFeesButton";
 import { CollectionChart } from "./components/CollectionChart";
 import { getActiveRole } from "@/lib/roles";
+import { formatFeeLabel } from "@/lib/utils";
 import { DebtChart } from "./components/DebtChart";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -227,7 +228,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         let vTitle = t.description || "";
         if (t.type === "PAYMENT" && t.payment?.fee?.student) {
             const fee = t.payment.fee;
-            vTitle = `${fee.type === "ENROLLMENT" ? "Matrícula" : fee.type === "EXAM" ? "Examen" : "Cuota"} ${fee.month}/${fee.year} - ${fee.student.name}`;
+            vTitle = `${formatFeeLabel(fee.type, fee.month, fee.year)} - ${fee.student.name}`;
         } else if ((t.type === "EXPENSE" || t.type === "PAYROLL") && t.expense) {
             vTitle = t.type === "PAYROLL" && t.expense.recipient?.name 
                 ? `Sueldo: ${t.expense.recipient.name}` 
@@ -256,9 +257,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
         if (t.type === "PAYMENT" && t.payment?.fee?.student) {
             const fee = t.payment.fee;
-            let feeLabel = `Cuota ${fee.month}/${fee.year}`;
-            if (fee.type === "ENROLLMENT") feeLabel = `Matrícula ${fee.year}`;
-            else if (fee.type === "EXAM") feeLabel = `Derecho de Examen ${fee.year}`;
+            let feeLabel = formatFeeLabel(fee.type, fee.month, fee.year);
             
             title = `${feeLabel} - ${fee.student.name}`;
             if (t.payment.notes) {

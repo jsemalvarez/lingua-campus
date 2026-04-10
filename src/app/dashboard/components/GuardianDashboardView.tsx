@@ -11,7 +11,7 @@ import {
     AlertCircle,
     History
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getMonthName } from "@/lib/utils";
 import Link from "next/link";
 
 interface GuardianDashboardViewProps {
@@ -30,12 +30,6 @@ export function GuardianDashboardView({
     fees
 }: GuardianDashboardViewProps) {
     const firstName = guardianName.split(" ")[0];
-
-    // Helper to get month name
-    const getMonthName = (month: number) => {
-        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        return months[month - 1] || "";
-    };
 
     return (
         <div className="min-h-screen bg-background pb-20">

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, Wallet } from "lucide-react";
 import { EntitySearch } from "./EntitySearch";
+import { getMonthName } from "@/lib/utils";
 
 interface StudentListOption {
     id: string;
@@ -165,7 +166,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                     } else if (f.type === "EXAM") {
                                         label = `Derecho de Examen ${f.year}`;
                                     } else {
-                                        label = `Cuota ${f.month}/${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
+                                        label = `Cuota ${getMonthName(f.month)} ${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
                                     }
                                     
                                     return (

@@ -13,6 +13,7 @@ import { StudentDangerZone } from "./StudentDangerZone";
 import { ChangeCourseModal } from "./components/ChangeCourseModal";
 import { ExamRegistrationToggle } from "./components/ExamRegistrationToggle";
 import { getActiveRole } from "@/lib/roles";
+import { formatFeeLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -233,12 +234,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                             <div key={f.id} className="flex flex-col gap-1.5 text-sm border-b border-border/30 pb-3 pt-2 first:pt-0 last:border-0 last:pb-0">
                                                 <div className="flex justify-between items-start">
                                                     <span className="font-medium text-foreground/90 leading-tight">
-                                                        {f.type === "ENROLLMENT"
-                                                            ? `Matrícula ${f.year}`
-                                                            : f.type === "EXAM"
-                                                                ? `Derecho de Examen ${f.year}`
-                                                                : `Cuota ${f.month}/${f.year}`
-                                                        }
+                                                        {formatFeeLabel(f.type, f.month, f.year)}
                                                     </span>
                                                     <span className="text-xs text-muted-foreground shrink-0">{dayjs(f.datePaid || f.createdAt).format("DD/MM")}</span>
                                                 </div>

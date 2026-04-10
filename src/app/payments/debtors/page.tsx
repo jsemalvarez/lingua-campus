@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { AlertCircle } from "lucide-react";
 import { getDebtorsReportAction } from "../billingActions";
 import { DebtorsClient } from "./DebtorsClient";
+import { formatFeeLabel, getMonthName } from "@/lib/utils";
 
 export default async function DebtorsPage() {
     const session = await getServerSession(authOptions);
@@ -21,10 +22,6 @@ export default async function DebtorsPage() {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    const monthNames = [
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    ];
 
     // Agrupar por estudiante para totales
     const summary = debtors.reduce((acc: any, fee) => {
@@ -52,12 +49,7 @@ export default async function DebtorsPage() {
 
         acc[sid].months.push({
             feeId: fee.id,
-            label:
-                fee.type === "ENROLLMENT"
-                    ? `Matrícula ${fee.year}`
-                    : fee.type === "EXAM"
-                        ? `Derecho de Examen ${fee.year}`
-                        : `${fee.month}/${fee.year} (${fee.enrollment?.course.name || "Sin curso"})`,
+            label: `${formatFeeLabel(fee.type, fee.month, fee.year)}${fee.enrollment?.course.name ? ` (${fee.enrollment.course.name})` : ""}`,
             isCurrent,
             amount: owed,
             isPaid: fee.paidAmount > 0,
@@ -83,8 +75,7 @@ export default async function DebtorsPage() {
 
                 <DebtorsClient
                     summaryList={summaryList}
-                    currentMonthLabel={`${monthNames[currentMonth - 1]} ${currentYear}`}
-                    monthNames={monthNames}
+                    currentMonthLabel={`${getMonthName(currentMonth)} ${currentYear}`}
                     currentMonth={currentMonth}
                 />
             </main>
