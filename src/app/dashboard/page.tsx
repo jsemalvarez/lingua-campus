@@ -534,8 +534,27 @@ export default async function DashboardPage() {
 
     const isSecretary = activeRole === "SECRETARY";
 
+    // 7. Get all Active Enrollments for context
+    const activeEnrollments = await prisma.enrollment.findMany({
+        where: {
+            course: { instituteId: user.instituteId },
+            status: 'ACTIVE',
+            student: { status: 'ACTIVE' }
+        },
+        include: {
+            course: { select: { name: true, color: true } }
+        }
+    });
+
+    const enrolledStudentIds = new Set<string>();
+    activeEnrollments.forEach(enrollment => {
+        enrolledStudentIds.add(enrollment.studentId);
+    });
+    const enrolledStudentsCount = enrolledStudentIds.size;
+
     const stats = [
         { label: "Estudiantes Activos", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+        { label: "En Cursos", value: enrolledStudentsCount.toString(), icon: Users, color: "text-emerald-600", bg: "bg-emerald-50" },
         { label: "Cursos Activos", value: totalCourses.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
         { label: "Profesores", value: totalTeachers.toString(), icon: GraduationCap, color: "text-orange-600", bg: "bg-orange-50" },
         ...(!isSecretary ? [{ label: "Ingresos del Mes", value: new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyIncome), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" }] : []),
@@ -572,30 +591,14 @@ export default async function DashboardPage() {
         return months[month - 1] || "";
     };
 
-    // 7. Data for the Wow-Factor Students Chart
-    // Get all Active Enrollments mapped by course
-    const activeEnrollments = await prisma.enrollment.findMany({
-        where: {
-            course: { instituteId: user.instituteId },
-            status: 'ACTIVE',
-            student: { status: 'ACTIVE' }
-        },
-        include: {
-            course: { select: { name: true, color: true } }
-        }
-    });
-
-    // Grouping by course name
+    // Grouping for chart
     const courseInfo: Record<string, { count: number; color: string }> = {};
-    const enrolledStudentIds = new Set<string>();
-
     activeEnrollments.forEach(enrollment => {
         const courseName = enrollment.course.name;
         if (!courseInfo[courseName]) {
             courseInfo[courseName] = { count: 0, color: enrollment.course.color || "#3b82f6" };
         }
         courseInfo[courseName].count += 1;
-        enrolledStudentIds.add(enrollment.studentId);
     });
 
     const chartData = Object.entries(courseInfo).map(([name, info]) => ({
@@ -634,7 +637,11 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className={`grid gap-4 md:grid-cols-2 ${stats.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+                <div className={`grid gap-4 md:grid-cols-2 ${
+                    stats.length === 3 ? "lg:grid-cols-3" : 
+                    stats.length === 4 ? "lg:grid-cols-4" : 
+                    "lg:grid-cols-3 xl:grid-cols-5"
+                }`}>
                     {stats.map((stat, i) => (
                         <Card key={i} className="p-6 hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
