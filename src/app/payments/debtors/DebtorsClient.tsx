@@ -223,7 +223,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                                 <Calendar size={20} />
                             </div>
                             <span className="text-[10px] font-black uppercase tracking-widest">
-                                Pendiente de {monthNames[currentMonth - 1]}
+                                Pendiente de {getMonthName(currentMonth)}
                             </span>
                         </div>
                         <h2 className="text-2xl font-black text-amber-600">${totalCurrent.toLocaleString()}</h2>
