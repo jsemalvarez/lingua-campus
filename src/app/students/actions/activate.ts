@@ -27,7 +27,7 @@ export async function activateStudentAction(studentId: string) {
         await prisma.student.update({
             where: { 
                 id: studentId,
-                instituteId: admin.instituteId // Aislamiento multi-tenancy
+                instituteId: user.instituteId // Aislamiento multi-tenancy
             },
             data: { status: "ACTIVE" }
         });
