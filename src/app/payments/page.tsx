@@ -215,9 +215,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     ];
 
     let filteredLedger = ledger;
+    // Ya no filtramos por secretaria para que vea todo igual que el admin
+    /*
     if (isSecretary) {
         filteredLedger = ledger.filter(t => t.type !== "EXPENSE" && t.type !== "PAYROLL" && t.amount >= 0);
     }
+    */
 
     // Mapeo de títulos originales para transacciones anuladas
     const voidedTitlesMap = new Map<string, string>();
@@ -336,137 +339,131 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                 Ver Deudores
                             </Button>
                         </Link>
-                        {!isSecretary && (
-                            <Link href="/payments/payroll">
-                                <Button variant="outline" className="flex items-center gap-2 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
-                                    <DollarSign size={16} />
-                                    Pago de Sueldos
-                                </Button>
-                            </Link>
-                        )}
-                        {!isSecretary && <GenerateFeesButton />}
+                        <Link href="/payments/payroll">
+                            <Button variant="outline" className="flex items-center gap-2 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
+                                <DollarSign size={16} />
+                                Pago de Sueldos
+                            </Button>
+                        </Link>
+                        <GenerateFeesButton />
 
                     </div>
                 </header>
 
                 {/* Bloques Estadísticos (KPIs) - Row 1 */}
-                {!isSecretary && (
-                    <div className="grid gap-4 md:grid-cols-3 mb-6 items-stretch">
-                        {primaryStats.map((stat: any, i) => (
-                            <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 flex flex-col justify-between ${stat.borderColor}`}>
-                                <div className="flex flex-col gap-3">
-                                    <div className={`${stat.bg} ${stat.color} w-fit p-3 rounded-xl`}>
-                                        <stat.icon size={24} />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                                        <h3 className="text-2xl font-bold mt-1 tracking-tight">{stat.value}</h3>
-                                    </div>
+                <div className="grid gap-4 md:grid-cols-3 mb-6 items-stretch">
+                    {primaryStats.map((stat: any, i) => (
+                        <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 flex flex-col justify-between ${stat.borderColor}`}>
+                            <div className="flex flex-col gap-3">
+                                <div className={`${stat.bg} ${stat.color} w-fit p-3 rounded-xl`}>
+                                    <stat.icon size={24} />
                                 </div>
-                                {stat.breakdown && (
-                                    <div className="mt-4 pt-3 border-t border-border/40 space-y-1.5">
-                                        {stat.breakdown.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex justify-between items-center text-xs">
-                                                <span className="text-muted-foreground">{item.key}</span>
-                                                <span className="font-semibold text-foreground/80">{item.val}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </Card>
-                        ))}
-                    </div>
-                )}
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                                    <h3 className="text-2xl font-bold mt-1 tracking-tight">{stat.value}</h3>
+                                </div>
+                            </div>
+                            {stat.breakdown && (
+                                <div className="mt-4 pt-3 border-t border-border/40 space-y-1.5">
+                                    {stat.breakdown.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground">{item.key}</span>
+                                            <span className="font-semibold text-foreground/80">{item.val}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Card>
+                    ))}
+                </div>
 
                 {/* Bloques Estadísticos (KPIs) - Row 2 (Charts & Health) */}
-                {!isSecretary && (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-8">
-                        {secondaryStats.map((stat: any, i) => (
-                            <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
-                                <div className="h-full flex flex-col justify-between gap-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
-                                            <stat.icon size={20} />
-                                        </div>
-                                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${stat.badgeColor}`}>{stat.badgeText}</span>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-8">
+                    {secondaryStats.map((stat: any, i) => (
+                        <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
+                            <div className="h-full flex flex-col justify-between gap-4">
+                                <div className="flex items-center justify-between">
+                                    <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
+                                        <stat.icon size={20} />
                                     </div>
-
-                                    <div className="flex justify-between items-end gap-4">
-                                        <div className="flex-1">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-
-                                            {stat.chartType === "COLLECTION" ? (
-                                                <div className="mt-2 flex items-stretch font-bold tracking-tight h-8 sm:h-9 select-none text-[10px] sm:text-lg">
-                                                    <div className="flex items-center px-2 sm:px-3 border border-blue-600/50 rounded-l-lg text-emerald-600 bg-transparent">
-                                                        ${feesCollectedThisMonth.toLocaleString()}
-                                                    </div>
-                                                    <div className="flex items-center justify-center px-2 bg-muted border-y border-blue-600/50 sm:text-xs text-muted-foreground font-medium">
-                                                        +
-                                                    </div>
-                                                    <div className="flex items-center px-2 sm:px-3 border border-blue-600/50 text-amber-500 bg-transparent">
-                                                        ${Math.max(0, totalToCollect - feesCollectedThisMonth).toLocaleString()}
-                                                    </div>
-                                                    <div className="flex items-center justify-center px-2 bg-muted border-y border-blue-600/50 sm:text-xs text-muted-foreground font-medium">
-                                                        =
-                                                    </div>
-                                                    <div className="flex items-center px-3 sm:px-4 bg-blue-600 text-white rounded-r-lg shadow-sm">
-                                                        ${totalToCollect.toLocaleString()}
-                                                    </div>
-                                                </div>
-                                            ) : stat.chartType === "DEBT" ? (
-                                                <div className="mt-2 flex items-stretch font-bold tracking-tight h-8 sm:h-9 select-none text-[10px] sm:text-lg">
-                                                    <div className="flex items-center px-2 sm:px-3 border border-rose-500 rounded-l-lg text-rose-600 bg-transparent">
-                                                        ${historicalDebt.toLocaleString()}
-                                                    </div>
-                                                    <div className="flex items-center justify-center px-2 bg-muted border-y border-rose-500 sm:text-xs text-muted-foreground font-medium">
-                                                        +
-                                                    </div>
-                                                    <div className="flex items-center px-2 sm:px-3 border border-rose-500 text-amber-500 bg-transparent">
-                                                        ${currentMonthDebt.toLocaleString()}
-                                                    </div>
-                                                    <div className="flex items-center justify-center px-2 bg-muted border-y border-rose-500 sm:text-xs text-muted-foreground font-medium">
-                                                        =
-                                                    </div>
-                                                    <div className="flex items-center px-3 sm:px-4 bg-rose-600 text-white rounded-r-lg shadow-sm">
-                                                        ${totalDebt.toLocaleString()}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <h3 className={`text-xl font-bold mt-1 tracking-tight ${stat.color}`}>{stat.value}</h3>
-                                            )}
-                                        </div>
-
-                                        {stat.chartType === "COLLECTION" && (
-                                            <div className="w-1/4">
-                                                <CollectionChart
-                                                    totalToCollect={totalToCollect}
-                                                    totalCollected={feesCollectedThisMonth}
-                                                />
-                                            </div>
-                                        )}
-
-                                        {stat.chartType === "DEBT" && (
-                                            <div className="w-1/4">
-                                                <DebtChart
-                                                    historicalDebt={historicalDebt}
-                                                    currentMonthDebt={currentMonthDebt}
-                                                />
-                                            </div>
-                                        )}
-
-                                        {!stat.chartType && (
-                                            <Link href="/payments/debtors">
-                                                <Button variant="ghost" size="sm" className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50">
-                                                    Ver Detalle
-                                                </Button>
-                                            </Link>
-                                        )}
-                                    </div>
+                                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${stat.badgeColor}`}>{stat.badgeText}</span>
                                 </div>
-                            </Card>
-                        ))}
-                    </div>
-                )}
+
+                                <div className="flex justify-between items-end gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+
+                                        {stat.chartType === "COLLECTION" ? (
+                                            <div className="mt-2 flex items-stretch font-bold tracking-tight h-8 sm:h-9 select-none text-[10px] sm:text-lg">
+                                                <div className="flex items-center px-2 sm:px-3 border border-blue-600/50 rounded-l-lg text-emerald-600 bg-transparent">
+                                                    ${feesCollectedThisMonth.toLocaleString()}
+                                                </div>
+                                                <div className="flex items-center justify-center px-2 bg-muted border-y border-blue-600/50 sm:text-xs text-muted-foreground font-medium">
+                                                    +
+                                                </div>
+                                                <div className="flex items-center px-2 sm:px-3 border border-blue-600/50 text-amber-500 bg-transparent">
+                                                    ${Math.max(0, totalToCollect - feesCollectedThisMonth).toLocaleString()}
+                                                </div>
+                                                <div className="flex items-center justify-center px-2 bg-muted border-y border-blue-600/50 sm:text-xs text-muted-foreground font-medium">
+                                                    =
+                                                </div>
+                                                <div className="flex items-center px-3 sm:px-4 bg-blue-600 text-white rounded-r-lg shadow-sm">
+                                                    ${totalToCollect.toLocaleString()}
+                                                </div>
+                                            </div>
+                                        ) : stat.chartType === "DEBT" ? (
+                                            <div className="mt-2 flex items-stretch font-bold tracking-tight h-8 sm:h-9 select-none text-[10px] sm:text-lg">
+                                                <div className="flex items-center px-2 sm:px-3 border border-rose-500 rounded-l-lg text-rose-600 bg-transparent">
+                                                    ${historicalDebt.toLocaleString()}
+                                                </div>
+                                                <div className="flex items-center justify-center px-2 bg-muted border-y border-rose-500 sm:text-xs text-muted-foreground font-medium">
+                                                    +
+                                                </div>
+                                                <div className="flex items-center px-2 sm:px-3 border border-rose-500 text-amber-500 bg-transparent">
+                                                    ${currentMonthDebt.toLocaleString()}
+                                                </div>
+                                                <div className="flex items-center justify-center px-2 bg-muted border-y border-rose-500 sm:text-xs text-muted-foreground font-medium">
+                                                    =
+                                                </div>
+                                                <div className="flex items-center px-3 sm:px-4 bg-rose-600 text-white rounded-r-lg shadow-sm">
+                                                    ${totalDebt.toLocaleString()}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <h3 className={`text-xl font-bold mt-1 tracking-tight ${stat.color}`}>{stat.value}</h3>
+                                        )}
+                                    </div>
+
+                                    {stat.chartType === "COLLECTION" && (
+                                        <div className="w-1/4">
+                                            <CollectionChart
+                                                totalToCollect={totalToCollect}
+                                                totalCollected={feesCollectedThisMonth}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {stat.chartType === "DEBT" && (
+                                        <div className="w-1/4">
+                                            <DebtChart
+                                                historicalDebt={historicalDebt}
+                                                currentMonthDebt={currentMonthDebt}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {!stat.chartType && (
+                                        <Link href="/payments/debtors">
+                                            <Button variant="ghost" size="sm" className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                                                Ver Detalle
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
 
                 <div className="grid gap-6 lg:grid-cols-3 items-start">
                     {/* Caja FUERTE Izquierda: Formularios para Agregar Dinero / Gastos */}
@@ -475,11 +472,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                             <RegisterIncomesForm students={students} />
                         </Card>
 
-                        {!isSecretary && (
-                            <Card className="p-5 border-border/40 border-l-4 border-l-rose-500 bg-rose-500/5">
-                                <RegisterOutgoingsForm employees={employees} />
-                            </Card>
-                        )}
+                        <Card className="p-5 border-border/40 border-l-4 border-l-rose-500 bg-rose-500/5">
+                            <RegisterOutgoingsForm employees={employees} />
+                        </Card>
                     </div>
 
                     {/* CENTRO-DERECHA: El libro contable de vida (Buscador y Tabla) */}

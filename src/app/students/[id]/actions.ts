@@ -88,7 +88,7 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
         select: { id: true, instituteId: true, role: true }
     });
 
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
         return { success: false, error: "Sin permisos" };
     }
 
@@ -97,7 +97,7 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
             where: { id: studentId }
         });
 
-        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -124,7 +124,7 @@ export async function softDeleteStudent(studentId: string) {
         select: { id: true, instituteId: true, role: true }
     });
 
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
         return { success: false, error: "Sin permisos para eliminar estudiantes" };
     }
 
@@ -133,7 +133,7 @@ export async function softDeleteStudent(studentId: string) {
             where: { id: studentId }
         });
 
-        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -159,7 +159,7 @@ export async function restoreStudentAction(studentId: string) {
         select: { id: true, instituteId: true, role: true }
     });
 
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
         return { success: false, error: "Sin permisos para restaurar estudiantes" };
     }
 
@@ -168,7 +168,7 @@ export async function restoreStudentAction(studentId: string) {
             where: { id: studentId }
         });
 
-        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -193,7 +193,7 @@ export async function hardDeleteStudentAction(studentId: string) {
         select: { id: true, instituteId: true, role: true }
     });
 
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) {
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
         return { success: false, error: "Sin permisos para eliminar permanentemente" };
     }
 
@@ -202,7 +202,7 @@ export async function hardDeleteStudentAction(studentId: string) {
             where: { id: studentId }
         });
 
-        if (!student || (user.role === "ADMIN" && student.instituteId !== user.instituteId)) {
+        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -231,7 +231,7 @@ export async function changeStudentCourseAction(enrollmentId: string, newCourseI
         select: { id: true, instituteId: true, role: true }
     });
 
-    if (!user || user.role !== "ADMIN" || !user.instituteId) {
+    if (!user || (user.role !== "ADMIN" && user.role !== "SECRETARY") || !user.instituteId) {
         return { success: false, error: "Solo administradores pueden cambiar el curso" };
     }
 
@@ -280,7 +280,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
     });
 
     // Validar permisos (solo ADMIN o SUPERADMIN)
-    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN" || user?.roles.includes("ADMIN") || user?.roles.includes("SUPERADMIN");
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN" || user?.role === "SECRETARY" || user?.roles.includes("ADMIN") || user?.roles.includes("SUPERADMIN") || user?.roles.includes("SECRETARY");
     if (!user || !isAdmin || !user.instituteId) {
         return { success: false, error: "Sin permisos" };
     }

@@ -92,7 +92,7 @@ export function StudentProfileView({
                     </p>
 
 
-                    {userRoles?.every(r => r === "TEACHER") === false && (
+                    {canManageAccess && (
                         <Button variant="outline" className="w-full mt-6 shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>
                             <Edit3 size={16} className="mr-2" /> Editar Perfil
                         </Button>
