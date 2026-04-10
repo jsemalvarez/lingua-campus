@@ -94,7 +94,7 @@ export default async function CoursesPage(props: PageProps) {
                         </p>
                     </div>
 
-                    {user.role === "ADMIN" && (
+                    {(user.role === "ADMIN" || user.role === "SECRETARY") && (
                         <div className="flex flex-wrap items-center gap-2">
                             <Link href="/courses/new">
                                 <Button className="h-11 px-6 shadow-lg shadow-primary/20 premium-gradient border-none hover:opacity-90 font-bold transition-all hover:scale-[1.02]">

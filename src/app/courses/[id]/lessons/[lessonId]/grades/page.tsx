@@ -45,7 +45,7 @@ export default async function GradesPage({
         redirect("/courses");
     }
 
-    const isAuthorized = user.role === "ADMIN" || user.id === course.teacher?.id;
+    const isAuthorized = user.role === "ADMIN" || user.role === "SECRETARY" || user.id === course.teacher?.id;
     if (!isAuthorized) {
         redirect(`/courses/${courseId}`);
     }

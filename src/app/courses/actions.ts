@@ -146,7 +146,7 @@ export async function removeCourseScheduleAction(scheduleId: string, courseId: s
 export async function updateCourseTeacherAction(courseId: string, teacherId: string | null) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
-    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden cambiar el profesor" };
+    if (user.role !== "ADMIN" && user.role !== "SECRETARY") return { success: false, error: "Solo personal administrativo puede cambiar el profesor" };
 
     try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
@@ -178,7 +178,7 @@ export async function updateCourseTeacherAction(courseId: string, teacherId: str
 export async function updateCourseAction(formData: FormData) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
-    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden editar el curso" };
+    if (user.role !== "ADMIN" && user.role !== "SECRETARY") return { success: false, error: "Solo personal administrativo puede editar el curso" };
 
     const courseId = formData.get("id") as string;
     const name = formData.get("name") as string;
@@ -230,7 +230,7 @@ export async function updateCourseAction(formData: FormData) {
 export async function removeStudentFromCourseAction(enrollmentId: string, courseId: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
-    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden desinscribir alumnos" };
+    if (user.role !== "ADMIN" && user.role !== "SECRETARY") return { success: false, error: "Solo personal administrativo puede desinscribir alumnos" };
 
     try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
@@ -255,7 +255,7 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
 export async function markEnrollmentIncompleteAction(enrollmentId: string, courseId: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
-    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden modificar inscripciones" };
+    if (user.role !== "ADMIN" && user.role !== "SECRETARY") return { success: false, error: "Solo personal administrativo puede modificar inscripciones" };
 
     try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
@@ -279,7 +279,7 @@ export async function markEnrollmentIncompleteAction(enrollmentId: string, cours
 export async function finishCourseAction(courseId: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
-    if (user.role !== "ADMIN") return { success: false, error: "Solo administradores pueden finalizar cursos" };
+    if (user.role !== "ADMIN" && user.role !== "SECRETARY") return { success: false, error: "Solo personal administrativo puede finalizar cursos" };
 
     try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
