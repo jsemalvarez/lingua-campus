@@ -13,7 +13,7 @@ import { processBulkPayrollAction } from "@/app/teachers/actions";
 interface Teacher {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
     hourlyRate: number | null;
 }
 
@@ -52,7 +52,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
 
     const filteredTeachers = teachers.filter(t => 
         t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        t.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (t.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
     );
 
     const handleSettlementChange = useCallback((teacherId: string, data: SettlementData) => {
