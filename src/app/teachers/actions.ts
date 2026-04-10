@@ -271,7 +271,7 @@ export async function processTeacherPayment(
                     date: new Date(date),
                     category: "Payroll",
                     recipientId: teacherId,
-                    instituteId: admin.instituteId,
+                    instituteId: admin.instituteId!,
                     status: "VALID"
                 }
             });
@@ -285,7 +285,7 @@ export async function processTeacherPayment(
                     date: new Date(date),
                     description: finalDescription,
                     expenseId: expense.id,
-                    instituteId: admin.instituteId,
+                    instituteId: admin.instituteId!,
                     operatorId: admin.id
                 }
             });
