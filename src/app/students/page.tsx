@@ -6,7 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users } from "lucide-react";
+import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users, AlertTriangle } from "lucide-react";
 import dayjs from "dayjs";
 import { StudentListActions } from "./components/StudentListActions";
 import { getActiveRole } from "@/lib/roles";
@@ -101,6 +101,9 @@ export default async function StudentsPage(props: PageProps) {
                             select: { id: true, name: true, color: true }
                         }
                     }
+                },
+                _count: {
+                    select: { guardianLinks: true }
                 }
             },
             orderBy: { name: "asc" },
@@ -113,6 +116,44 @@ export default async function StudentsPage(props: PageProps) {
     ]);
 
     const totalPages = Math.ceil(totalStudents / PAGE_SIZE) || 1;
+
+    // -------------------------------------------------------------------------
+    // Helper: detecta qué datos obligatorios faltan en el perfil del estudiante
+    // -------------------------------------------------------------------------
+    type MissingDataFlag = 'sin_tutor' | 'sin_fecha' | 'sin_contacto' | 'sin_dni';
+
+    function getMissingDataFlags(student: {
+        birthDate: Date | null;
+        dni: string | null;
+        phone: string | null;
+        email: string | null;
+        guardian1Name: string | null;
+        _count: { guardianLinks: number };
+    }): MissingDataFlag[] {
+        const flags: MissingDataFlag[] = [];
+
+        // Sin DNI (aplica a todos)
+        if (!student.dni) flags.push('sin_dni');
+
+        // Sin ninguna vía de contacto directo
+        if (!student.phone && !student.email) flags.push('sin_contacto');
+
+        // Sin fecha de nacimiento → no podemos determinar si es menor
+        if (!student.birthDate) {
+            flags.push('sin_fecha');
+            return flags;
+        }
+
+        const age = dayjs().diff(dayjs(student.birthDate), 'year');
+
+        // Menor de 18 sin tutor registrado
+        if (age < 18) {
+            const hasTutor = !!(student.guardian1Name || student._count.guardianLinks > 0);
+            if (!hasTutor) flags.push('sin_tutor');
+        }
+
+        return flags;
+    }
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -247,7 +288,7 @@ export default async function StudentsPage(props: PageProps) {
                                                                 {student.name}
                                                             </Link>
                                                             
-                                                            {/* Course Badge */}
+                                                            {/* Course Badges */}
                                                             {student.enrollments && student.enrollments.length > 0 ? (
                                                                 <div className="flex flex-wrap gap-1 mt-0.5">
                                                                     {student.enrollments.map((e: any) => (
@@ -275,6 +316,36 @@ export default async function StudentsPage(props: PageProps) {
                                                                     </span>
                                                                 </div>
                                                             )}
+
+                                                            {/* Missing Data Badges */}
+                                                            {(() => {
+                                                                const flags = getMissingDataFlags(student);
+                                                                if (flags.length === 0) return null;
+                                                                return (
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {flags.includes('sin_tutor') && (
+                                                                            <span title="Menor de 18 años sin tutor registrado" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-red-500/10 text-red-500 border-red-500/30 cursor-default">
+                                                                                <AlertTriangle size={8} /> Sin tutor
+                                                                            </span>
+                                                                        )}
+                                                                        {flags.includes('sin_fecha') && (
+                                                                            <span title="Falta la fecha de nacimiento" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-default">
+                                                                                <AlertTriangle size={8} /> Sin fecha nac.
+                                                                            </span>
+                                                                        )}
+                                                                        {flags.includes('sin_contacto') && (
+                                                                            <span title="No tiene email ni teléfono de contacto" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-orange-500/10 text-orange-500 border-orange-500/30 cursor-default">
+                                                                                <AlertTriangle size={8} /> Sin contacto
+                                                                            </span>
+                                                                        )}
+                                                                        {flags.includes('sin_dni') && (
+                                                                            <span title="No tiene DNI registrado" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-blue-500/10 text-blue-500 border-blue-500/30 cursor-default">
+                                                                                <AlertTriangle size={8} /> Sin DNI
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 </td>
