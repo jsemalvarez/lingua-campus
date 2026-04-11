@@ -15,18 +15,36 @@ interface RegistrationFormProps {
     instituteId: string;
     instituteName: string;
     instituteLevels: Level[];
+    // ── Nuevas props para modo actualización ──
+    initialData?: any; // Pre-rellena los campos
+    token?: string;                  
+    studentName?: string;            
 }
 
-export function RegistrationForm({ instituteId, instituteName, instituteLevels }: RegistrationFormProps) {
+import { updateStudentFromTokenAction } from "@/app/complete-profile/actions";
+
+export function RegistrationForm({ 
+    instituteId, 
+    instituteName, 
+    instituteLevels,
+    initialData,
+    token,
+    studentName
+}: RegistrationFormProps) {
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
-    const [formType, setFormType] = useState<"adult" | "minor">("adult");
+    const [formType, setFormType] = useState<"adult" | "minor">(
+        initialData ? (initialData.guardian1Name ? "minor" : "adult") : "adult"
+    );
 
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");
         startTransition(async () => {
-            const result = await createPreEnrollmentAction(formData, instituteId);
+            const result = token 
+                ? await updateStudentFromTokenAction(formData, token)
+                : await createPreEnrollmentAction(formData, instituteId);
+                
             if (result.success) {
                 setStatus("success");
             } else {
@@ -42,12 +60,17 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                 <div className="h-24 w-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(16,185,129,0.2)] animate-success-reveal">
                     <CheckCircle size={48} />
                 </div>
-                <h2 className="text-4xl font-black text-foreground mb-4 tracking-tighter">¡Inscripción Enviada!</h2>
+                <h2 className="text-4xl font-black text-foreground mb-4 tracking-tighter">
+                    {initialData ? "¡Datos Actualizados!" : "¡Inscripción Enviada!"}
+                </h2>
                 <p className="text-muted-foreground text-lg max-w-md mx-auto leading-relaxed font-medium">
-                    Gracias por confiar en <strong>{instituteName}</strong>. Registro recibido con éxito.
+                    {initialData 
+                        ? `Tus datos en ${instituteName} han sido actualizados correctamente. Gracias por completar tu perfil.`
+                        : `Gracias por confiar en ${instituteName}. Registro recibido con éxito.`
+                    }
                 </p>
                 <div className="mt-10 p-6 bg-primary/5 rounded-[2rem] text-sm border border-primary/10 inline-flex items-center gap-3 font-semibold text-primary animate-pulse">
-                    <Sparkles size={18} /> Pronto nos pondremos en contacto
+                    <Sparkles size={18} /> {initialData ? "Tu ficha ya está completa" : "Pronto nos pondremos en contacto"}
                 </div>
             </div>
         );
@@ -58,7 +81,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
             <input type="hidden" name="formType" value={formType} />
 
             {/* ── 0. Selección de Tipo de Inscripción ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 bg-slate-100/50 dark:bg-slate-900/50 rounded-[2.2rem] border border-border/50">
+            {!initialData && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 bg-slate-100/50 dark:bg-slate-900/50 rounded-[2.2rem] border border-border/50">
                 <button
                     type="button"
                     onClick={() => setFormType("adult")}
@@ -103,6 +127,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                     </div>
                 </button>
             </div>
+            )}
 
             {/* ── 1. Datos del Alumno ── */}
             <div className="space-y-8">
@@ -123,8 +148,13 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         <input
                             name="name"
                             required
+                            defaultValue={initialData?.name || ""}
+                            readOnly={!!initialData}
                             placeholder="Ej: Sofía Martínez"
-                            className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold text-lg h-14 shadow-sm hover:border-primary/30"
+                            className={cn(
+                                "w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold text-lg h-14 shadow-sm hover:border-primary/30",
+                                initialData && "opacity-60 cursor-not-allowed bg-slate-100 dark:bg-slate-900"
+                            )}
                         />
                     </div>
 
@@ -136,6 +166,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <input
                                 name="birthDate"
                                 type="date"
+                                defaultValue={initialData?.birthDate ? new Date(initialData.birthDate).toISOString().split('T')[0] : ""}
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 [color-scheme:light] dark:[color-scheme:dark]"
                             />
                         </div>
@@ -146,6 +177,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         <input
                             name="dni"
                             required
+                            defaultValue={initialData?.dni || ""}
                             placeholder="Ej: 45123456"
                             className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                         />
@@ -159,6 +191,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <input
                                 name="phone"
                                 type="tel"
+                                defaultValue={initialData?.phone || ""}
                                 placeholder="+54 9 223 ..."
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                             />
@@ -171,6 +204,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-primary transition-colors" />
                             <input
                                 name="address"
+                                defaultValue={initialData?.address || ""}
                                 placeholder="Ej: Av. San Martín 1234"
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                             />
@@ -185,6 +219,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <input
                                 name="email"
                                 type="email"
+                                defaultValue={initialData?.email || ""}
                                 placeholder="ejemplo@mail.com"
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                             />
@@ -196,6 +231,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         <div className="relative group/input">
                             <select
                                 name="registeredLevel"
+                                defaultValue={initialData?.registeredLevel || ""}
                                 className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 appearance-none shadow-sm cursor-pointer"
                             >
                                 <option value="">Seleccionar nivel...</option>
@@ -215,6 +251,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                                 <GraduationCap className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-primary transition-colors" />
                                 <input
                                     name="schoolInfo"
+                                    defaultValue={initialData?.schoolInfo || ""}
                                     placeholder="Ej: Instituto San José / Turno Tarde"
                                     className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                                 />
@@ -242,7 +279,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         <div className="flex flex-col gap-2.5 sm:col-span-2">
                             <label className="text-[0.95rem] font-bold ml-1">Nombre Completo del Tutor {formType === 'minor' && "*"}</label>
                             <input
-                                name="g1Name"
+                                name="guardian1Name"
+                                defaultValue={initialData?.guardian1Name || ""}
                                 required={formType === 'minor'}
                                 placeholder="Nombre del adulto responsable"
                                 className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
@@ -253,7 +291,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <label className="text-[0.95rem] font-bold ml-1">Vínculo / Parentesco {formType === 'minor' && "*"}</label>
                             <div className="relative">
                                 <select
-                                    name="g1Relation"
+                                    name="guardian1Relation"
+                                    defaultValue={initialData?.guardian1Relation || ""}
                                     required={formType === 'minor'}
                                     className="w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 appearance-none shadow-sm cursor-pointer"
                                 >
@@ -273,7 +312,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <div className="relative group/input">
                                 <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-emerald-500 transition-colors" />
                                 <input
-                                    name="g1Phone"
+                                    name="guardian1Phone"
+                                    defaultValue={initialData?.guardian1Phone || ""}
                                     required={formType === 'minor'}
                                     type="tel"
                                     placeholder="Ej: +54 9 223 ...."
@@ -302,7 +342,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         <div className="flex flex-col gap-2.5 sm:col-span-2">
                             <label className="text-[0.95rem] font-bold ml-1 opacity-70">Nombre Completo</label>
                             <input
-                                name="g2Name"
+                                name="guardian2Name"
+                                defaultValue={initialData?.guardian2Name || ""}
                                 placeholder="Nombre del segundo tutor"
                                 className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
                             />
@@ -311,7 +352,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <label className="text-[0.95rem] font-bold ml-1 opacity-70">Parentesco</label>
                             <div className="relative">
                                 <select
-                                    name="g2Relation"
+                                    name="guardian2Relation"
+                                    defaultValue={initialData?.guardian2Relation || ""}
                                     className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13 appearance-none cursor-pointer"
                                 >
                                     <option value="">Seleccionar...</option>
@@ -327,7 +369,8 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                             <label className="text-[0.95rem] font-bold ml-1 opacity-70">Celular</label>
                             <div className="relative group/input">
                                 <input
-                                    name="g2Phone"
+                                    name="guardian2Phone"
+                                    defaultValue={initialData?.guardian2Phone || ""}
                                     type="tel"
                                     placeholder="+54 9 223 ..."
                                     className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
@@ -358,7 +401,7 @@ export function RegistrationForm({ instituteId, instituteName, instituteLevels }
                         </div>
                     ) : (
                         <>
-                            <Heart size={24} className="fill-current text-white animate-pulse" /> Finalizar Inscripción
+                            <Heart size={24} className="fill-current text-white animate-pulse" /> {initialData ? "Guardar y Enviar" : "Finalizar Inscripción"}
                         </>
                     )}
                 </Button>

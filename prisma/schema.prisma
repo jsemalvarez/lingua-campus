@@ -133,6 +133,9 @@ model Student {
   // Relation for Guardian Portal
   guardianLinks GuardianStudentLink[] @relation("StudentToGuardian")
 
+  // Relation for data completion tokens
+  dataTokens    StudentDataToken[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -497,3 +500,16 @@ model MiscellaneousIncome {
   @@index([studentId])
 }
 
+// -----------------------------------------------------------------------------
+// STUDENT DATA COMPLETION TOKENS
+// -----------------------------------------------------------------------------
+
+model StudentDataToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

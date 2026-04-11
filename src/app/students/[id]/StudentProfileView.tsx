@@ -8,6 +8,7 @@ import { User, Phone, Mail, UserCheck, Edit3, Info, Wallet } from "lucide-react"
 import { CreateGuardianModal } from "./components/CreateGuardianModal";
 import dayjs from "dayjs";
 import { StudentQRCard } from "./components/StudentQRCard";
+import { CompletionLinkButton } from "../components/CompletionLinkButton";
 
 interface StudentData {
     id: string;
@@ -93,9 +94,12 @@ export function StudentProfileView({
 
 
                     {canManageAccess && (
-                        <Button variant="outline" className="w-full mt-6 shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>
-                            <Edit3 size={16} className="mr-2" /> Editar Perfil
-                        </Button>
+                        <div className="w-full mt-6 space-y-3 px-1">
+                            <Button variant="outline" className="w-full shadow-sm font-semibold border-primary/20 hover:bg-primary/5 hover:text-primary" onClick={() => setIsEditing(true)}>
+                                <Edit3 size={16} className="mr-2" /> Editar Perfil
+                            </Button>
+                            <CompletionLinkButton studentId={student.id} variant="full" className="w-full" />
+                        </div>
                     )}
                 </Card>
 

@@ -9,6 +9,7 @@ import { restoreStudentAction, hardDeleteStudentAction } from "../[id]/actions";
 import { activateStudentAction } from "../actions/activate";
 import { useRouter } from "next/navigation";
 import { UserCheck } from "lucide-react";
+import { CompletionLinkButton } from "./CompletionLinkButton";
 
 export function StudentListActions({ 
     studentId, 
@@ -74,17 +75,21 @@ export function StudentListActions({
 
     if (isActive) {
         return (
-            <Link href={`/students/${studentId}`}>
-                <Button variant="ghost" size="icon" className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary transition-all rounded-full h-8 w-8">
-                    <Eye size={16} />
-                </Button>
-            </Link>
+            <div className="flex justify-end gap-2 items-center opacity-0 group-hover:opacity-100 transition-all">
+                <CompletionLinkButton studentId={studentId} variant="icon" />
+                <Link href={`/students/${studentId}`}>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-all rounded-full h-8 w-8">
+                        <Eye size={16} />
+                    </Button>
+                </Link>
+            </div>
         );
     }
 
     if (currentStatus === "PRE_INSCRIBED") {
         return (
-            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all items-center">
+                <CompletionLinkButton studentId={studentId} variant="icon" />
                 <Button
                     variant="ghost"
                     size="icon"

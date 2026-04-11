@@ -355,3 +355,39 @@ export async function createGuardianAccount(studentId: string, guardianName: str
     }
 }
 
+
+export async function generateDataCompletionToken(studentId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true, role: true }
+    });
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "SECRETARY" && user.role !== "SUPERADMIN")) {
+        return { success: false, error: "Sin permisos" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId }
+        });
+
+        if (!student || (user.role !== "SUPERADMIN" && student.instituteId !== user.instituteId)) {
+            return { success: false, error: "Estudiante no encontrado" };
+        }
+
+        const token = await prisma.studentDataToken.create({
+            data: {
+                studentId,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            }
+        });
+
+        return { success: true, token: token.token };
+    } catch (error) {
+        console.error("Error generating token:", error);
+        return { success: false, error: "Error al generar el token" };
+    }
+}
