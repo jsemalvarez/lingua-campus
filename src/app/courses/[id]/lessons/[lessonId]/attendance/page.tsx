@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, ClipboardCheck, BookOpen, Calendar as CalendarIcon, QrCode } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function AttendancePage({
     params
@@ -21,6 +22,10 @@ export default async function AttendancePage({
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true }
     });
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
@@ -77,7 +82,7 @@ export default async function AttendancePage({
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="space-y-4 mb-4">

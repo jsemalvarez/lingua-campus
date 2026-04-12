@@ -13,6 +13,7 @@ import { RemoveStudentButton } from "../components/RemoveStudentButton";
 import { DeleteCourseButton } from "../components/DeleteCourseButton";
 import { FinishCourseButton } from "../components/FinishCourseButton";
 import { BadgeCheck, Info } from "lucide-react";
+import { getActiveRole } from "@/lib/roles";
 
 // TODO: Create StudentList component to handle enrollments. For now we will create an empty block
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +24,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true }
     });
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
@@ -72,7 +77,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 

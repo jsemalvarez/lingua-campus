@@ -11,6 +11,7 @@ import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, Clipbo
 import { format, addDays, subDays, addWeeks, subWeeks, startOfWeek, isSameDay, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
+import { getActiveRole } from "@/lib/roles";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -48,7 +49,10 @@ export default async function SchedulePage({
     const dateStr = format(displayDateNoon, "yyyy-MM-dd");
     const isToday = isSameDay(displayDateNoon, new Date());
 
-    const role = (session.user as any).role;
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const role = await getActiveRole(userRoles);
+
     let instituteId = "";
     let studentEnrollments: string[] = [];
 
@@ -183,7 +187,7 @@ export default async function SchedulePage({
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={role} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">

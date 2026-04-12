@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Plus, BookOpen, Layers, MapPin, Archive, CheckCircle2 } from "lucide-react";
 import { CourseListClientRenderer } from "./components/CourseListClientRenderer";
+import { getActiveRole } from "@/lib/roles";
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -24,6 +25,10 @@ export default async function CoursesPage(props: PageProps) {
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true, preferences: true }
     });
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard"); // Si sos superadmin andá a tu panel
@@ -78,7 +83,7 @@ export default async function CoursesPage(props: PageProps) {
 
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
 

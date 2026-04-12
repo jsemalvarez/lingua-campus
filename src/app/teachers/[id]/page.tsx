@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 import { TeacherProfileView } from "./TeacherProfileView";
 import { TeacherDangerZone } from "./TeacherDangerZone";
 import { TeacherPayrollSection } from "./TeacherPayrollSection";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
@@ -19,6 +20,10 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true }
     });
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
@@ -46,7 +51,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="mb-8">

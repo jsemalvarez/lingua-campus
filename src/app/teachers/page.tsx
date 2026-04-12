@@ -9,6 +9,7 @@ import { CreateTeacherModal } from "./components/CreateTeacherModal";
 import { Search, GraduationCap, Filter, Mail, Phone, Calendar as CalendarIcon, Edit3, Eye } from "lucide-react";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function TeachersPage() {
     const session = await getServerSession(authOptions);
@@ -18,6 +19,10 @@ export default async function TeachersPage() {
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true }
     });
+    
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
@@ -45,7 +50,7 @@ export default async function TeachersPage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

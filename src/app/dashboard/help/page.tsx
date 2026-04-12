@@ -4,14 +4,19 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { BookOpen, Users, CreditCard, GraduationCap, Info, CalendarPlus, Wand2, ShieldAlert, Undo2, Trash2, Edit2, FileText, Wallet, PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function HelpCenterPage() {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) redirect("/login");
 
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
+
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="mb-10 lg:mb-14">
