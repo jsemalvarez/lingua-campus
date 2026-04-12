@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import dayjs from "dayjs";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
-import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles } from "lucide-react";
+import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles, Percent, Coins } from "lucide-react";
 
 import { RegisterIncomesForm } from "./components/RegisterIncomesForm";
 import { RegisterOutgoingsForm } from "./components/RegisterOutgoingsForm";
@@ -130,6 +130,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         
     const rentabilidad = totalCollected - totalExpenses;
 
+    // 5. Calcular Descuentos e Intereses (Mes actual)
+    const currentMonthPayments = currentMonthTransactions.filter(t => t.type === "PAYMENT");
+    const totalDiscounts = currentMonthPayments.reduce((acc, t) => acc + (t.payment?.discount || 0), 0);
+    const totalSurcharges = currentMonthPayments.reduce((acc, t) => acc + (t.payment?.surcharge || 0), 0);
+
     // Consultamos deudores totales (acumulado histórico)
     const totalDebtData = await prisma.fee.findMany({
         where: {
@@ -212,6 +217,27 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             badgeColor: "text-rose-600 bg-rose-50 dark:bg-rose-950/40",
             borderColor: "border-l-rose-600"
         },
+    ];
+
+    const adjustmentStats = [
+        {
+            label: "Intereses Cobrados (Mes)",
+            value: `$${totalSurcharges.toLocaleString()}`,
+            icon: Coins,
+            color: "text-amber-600",
+            bg: "bg-amber-50 dark:bg-amber-950/40",
+            borderColor: "border-l-amber-600",
+            description: "Recargos por mora en cuotas"
+        },
+        {
+            label: "Descuentos Otorgados (Mes)",
+            value: `$${totalDiscounts.toLocaleString()}`,
+            icon: Percent,
+            color: "text-indigo-600",
+            bg: "bg-indigo-50 dark:bg-indigo-950/40",
+            borderColor: "border-l-indigo-600",
+            description: "Bonificaciones y becas directas"
+        }
     ];
 
     let filteredLedger = ledger;
@@ -380,7 +406,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
                 {/* Bloques Estadísticos (KPIs) - Row 2 (Charts & Health) */}
                 {!isSecretary && (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-8">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-6">
                         {secondaryStats.map((stat: any, i) => (
                             <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
                                 <div className="h-full flex flex-col justify-between gap-4">
@@ -461,6 +487,26 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                                 </Button>
                                             </Link>
                                         )}
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+
+                {/* Bloques Estadísticos (KPIs) - Row 3 (Adjustments) */}
+                {!isSecretary && (
+                    <div className="grid gap-4 md:grid-cols-2 mb-8">
+                        {adjustmentStats.map((stat: any, i) => (
+                            <Card key={i} className={`p-5 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
+                                        <stat.icon size={22} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                                        <h3 className="text-2xl font-bold mt-0.5 tracking-tight">{stat.value}</h3>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">{stat.description}</p>
                                     </div>
                                 </div>
                             </Card>
