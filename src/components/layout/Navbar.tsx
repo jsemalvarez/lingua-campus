@@ -144,12 +144,14 @@ export function Navbar({
                                     <NotificationBell instituteId={sessionUser.instituteId} />
                                 )}
 
-                                <Link href="/dashboard/help"
-                                    className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border border-transparent hover:border-primary/20"
-                                    title="Centro de Ayuda"
-                                >
-                                    <HelpCircle size={20} />
-                                </Link>
+                                {(activeRole === "ADMIN" || activeRole === "SECRETARY" || activeRole === "SUPERADMIN") && (
+                                    <Link href="/dashboard/help"
+                                        className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border border-transparent hover:border-primary/20"
+                                        title="Centro de Ayuda"
+                                    >
+                                        <HelpCircle size={20} />
+                                    </Link>
+                                )}
 
                                 <Link href="/profile"
                                     className="flex h-8 w-8 sm:h-9 sm:w-9 rounded-xl items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border border-transparent hover:border-primary/20"
