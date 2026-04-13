@@ -30,7 +30,7 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
         format: 'a4'
     });
 
-    const primaryColor = [40, 40, 40]; // Dark grey
+    const primaryColor: [number, number, number] = [40, 40, 40]; // Dark grey
     const margin = 15;
     const pageWidth = doc.internal.pageSize.getWidth();
 
