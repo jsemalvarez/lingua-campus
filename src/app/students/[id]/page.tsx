@@ -12,6 +12,7 @@ import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
 import { StudentDangerZone } from "./StudentDangerZone";
 import { ChangeCourseModal } from "./components/ChangeCourseModal";
 import { ExamRegistrationToggle } from "./components/ExamRegistrationToggle";
+import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
 import { formatFeeLabel } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 orderBy: { enrolledAt: 'desc' }
             },
             fees: {
+                include: { payments: { where: { status: "VALID" }, orderBy: { date: 'desc' }, take: 1 } },
                 orderBy: { createdAt: 'desc' },
                 take: 5
             },
@@ -240,6 +242,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                 </div>
                                                 <div className="flex justify-between items-center mt-0.5">
                                                     <span className="font-bold text-emerald-600">${f.paidAmount.toLocaleString()}</span>
+                                                    {(f as any).payments?.[0] && (
+                                                        <ReceiptDownloadButton paymentId={(f as any).payments[0].id} variant="icon" />
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

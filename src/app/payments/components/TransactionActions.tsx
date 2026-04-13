@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { XCircle, AlertTriangle } from "lucide-react";
-import { voidExpenseAction, voidPaymentAction, voidIncomeAction } from "../actions";
+import { voidExpenseAction, voidPaymentAction, voidIncomeAction, getReceiptDataAction } from "../actions";
+import { Download, Loader2 } from "lucide-react";
+import { generatePaymentReceipt } from "@/lib/pdf/generateReceipt";
+import { formatFeeLabel } from "@/lib/utils";
 
 interface TransactionActionsProps {
     tx: {
@@ -15,8 +18,52 @@ interface TransactionActionsProps {
 
 export function TransactionActions({ tx }: TransactionActionsProps) {
     const [isPending, startTransition] = useTransition();
+    const [isDownloading, setIsDownloading] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [reason, setReason] = useState("");
+
+    const handleDownload = async () => {
+        if (isDownloading) return;
+        setIsDownloading(true);
+        try {
+            const result = await getReceiptDataAction(tx.id);
+            if (result.success && result.payment && result.institute) {
+                const { payment, institute } = result;
+                
+                // Prepare concepts
+                const concepts = [
+                    {
+                        description: formatFeeLabel(payment.feeType as any, payment.feeMonth, payment.feeYear),
+                        amount: payment.amount
+                    }
+                ];
+
+                if (payment.surcharge > 0) {
+                    concepts.push({ description: 'RECARGO / INTERÉS', amount: payment.surcharge });
+                }
+                if (payment.discount > 0) {
+                    concepts.push({ description: 'DESCUENTO APLICADO', amount: -payment.discount });
+                }
+
+                await generatePaymentReceipt({
+                    receiptNumber: payment.id.slice(0, 8).toUpperCase(),
+                    date: payment.date,
+                    studentName: payment.studentName,
+                    studentAddress: payment.studentAddress,
+                    concepts,
+                    total: payment.amount, // El 'amount' ya es el neto cobrado en este modelo
+                    institute: institute as any
+                });
+            } else {
+                alert(result.error || "Error al generar el recibo");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error al descargar el comprobante");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     // Filter out actions for adjustments or refunds themselves
     if (tx.source === "REFUND" || tx.source === "ADJUSTMENT") {
@@ -47,6 +94,16 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
 
     return (
         <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+            {tx.source === "PAYMENT" && (
+                <button
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    title="Descargar Comprobante"
+                    className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+                >
+                    {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                </button>
+            )}
             <button
                 onClick={() => setShowDeleteConfirm(true)}
                 title="Anular"

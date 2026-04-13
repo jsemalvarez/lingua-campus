@@ -642,3 +642,62 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
         return { success: false, error: "Error al aplicar el saldo a favor" };
     }
 }
+
+export async function getReceiptDataAction(paymentId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        const payment = await prisma.payment.findUnique({
+            where: { id: paymentId },
+            include: {
+                fee: {
+                    include: {
+                        student: {
+                            select: {
+                                name: true,
+                                address: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!payment) return { success: false, error: "Pago no encontrado" };
+        if (payment.fee.instituteId !== user.instituteId) return { success: false, error: "Acceso denegado" };
+
+        const institute = await prisma.institute.findUnique({
+            where: { id: user.instituteId },
+            select: {
+                name: true,
+                address: true,
+                phone: true,
+                cuit: true,
+                grossIncome: true,
+                activityStartDate: true,
+                logoUrl: true
+            }
+        });
+
+        return { 
+            success: true, 
+            payment: {
+                id: payment.id,
+                amount: payment.amount,
+                surcharge: payment.surcharge,
+                discount: payment.discount,
+                date: payment.date,
+                feeType: payment.fee.type,
+                feeMonth: payment.fee.month,
+                feeYear: payment.fee.year,
+                studentName: payment.fee.student.name,
+                studentAddress: payment.fee.student.address
+            },
+            institute 
+        };
+    } catch (e: any) {
+        console.error(e);
+        return { success: false, error: "Error al cargar datos del recibo" };
+    }
+}

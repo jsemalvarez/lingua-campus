@@ -18,6 +18,9 @@ interface InstituteSettingsFormProps {
         facebookUrl: string | null;
         instagramUrl: string | null;
         whatsappNumber: string | null;
+        cuit: string | null;
+        grossIncome: string | null;
+        activityStartDate: Date | string | null;
     };
 }
 
@@ -170,6 +173,47 @@ export function InstituteSettingsForm({ institute }: InstituteSettingsFormProps)
                             defaultValue={institute.whatsappNumber ?? ""}
                             placeholder="5491112345678 (Sin el +)"
                             className="w-full px-4 py-2.5 rounded-xl border border-input bg-background/50 text-sm focus:ring-2 focus:ring-ring/30 transition-all font-medium outline-none hover:border-primary/30 border-emerald-500/30 focus:border-emerald-500/50"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* --- Sección: Datos Fiscales (Para Comprobantes) --- */}
+            <div className="bg-card/50 border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
+                    <h3 className="text-base font-bold flex items-center gap-2">
+                        <CheckCircle className="text-primary" size={18} />
+                        Datos Fiscales (Comprobantes)
+                    </h3>
+                </div>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold">C.U.I.T. / Documento Fiscal</label>
+                        <input
+                            name="cuit"
+                            defaultValue={institute.cuit ?? ""}
+                            placeholder="Ej: 27-29593054-9"
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background/50 text-sm focus:ring-2 focus:ring-ring/30 transition-all font-medium outline-none hover:border-primary/30"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold">Ingresos Brutos</label>
+                        <input
+                            name="grossIncome"
+                            defaultValue={institute.grossIncome ?? ""}
+                            placeholder="Ej: 27-29593054-9"
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background/50 text-sm focus:ring-2 focus:ring-ring/30 transition-all font-medium outline-none hover:border-primary/30"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold">Inicio de Actividad</label>
+                        <input
+                            name="activityStartDate"
+                            type="date"
+                            defaultValue={institute.activityStartDate ? new Date(institute.activityStartDate).toISOString().split('T')[0] : ""}
+                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background/50 text-sm focus:ring-2 focus:ring-ring/30 transition-all font-medium outline-none hover:border-primary/30"
                         />
                     </div>
                 </div>
