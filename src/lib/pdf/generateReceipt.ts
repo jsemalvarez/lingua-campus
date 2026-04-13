@@ -24,239 +24,206 @@ interface ReceiptData {
 }
 
 export const generatePaymentReceipt = async (data: ReceiptData) => {
-    const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-    });
+    try {
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
 
-    const primaryColor: [number, number, number] = [40, 40, 40]; // Dark grey
-    const margin = 15;
-    const pageWidth = doc.internal.pageSize.getWidth();
+        // Use consistent RGB objects
+        const primaryColor = { r: 40, g: 40, b: 40 };
+        const secondaryColor = { r: 100, g: 100, b: 100 };
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
 
-    // --- BORDER ---
-    doc.setDrawColor(200);
-    doc.rect(margin, margin, pageWidth - (margin * 2), 140); // Receipt box
+        // --- BORDER ---
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(margin, margin, pageWidth - (margin * 2), 140); // Receipt box
 
-    // --- HEADER LEFT: Logo & Institute Info ---
-    const headerLeftWidth = (pageWidth - margin - 60) - (margin + 5);
-    const centerX = (margin + 5) + (headerLeftWidth / 2);
-    let currentY = margin + 12;
+        // --- TOP RIGHT CORNER: IVA EXENTO ---
+        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('IVA EXENTO', pageWidth - margin - 10, margin + 7, { align: 'right' });
 
-    doc.setTextColor(primaryColor[0]);
+        // --- HEADER LEFT: Logo & Institute Info ---
+        const headerLeftWidth = (pageWidth - margin - 60) - (margin + 5);
+        const centerX = (margin + 5) + (headerLeftWidth / 2);
+        let currentY = margin + 12;
 
-    if (data.institute.logoUrl) {
-        try {
-            const logoWidth = 35;
-            const logoHeight = 20;
-            const logoX = centerX - (logoWidth / 2);
-            const logoY = currentY - 5;
+        if (data.institute.logoUrl) {
+            try {
+                const logoWidth = 35;
+                const logoHeight = 20;
+                const logoX = centerX - (logoWidth / 2);
+                const logoY = currentY - 5;
 
-            // Apply rounded corners clipping
-            doc.saveGraphicsState();
-            doc.setDrawColor(255, 255, 255); // White border to "hide" it or just used for clipping
-            doc.roundedRect(logoX, logoY, logoWidth, logoHeight, 3, 3, 'S');
-            doc.clip();
-            doc.addImage(data.institute.logoUrl, 'PNG', logoX, logoY, logoWidth, logoHeight);
-            doc.restoreGraphicsState();
-
-            currentY += logoHeight + 2;
-        } catch (e) {
-            console.error('Error loading logo, falling back to text', e);
+                // Removed rounded corners and clipping because they cause crashes in Foxit Reader
+                doc.addImage(data.institute.logoUrl, 'PNG', logoX, logoY, logoWidth, logoHeight);
+                
+                currentY += logoHeight + 2;
+            } catch (e) {
+                console.error('Logo failed to load:', e);
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text((data.institute.name || 'INSTITUTO').toUpperCase(), centerX, currentY + 5, { align: 'center' });
+                currentY += 12;
+            }
+        } else {
             doc.setFontSize(16);
             doc.setFont('helvetica', 'bold');
-            doc.text(data.institute.name.toUpperCase(), centerX, currentY + 5, { align: 'center' });
+            doc.text((data.institute.name || 'INSTITUTO').toUpperCase(), centerX, currentY + 5, { align: 'center' });
             currentY += 12;
         }
-    } else {
-        doc.setFontSize(16);
+
+        // Center-aligned Institute Info Below Logo
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text(data.institute.name.toUpperCase(), centerX, currentY + 5, { align: 'center' });
-        currentY += 12;
-    }
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INGLÉS', centerX, currentY, { align: 'center' });
-    currentY += 3.1;
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setCharSpace(0.3); // Add a small space between letters
-    if (data.institute.address) {
-        const capitalizedAddress = data.institute.address
-            .toLowerCase()
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-        doc.text(`${capitalizedAddress} - Mar del Plata`, centerX, currentY, { align: 'center' });
+        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.text('INGLÉS', centerX, currentY, { align: 'center' });
         currentY += 3.1;
-    }
-    if (data.institute.phone) {
-        doc.text(`Tel: ${data.institute.phone}`, centerX, currentY, { align: 'center' });
-    }
-    doc.setCharSpace(0); // Reset after
 
-    doc.setFontSize(8);
-    doc.text('IVA EXENTO', pageWidth - margin - 2, margin + 4, { align: 'right' });
-
-    // --- HEADER RIGHT: Receipt No & Date ---
-    doc.setFontSize(10);
-    doc.text(`N° ${data.receiptNumber}`, pageWidth - margin - 50, margin + 12);
-
-    const date = dayjs(data.date);
-    doc.text('FECHA:', pageWidth - margin - 50, margin + 22);
-
-    // Date boxes (divided rectangles)
-    const dateX = pageWidth - margin - 35;
-    const dateY = margin + 18;
-    const boxW = 8;
-    const boxH = 6;
-    doc.setDrawColor(180);
-    doc.rect(dateX, dateY, boxW, boxH); // Day
-    doc.rect(dateX + boxW + 1, dateY, boxW, boxH); // Month
-    doc.rect(dateX + (boxW * 2) + 2, dateY, boxW + 4, boxH); // Year
-
-    doc.setFontSize(8);
-    doc.text(date.format('DD'), dateX + 2, dateY + 4.5);
-    doc.text(date.format('MM'), dateX + boxW + 3, dateY + 4.5);
-    doc.text(date.format('YY'), dateX + (boxW * 2) + 5, dateY + 4.5);
-    doc.setDrawColor(200);
-    // Line 80-81 from previous content was the text call
-
-    // --- FISCAL INFO (Small, moved up) ---
-    doc.setFontSize(7);
-    doc.setTextColor(100);
-    let fiscalLineY = margin + 29;
-    if (data.institute.cuit) {
-        doc.text(`C.U.I.T.: ${data.institute.cuit}`, pageWidth - margin - 50, fiscalLineY);
-        fiscalLineY += 4;
-    }
-    if (data.institute.grossIncome) {
-        doc.text(`Ing. BRUTOS: ${data.institute.grossIncome}`, pageWidth - margin - 50, fiscalLineY);
-        fiscalLineY += 4;
-    }
-    if (data.institute.activityStartDate) {
-        doc.text(`Inicio de Actividad: ${dayjs(data.institute.activityStartDate).format('DD/MM/YYYY')}`, pageWidth - margin - 50, fiscalLineY);
-        fiscalLineY += 4;
-    }
-    doc.text('Documento no válido como factura.', pageWidth - margin - 50, fiscalLineY);
-
-    // --- SEPARATOR LINE ---
-    doc.setDrawColor(200);
-    doc.line(margin, margin + 45, pageWidth - margin, margin + 45);
-
-    // --- CLIENT INFO (Senores / Domicilio) ---
-    doc.setDrawColor(0);
-    doc.setTextColor(primaryColor[0]);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('SEÑORES:', margin + 10, margin + 52);
-    doc.setFont('helvetica', 'normal');
-    doc.text(data.studentName.toUpperCase(), margin + 35, margin + 52);
-    doc.line(margin + 35, margin + 53, margin + 110, margin + 53);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('DOMICILIO:', margin + 10, margin + 60);
-    doc.setFont('helvetica', 'normal');
-    doc.text((data.studentAddress || '').toUpperCase(), margin + 35, margin + 60);
-    doc.line(margin + 35, margin + 61, margin + 110, margin + 61);
-
-    // --- IVA CONDITION (Grid Box) ---
-    const ivaBoxTop = margin + 66;
-    const ivaX = margin + 10;
-    const ivaWidth = pageWidth - (margin * 2) - 20;
-    const ivaHeight = 12;
-
-    doc.setDrawColor(0);
-    doc.rect(ivaX, ivaBoxTop, ivaWidth, ivaHeight);
-
-    // Vertical centering within box
-    // Total height 12. Two lines roughly at 4.5 and 8.5 from the top of the box
-    const line1Y = ivaBoxTop + 4.5;
-    const line2Y = ivaBoxTop + 8.5;
-
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CONDICIÓN', ivaX + 2, line1Y);
-    doc.text('DE I.V.A.', ivaX + 2, line2Y);
-
-    const checkSize = 3;
-    doc.setFont('helvetica', 'normal');
-
-    // Column 1: RI & Monotributo
-    const col1X = ivaX + 35;
-    doc.text('I.V.A RESP. INSCRIPTO', col1X, line1Y);
-    doc.rect(col1X + 34, line1Y - 2.2, checkSize, checkSize);
-
-    doc.text('RESP. MONOTRIBUTO', col1X, line2Y);
-    doc.rect(col1X + 34, line2Y - 2.2, checkSize, checkSize);
-
-    // Column 2: Exento & Cons Final
-    const col2X = col1X + 48;
-    doc.text('EXENTO', col2X, line1Y);
-    doc.rect(col2X + 22, line1Y - 2.2, checkSize, checkSize);
-
-    doc.text('CONS. FINAL', col2X, line2Y);
-    doc.rect(col2X + 22, line2Y - 2.2, checkSize, checkSize);
-    if (true) { // Default as requested
         doc.setFontSize(8);
-        doc.text('X', col2X + 22.8, line2Y + 0.1);
-        doc.setFontSize(7);
-    }
-
-    // Column 3: No Responsable
-    const col3X = col2X + 42;
-    doc.text('NO RESPONSABLE', col3X, line1Y);
-    doc.rect(col3X + 28, line1Y - 2.2, checkSize, checkSize);
-
-    // --- CONCEPTS TABLE ---
-    autoTable(doc, {
-        startY: ivaBoxTop + ivaHeight + 4,
-        margin: { left: margin + 10, right: margin + 10 },
-        head: [['CONCEPTO', 'IMPORTE']],
-        body: data.concepts.map(c => [c.description.toUpperCase(), `$ ${c.amount.toLocaleString()}`]),
-        theme: 'plain',
-        headStyles: {
-            fillColor: [240, 240, 240],
-            textColor: primaryColor,
-            fontStyle: 'bold',
-            lineWidth: 0.1,
-            lineColor: [200, 200, 200]
-        },
-        styles: { fontSize: 9, cellPadding: 3 },
-        columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
+        doc.setFont('helvetica', 'bold');
+        if (data.institute.address) {
+            const capitalizedAddress = data.institute.address
+                .toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            doc.text(`${capitalizedAddress} - Mar del Plata`, centerX, currentY, { align: 'center' });
+            currentY += 3.1;
         }
-    });
+        if (data.institute.phone) {
+            doc.text(`Tel: ${data.institute.phone}`, centerX, currentY, { align: 'center' });
+        }
 
-    // --- TOTAL ---
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+        // --- HEADER RIGHT: Receipt No & Date ---
+        const headerRightX = pageWidth - margin - 50;
+        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`N° ${data.receiptNumber || '0000-0000'}`, headerRightX, margin + 12);
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('SON PESOS:', margin + 10, finalY);
-    doc.setFont('helvetica', 'normal');
-    doc.line(margin + 35, finalY + 1, margin + 105, finalY + 1);
+        const date = dayjs(data.date);
+        doc.setFont('helvetica', 'normal');
+        doc.text('FECHA:', headerRightX, margin + 22);
 
-    const totalBoxWidth = 55;
-    const totalBoxHeight = 14;
-    const totalX = pageWidth - margin - totalBoxWidth - 10;
-    const totalY = finalY - 9;
+        // Date boxes
+        const dateX = pageWidth - margin - 35;
+        const dateY = margin + 18;
+        doc.setDrawColor(180, 180, 180);
+        doc.rect(dateX, dateY, 8, 6); // Day
+        doc.rect(dateX + 9, dateY, 8, 6); // Month
+        doc.rect(dateX + 18, dateY, 12, 6); // Year
 
-    doc.setFillColor(240, 240, 240);
-    doc.rect(totalX, totalY, totalBoxWidth, totalBoxHeight, 'F');
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.3);
-    doc.rect(totalX, totalY, totalBoxWidth, totalBoxHeight);
+        doc.setFontSize(8);
+        doc.text(date.format('DD'), dateX + 2, dateY + 4.5);
+        doc.text(date.format('MM'), dateX + 11, dateY + 4.5);
+        doc.text(date.format('YY'), dateX + 21, dateY + 4.5);
 
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL  $', totalX + 5, totalY + 9.5);
-    doc.text(`${data.total.toLocaleString()}`, totalX + totalBoxWidth - 5, totalY + 9.5, { align: 'right' });
-    doc.setLineWidth(0.1); // Reset
+        // --- FISCAL INFO ---
+        doc.setFontSize(7);
+        doc.setTextColor(secondaryColor.r, secondaryColor.g, secondaryColor.b);
+        let fiscalLineY = margin + 29;
+        if (data.institute.cuit) {
+            doc.text(`C.U.I.T.: ${data.institute.cuit}`, headerRightX, fiscalLineY);
+            fiscalLineY += 4;
+        }
+        if (data.institute.grossIncome) {
+            doc.text(`Ing. BRUTOS: ${data.institute.grossIncome}`, headerRightX, fiscalLineY);
+            fiscalLineY += 4;
+        }
+        if (data.institute.activityStartDate) {
+            doc.text(`Inicio de Actividad: ${dayjs(data.institute.activityStartDate).format('DD/MM/YYYY')}`, headerRightX, fiscalLineY);
+            fiscalLineY += 4;
+        }
+        doc.text('Documento no válido como factura.', headerRightX, fiscalLineY);
 
-    // Save/Download
-    doc.save(`Recibo_${data.receiptNumber}.pdf`);
+        // --- SEPARATOR LINE ---
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, margin + 45, pageWidth - margin, margin + 45);
+
+        // --- CLIENT INFO ---
+        doc.setDrawColor(0, 0, 0);
+        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SEÑORES:', margin + 10, margin + 52);
+        doc.setFont('helvetica', 'normal');
+        doc.text((data.studentName || '').toUpperCase(), margin + 35, margin + 52);
+        doc.line(margin + 35, margin + 53, margin + 110, margin + 53);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('DOMICILIO:', margin + 10, margin + 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text((data.studentAddress || '').toUpperCase(), margin + 35, margin + 60);
+        doc.line(margin + 35, margin + 61, margin + 110, margin + 61);
+
+        // --- IVA CONDITION ---
+        const ivaBoxY = margin + 66;
+        doc.setDrawColor(0, 0, 0);
+        doc.rect(margin + 10, ivaBoxY, pageWidth - (margin * 2) - 20, 12);
+        
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CONDICIÓN', margin + 12, ivaBoxY + 4.5);
+        doc.text('DE I.V.A.', margin + 12, ivaBoxY + 8.5);
+
+        const l1y = ivaBoxY + 4.5;
+        const l2y = ivaBoxY + 8.5;
+        const col1 = margin + 45;
+        const col2 = margin + 93;
+        const col3 = margin + 135;
+
+        doc.setFont('helvetica', 'normal');
+        doc.text('I.V.A RESP. INSCRIPTO', col1, l1y);
+        doc.rect(col1 + 34, l1y - 2.2, 3, 3);
+        doc.text('RESP. MONOTRIBUTO', col1, l2y);
+        doc.rect(col1 + 34, l2y - 2.2, 3, 3);
+
+        doc.text('EXENTO', col2, l1y);
+        doc.rect(col2 + 22, l1y - 2.2, 3, 3);
+        doc.text('CONS. FINAL', col2, l2y);
+        doc.rect(col2 + 22, l2y - 2.2, 3, 3);
+        doc.text('X', col2 + 22.8, l2y + 0.1); // Checked
+
+        doc.text('NO RESPONSABLE', col3, l1y);
+        doc.rect(col3 + 28, l1y - 2.2, 3, 3);
+
+        // --- TABLE ---
+        autoTable(doc, {
+            startY: ivaBoxY + 16,
+            margin: { left: margin + 10, right: margin + 10 },
+            head: [['CONCEPTO', 'IMPORTE']],
+            body: data.concepts.map(c => [
+                (c.description || 'SIN CONCEPTO').toUpperCase(),
+                `$ ${Number(c.amount || 0).toLocaleString()}`
+            ]),
+            theme: 'plain',
+            headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+            bodyStyles: { textColor: [40, 40, 40] },
+            columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }
+        });
+
+        // --- TOTAL ---
+        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SON PESOS:', margin + 10, finalY);
+        doc.line(margin + 35, finalY + 1, margin + 105, finalY + 1);
+
+        const totalX = pageWidth - margin - 65;
+        doc.setFillColor(240, 240, 240);
+        doc.rect(totalX, finalY - 9, 55, 14, 'F');
+        doc.setDrawColor(0, 0, 0);
+        doc.rect(totalX, finalY - 9, 55, 14);
+        doc.text('TOTAL  $', totalX + 5, finalY + 0.5);
+        doc.text(`${Number(data.total || 0).toLocaleString()}`, totalX + 50, finalY + 0.5, { align: 'right' });
+
+        doc.save(`Recibo_${data.receiptNumber || Date.now()}.pdf`);
+    } catch (error) {
+        console.error('PDF Generation Error:', error);
+    }
 };
