@@ -4,12 +4,23 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { PayrollClient } from "./PayrollClient";
+import { getActiveRole } from "@/lib/roles";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function PayrollPage() {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    // Solo ADMIN, SECRETARY y SUPERADMIN (con instituto) pueden ver esta página
+    const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];
+    if (!allowedRoles.includes(activeRole)) {
+        redirect("/dashboard");
+    }
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },

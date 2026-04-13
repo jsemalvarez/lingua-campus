@@ -6,10 +6,20 @@ import { AlertCircle } from "lucide-react";
 import { getDebtorsReportAction } from "../billingActions";
 import { DebtorsClient } from "./DebtorsClient";
 import { formatFeeLabel, getMonthName } from "@/lib/utils";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function DebtorsPage() {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];
+    if (!allowedRoles.includes(activeRole)) {
+        redirect("/dashboard");
+    }
 
     const result = await getDebtorsReportAction();
     if (!result.success || !result.data) {

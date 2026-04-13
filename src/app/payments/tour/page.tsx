@@ -1,10 +1,26 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getActiveRole } from "@/lib/roles";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { ShieldCheck, FileKey, Zap, PieChart, GraduationCap, Undo2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
-export default function FinanceTourPage() {
+export default async function FinanceTourPage() {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) redirect("/login");
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];
+    if (!allowedRoles.includes(activeRole)) {
+        redirect("/dashboard");
+    }
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <Navbar />

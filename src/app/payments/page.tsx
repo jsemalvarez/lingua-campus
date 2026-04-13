@@ -28,9 +28,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const activeRole = await getActiveRole(userRoles);
     const isSecretary = activeRole === "SECRETARY";
 
-    if (activeRole === "STUDENT") {
-        // Por ahora, redirigimos a los alumnos al dashboard ya que esta página es administrativa.
-        // En el futuro se creará una vista de pagos específica para el alumno.
+    // Solo ADMIN, SECRETARY y SUPERADMIN (con instituto) pueden ver esta página administrativa
+    const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];
+    if (!allowedRoles.includes(activeRole)) {
         redirect("/dashboard");
     }
 

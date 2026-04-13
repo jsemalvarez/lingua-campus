@@ -251,9 +251,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                     </div>
                                 )}
 
-                                <Link href="/payments" className="block w-full mt-4 text-center rounded-lg bg-primary/10 text-primary py-2 text-sm font-bold hover:bg-primary/20 transition-colors">
-                                    {isAdmin ? "Ir a Cobranzas" : "Ver detalle de pagos"}
-                                </Link>
+                                {isAdmin && (
+                                    <Link href="/payments" className="block w-full mt-4 text-center rounded-lg bg-primary/10 text-primary py-2 text-sm font-bold hover:bg-primary/20 transition-colors">
+                                        Ir a Cobranzas
+                                    </Link>
+                                )}
 
                             </Card>
                         </div>

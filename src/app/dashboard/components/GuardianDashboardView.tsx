@@ -123,11 +123,7 @@ export function GuardianDashboardView({
                                 </div>
                                 Estado de Cuenta
                             </h3>
-                            <Link href="/payments">
-                                <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/5">
-                                    Ver finanzas <ChevronRight size={16} />
-                                </Button>
-                            </Link>
+
                         </div>
 
                         <div className="space-y-4 relative">
