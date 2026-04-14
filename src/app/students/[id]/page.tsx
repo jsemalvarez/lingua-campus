@@ -228,11 +228,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                     Últimos Pagos Registrados
                                 </h3>
 
-                                {student.fees.filter(f => f.originalAmount > 0).length === 0 ? (
+                                {student.fees.filter(f => f.paidAmount > 0).length === 0 ? (
                                     <p className="text-sm italic text-muted-foreground border-l-2 pl-3 border-border">Sin movimiento financiero.</p>
                                 ) : (
                                     <div className="space-y-4">
-                                        {student.fees.filter(f => f.originalAmount > 0).map(f => (
+                                        {student.fees.filter(f => f.paidAmount > 0).map(f => (
                                             <div key={f.id} className="flex flex-col gap-1.5 text-sm border-b border-border/30 pb-3 pt-2 first:pt-0 last:border-0 last:pb-0">
                                                 <div className="flex justify-between items-start">
                                                     <span className="font-medium text-foreground/90 leading-tight">

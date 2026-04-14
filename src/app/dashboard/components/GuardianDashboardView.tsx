@@ -163,7 +163,7 @@ export function GuardianDashboardView({
                                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-2">
                                             <CheckCircle2 size={14} /> Pagos Recientes
                                         </p>
-                                        {fees.filter(f => f.status === "PAID").slice(0, 3).map(fee => (
+                                        {fees.filter(f => f.status === "PAID" && f.paidAmount > 0).slice(0, 3).map(fee => (
                                             <div key={fee.id} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-background/30 hover:bg-background/60 transition-colors">
                                                 <div>
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Cuota {getMonthName(fee.month)} {fee.year}</p>

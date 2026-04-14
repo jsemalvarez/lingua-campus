@@ -577,7 +577,8 @@ export default async function DashboardPage() {
     const recentPayments = await prisma.fee.findMany({
         where: {
             instituteId: user.instituteId,
-            status: { in: ["PAID", "PARTIAL"] }
+            status: { in: ["PAID", "PARTIAL"] },
+            paidAmount: { gt: 0 }
         },
         orderBy: { datePaid: 'desc' },
         take: 3,
