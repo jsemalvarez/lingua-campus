@@ -23,6 +23,7 @@ interface ProfileFormProps {
         guardian2Phone?: string | null;
         schoolInfo?: string | null;
         registeredLevel?: string | null;
+        registeredLevelName?: string | null;
     };
 }
 
@@ -151,7 +152,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-muted-foreground">Nivel registrado</label>
-                                <p className="text-sm font-medium">{initialData.registeredLevel || "Sin nivel"}</p>
+                                <p className="text-sm font-medium">{initialData.registeredLevelName || initialData.registeredLevel || "Sin nivel"}</p>
                             </div>
                         </div>
                     </div>

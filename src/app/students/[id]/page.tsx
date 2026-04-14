@@ -88,12 +88,12 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     // Parallelize metadata fetching to reduce database connection hold time
     const [availableCourses, instituteLevels] = await Promise.all([
         prisma.course.findMany({
-            where: { instituteId: user.instituteId },
+            where: { instituteId: student.instituteId },
             select: { id: true, name: true, level: true },
             orderBy: { name: 'asc' }
         }),
         prisma.level.findMany({
-            where: { instituteId: user.instituteId },
+            where: { instituteId: student.instituteId },
             orderBy: { name: 'asc' }
         })
     ]);

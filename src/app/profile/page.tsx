@@ -27,8 +27,17 @@ export default async function ProfilePage() {
             where: { id: (session.user as any).id },
         });
         if (student) {
+            let registeredLevelName = student.registeredLevel || undefined;
+            if (student.registeredLevel) {
+                const level = await prisma.level.findUnique({
+                    where: { id: student.registeredLevel }
+                });
+                if (level) registeredLevelName = level.name;
+            }
+
             userData = {
                 ...student,
+                registeredLevelName,
                 role: "STUDENT",
             };
         }
