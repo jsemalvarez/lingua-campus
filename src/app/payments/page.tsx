@@ -242,7 +242,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     let filteredLedger = ledger;
     if (isSecretary) {
-        filteredLedger = ledger.filter(t => t.type !== "EXPENSE" && t.type !== "PAYROLL" && t.amount >= 0);
+        filteredLedger = ledger.filter(t => 
+            t.type !== "EXPENSE" && 
+            t.type !== "PAYROLL" && 
+            t.expenseId === null
+        );
     }
 
     // Mapeo de títulos originales para transacciones anuladas
