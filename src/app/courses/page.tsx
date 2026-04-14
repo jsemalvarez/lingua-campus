@@ -38,7 +38,12 @@ export default async function CoursesPage(props: PageProps) {
     const isActiveTab = tab === 'active';
     const status = isActiveTab ? "ACTIVE" : "FINISHED";
 
-    const isTeacher = user.role === "TEACHER";
+    const isTeacher = activeRole === "TEACHER";
+
+    if (isTeacher && !isActiveTab) {
+        redirect("/courses?tab=active");
+    }
+
     const whereClause: any = { instituteId: user.instituteId, status };
     if (isTeacher) {
         whereClause.teacherId = user.id;
@@ -99,7 +104,7 @@ export default async function CoursesPage(props: PageProps) {
                         </p>
                     </div>
 
-                    {(user.role === "ADMIN" || user.role === "SECRETARY") && (
+                    {(activeRole === "ADMIN" || activeRole === "SECRETARY") && (
                         <div className="flex flex-wrap items-center gap-2">
                             <Link href="/courses/new">
                                 <Button className="h-11 px-6 shadow-lg shadow-primary/20 premium-gradient border-none hover:opacity-90 font-bold transition-all hover:scale-[1.02]">
@@ -125,26 +130,28 @@ export default async function CoursesPage(props: PageProps) {
                 </div>
 
                 {/* Tabs de Estado */}
-                <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl w-fit border border-border/40">
-                    <Link href="/courses?tab=active">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-bold" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                            <CheckCircle2 size={16} className="mr-2 text-emerald-500" /> Activos
-                        </Button>
-                    </Link>
-                    <Link href="/courses?tab=finished">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${!isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-bold" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                            <Archive size={16} className="mr-2 text-amber-500" /> Historial
-                        </Button>
-                    </Link>
-                </div>
+                {!isTeacher && (
+                    <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl w-fit border border-border/40">
+                        <Link href="/courses?tab=active">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                            >
+                                <CheckCircle2 size={16} className="mr-2 text-emerald-500" /> Activos
+                            </Button>
+                        </Link>
+                        <Link href="/courses?tab=finished">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`px-4 sm:px-6 py-2 rounded-lg transition-all ${!isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                            >
+                                <Archive size={16} className="mr-2 text-amber-500" /> Historial
+                            </Button>
+                        </Link>
+                    </div>
+                )}
 
                 {/* ── Listado de Cursos ── */}
                 {courses.length === 0 ? (

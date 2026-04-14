@@ -64,6 +64,28 @@ export default async function SchedulePage({
         if (!student) redirect("/login");
         instituteId = student.instituteId;
         studentEnrollments = student.enrollments.map(e => e.courseId);
+    } else if (role === "GUARDIAN") {
+        const guardianId = (session.user as any).id;
+        const guardianLinks = await prisma.guardianStudentLink.findMany({
+            where: { guardianId },
+            include: {
+                student: {
+                    include: { enrollments: { select: { courseId: true } } }
+                }
+            }
+        });
+        
+        if (guardianLinks.length === 0) redirect("/dashboard");
+        
+        instituteId = guardianLinks[0].student.instituteId;
+        
+        guardianLinks.forEach(link => {
+            link.student.enrollments.forEach(e => {
+                if (!studentEnrollments.includes(e.courseId)) {
+                    studentEnrollments.push(e.courseId);
+                }
+            });
+        });
     } else {
         const user = await prisma.user.findUnique({
             where: { id: (session.user as any).id },
@@ -76,7 +98,7 @@ export default async function SchedulePage({
     }
 
     const isTeacher = role === "TEACHER";
-    const isStudent = role === "STUDENT";
+    const isStudentOrGuardian = role === "STUDENT" || role === "GUARDIAN";
     const effectiveTeacherId = isTeacher ? (session.user as any).id : params.teacherId;
 
     // Obtenemos los cursos, profesores y aulas para los filtros
@@ -86,7 +108,7 @@ export default async function SchedulePage({
                 instituteId: instituteId, 
                 status: "ACTIVE",
                 ...(isTeacher ? { teacherId: (session.user as any).id } : {}),
-                ...(isStudent ? { id: { in: studentEnrollments } } : {})
+                ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             },
             orderBy: { name: "asc" }
         }),
@@ -132,8 +154,8 @@ export default async function SchedulePage({
                 ...(activeCourseId ? { id: activeCourseId } : {}),
                 ...(activeTeacherId ? { teacherId: activeTeacherId } : {}),
                 ...(activeClassroomId ? { classroomId: activeClassroomId } : {}),
-                // If student, ONLY show their enrolled courses
-                ...(isStudent ? { id: { in: studentEnrollments } } : {})
+                // If student/guardian, ONLY show their enrolled courses
+                ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             }
         },
         include: {

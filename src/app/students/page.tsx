@@ -45,7 +45,7 @@ export default async function StudentsPage(props: PageProps) {
     const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
     const skip = (currentPage - 1) * PAGE_SIZE;
 
-    const isTeacher = user.role === "TEACHER";
+    const isTeacher = activeRole === "TEACHER";
 
     const tabParam = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
     const isActiveTab = tabParam === 'active';
