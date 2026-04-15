@@ -3,7 +3,8 @@
 import { useTransition, useState } from "react";
 import { createExpenseAction } from "../actions";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle, AlertCircle, UserCircle } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
+import { EntitySearch } from "./EntitySearch";
 
 interface UserInfo {
     id: string;
@@ -19,17 +20,21 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
+    const [selectedEmployee, setSelectedEmployee] = useState<UserInfo | null>(null);
 
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");
 
-        // El campo category es fijo para sueldos
-        formData.append("category", "NOMINA");
+        // El campo category es fijo para sueldos (debe coincidir con la detección en createExpenseAction)
+        formData.append("category", "Payroll");
 
         startTransition(async () => {
             const result = await createExpenseAction(formData);
             if (result.success) {
                 setStatus("success");
+                setSelectedEmployee(null);
+                const formEl = document.getElementById("salary-form") as HTMLFormElement;
+                if (formEl) formEl.reset();
                 setTimeout(() => {
                     setStatus("idle");
                 }, 2000);
@@ -41,21 +46,17 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
     };
 
     return (
-        <form action={handleSubmit} className="space-y-4">
-            <h3 className="font-semibold text-lg border-b border-border/50 pb-2 mb-4 text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                <UserCircle size={20} /> Registrar Pago de Sueldo
-            </h3>
-
+        <form id="salary-form" action={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-                <label className="text-sm font-semibold">Empleado / Profesor</label>
-                <select name="recipientId" required className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none">
-                    <option value="">Seleccionar empleado...</option>
-                    {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                            {emp.name} ({emp.role === "TEACHER" ? "Profesor" : "Admin"})
-                        </option>
-                    ))}
-                </select>
+                <EntitySearch
+                    entities={employees}
+                    selectedEntity={selectedEmployee}
+                    onSelect={(e) => setSelectedEmployee(e as UserInfo | null)}
+                    placeholder="Seleccionar empleado..."
+                    label="Empleado / Profesor"
+                    name="recipientId"
+                    colorTheme="rose"
+                />
             </div>
 
             <div className="space-y-1.5">
@@ -65,7 +66,7 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
                     name="description"
                     required
                     placeholder="Ej: Sueldo Marzo 2024"
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
                 />
             </div>
 
@@ -79,7 +80,7 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
                         step="0.01"
                         required
                         placeholder="0.00"
-                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none"
+                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                 </div>
                 <div className="space-y-1.5">
@@ -87,7 +88,7 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
                     <input
                         type="date"
                         name="date"
-                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none"
+                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
                     />
                 </div>
             </div>
@@ -104,8 +105,8 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
                 </div>
             )}
 
-            <Button type="submit" className="w-full font-bold mt-2 bg-amber-600 hover:bg-amber-700 text-white" disabled={isPending}>
-                {isPending ? "Procesando..." : "Registrar Pago (-)"}
+            <Button type="submit" className="w-full font-bold mt-2 bg-rose-600 hover:bg-rose-700 text-white" disabled={isPending}>
+                {isPending ? "Procesando..." : "Registrar Pago de Sueldo (-)"}
             </Button>
         </form>
     );

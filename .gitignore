@@ -42,3 +42,13 @@ next-env.d.ts
 
 # scripts
 /scripts
+
+# AI workspaces
+/artifacts
+
+# PWA
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/fallback-*.js
+public/swe-worker-*.js

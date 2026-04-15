@@ -14,7 +14,13 @@ import {
   BarChart3,
   Menu,
   X,
-  LogIn
+  LogIn,
+  ShieldCheck, 
+  FileKey, 
+  Zap, 
+  PieChart, 
+  Undo2, 
+  CheckCircle2
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
@@ -206,6 +212,89 @@ export default function LandingPage() {
               </p>
             </div>
 
+          </div>
+        </section>
+
+        {/* Feature: Motor Financiero Inmutable (Imported from Tour) */}
+        <section className="container mx-auto px-6 mt-32 relative z-10">
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-[100%] blur-3xl pointer-events-none -z-10" />
+          
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-semibold tracking-wide uppercase">
+              <ShieldCheck size={16} /> El Motor Financiero
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              Contabilidad blindada e inteligente
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+              Descubre cómo transformamos la complejidad administrativa en tranquilidad absoluta con un Ledger inmutable diseñado para institutos.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {/* Feature 1 */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors" />
+                  <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 text-blue-600 dark:text-blue-500 group-hover:scale-110 transition-transform">
+                      <FileKey size={28} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Libro Mayor Inmutable</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                      A diferencia de sistemas tradicionales donde los registros se pueden borrar, utilizamos un <strong>Ledger inmutable</strong>. Todo movimiento queda grabado permanentemente.
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-blue-500" /> Auditoría perfecta (Cero pérdidas de datos)</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-blue-500" /> Trazabilidad de operador (quién cobró qué y cuándo)</li>
+                  </ul>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors" />
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6 text-amber-600 dark:text-amber-500 group-hover:scale-110 transition-transform">
+                      <Undo2 size={28} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Gestión de Errores Segura</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                      ¿Se cobró un recibo equivocado? Revertimos el efecto financiero mediante un contra-asiento automático (un reembolso contable), exigiendo un motivo escrito.
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-amber-500" /> El saldo del alumno vuelve a estar pendiente</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-amber-500" /> Reparación instantánea en la caja del mes</li>
+                  </ul>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors" />
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6 text-emerald-600 dark:text-emerald-500 group-hover:scale-110 transition-transform">
+                      <Zap size={28} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Facturación Masiva</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                      Genera matrículas anuales y cuotas mensuales de todos tus alumnos activos en segundos. El algoritmo evitará duplicar deudas si el alumno ya pagó el mes.
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-500" /> Ahorro masivo de tiempo administrativo</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-500" /> Facturación inteligente anti-duplicados</li>
+                  </ul>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-colors" />
+                  <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 text-purple-600 dark:text-purple-500 group-hover:scale-110 transition-transform">
+                      <PieChart size={28} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Análisis Financiero KPI</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                      Un reporte de deudores avanzado cruza automáticamente ingresos operativos, nóminas de sueldos y cuotas para ofrecerte la rentabilidad neta en tiempo real.
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-purple-500" /> Desglose detallado de rentabilidad</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-purple-500" /> Cálculo dinámico separado de Anulaciones</li>
+                  </ul>
+              </div>
           </div>
         </section>
 

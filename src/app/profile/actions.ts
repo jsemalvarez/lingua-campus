@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 
 export async function updateProfileAction(formData: FormData) {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
+    if (!session || !session.user) {
         return { success: false, error: "No autenticado" };
     }
 
@@ -23,21 +23,23 @@ export async function updateProfileAction(formData: FormData) {
 
     try {
         if (role === "STUDENT") {
-            const student = await prisma.student.findFirst({
-                where: { email: session.user.email }
+            const student = await prisma.student.findUnique({
+                where: { id: (session.user as any).id }
             });
             if (student) {
+                const address = formData.get("address") as string;
                 await prisma.student.update({
                     where: { id: student.id },
                     data: {
                         name: name.trim(),
                         phone: phone ? phone.trim() : null,
+                        address: address ? address.trim() : null,
                     }
                 });
             }
         } else {
             await prisma.user.update({
-                where: { email: session.user.email },
+                where: { id: (session.user as any).id },
                 data: {
                     name: name.trim(),
                     phone: phone ? phone.trim() : null,
@@ -54,7 +56,7 @@ export async function updateProfileAction(formData: FormData) {
 
 export async function changePasswordAction(formData: FormData) {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
+    if (!session || !session.user) {
         return { success: false, error: "No autenticado" };
     }
 
@@ -81,8 +83,8 @@ export async function changePasswordAction(formData: FormData) {
         let userId = "";
 
         if (role === "STUDENT") {
-            const student = await prisma.student.findFirst({
-                where: { email: session.user.email }
+            const student = await prisma.student.findUnique({
+                where: { id: (session.user as any).id }
             });
             if (!student) return { success: false, error: "Estudiante no encontrado." };
             // @ts-ignore
@@ -90,7 +92,7 @@ export async function changePasswordAction(formData: FormData) {
             userId = student.id;
         } else {
             const user = await prisma.user.findUnique({
-                where: { email: session.user.email }
+                where: { id: (session.user as any).id }
             });
             if (!user) return { success: false, error: "Usuario no encontrado." };
             dbUserPasswordHash = user.password;

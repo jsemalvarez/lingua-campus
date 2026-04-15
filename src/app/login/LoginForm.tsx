@@ -12,16 +12,17 @@ import { useOnlineStatus } from "@/hooks/use-online-status";
 
 interface LoginFormProps {
   institute?: {
+    id: string;
     name: string;
     logoUrl: string | null;
   } | null;
 }
 
 export default function LoginForm({ institute }: LoginFormProps) {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [identifier, setIdentifier] = useState("");
+    const [password, setPassword]     = useState("");
+    const [error, setError]           = useState("");
+    const [loading, setLoading]       = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
@@ -39,13 +40,14 @@ export default function LoginForm({ institute }: LoginFormProps) {
         setError("");
 
         const result = await signIn("credentials", {
-            email,
+            identifier,
             password,
+            instituteId: institute?.id ?? "",
             redirect: false,
         });
 
         if (result?.error) {
-            setError("Credenciales inválidas. Verificá tu email y contraseña.");
+            setError("Credenciales inválidas. Verificá tu email, DNI o contraseña.");
             setLoading(false);
         } else {
             router.push("/dashboard");
@@ -97,20 +99,20 @@ export default function LoginForm({ institute }: LoginFormProps) {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Email */}
+                    {/* Email o DNI */}
                     <div className="space-y-1.5">
-                        <label htmlFor="email" className="text-sm font-semibold text-foreground/90">
-                            Email
+                        <label htmlFor="identifier" className="text-sm font-semibold text-foreground/90">
+                            Email o DNI
                         </label>
                         <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="tu@email.com"
+                            id="identifier"
+                            type="text"
+                            value={identifier}
+                            onChange={(e) => setIdentifier(e.target.value)}
+                            placeholder="tu@email.com o 12345678"
                             className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all bg-background text-foreground text-sm font-medium placeholder:text-muted-foreground/50 disabled:opacity-50"
                             required
-                            autoComplete="email"
+                            autoComplete="username"
                             disabled={!isOnline || loading}
                         />
                     </div>

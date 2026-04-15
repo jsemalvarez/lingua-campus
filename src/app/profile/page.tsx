@@ -7,31 +7,43 @@ import { AdminNavbar } from "../admin/institutes/AdminNavbar";
 import { ProfileForm } from "./ProfileForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { Card } from "@/components/ui/Card";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function ProfilePage() {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
+    if (!session || !session.user) {
         redirect("/login");
     }
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
 
     const role = (session.user as any).role;
     let userData: any = null;
 
     if (role === "STUDENT") {
-        const student = await prisma.student.findFirst({
-            where: { email: session.user.email },
+        const student = await prisma.student.findUnique({
+            where: { id: (session.user as any).id },
         });
         if (student) {
+            let registeredLevelName = student.registeredLevel || undefined;
+            if (student.registeredLevel) {
+                const level = await prisma.level.findUnique({
+                    where: { id: student.registeredLevel }
+                });
+                if (level) registeredLevelName = level.name;
+            }
+
             userData = {
-                name: student.name,
-                phone: student.phone,
-                email: student.email,
+                ...student,
+                registeredLevelName,
                 role: "STUDENT",
             };
         }
     } else {
         const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
+            where: { id: (session.user as any).id },
             select: {
                 name: true,
                 phone: true,
@@ -51,7 +63,7 @@ export default async function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            {isSuperAdmin ? <AdminNavbar /> : <Navbar />}
+            {isSuperAdmin ? <AdminNavbar /> : <Navbar currentActiveRole={activeRole} />}
 
             <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-3xl">
                 <header className="mb-8 space-y-1">
@@ -64,12 +76,8 @@ export default async function ProfilePage() {
                 </header>
 
                 <Card className="p-5 sm:p-8 border-border/40 shadow-sm animate-in">
-                    <ProfileForm initialData={{
-                        name: userData.name,
-                        phone: userData.phone,
-                        email: userData.email,
-                        role: userData.role,
-                    }} />
+                    <ProfileForm initialData={userData} />
+
 
                     {/* Formulario de Cambio de Contraseña */}
                     <ChangePasswordForm />

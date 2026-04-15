@@ -37,6 +37,9 @@ interface EditCourseModalProps {
     classrooms: Classroom[];
     currentStartDate: Date | null;
     currentEndDate: Date | null;
+    currentMonthlyPrice: number;
+    currentEnrollmentPrice: number;
+    currentExamPrice: number;
 }
 
 export function EditCourseModal({ 
@@ -50,7 +53,10 @@ export function EditCourseModal({
     levels, 
     classrooms,
     currentStartDate,
-    currentEndDate
+    currentEndDate,
+    currentMonthlyPrice,
+    currentEnrollmentPrice,
+    currentExamPrice
 }: EditCourseModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
@@ -70,6 +76,9 @@ export function EditCourseModal({
     const [color, setColor] = useState(currentColor || "#3b82f6");
     const [startDate, setStartDate] = useState(currentStartDate ? new Date(currentStartDate).toISOString().split('T')[0] : "");
     const [endDate, setEndDate] = useState(currentEndDate ? new Date(currentEndDate).toISOString().split('T')[0] : "");
+    const [monthlyPrice, setMonthlyPrice] = useState(currentMonthlyPrice.toString());
+    const [enrollmentPrice, setEnrollmentPrice] = useState(currentEnrollmentPrice.toString());
+    const [examPrice, setExamPrice] = useState(currentExamPrice.toString());
 
     const palette = [
         { name: "Rojo 300", value: "#fca5a5" }, { name: "Rojo 500", value: "#ef4444" }, { name: "Rojo 700", value: "#b91c1c" }, { name: "Rojo 900", value: "#7f1d1d" },
@@ -105,6 +114,9 @@ export function EditCourseModal({
         formData.append("color", color);
         formData.append("startDate", startDate);
         formData.append("endDate", endDate);
+        formData.append("monthlyPrice", monthlyPrice);
+        formData.append("enrollmentPrice", enrollmentPrice);
+        formData.append("examPrice", examPrice);
 
         setStatus("idle");
         startTransition(async () => {
@@ -159,7 +171,7 @@ export function EditCourseModal({
                                 </div>
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="space-y-1.5 focus-within:text-blue-500 transition-colors">
+                                    <div className="space-y-1.5 focus-within:text-blue-500 transition-colors md:col-span-2">
                                         <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
                                             Nombre del Curso
                                         </label>
@@ -279,6 +291,58 @@ export function EditCourseModal({
                                             type="date"
                                             value={endDate}
                                             onChange={(e) => setEndDate(e.target.value)}
+                                            className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 2.5: Pricing */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 pb-1 border-b border-border/10">
+                                    <div className="w-1 h-4 rounded-full transition-colors duration-500" style={{ backgroundColor: color }} />
+                                    <h3 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Finanzas (Precios)</h3>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="space-y-1.5 focus-within:text-emerald-500 transition-colors">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
+                                            Cuota Mensual ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={monthlyPrice}
+                                            onChange={(e) => setMonthlyPrice(e.target.value)}
+                                            required
+                                            className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5 focus-within:text-emerald-500 transition-colors">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
+                                            Matrícula ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={enrollmentPrice}
+                                            onChange={(e) => setEnrollmentPrice(e.target.value)}
+                                            required
+                                            className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5 focus-within:text-purple-500 transition-colors">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
+                                            Derecho de Examen ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={examPrice}
+                                            onChange={(e) => setExamPrice(e.target.value)}
+                                            required
                                             className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
                                         />
                                     </div>

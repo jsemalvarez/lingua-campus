@@ -52,3 +52,78 @@ export async function saveLessonAttendanceAction(
         return { success: false, error: error.message || "Error al guardar el parte de asistencia." };
     }
 }
+
+export async function scanAttendanceQRAction(
+    lessonId: string,
+    courseId: string,
+    studentId: string
+) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) {
+        return { success: false, error: "No autenticado" };
+    }
+
+    try {
+        // 1. Validar que el alumno pertenece al curso
+        const enrollment = await prisma.enrollment.findUnique({
+            where: {
+                studentId_courseId: {
+                    studentId: studentId,
+                    courseId: courseId
+                }
+            },
+            include: { student: true }
+        });
+
+        if (!enrollment || enrollment.status !== "ACTIVE") {
+            return { 
+                success: false, 
+                error: "El estudiante no pertenece a este curso o no está activo." 
+            };
+        }
+
+        // 2. Marcar presente
+        await prisma.$transaction(async (tx) => {
+            const existing = await tx.attendance.findUnique({
+                where: {
+                    studentId_lessonId: {
+                        studentId: studentId,
+                        lessonId: lessonId
+                    }
+                }
+            });
+
+            if (existing) {
+                // Solo pisarlo si no era PRESENT (quizás le habían puesto Ausente por error)
+                if (existing.status !== "PRESENT") {
+                    await tx.attendance.update({
+                        where: { id: existing.id },
+                        data: { status: "PRESENT", notes: "Marcado vía QR Kiosk" }
+                    });
+                }
+            } else {
+                await tx.attendance.create({
+                    data: {
+                        studentId: studentId,
+                        lessonId: lessonId,
+                        status: "PRESENT",
+                        notes: "Marcado vía QR Kiosk"
+                    }
+                });
+            }
+        });
+
+        // 3. Revalidar cache suavemente
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath(`/courses/${courseId}/lessons/${lessonId}/attendance`);
+
+        return { 
+            success: true, 
+            studentName: enrollment.student.name 
+        };
+
+    } catch (error: any) {
+        console.error("QR Scan Error:", error);
+        return { success: false, error: "Error interno al procesar el código QR." };
+    }
+}

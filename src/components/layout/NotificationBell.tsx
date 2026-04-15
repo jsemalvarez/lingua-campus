@@ -45,6 +45,8 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
 
     // ── Supabase Broadcast subscription ──
     useEffect(() => {
+        if (!supabaseClient || !instituteId) return;
+
         const channel = supabaseClient
             .channel(`institute:${instituteId}`)
             .on(
@@ -60,12 +62,12 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
                 if (status === "SUBSCRIBED") {
                     console.log("[NotificationBell] Broadcast channel connected ✓");
                 } else if (status === "CHANNEL_ERROR") {
-                    console.error("[NotificationBell] Broadcast channel error");
+                    console.warn("[NotificationBell] Broadcast channel error (Realtime might be disabled in Supabase project)");
                 }
             });
 
         return () => {
-            supabaseClient.removeChannel(channel);
+            supabaseClient?.removeChannel(channel);
         };
     }, [instituteId]);
 

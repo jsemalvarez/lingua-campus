@@ -74,7 +74,7 @@ export function StudentDangerZone({ studentId, studentStatus }: { studentId: str
                             <div>
                                 <h4 className="font-semibold text-foreground">Restablecer Contraseña</h4>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    Permite asignar una nueva contraseña al estudiante para que pueda acceder a su cuenta. Si dejas el campo vacío, se asignará una contraseña genérica por defecto.
+                                    Permite asignar una nueva contraseña al estudiante para que pueda acceder a su cuenta. Si dejas el campo vacío, se asignará su **DNI** como contraseña por defecto.
                                 </p>
                             </div>
 

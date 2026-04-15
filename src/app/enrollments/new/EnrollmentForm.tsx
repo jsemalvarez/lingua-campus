@@ -36,6 +36,8 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
     const [courseId, setCourseId] = useState(preselectedCourseId || "");
     const [studentId, setStudentId] = useState("");
     const [filterNoCourse, setFilterNoCourse] = useState(false);
+    const [customMonthlyPrice, setCustomMonthlyPrice] = useState("");
+    const [customEnrollmentPrice, setCustomEnrollmentPrice] = useState("");
 
     // Searchable Select State
     const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +65,8 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
         const formData = new FormData();
         formData.append("courseId", courseId);
         formData.append("studentId", studentId);
+        formData.append("customMonthlyPrice", customMonthlyPrice);
+        formData.append("customEnrollmentPrice", customEnrollmentPrice);
 
         startTransition(async () => {
             const result = await createEnrollmentAction(formData);
@@ -173,6 +177,31 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
                     <p className="text-xs text-muted-foreground mt-3 text-right relative z-10 w-full">
                         ¿No lo encuentras? <Link href="/students/new" className="text-primary font-medium hover:underline cursor-pointer relative z-20">Regístralo primero</Link>
                     </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-4 border-t border-border/30">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-emerald-600">Cuota Personalizada (Beca)</label>
+                        <input
+                            type="number"
+                            placeholder="Dejar vacío para usar precio del curso"
+                            value={customMonthlyPrice}
+                            onChange={(e) => setCustomMonthlyPrice(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 bg-background text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Si el alumno tiene una beca parcial, ingresa aquí el valor final de su cuota mensual.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-amber-600">Matrícula Personalizada</label>
+                        <input
+                            type="number"
+                            placeholder="Precio especial de inscripción"
+                            value={customEnrollmentPrice}
+                            onChange={(e) => setCustomEnrollmentPrice(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 bg-background text-sm"
+                        />
+                    </div>
                 </div>
             </div>
 

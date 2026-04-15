@@ -8,45 +8,57 @@ export const authOptions: NextAuthOptions = {
         CredentialsProvider({
             name: "Credentials",
             credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
+                identifier:  { label: "Email o DNI", type: "text" },
+                password:    { label: "Password",    type: "password" },
+                instituteId: { label: "Institute ID", type: "text" },
             },
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) return null;
+                if (!credentials?.identifier || !credentials?.password) return null;
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email },
-                });
+                const identifier  = credentials.identifier.trim();
+                const instituteId = credentials.instituteId?.trim() || undefined;
+                const isEmail     = identifier.includes("@");
 
-                if (user && user.password) {
-                    const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
-                    if (isPasswordCorrect) {
-                        return {
-                            id: user.id,
-                            name: user.name,
-                            email: user.email,
-                            role: user.role,
-                            instituteId: user.instituteId,
-                        };
+                // ── 1. Buscar en la tabla User (staff: ADMIN, TEACHER, SECRETARY, GUARDIAN) ──
+                if (isEmail) {
+                    const user = await prisma.user.findUnique({
+                        where: { email: identifier },
+                        select: { id: true, name: true, email: true, password: true, roles: true, instituteId: true }
+                    });
+
+                    if (user?.password) {
+                        const ok = await bcrypt.compare(credentials.password, user.password);
+                        if (ok) {
+                            return {
+                                id:          user.id,
+                                name:        user.name,
+                                email:       user.email,
+                                role:        user.roles[0], // Compatibilidad
+                                roles:       user.roles,
+                                instituteId: user.instituteId,
+                            };
+                        }
                     }
                 }
 
-                // @ts-ignore: Prisma cache issue in Windows
+                // ── 2. Buscar en la tabla Student ─────────────────────────────────────
                 const student = await prisma.student.findFirst({
-                    where: { email: credentials.email },
+                    where: isEmail
+                        ? { email: identifier }                          // buscar por email
+                        : { dni: identifier, instituteId: instituteId }, // buscar por DNI + instituto
                 });
 
-                // @ts-ignore: Prisma cache issue in Windows
-                if (student && student.password) {
-                    // @ts-ignore: Prisma cache issue in Windows
-                    const isStudentPasswordCorrect = await bcrypt.compare(credentials.password, student.password);
-                    if (isStudentPasswordCorrect) {
+                if (student?.password) {
+                    const ok = await bcrypt.compare(credentials.password, student.password);
+                    if (ok) {
                         return {
-                            id: student.id,
-                            name: student.name,
-                            email: student.email,
-                            role: "STUDENT",
+                            id:          student.id,
+                            name:        student.name,
+                            email:       student.email,
+                            role:        "STUDENT",
+                            roles:       ["STUDENT"],
                             instituteId: student.instituteId,
+                            birthDate:   student.birthDate,
                         };
                     }
                 }
@@ -58,18 +70,25 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.role = (user as any).role;
+                token.id          = user.id;
+                token.role        = (user as any).role;
+                token.roles       = (user as any).roles;
                 token.instituteId = (user as any).instituteId;
+                token.birthDate   = (user as any).birthDate;
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
-                (session.user as any).role = token.role;
+                (session.user as any).id          = token.id;
+                (session.user as any).role        = token.role;
+                (session.user as any).roles       = token.roles;
                 (session.user as any).instituteId = token.instituteId;
+                (session.user as any).birthDate   = token.birthDate;
             }
             return session;
         },
+
     },
     pages: {
         signIn: "/login",
@@ -78,3 +97,4 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
 };
+

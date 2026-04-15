@@ -5,9 +5,10 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { AttendanceForm } from "./AttendanceForm";
 import Link from "next/link";
-import { ArrowLeft, ClipboardCheck, BookOpen, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, BookOpen, Calendar as CalendarIcon, QrCode } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function AttendancePage({
     params
@@ -21,6 +22,10 @@ export default async function AttendancePage({
         where: { email: session.user.email },
         select: { id: true, role: true, instituteId: true }
     });
+
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
 
     if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
@@ -45,7 +50,7 @@ export default async function AttendancePage({
         redirect("/courses");
     }
 
-    const isAuthorized = user.role === "ADMIN" || user.id === course.teacher?.id;
+    const isAuthorized = user.role === "ADMIN" || user.role === "SECRETARY" || user.id === course.teacher?.id;
     if (!isAuthorized) {
         redirect(`/courses/${courseId}`);
     }
@@ -77,7 +82,7 @@ export default async function AttendancePage({
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="space-y-4 mb-4">
@@ -105,6 +110,17 @@ export default async function AttendancePage({
                                 </p>
                             </div>
                         </div>
+
+                        {!isReadOnly && (
+                            <div className="shrink-0 flex md:pt-1">
+                                <Link href={`/courses/${courseId}/lessons/${lessonId}/attendance/scanner`}>
+                                    <div className="px-5 py-3 rounded-xl bg-slate-900 dark:bg-slate-100 text-slate-50 dark:text-slate-900 font-bold hover:scale-105 transition-transform flex items-center gap-2 shadow-lg cursor-pointer hover:shadow-primary/20">
+                                        <QrCode size={20} />
+                                        Modo Escáner QR
+                                    </div>
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </header>
 

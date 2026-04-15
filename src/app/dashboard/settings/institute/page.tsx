@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { InstituteSettingsForm } from "@/features/institutes/InstituteSettingsForm";
 import { Building2, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function InstituteSettingsPage() {
     const session = await getServerSession(authOptions);
@@ -15,6 +16,9 @@ export default async function InstituteSettingsPage() {
     }
 
     const user = session.user as any;
+
+    const userRoles = user.roles || [user.role];
+    const activeRole = await getActiveRole(userRoles);
 
     if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") {
         redirect("/dashboard");
@@ -44,7 +48,7 @@ export default async function InstituteSettingsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
             <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Breadcrumbs / Header */}
                 <div className="flex flex-col gap-1.5">

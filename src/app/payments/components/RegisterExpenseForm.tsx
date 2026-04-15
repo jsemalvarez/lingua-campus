@@ -32,21 +32,19 @@ export function RegisterExpenseForm() {
 
     return (
         <form action={handleSubmit} className="space-y-4">
-            <h3 className="font-semibold text-lg border-b border-border/50 pb-2 mb-4 text-rose-600 dark:text-rose-400">Registrar Nuevo Gasto</h3>
-
             <div className="space-y-1.5">
                 <label className="text-sm font-semibold">Descripción</label>
-                <input type="text" name="description" required placeholder="Ej: Materiales, Limpieza, Alquiler..." className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                <input type="text" name="description" required placeholder="Ej: Materiales, Limpieza, Alquiler..." className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Monto ($)</label>
-                    <input type="number" name="amount" min="1" step="0.01" required placeholder="Ej: 50000" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                    <input type="number" name="amount" min="1" step="0.01" required placeholder="Ej: 50000" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
                 </div>
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Categoría</label>
-                    <select name="category" required className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none">
+                    <select name="category" required className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20">
                         <option value="ALQUILER">Alquiler / Expensas</option>
                         <option value="SERVICIOS">Servicios (Luz, Internet)</option>
                         <option value="MANTENIMIENTO">Mantenimiento / Limpieza</option>
@@ -60,11 +58,11 @@ export function RegisterExpenseForm() {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Fecha (Opcional)</label>
-                    <input type="date" name="date" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                    <input type="date" name="date" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
                 </div>
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Nº de Ticket (Opcional)</label>
-                    <input type="text" name="ticketNumber" placeholder="Ej: 001-00234" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none" />
+                    <input type="text" name="ticketNumber" placeholder="Ej: 001-00234" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
                 </div>
             </div>
 

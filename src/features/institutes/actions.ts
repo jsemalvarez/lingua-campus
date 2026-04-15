@@ -34,6 +34,9 @@ export async function updateInstituteByAdminAction(formData: FormData) {
     const facebookUrl = formData.get("facebookUrl") as string;
     const instagramUrl = formData.get("instagramUrl") as string;
     const whatsappNumber = formData.get("whatsappNumber") as string;
+    const cuit = formData.get("cuit") as string;
+    const grossIncome = formData.get("grossIncome") as string;
+    const activityStartDate = formData.get("activityStartDate") as string;
 
     if (!instituteId || !name) {
         return { success: false, error: "El ID y el nombre son obligatorios" };
@@ -52,6 +55,9 @@ export async function updateInstituteByAdminAction(formData: FormData) {
                 facebookUrl: facebookUrl ? facebookUrl.trim() : null,
                 instagramUrl: instagramUrl ? instagramUrl.trim() : null,
                 whatsappNumber: whatsappNumber ? whatsappNumber.trim() : null,
+                cuit: cuit ? cuit.trim() : null,
+                grossIncome: grossIncome ? grossIncome.trim() : null,
+                activityStartDate: activityStartDate ? new Date(activityStartDate) : null,
             }
         });
 

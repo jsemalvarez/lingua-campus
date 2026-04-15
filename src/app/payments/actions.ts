@@ -22,37 +22,134 @@ export async function createPaymentAction(formData: FormData) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
+    const feeId = formData.get("feeId") as string;
     const amountStr = formData.get("amount") as string;
+    const surchargeStr = formData.get("surcharge") as string;
+    const discountStr = formData.get("discount") as string;
     const method = formData.get("method") as string;
-    const status = formData.get("status") as string;
-    const enrollmentId = formData.get("enrollmentId") as string; // Opcional
-    const studentId = formData.get("studentId") as string; // Opcional
     const notes = formData.get("notes") as string;
 
     const amount = parseFloat(amountStr);
+    const surcharge = parseFloat(surchargeStr) || 0;
+    const discount = parseFloat(discountStr) || 0;
 
-    if (isNaN(amount) || amount <= 0) {
-        return { success: false, error: "El monto debe ser numérico y mayor a 0" };
+    if (!feeId || isNaN(amount) || amount <= 0) {
+        return { success: false, error: "Datos del pago inválidos" };
     }
 
+    // El capital que realmente se acredita a la deuda es:
+    // Lo que pagó + lo que se le perdonó - lo que es recargo (interés)
+    const capitalContribution = amount + discount - surcharge;
+
     try {
-        const currentDate = new Date();
-        await prisma.fee.create({
-            data: {
-                studentId: studentId,
-                amount,
-                year: currentDate.getFullYear(),
-                month: currentDate.getMonth() + 1, // 1-12
-                status: status === "PAID" ? "PAID" : "PENDING",
-                datePaid: status === "PAID" ? currentDate : null,
-                instituteId: user.instituteId as string
+        // 1. Obtener la Cuota (Fee)
+        const fee = await prisma.fee.findUnique({
+            where: { id: feeId },
+        });
+
+        if (!fee) return { success: false, error: "Cuota no encontrada" };
+
+        const totalPaidAfter = fee.paidAmount + capitalContribution;
+        const surplus = totalPaidAfter > fee.originalAmount ? totalPaidAfter - fee.originalAmount : 0;
+        const finalPaidAmountOnFee = Math.min(totalPaidAfter, fee.originalAmount);
+
+        // 2. Transacción para crear el pago, actualizar la cuota y manejar el saldo a favor
+        await prisma.$transaction(async (tx) => {
+            // Crear el registro de transacción individual con los ajustes
+            const payment = await tx.payment.create({
+                data: {
+                    feeId,
+                    amount,
+                    surcharge,
+                    discount,
+                    method,
+                    notes: surplus > 0 ? `${notes || ""} (Excedente de $${surplus.toLocaleString()} acreditado a saldo)`.trim() : notes,
+                    date: new Date()
+                }
+            });
+
+            // Asiento en el Libro Mayor
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: amount, // El pago real que ingresó
+                    type: "PAYMENT",
+                    method,
+                    date: new Date(),
+                    description: `Pago Cuota/Matrícula - Estudiante ID: ${fee.studentId}`,
+                    paymentId: payment.id,
+                    operatorId: user.id
+                }
+            });
+
+            // Determinar nuevo estado (basado en el capital cubierto)
+            let newStatus: any = "PARTIAL";
+            if (finalPaidAmountOnFee >= fee.originalAmount) {
+                newStatus = "PAID";
+            }
+
+            // Actualizar el "Snapshot" de la cuota
+            await tx.fee.update({
+                where: { id: feeId },
+                data: {
+                    paidAmount: finalPaidAmountOnFee,
+                    status: newStatus,
+                    datePaid: newStatus === "PAID" ? new Date() : fee.datePaid
+                }
+            });
+
+            // Si hay excedente, lo sumamos al balance del alumno
+            if (surplus > 0) {
+                await tx.student.update({
+                    where: { id: fee.studentId },
+                    data: {
+                        creditBalance: { increment: surplus }
+                    }
+                });
             }
         });
 
         revalidatePath("/payments");
+        revalidatePath("/payments/debtors");
         return { success: true };
     } catch (e: any) {
-        return { success: false, error: "Error al registrar pago" };
+        console.error(e);
+        return { success: false, error: "Error al registrar el pago" };
+    }
+}
+
+export async function getStudentPendingFeesAction(studentId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        const [fees, student] = await Promise.all([
+            prisma.fee.findMany({
+                where: {
+                    studentId,
+                    status: { in: ["PENDING", "PARTIAL"] },
+                    originalAmount: { gt: 0 },
+                    instituteId: user.instituteId as string
+                },
+                include: {
+                    enrollment: {
+                        include: { course: { select: { name: true } } }
+                    }
+                },
+                orderBy: [
+                    { year: "desc" },
+                    { month: "desc" }
+                ]
+            }),
+            prisma.student.findUnique({
+                where: { id: studentId },
+                select: { creditBalance: true }
+            })
+        ]);
+
+        return { success: true, fees, creditBalance: student?.creditBalance || 0 };
+    } catch (e: any) {
+        return { success: false, error: "Error al cargar cuotas pendientes" };
     }
 }
 
@@ -75,16 +172,31 @@ export async function createExpenseAction(formData: FormData) {
     }
 
     try {
-        await prisma.expense.create({
-            data: {
-                description: description.trim(),
-                amount,
-                category: category || "OTROS",
-                ticketNumber: ticketNumber?.trim() || null,
-                date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
-                instituteId: user.instituteId as string,
-                recipientId: recipientId || null
-            }
+        await prisma.$transaction(async (tx) => {
+            const exp = await tx.expense.create({
+                data: {
+                    description: description.trim(),
+                    amount,
+                    category: category || "OTROS",
+                    ticketNumber: ticketNumber?.trim() || null,
+                    date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
+                    instituteId: user.instituteId as string,
+                    recipientId: recipientId || null
+                }
+            });
+
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: -amount, // Salida de dinero
+                    type: category === "Payroll" ? "PAYROLL" : "EXPENSE",
+                    method: "EFECTIVO", // Por defecto
+                    date: exp.date,
+                    description: `Gasto: ${exp.category} ${exp.ticketNumber ? '- Ticket: '+exp.ticketNumber : ''}`,
+                    expenseId: exp.id,
+                    operatorId: user.id
+                }
+            });
         });
 
         revalidatePath("/payments");
@@ -94,7 +206,61 @@ export async function createExpenseAction(formData: FormData) {
     }
 }
 
-export async function updateExpenseAction(expenseId: string, formData: FormData) {
+export async function voidExpenseAction(expenseId: string, reason?: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            const expense = await tx.expense.findFirst({
+                where: { id: expenseId, instituteId: user.instituteId as string }
+            });
+
+            if (!expense) throw new Error("Gasto no encontrado");
+            if (expense.status === "VOIDED") throw new Error("El gasto ya está anulado");
+
+            // Marcar gasto como anulado
+            await tx.expense.update({
+                where: { id: expense.id },
+                data: { status: "VOIDED" }
+            });
+
+            // Marcar transacción original como anulada
+            await tx.transaction.updateMany({
+                where: { expenseId: expense.id },
+                data: { status: "VOIDED" }
+            });
+
+            // Generar contra-asiento
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: expense.amount, // Positivo para compensar el gasto negativo original
+                    type: "ADJUSTMENT",
+                    method: "EFECTIVO",
+                    date: new Date(),
+                    description: `Anulación de Gasto #${expense.id.slice(-6)}`,
+                    expenseId: expense.id,
+                    operatorId: user.id
+                }
+            });
+
+            // Desmarcar lecciones asociadas al expense anulado
+            // para que vuelvan a aparecer como pendientes en la próxima liquidación
+            await tx.lesson.updateMany({
+                where: { expenseId: expense.id },
+                data: { expenseId: null }
+            });
+        });
+
+        revalidatePath("/payments");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message || "Error al anular el gasto" };
+    }
+}
+
+export async function createIncomeAction(formData: FormData) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
@@ -102,7 +268,9 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
     const amountStr = formData.get("amount") as string;
     const category = formData.get("category") as string;
     const dateStr = formData.get("date") as string;
+    const method = formData.get("method") as string;
     const ticketNumber = formData.get("ticketNumber") as string;
+    const studentId = formData.get("studentId") as string;
 
     const amount = parseFloat(amountStr);
 
@@ -111,42 +279,425 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
     }
 
     try {
-        await prisma.expense.update({
-            where: { 
-                id: expenseId,
-                instituteId: user.instituteId as string // Seguridad extra
-            },
-            data: {
-                description: description.trim(),
-                amount,
-                category: category || "OTROS",
-                ticketNumber: ticketNumber?.trim() || null,
-                date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
-            }
+        await prisma.$transaction(async (tx) => {
+            const inc = await tx.miscellaneousIncome.create({
+                data: {
+                    description: description.trim(),
+                    amount,
+                    category: category || "OTROS",
+                    method: method || "EFECTIVO",
+                    ticketNumber: ticketNumber?.trim() || null,
+                    date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
+                    instituteId: user.instituteId as string,
+                    studentId: studentId || null
+                }
+            });
+
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: amount,
+                    type: "MISC_INCOME",
+                    method: inc.method,
+                    date: inc.date,
+                    description: `Ingreso: ${inc.category} ${inc.ticketNumber ? '- '+inc.ticketNumber : ''}`,
+                    miscIncomeId: inc.id,
+                    operatorId: user.id
+                }
+            });
         });
 
         revalidatePath("/payments");
         return { success: true };
     } catch (e: any) {
-        return { success: false, error: "Error al actualizar el gasto" };
+        console.error(e);
+        return { success: false, error: "Error al registrar el ingreso extra" };
     }
 }
 
-export async function deleteExpenseAction(expenseId: string) {
+export async function generateStandaloneEnrollmentFeeAction(formData: FormData) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, instituteId: true }
+    });
+
+    if (!user || !user.instituteId) return { success: false, error: "Sin permisos" };
+
+    const studentId = formData.get("studentId") as string;
+    const year = parseInt(formData.get("year") as string);
+    const amount = parseFloat(formData.get("amount") as string);
+
+    if (!studentId || isNaN(year) || isNaN(amount)) {
+        return { success: false, error: "Datos incompletos" };
+    }
+
+    try {
+        // Verificar si ya existe una matrícula de este tipo para este año (para evitar duplicados accidentales)
+        const existing = await prisma.fee.findFirst({
+            where: {
+                studentId,
+                year,
+                type: "ENROLLMENT",
+                instituteId: user.instituteId
+            }
+        });
+
+        if (existing) {
+            return { success: false, error: `Ya existe una matrícula registrada para este alumno en el año ${year}` };
+        }
+
+        await prisma.fee.create({
+            data: {
+                studentId,
+                year,
+                month: new Date().getMonth() + 1, // Mes administrativo de creación
+                type: "ENROLLMENT",
+                originalAmount: amount,
+                paidAmount: 0,
+                status: "PENDING",
+                instituteId: user.instituteId
+            }
+        });
+
+        revalidatePath("/payments");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Error al generar la matrícula" };
+    }
+}
+
+export async function voidPaymentAction(paymentId: string, reason?: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
     try {
-        await prisma.expense.delete({
-            where: { 
-                id: expenseId,
-                instituteId: user.instituteId as string // Seguridad extra
-            }
+        await prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.findUnique({
+                where: { id: paymentId },
+                include: { fee: true }
+            });
+
+            if (!payment) throw new Error("Pago no encontrado");
+            if (payment.status === "VOIDED") throw new Error("El pago ya fue anulado");
+            if (payment.fee.instituteId !== user.instituteId) throw new Error("Acceso denegado");
+
+            // Marcar el pago como anulado
+            await tx.payment.update({
+                where: { id: payment.id },
+                data: { status: "VOIDED" }
+            });
+
+            // Marcar transacción original como anulada
+            await tx.transaction.updateMany({
+                where: { paymentId: payment.id },
+                data: { status: "VOIDED" }
+            });
+
+            // Contra-asiento
+            const adjustmentDescription = reason
+                ? `Anulación de Pago de Cuota #${payment.id.slice(-6)} - Motivo: ${reason}`
+                : `Anulación de Pago de Cuota #${payment.id.slice(-6)}`;
+                
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: -payment.amount, // Salida de dinero para revertir el ingreso
+                    type: "REFUND",
+                    method: payment.method,
+                    date: new Date(),
+                    description: adjustmentDescription,
+                    paymentId: payment.id,
+                    operatorId: user.id
+                }
+            });
+
+            // Recalcular balance de la cuenta
+            const capitalContribution = payment.amount + payment.discount - payment.surcharge;
+            const newPaidAmount = Math.max(0, payment.fee.paidAmount - capitalContribution);
+
+            let newStatus: any = "PARTIAL";
+            if (newPaidAmount === 0) newStatus = "PENDING";
+
+            await tx.fee.update({
+                where: { id: payment.feeId },
+                data: {
+                    paidAmount: newPaidAmount,
+                    status: newStatus,
+                    datePaid: newStatus === "PAID" ? payment.fee.datePaid : null
+                }
+            });
+        });
+
+        revalidatePath("/payments");
+        revalidatePath("/payments/debtors");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message || "Error al anular pago" };
+    }
+}
+
+export async function voidIncomeAction(incomeId: string, reason?: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            const income = await tx.miscellaneousIncome.findFirst({
+                where: { id: incomeId, instituteId: user.instituteId as string }
+            });
+
+            if (!income) throw new Error("Ingreso no encontrado");
+            if (income.status === "VOIDED") throw new Error("El ingreso ya fue anulado");
+
+            // Marcar ingreso como anulado
+            await tx.miscellaneousIncome.update({
+                where: { id: income.id },
+                data: { status: "VOIDED" }
+            });
+
+            // Marcar transacción original como anulada
+            await tx.transaction.updateMany({
+                where: { miscIncomeId: income.id },
+                data: { status: "VOIDED" }
+            });
+
+            // Generar contra-asiento
+            const adjustmentDescription = reason
+                ? `Anulación de Ingreso #${income.id.slice(-6)} - Motivo: ${reason}`
+                : `Anulación de Ingreso #${income.id.slice(-6)}`;
+                
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: -income.amount, // Negativo para compensar el ingreso original
+                    type: "ADJUSTMENT",
+                    method: income.method,
+                    date: new Date(),
+                    description: adjustmentDescription,
+                    miscIncomeId: income.id,
+                    operatorId: user.id
+                }
+            });
         });
 
         revalidatePath("/payments");
         return { success: true };
     } catch (e: any) {
-        return { success: false, error: "Error al eliminar el gasto" };
+        return { success: false, error: e.message || "Error al anular el ingreso" };
+    }
+}
+
+/**
+ * Registra un adelanto de dinero (sin vincular a cuota) directamente al saldo del alumno.
+ */
+export async function registerAdvanceAction(formData: FormData) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    const studentId = formData.get("studentId") as string;
+    const amountStr = formData.get("amount") as string;
+    const method = formData.get("method") as string;
+    const notes = formData.get("notes") as string;
+
+    const amount = parseFloat(amountStr);
+
+    if (!studentId || isNaN(amount) || amount <= 0) {
+        return { success: false, error: "Datos del adelanto inválidos" };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId },
+            select: { name: true }
+        });
+
+        if (!student) return { success: false, error: "Alumno no encontrado" };
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Crear el registro en MiscellaneousIncome para tener trazabilidad
+            const income = await tx.miscellaneousIncome.create({
+                data: {
+                    description: notes || "Adelanto de Pago - Saldo a Favor",
+                    amount,
+                    category: "ADELANTO",
+                    method: method || "EFECTIVO",
+                    date: new Date(),
+                    instituteId: user.instituteId as string,
+                    studentId: studentId,
+                    status: "VALID"
+                }
+            });
+
+            // 2. Crear transacción en el libro mayor
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: amount,
+                    type: "MISC_INCOME",
+                    method: income.method,
+                    date: new Date(),
+                    description: `Adelanto - ${student.name}`,
+                    miscIncomeId: income.id,
+                    operatorId: user.id
+                }
+            });
+
+            // 3. Incrementar el crédito del alumno
+            await tx.student.update({
+                where: { id: studentId },
+                data: { creditBalance: { increment: amount } }
+            });
+        });
+
+        revalidatePath("/payments");
+        revalidatePath("/students");
+        return { success: true };
+    } catch (e) {
+        console.error(e);
+        return { success: false, error: "Error al registrar el adelanto" };
+    }
+}
+
+/**
+ * Permite pagar una cuota usando el saldo a favor (creditBalance) del alumno.
+ */
+export async function applyCreditToFeeAction(feeId: string, creditAmount: number) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    if (isNaN(creditAmount) || creditAmount <= 0) {
+        return { success: false, error: "Monto de crédito inválido" };
+    }
+
+    try {
+        const fee = await prisma.fee.findUnique({
+            where: { id: feeId },
+            include: { student: true }
+        });
+
+        if (!fee || !fee.student) return { success: false, error: "Cuota o alumno no encontrado" };
+
+        if (fee.student.creditBalance < creditAmount) {
+            return { success: false, error: "Saldo insuficiente" };
+        }
+
+        const remainingDebt = fee.originalAmount - fee.paidAmount;
+        const actualApplication = Math.min(creditAmount, remainingDebt);
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Crear registro de pago (virtualmente es un pago con método 'SALDO')
+            const payment = await tx.payment.create({
+                data: {
+                    feeId,
+                    amount: actualApplication,
+                    method: "SALDO",
+                    notes: "Pago con saldo a favor",
+                    date: new Date()
+                }
+            });
+
+            // 2. Crear transacción en libro mayor (es un ajuste de balance interno, suma 0 neto a la caja real)
+            // Pero lo registramos como ADJUSTMENT para trazabilidad
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: 0, // No entra dinero real a la caja hoy, ya entró antes
+                    type: "ADJUSTMENT",
+                    method: "SALDO",
+                    date: new Date(),
+                    description: `Aplicación de Saldo a Favor - Cuota ${fee.month}/${fee.year}`,
+                    paymentId: payment.id,
+                    operatorId: user.id
+                }
+            });
+
+            // 3. Descontar del saldo del alumno
+            await tx.student.update({
+                where: { id: fee.studentId },
+                data: { creditBalance: { decrement: actualApplication } }
+            });
+
+            // 4. Actualizar estado de la cuota
+            const newTotalPaid = fee.paidAmount + actualApplication;
+            const newStatus = newTotalPaid >= fee.originalAmount ? "PAID" : "PARTIAL";
+
+            await tx.fee.update({
+                where: { id: feeId },
+                data: {
+                    paidAmount: newTotalPaid,
+                    status: newStatus,
+                    datePaid: newStatus === "PAID" ? new Date() : fee.datePaid
+                }
+            });
+        });
+
+        revalidatePath("/payments");
+        revalidatePath("/students");
+        return { success: true };
+    } catch (e: any) {
+        console.error(e);
+        return { success: false, error: "Error al aplicar el saldo a favor" };
+    }
+}
+
+export async function getReceiptDataAction(paymentId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        const payment = await prisma.payment.findUnique({
+            where: { id: paymentId },
+            include: {
+                fee: {
+                    include: {
+                        student: {
+                            select: {
+                                name: true,
+                                address: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!payment) return { success: false, error: "Pago no encontrado" };
+        if (payment.fee.instituteId !== user.instituteId) return { success: false, error: "Acceso denegado" };
+
+        const institute = await prisma.institute.findUnique({
+            where: { id: user.instituteId },
+            select: {
+                name: true,
+                address: true,
+                phone: true,
+                cuit: true,
+                grossIncome: true,
+                activityStartDate: true,
+                logoUrl: true
+            }
+        });
+
+        return { 
+            success: true, 
+            payment: {
+                id: payment.id,
+                amount: payment.amount,
+                surcharge: payment.surcharge,
+                discount: payment.discount,
+                date: payment.date,
+                feeType: payment.fee.type,
+                feeMonth: payment.fee.month,
+                feeYear: payment.fee.year,
+                studentName: payment.fee.student.name,
+                studentAddress: payment.fee.student.address
+            },
+            institute 
+        };
+    } catch (e: any) {
+        console.error(e);
+        return { success: false, error: "Error al cargar datos del recibo" };
     }
 }

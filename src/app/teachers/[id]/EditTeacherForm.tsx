@@ -11,6 +11,7 @@ interface TeacherData {
     name: string;
     email: string;
     phone: string | null;
+    hourlyRate?: number | null;
 }
 
 export function EditTeacherForm({ teacher, onCancel }: { teacher: TeacherData, onCancel: () => void }) {
@@ -63,6 +64,10 @@ export function EditTeacherForm({ teacher, onCancel }: { teacher: TeacherData, o
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular (Opcional)</label>
                         <input type="tel" name="phone" defaultValue={teacher.phone || ""} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="+54 9 11..." />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Valor Hora ($)</label>
+                        <input type="number" step="0.01" name="hourlyRate" defaultValue={teacher.hourlyRate || 0} className="w-full px-4 py-2 rounded-lg border border-input transition-all bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none" placeholder="0.00" />
                     </div>
                 </div>
             </div>

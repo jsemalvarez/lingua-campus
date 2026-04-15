@@ -16,8 +16,16 @@ export async function createStudentAction(formData: FormData) {
     }
 
     const instituteId = (session.user as any).instituteId;
-    if (!instituteId) {
-        return { success: false, error: "No estás asignado a un instituto válido" };
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email as string },
+        select: { role: true, roles: true }
+    });
+
+    const userRoles = (user?.roles as string[]) || [user?.role];
+    const isAdmin = userRoles.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r));
+
+    if (!isAdmin || !instituteId) {
+        return { success: false, error: "No tienes permisos para registrar alumnos en este instituto" };
     }
 
     try {

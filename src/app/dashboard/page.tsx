@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -16,24 +18,130 @@ import {
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { StudentsChart } from "./components/StudentsChart";
+import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
+import { GuardianDashboardView } from "./components/GuardianDashboardView";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user?.email) {
+    if (!session || !session.user || !session.user.email) {
         redirect("/login");
     }
 
-    // Si es estudiante, armamos una vista personalizada
-    if ((session.user as any).role === "STUDENT") {
-        const student = await prisma.student.findUnique({
-            where: {
-                email_instituteId: {
-                    email: session.user.email!,
-                    instituteId: session.user.instituteId!
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const activeRole = await getActiveRole(userRoles);
+
+    // ─── GUARDIAN View ───
+    if (activeRole === "GUARDIAN") {
+        const guardianId = sessionUser.id;
+        
+        const guardianLinks = await prisma.guardianStudentLink.findMany({
+            where: { guardianId },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        name: true,
+                        institute: { select: { name: true } },
+                        enrollments: {
+                            where: { status: "ACTIVE" },
+                            include: {
+                                course: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        lessons: {
+                                            where: { date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
+                                            orderBy: { date: 'asc' },
+                                            take: 5,
+                                            select: { id: true, date: true, topic: true }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        fees: {
+                            orderBy: [{ year: 'desc' }, { month: 'desc' }],
+                            take: 10,
+                            select: {
+                                id: true,
+                                month: true,
+                                year: true,
+                                originalAmount: true,
+                                paidAmount: true,
+                                status: true,
+                                datePaid: true,
+                                student: { select: { name: true } }
+                            }
+                        }
+                    }
                 }
-            },
-            select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } }
+            }
+        });
+
+        if (guardianLinks.length === 0) {
+            // No hay vinculación aún
+            return (
+                <div className="min-h-screen bg-background">
+                    <Navbar currentActiveRole={activeRole} />
+                    <main className="container mx-auto px-4 py-20 text-center">
+                        <div className="max-w-md mx-auto space-y-4">
+                            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                                <Users className="text-muted-foreground" size={32} />
+                            </div>
+                            <h2 className="text-2xl font-bold">Portal de Tutores</h2>
+                            <p className="text-muted-foreground">
+                                Todavía no tenés alumnos asociados a tu cuenta. Por favor, contactate con la secretaría del instituto.
+                            </p>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const students = guardianLinks.map(l => l.student);
+        const instituteName = students[0]?.institute?.name || "Lingua Campus";
+        
+        // Flatten lessons
+        const allLessons = guardianLinks.flatMap(l => 
+            l.student.enrollments.flatMap(e => 
+                e.course.lessons.map(lesson => ({
+                    ...lesson,
+                    course: { name: e.course.name },
+                    studentName: l.student.name
+                }))
+            )
+        ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 6);
+
+        // Flatten fees
+        const allFees = guardianLinks.flatMap(l => l.student.fees)
+            .sort((a,b) => {
+                if (a.year !== b.year) return b.year - a.year;
+                return b.month - a.month;
+            });
+
+        return (
+            <div className="min-h-screen bg-background">
+                <Navbar currentActiveRole={activeRole} />
+                <GuardianDashboardView 
+                    guardianName={sessionUser.name || "Tutor"}
+                    instituteName={instituteName}
+                    students={students}
+                    upcomingLessons={allLessons}
+                    fees={allFees}
+                />
+            </div>
+        );
+    }
+
+    // ─── STUDENT View ───
+    if (activeRole === "STUDENT") {
+        const student = await prisma.student.findUnique({
+            where: { id: (session.user as any).id },
+            select: { id: true, name: true, birthDate: true, instituteId: true, institute: { select: { name: true } } }
         });
 
         if (!student) redirect("/login");
@@ -82,20 +190,35 @@ export default async function DashboardPage() {
 
         // Cuotas pendientes
         const pendingFees = await prisma.fee.count({
-            where: { studentId: student.id, status: { in: ["PENDING", "OVERDUE"] } }
+            where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } }
         });
 
         const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+        // Calcular edad
+        let isMinor = false;
+        if (student.birthDate) {
+            const birth = new Date(student.birthDate);
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            isMinor = age < 18;
+        }
+
         const studentStats = [
             { label: "Mis Cursos", value: enrollments.length.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
             { label: "Asistencia", value: totalAttendances > 0 ? `${attendanceRate}%` : "—", icon: GraduationCap, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Cuotas Pendientes", value: pendingFees.toString(), icon: DollarSign, color: pendingFees > 0 ? "text-amber-600" : "text-green-600", bg: pendingFees > 0 ? "bg-amber-50" : "bg-green-50" },
+            // Solo mostrar cuotas si es mayor de 18
+            ...(!isMinor ? [{ label: "Cuotas Pendientes", value: pendingFees.toString(), icon: DollarSign, color: pendingFees > 0 ? "text-amber-600" : "text-green-600", bg: pendingFees > 0 ? "bg-amber-50" : "bg-green-50" }] : []),
         ];
+
 
         return (
             <div className="min-h-screen bg-background">
-                <Navbar />
+                <Navbar currentActiveRole={activeRole} />
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
                         <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
@@ -108,7 +231,11 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Stats */}
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className={`grid gap-4 ${
+                        studentStats.length === 1 ? "grid-cols-1" : 
+                        studentStats.length === 2 ? "md:grid-cols-2" : 
+                        "md:grid-cols-3"
+                    }`}>
                         {studentStats.map((stat, i) => (
                             <Card key={i} className="p-6 hover:shadow-md transition-shadow">
                                 <div className="flex items-center justify-between">
@@ -194,13 +321,13 @@ export default async function DashboardPage() {
         redirect("/admin/institutes");
     }
 
-    const isTeacher = user.role === "TEACHER";
+    const isActiveTeacher = activeRole === "TEACHER";
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // ─── TEACHER-specific dashboard ───
-    if (isTeacher) {
+    if (isActiveTeacher) {
         // Cursos asignados al profesor con sus horarios
         const teacherCourses = await prisma.course.findMany({
             where: { teacherId: user.id, instituteId: user.instituteId, status: "ACTIVE" },
@@ -245,7 +372,7 @@ export default async function DashboardPage() {
 
         return (
             <div className="min-h-screen bg-background pb-24">
-                <Navbar />
+                <Navbar currentActiveRole={activeRole} />
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
@@ -397,19 +524,40 @@ export default async function DashboardPage() {
     const monthlyFees = await prisma.fee.findMany({
         where: {
             instituteId: user.instituteId,
-            status: "PAID",
+            status: { in: ["PAID", "PARTIAL"] },
             year: currentYear,
             month: currentMonth
         },
-        select: { amount: true }
+        select: { paidAmount: true }
     });
-    const monthlyIncome = monthlyFees.reduce((acc, curr) => acc + curr.amount, 0);
+    const monthlyIncome = monthlyFees.reduce((acc, curr) => acc + curr.paidAmount, 0);
+
+    const isSecretary = activeRole === "SECRETARY";
+
+    // 7. Get all Active Enrollments for context
+    const activeEnrollments = await prisma.enrollment.findMany({
+        where: {
+            course: { instituteId: user.instituteId },
+            status: 'ACTIVE',
+            student: { status: 'ACTIVE' }
+        },
+        include: {
+            course: { select: { name: true, color: true } }
+        }
+    });
+
+    const enrolledStudentIds = new Set<string>();
+    activeEnrollments.forEach(enrollment => {
+        enrolledStudentIds.add(enrollment.studentId);
+    });
+    const enrolledStudentsCount = enrolledStudentIds.size;
 
     const stats = [
         { label: "Estudiantes Activos", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+        { label: "En Cursos", value: enrolledStudentsCount.toString(), icon: Users, color: "text-emerald-600", bg: "bg-emerald-50" },
         { label: "Cursos Activos", value: totalCourses.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
         { label: "Profesores", value: totalTeachers.toString(), icon: GraduationCap, color: "text-orange-600", bg: "bg-orange-50" },
-        { label: "Ingresos del Mes", value: new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyIncome), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+        ...(!isSecretary ? [{ label: "Ingresos del Mes", value: new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyIncome), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" }] : []),
     ];
 
     // 5. Fetch upcoming lessons
@@ -429,7 +577,8 @@ export default async function DashboardPage() {
     const recentPayments = await prisma.fee.findMany({
         where: {
             instituteId: user.instituteId,
-            status: "PAID"
+            status: { in: ["PAID", "PARTIAL"] },
+            paidAmount: { gt: 0 }
         },
         orderBy: { datePaid: 'desc' },
         take: 3,
@@ -443,30 +592,14 @@ export default async function DashboardPage() {
         return months[month - 1] || "";
     };
 
-    // 7. Data for the Wow-Factor Students Chart
-    // Get all Active Enrollments mapped by course
-    const activeEnrollments = await prisma.enrollment.findMany({
-        where: {
-            course: { instituteId: user.instituteId },
-            status: 'ACTIVE',
-            student: { status: 'ACTIVE' }
-        },
-        include: {
-            course: { select: { name: true, color: true } }
-        }
-    });
-
-    // Grouping by course name
+    // Grouping for chart
     const courseInfo: Record<string, { count: number; color: string }> = {};
-    const enrolledStudentIds = new Set<string>();
-
     activeEnrollments.forEach(enrollment => {
         const courseName = enrollment.course.name;
         if (!courseInfo[courseName]) {
             courseInfo[courseName] = { count: 0, color: enrollment.course.color || "#3b82f6" };
         }
         courseInfo[courseName].count += 1;
-        enrolledStudentIds.add(enrollment.studentId);
     });
 
     const chartData = Object.entries(courseInfo).map(([name, info]) => ({
@@ -490,7 +623,7 @@ export default async function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -505,7 +638,11 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className={`grid gap-4 md:grid-cols-2 ${
+                    stats.length === 3 ? "lg:grid-cols-3" : 
+                    stats.length === 4 ? "lg:grid-cols-4" : 
+                    "lg:grid-cols-3 xl:grid-cols-5"
+                }`}>
                     {stats.map((stat, i) => (
                         <Card key={i} className="p-6 hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
@@ -522,8 +659,13 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Enhanced Wow-Factor Graphics Section */}
-                <div className="mb-6">
+                <div className="mb-6 space-y-6">
                     <StudentsChart data={chartData} totalActive={totalStudents} />
+                    {!isSecretary && (
+                        <Suspense fallback={<Card className="h-[450px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                            <AnnualFinanceChartServer instituteId={user.instituteId} />
+                         </Suspense>
+                    )}
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -568,7 +710,7 @@ export default async function DashboardPage() {
                                         <span className="text-xs text-muted-foreground">Cuota {getMonthName(payment.month)} {payment.year}</span>
                                     </div>
                                     <div className="text-sm font-bold text-green-600">
-                                        +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.amount)}
+                                        +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.paidAmount)}
                                     </div>
                                 </div>
                             ))}

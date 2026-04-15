@@ -35,6 +35,9 @@ model Institute {
   whatsappNumber String?
   pwaIcon192 String?
   pwaIcon512 String?
+  cuit        String?
+  grossIncome String?
+  activityStartDate DateTime?
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -43,6 +46,7 @@ model Institute {
   users         User[]
   students      Student[]
   courses       Course[]
+  miscellaneousIncome MiscellaneousIncome[]
   expenses      Expense[]
   classrooms    Classroom[]
   levels        Level[]
@@ -57,24 +61,33 @@ enum UserRole {
   SUPERADMIN // All access (L-C devs)
   ADMIN      // Institute owner/admin
   TEACHER    // Staff member
+  SECRETARY  // Administrative staff
+  GUARDIAN   // Parent / Guardian
 }
 
 model User {
   id          String   @id @default(cuid())
   email       String   @unique
   password    String
-  role        UserRole @default(ADMIN)
+  role        UserRole @default(ADMIN) // @deprecated - Use roles instead
+  roles       UserRole[] @default([ADMIN])
+  dni         String?    @unique
   name        String     // Nombre Completo
   phone       String?    // Celular
   avatarUrl   String?
   status      String   @default("ACTIVE") // ACTIVE, DELETED
   preferences Json?      // Almacena preferencias visuales como ordenamiento de cursos
   
+  hourlyRate  Float?   @default(0)
+  
   instituteId String?
   institute   Institute? @relation(fields: [instituteId], references: [id])
   
   courses     Course[]   @relation("CourseTeacher")
   expensesReceived Expense[]  @relation("RecipientExpenses")
+  
+  // Relation for Guardian Portal
+  guardianLinks GuardianStudentLink[] @relation("GuardianToStudent")
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -107,6 +120,9 @@ model Student {
   guardian2Phone    String?
   birthDate     DateTime?
   joinDate      DateTime @default(now())
+
+  // Billetera Virtual (Saldos a favor)
+  creditBalance Float    @default(0)
   
   instituteId   String
   institute     Institute @relation(fields: [instituteId], references: [id])
@@ -115,11 +131,33 @@ model Student {
   attendances   Attendance[]
   grades        Grade[]
   fees          Fee[]
+  miscellaneousIncome MiscellaneousIncome[]
+  
+  // Relation for Guardian Portal
+  guardianLinks GuardianStudentLink[] @relation("StudentToGuardian")
+
+  // Relation for data completion tokens
+  dataTokens    StudentDataToken[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([email, instituteId])
+  @@unique([dni, instituteId])
+}
+
+model GuardianStudentLink {
+  id          String   @id @default(cuid())
+  guardianId  String
+  guardian    User     @relation("GuardianToStudent", fields: [guardianId], references: [id])
+  studentId   String
+  student     Student  @relation("StudentToGuardian", fields: [studentId], references: [id])
+  relation    String?  // Madre, Padre, Tío, etc.
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([guardianId, studentId])
 }
 
 model Course {
@@ -146,6 +184,11 @@ model Course {
   startDate   DateTime?
   endDate     DateTime?
 
+  // Financials
+  monthlyPrice   Float @default(0)
+  enrollmentPrice Float @default(0)
+  examPrice      Float @default(0)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -159,6 +202,15 @@ model Enrollment {
   
   enrolledAt  DateTime @default(now())
   status      String   @default("ACTIVE") // ACTIVE, FINISHED, INCOMPLETE
+
+  // Custom Pricing (Scholarships)
+  customMonthlyPrice   Float?
+  customEnrollmentPrice Float?
+  customExamPrice      Float?
+
+  takesExam   Boolean  @default(false)
+
+  fees        Fee[]
 
   @@unique([studentId, courseId])
 }
@@ -241,6 +293,9 @@ model Lesson {
   scheduleId  String?
   schedule    Schedule? @relation(fields: [scheduleId], references: [id])
 
+  expenseId   String?
+  expense     Expense? @relation(fields: [expenseId], references: [id])
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -283,10 +338,59 @@ model Grade {
 // FINANCIALS
 // -----------------------------------------------------------------------------
 
+enum TransactionType {
+  PAYMENT        // Ingreso por Cuota/Matrícula
+  EXPENSE        // Gasto común
+  PAYROLL        // Pago de sueldo
+  REFUND         // Devolución a un alumno
+  MISC_INCOME    // Otros ingresos (libros, excursiones)
+  ADJUSTMENT     // Ajustes de balance
+}
+
+enum TransactionStatus {
+  VALID
+  VOIDED     // Anulado por error humano
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  instituteId String
+  amount      Float    // Positivo para ingresos, Negativo para salidas
+  type        TransactionType
+  method      String   // EFECTIVO, TRANSFERENCIA, etc.
+  date        DateTime @default(now())
+  status      TransactionStatus @default(VALID)
+  
+  description String?  // Concepto
+
+  // Enlaces a la entidad original (sólo uno tendrá valor)
+  paymentId   String?
+  payment     Payment? @relation(fields: [paymentId], references: [id])
+  
+  expenseId   String?
+  expense     Expense? @relation(fields: [expenseId], references: [id])
+  
+  miscIncomeId String?
+  miscIncome   MiscellaneousIncome? @relation(fields: [miscIncomeId], references: [id])
+
+  operatorId  String?  // Id del usuario que registró el movimiento (opcional)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([instituteId])
+}
+
 enum PaymentStatus {
   PENDING
+  PARTIAL
   PAID
   OVERDUE
+}
+
+enum FeeType {
+  MONTHLY
+  ENROLLMENT
+  EXAM
 }
 
 model Fee {
@@ -294,7 +398,14 @@ model Fee {
   studentId   String
   student     Student  @relation(fields: [studentId], references: [id])
   
-  amount      Float
+  enrollmentId String?
+  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id])
+
+  type        FeeType @default(MONTHLY)
+  
+  originalAmount Float    // Precio base al momento de generar (Snapshot)
+  paidAmount     Float    @default(0) // Suma de todos los pagos realizados
+  
   year        Int
   month       Int      // 1-12
   status      PaymentStatus @default(PENDING)
@@ -304,6 +415,26 @@ model Fee {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  payments    Payment[]
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  feeId       String
+  fee         Fee      @relation(fields: [feeId], references: [id])
+  
+  amount      Float
+  surcharge   Float    @default(0)
+  discount    Float    @default(0)
+  method      String   // EFECTIVO, TRANSFERENCIA, etc.
+  date        DateTime @default(now())
+  notes       String?
+  status      TransactionStatus @default(VALID)
+  
+  transactions Transaction[]
+  
+  createdAt   DateTime @default(now())
 }
 
 model Expense {
@@ -313,12 +444,16 @@ model Expense {
   date        DateTime @db.Date
   category    String   // Payroll, Rent, Utilities, etc.
   ticketNumber String?
+  status      TransactionStatus @default(VALID)
   
   instituteId String
   institute   Institute @relation(fields: [instituteId], references: [id])
   
   recipientId String?
   recipient   User?     @relation("RecipientExpenses", fields: [recipientId], references: [id])
+
+  lessons     Lesson[]
+  transactions Transaction[]
 
   createdAt   DateTime @default(now())
 
@@ -344,3 +479,40 @@ model Notification {
   @@index([instituteId, read])
 }
 
+model MiscellaneousIncome {
+  id           String    @id @default(cuid())
+  description  String
+  amount       Float
+  date         DateTime  @db.Date
+  category     String    // VENTA_LIBROS, EXCURSION, TALLER, OTROS
+  method       String    // EFECTIVO, TRANSFERENCIA, etc.
+  ticketNumber String?
+  status       TransactionStatus @default(VALID)
+  
+  instituteId  String
+  institute    Institute @relation(fields: [instituteId], references: [id])
+  
+  studentId    String?   // Opcional
+  student      Student?  @relation(fields: [studentId], references: [id])
+
+  transactions Transaction[]
+
+  createdAt    DateTime  @default(now())
+
+  @@index([instituteId])
+  @@index([studentId])
+}
+
+// -----------------------------------------------------------------------------
+// STUDENT DATA COMPLETION TOKENS
+// -----------------------------------------------------------------------------
+
+model StudentDataToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

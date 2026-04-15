@@ -11,6 +11,7 @@ import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, Clipbo
 import { format, addDays, subDays, addWeeks, subWeeks, startOfWeek, isSameDay, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
+import { getActiveRole } from "@/lib/roles";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -26,7 +27,7 @@ export default async function SchedulePage({
     }>
 }) {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    if (!session || !session.user) redirect("/login");
 
     const params = await searchParams;
     const view = params.view || "week";
@@ -48,38 +49,79 @@ export default async function SchedulePage({
     const dateStr = format(displayDateNoon, "yyyy-MM-dd");
     const isToday = isSameDay(displayDateNoon, new Date());
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [sessionUser.role];
+    const role = await getActiveRole(userRoles);
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
+    let instituteId = "";
+    let studentEnrollments: string[] = [];
+
+    if (role === "STUDENT") {
+        const student = await prisma.student.findUnique({
+            where: { id: (session.user as any).id },
+            include: { enrollments: { select: { courseId: true } } }
+        });
+        if (!student) redirect("/login");
+        instituteId = student.instituteId;
+        studentEnrollments = student.enrollments.map(e => e.courseId);
+    } else if (role === "GUARDIAN") {
+        const guardianId = (session.user as any).id;
+        const guardianLinks = await prisma.guardianStudentLink.findMany({
+            where: { guardianId },
+            include: {
+                student: {
+                    include: { enrollments: { select: { courseId: true } } }
+                }
+            }
+        });
+        
+        if (guardianLinks.length === 0) redirect("/dashboard");
+        
+        instituteId = guardianLinks[0].student.instituteId;
+        
+        guardianLinks.forEach(link => {
+            link.student.enrollments.forEach(e => {
+                if (!studentEnrollments.includes(e.courseId)) {
+                    studentEnrollments.push(e.courseId);
+                }
+            });
+        });
+    } else {
+        const user = await prisma.user.findUnique({
+            where: { id: (session.user as any).id },
+            select: { id: true, role: true, instituteId: true }
+        });
+        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+            redirect("/dashboard");
+        }
+        instituteId = user.instituteId;
     }
 
-    const isTeacher = user.role === "TEACHER";
-    const effectiveTeacherId = isTeacher ? user.id : params.teacherId;
+    const isTeacher = role === "TEACHER";
+    const isStudentOrGuardian = role === "STUDENT" || role === "GUARDIAN";
+    const effectiveTeacherId = isTeacher ? (session.user as any).id : params.teacherId;
 
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
         prisma.course.findMany({
             where: { 
-                instituteId: user.instituteId, 
+                instituteId: instituteId, 
                 status: "ACTIVE",
-                ...(isTeacher ? { teacherId: user.id } : {})
+                ...(isTeacher ? { teacherId: (session.user as any).id } : {}),
+                ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             },
             orderBy: { name: "asc" }
         }),
         prisma.user.findMany({
             where: { 
-                instituteId: user.instituteId, 
+                instituteId: instituteId, 
                 role: "TEACHER", 
                 status: "ACTIVE"
             },
             orderBy: { name: "asc" }
         }),
         prisma.classroom.findMany({
-            where: { instituteId: user.instituteId },
+            where: { instituteId: instituteId },
             orderBy: { name: "asc" }
         })
     ]);
@@ -106,12 +148,14 @@ export default async function SchedulePage({
     const allSchedules = await prisma.schedule.findMany({
         where: {
             course: {
-                instituteId: user.instituteId,
+                instituteId: instituteId,
                 status: "ACTIVE",
                 // Apply optional filters
                 ...(activeCourseId ? { id: activeCourseId } : {}),
                 ...(activeTeacherId ? { teacherId: activeTeacherId } : {}),
                 ...(activeClassroomId ? { classroomId: activeClassroomId } : {}),
+                // If student/guardian, ONLY show their enrolled courses
+                ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             }
         },
         include: {
@@ -165,7 +209,7 @@ export default async function SchedulePage({
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={role} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
@@ -238,81 +282,9 @@ export default async function SchedulePage({
                     </Link>
                 </div>
 
-                <div className="grid gap-8 lg:grid-cols-4">
-                    <div className="lg:col-span-1 flex flex-col gap-4">
-                        <Card className="p-5 bg-card border-border/60 shadow-sm rounded-2xl">
-                            <h3 className="text-sm font-bold mb-5 flex items-center gap-2 text-foreground/80">
-                                <Users className="text-primary" size={16} /> Filtros de Búsqueda
-                            </h3>
-                            
-                            <form method="GET" action="/schedule" className="space-y-5">
-                                <input type="hidden" name="view" value={view} />
-                                <input type="hidden" name="date" value={dateStr} />
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Curso</label>
-                                    <select 
-                                        name="courseId" 
-                                        defaultValue={activeCourseId || ""}
-                                        className="w-full bg-muted/30 border-border/40 rounded-xl px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Todos los Cursos</option>
-                                        {allCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                                {!isTeacher && (
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Profesor</label>
-                                        <select 
-                                            name="teacherId" 
-                                            defaultValue={activeTeacherId || ""}
-                                            className="w-full bg-muted/30 border-border/40 rounded-xl px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
-                                        >
-                                            <option value="">Todos los Profesores</option>
-                                            {allTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Aula</label>
-                                    <select 
-                                        name="classroomId" 
-                                        defaultValue={activeClassroomId || ""}
-                                        className="w-full bg-muted/30 border-border/40 rounded-xl px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Todas las Aulas</option>
-                                        {allClassrooms.map(cl => <option key={cl.id} value={cl.id}>{cl.name}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="pt-2 flex gap-2">
-                                    <Button type="submit" className="flex-1 rounded-xl h-10 font-bold text-xs bg-primary hover:bg-primary/90">
-                                        Aplicar Filtros
-                                    </Button>
-                                    {(activeCourseId || activeTeacherId || activeClassroomId) && (
-                                        <Link href={`/schedule?view=${view}&date=${dateStr}`} className="flex-1">
-                                            <Button type="button" variant="outline" className="w-full rounded-xl h-10 font-bold text-xs">
-                                                Limpiar
-                                            </Button>
-                                        </Link>
-                                    )}
-                                </div>
-                            </form>
-                        </Card>
-
-                        <div className="bg-primary/5 border border-primary/10 p-5 rounded-2xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 blur-2xl rounded-full -mr-10 -mt-10" />
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3">Estadística Rápida</h3>
-                            <div className="flex items-end gap-2">
-                                <span className="text-3xl font-black text-foreground">{schedules.length}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Clases Encontradas</span>
-                            </div>
-                        </div>
-                    </div>
-
+                <div className="grid gap-8 grid-cols-1">
                     {/* Weekly Grid or Daily List */}
-                    <div className="lg:col-span-3 space-y-4">
+                    <div className="space-y-4">
                         {schedules.length === 0 ? (
                             <div className="text-center p-12 border border-dashed rounded-xl border-border/50 bg-muted/20">
                                 <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
