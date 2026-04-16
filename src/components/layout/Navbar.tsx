@@ -140,8 +140,11 @@ export function Navbar({
                                     availableRoles={userRoles} 
                                 />
 
-                                {(activeRole === "ADMIN" || activeRole === "SUPERADMIN") && sessionUser?.instituteId && (
-                                    <NotificationBell instituteId={sessionUser.instituteId} />
+                                {sessionUser?.id && (
+                                    <NotificationBell 
+                                        userId={sessionUser.id} 
+                                        isStudent={userRoles.includes("STUDENT")}
+                                    />
                                 )}
 
                                 {(activeRole === "ADMIN" || activeRole === "SECRETARY" || activeRole === "SUPERADMIN") && (

@@ -89,6 +89,8 @@ model User {
   // Relation for Guardian Portal
   guardianLinks GuardianStudentLink[] @relation("GuardianToStudent")
   
+  notifications Notification[]
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -140,6 +142,8 @@ model Student {
 
   // Relation for data completion tokens
   dataTokens    StudentDataToken[]
+  
+  notifications Notification[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -470,6 +474,13 @@ model Notification {
   id          String   @id @default(cuid())
   instituteId String
   institute   Institute @relation(fields: [instituteId], references: [id])
+  
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  studentId   String?
+  student     Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
   type        String   // "NEW_ENROLLMENT", "PAYMENT_RECEIVED", etc.
   title       String
   body        String
@@ -479,6 +490,8 @@ model Notification {
   createdAt   DateTime @default(now())
 
   @@index([instituteId, read])
+  @@index([userId, read])
+  @@index([studentId, read])
 }
 
 model MiscellaneousIncome {

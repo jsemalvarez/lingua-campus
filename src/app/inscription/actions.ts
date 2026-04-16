@@ -80,45 +80,21 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
 
         revalidatePath("/students");
 
-        // 🔔 Crear notificación en DB
+        // 🔔 Crear notificación en DB usando el nuevo sistema para Roles
         const levelLabel = registeredLevel ? ` — Nivel: ${registeredLevel}` : "";
         const notifTitle = "Nueva pre-inscripción recibida";
         const notifBody = `${name}${levelLabel} se pre-inscribió al instituto`;
 
-        const newNotif = await prisma.notification.create({
-            data: {
-                instituteId,
-                type: "NEW_ENROLLMENT",
-                title: notifTitle,
-                body: notifBody,
-                link: "/students",
-            },
+        const { createNotificationForRoles } = await import("@/app/actions/notifications");
+        
+        await createNotificationForRoles({
+            instituteId,
+            roles: ["ADMIN", "SECRETARY"],
+            type: "NEW_ENROLLMENT",
+            title: notifTitle,
+            body: notifBody,
+            link: "/students"
         });
-
-        // 📡 Broadcast en tiempo real via Supabase (más confiable que postgres_changes)
-        try {
-            const { createClient } = await import("@supabase/supabase-js");
-            const supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            );
-            await supabase.channel(`institute:${instituteId}`).send({
-                type: "broadcast",
-                event: "new_notification",
-                payload: {
-                    id: newNotif.id,
-                    type: newNotif.type,
-                    title: notifTitle,
-                    body: notifBody,
-                    read: false,
-                    link: "/students",
-                    createdAt: newNotif.createdAt,
-                },
-            });
-        } catch (broadcastErr) {
-            // No bloqueante — la notificación ya está en DB, solo falla el push en tiempo real
-            console.error("[Broadcast] Error sending realtime event:", broadcastErr);
-        }
 
         return { success: true };
     } catch (e: any) {
@@ -126,3 +102,4 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         return { success: false, error: "Error al procesar la inscripción. Intente nuevamente." };
     }
 }
+
