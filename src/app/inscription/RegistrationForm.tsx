@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { createPreEnrollmentAction } from "./actions";
+import { differenceInYears } from "date-fns";
 import { Button } from "@/components/ui/Button";
 import { User, Phone, Mail, Calendar, Users, CheckCircle, AlertCircle, Heart, MapPin, Inbox, GraduationCap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -81,8 +82,7 @@ export function RegistrationForm({
             <input type="hidden" name="formType" value={formType} />
 
             {/* ── 0. Selección de Tipo de Inscripción ── */}
-            {!initialData && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 bg-slate-100/50 dark:bg-slate-900/50 rounded-[2.2rem] border border-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 bg-slate-100/50 dark:bg-slate-900/50 rounded-[2.2rem] border border-border/50">
                 <button
                     type="button"
                     onClick={() => setFormType("adult")}
@@ -127,7 +127,6 @@ export function RegistrationForm({
                     </div>
                 </button>
             </div>
-            )}
 
             {/* ── 1. Datos del Alumno ── */}
             <div className="space-y-8">
@@ -149,11 +148,9 @@ export function RegistrationForm({
                             name="name"
                             required
                             defaultValue={initialData?.name || ""}
-                            readOnly={!!initialData}
                             placeholder="Ej: Sofía Martínez"
                             className={cn(
-                                "w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold text-lg h-14 shadow-sm hover:border-primary/30",
-                                initialData && "opacity-60 cursor-not-allowed bg-slate-100 dark:bg-slate-900"
+                                "w-full px-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold text-lg h-14 shadow-sm hover:border-primary/30"
                             )}
                         />
                     </div>
@@ -167,6 +164,17 @@ export function RegistrationForm({
                                 name="birthDate"
                                 type="date"
                                 defaultValue={initialData?.birthDate ? new Date(initialData.birthDate).toISOString().split('T')[0] : ""}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value) {
+                                        const age = differenceInYears(new Date(), new Date(value));
+                                        if (age < 18) {
+                                            setFormType("minor");
+                                        } else {
+                                            setFormType("adult");
+                                        }
+                                    }
+                                }}
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 [color-scheme:light] dark:[color-scheme:dark]"
                             />
                         </div>
