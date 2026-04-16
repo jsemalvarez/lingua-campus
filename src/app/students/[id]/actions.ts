@@ -130,11 +130,20 @@ export async function softDeleteStudent(studentId: string) {
 
     try {
         const student = await prisma.student.findUnique({
-            where: { id: studentId }
+            where: { id: studentId },
+            include: {
+                enrollments: {
+                    where: { status: "ACTIVE" }
+                }
+            }
         });
 
         if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        if (student.enrollments.length > 0) {
+            return { success: false, error: "El alumno tiene inscripciones activas a cursos. Primero dalo de baja de la cursada antes de enviarlo a la papelera." };
         }
 
         await prisma.student.update({
