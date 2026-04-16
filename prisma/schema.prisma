@@ -113,11 +113,13 @@ model Student {
   guardian1Name     String?
   guardian1Relation String?
   guardian1Phone    String?
+  guardian1Email    String?
   
   // Tutor Legal 2
   guardian2Name     String?
   guardian2Relation String?
   guardian2Phone    String?
+  guardian2Email    String?
   birthDate     DateTime?
   joinDate      DateTime @default(now())
 

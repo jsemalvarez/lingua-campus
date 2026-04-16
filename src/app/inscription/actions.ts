@@ -26,11 +26,13 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         const g1Name = formData.get("g1Name") as string;
         const g1Relation = formData.get("g1Relation") as string;
         const g1Phone = formData.get("g1Phone") as string;
+        const g1Email = formData.get("g1Email") as string;
 
         // Tutor 2 (Opcional)
         const g2Name = formData.get("g2Name") as string;
         const g2Relation = formData.get("g2Relation") as string;
         const g2Phone = formData.get("g2Phone") as string;
+        const g2Email = formData.get("g2Email") as string;
 
         if (!name) {
             return { success: false, error: "El nombre es obligatorio" };
@@ -65,10 +67,12 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
                 guardian1Name: g1Name || null,
                 guardian1Relation: g1Relation || null,
                 guardian1Phone: g1Phone || null,
+                guardian1Email: g1Email || null,
 
                 guardian2Name: g2Name || null,
                 guardian2Relation: g2Relation || null,
                 guardian2Phone: g2Phone || null,
+                guardian2Email: g2Email || null,
 
                 instituteId: instituteId,
             }

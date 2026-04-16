@@ -32,10 +32,12 @@ export async function editStudentAction(formData: FormData) {
     const guardian1Name = formData.get("guardian1Name") as string;
     const guardian1Relation = formData.get("guardian1Relation") as string;
     const guardian1Phone = formData.get("guardian1Phone") as string;
+    const guardian1Email = formData.get("guardian1Email") as string;
 
     const guardian2Name = formData.get("guardian2Name") as string;
     const guardian2Relation = formData.get("guardian2Relation") as string;
     const guardian2Phone = formData.get("guardian2Phone") as string;
+    const guardian2Email = formData.get("guardian2Email") as string;
 
     if (!studentId || !name) {
         return { success: false, error: "Faltan datos obligatorios (nombre)" };
@@ -49,6 +51,46 @@ export async function editStudentAction(formData: FormData) {
 
         if (!student || student.instituteId !== user.instituteId) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
+        }
+
+        // Lógica de Sincronización de Email de Tutor
+        // Si el email cambió, buscamos si hay una cuenta vinculada para actualizarla
+        const updateGuardianEmail = async (oldEmail: string | null, newEmail: string | null) => {
+            if (!newEmail || oldEmail === newEmail) return;
+            const normalizedNewEmail = newEmail.toLowerCase().trim();
+            const normalizedOldEmail = oldEmail?.toLowerCase().trim();
+
+            if (!normalizedOldEmail) return;
+
+            // Buscar el usuario vinculado que tenía el email anterior
+            const link = await prisma.guardianStudentLink.findFirst({
+                where: {
+                    studentId: studentId,
+                    guardian: { email: normalizedOldEmail }
+                },
+                include: { guardian: true }
+            });
+
+            if (link) {
+                // Verificar que el nuevo email no esté en uso
+                const conflict = await prisma.user.findUnique({ where: { email: normalizedNewEmail } });
+                if (conflict) {
+                    throw new Error(`El email ${normalizedNewEmail} ya está en uso por otro usuario.`);
+                }
+
+                // Actualizar el usuario
+                await prisma.user.update({
+                    where: { id: link.guardianId },
+                    data: { email: normalizedNewEmail }
+                });
+            }
+        };
+
+        if (guardian1Email !== student.guardian1Email) {
+            await updateGuardianEmail(student.guardian1Email, guardian1Email);
+        }
+        if (guardian2Email !== student.guardian2Email) {
+            await updateGuardianEmail(student.guardian2Email, guardian2Email);
         }
 
         await prisma.student.update({
@@ -65,9 +107,11 @@ export async function editStudentAction(formData: FormData) {
                 guardian1Name: guardian1Name || null,
                 guardian1Relation: guardian1Relation || null,
                 guardian1Phone: guardian1Phone || null,
+                guardian1Email: guardian1Email || null,
                 guardian2Name: guardian2Name || null,
                 guardian2Relation: guardian2Relation || null,
                 guardian2Phone: guardian2Phone || null,
+                guardian2Email: guardian2Email || null,
             }
         });
 

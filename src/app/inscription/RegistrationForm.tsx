@@ -284,8 +284,8 @@ export function RegistrationForm({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 pt-2">
-                        <div className="flex flex-col gap-2.5 sm:col-span-2">
-                            <label className="text-[0.95rem] font-bold ml-1">Nombre Completo del Tutor {formType === 'minor' && "*"}</label>
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1">Nombre Completo {formType === 'minor' && "*"}</label>
                             <input
                                 name="guardian1Name"
                                 defaultValue={initialData?.guardian1Name || ""}
@@ -329,6 +329,20 @@ export function RegistrationForm({
                                 />
                             </div>
                         </div>
+
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1">Email Acceso</label>
+                            <div className="relative group/input">
+                                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-emerald-500 transition-colors" />
+                                <input
+                                    name="guardian1Email"
+                                    defaultValue={initialData?.guardian1Email || ""}
+                                    type="email"
+                                    placeholder="Su email preferido para acceso al sistema"
+                                    className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -347,7 +361,7 @@ export function RegistrationForm({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 pt-2 p-6 md:p-10 bg-slate-500/5 dark:bg-slate-400/5 rounded-[2.5rem] border border-border/10 shadow-inner">
-                        <div className="flex flex-col gap-2.5 sm:col-span-2">
+                        <div className="flex flex-col gap-2.5">
                             <label className="text-[0.95rem] font-bold ml-1 opacity-70">Nombre Completo</label>
                             <input
                                 name="guardian2Name"
@@ -376,12 +390,26 @@ export function RegistrationForm({
                         <div className="flex flex-col gap-2.5">
                             <label className="text-[0.95rem] font-bold ml-1 opacity-70">Celular</label>
                             <div className="relative group/input">
+                                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-blue-500 transition-colors" />
                                 <input
                                     name="guardian2Phone"
                                     defaultValue={initialData?.guardian2Phone || ""}
                                     type="tel"
                                     placeholder="+54 9 223 ..."
-                                    className="w-full px-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
+                                    className="w-full pl-14 pr-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2.5">
+                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Email Acceso</label>
+                            <div className="relative group/input">
+                                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-blue-500 transition-colors" />
+                                <input
+                                    name="guardian2Email"
+                                    defaultValue={initialData?.guardian2Email || ""}
+                                    type="email"
+                                    placeholder="email@tutor2.com"
+                                    className="w-full pl-14 pr-6 py-4 rounded-[1.1rem] border border-input bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium h-13 shadow-sm"
                                 />
                             </div>
                         </div>

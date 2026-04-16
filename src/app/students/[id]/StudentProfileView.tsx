@@ -19,9 +19,11 @@ interface StudentData {
     guardian1Name: string | null;
     guardian1Relation: string | null;
     guardian1Phone: string | null;
+    guardian1Email: string | null;
     guardian2Name: string | null;
     guardian2Relation: string | null;
     guardian2Phone: string | null;
+    guardian2Email: string | null;
     birthDate: Date | null;
     address: string | null;
     dni: string | null;
@@ -184,12 +186,17 @@ export function StudentProfileView({
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
                                         <span className="font-medium">{student.guardian1Phone ? <a href={`https://wa.me/${student.guardian1Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian1Phone}</a> : "-"}</span>
                                     </div>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Email</span>
+                                        <span className="font-medium">{student.guardian1Email || "-"}</span>
+                                    </div>
                                     {canManageAccess && !g1Link && (
                                         <div className="pt-2">
                                             <CreateGuardianModal 
                                                 studentId={student.id} 
                                                 guardianName={student.guardian1Name} 
                                                 relation={student.guardian1Relation || "Tutor"} 
+                                                existingEmail={student.guardian1Email || ""}
                                                 isFullWidth={true}
                                             />
                                         </div>
@@ -228,12 +235,17 @@ export function StudentProfileView({
                                         <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
                                         <span className="font-medium">{student.guardian2Phone ? <a href={`https://wa.me/${student.guardian2Phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{student.guardian2Phone}</a> : "-"}</span>
                                     </div>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Email</span>
+                                        <span className="font-medium">{student.guardian2Email || "-"}</span>
+                                    </div>
                                     {canManageAccess && !g2Link && (
                                         <div className="pt-2">
                                             <CreateGuardianModal 
                                                 studentId={student.id} 
                                                 guardianName={student.guardian2Name} 
                                                 relation={student.guardian2Relation || "Tutor"} 
+                                                existingEmail={student.guardian2Email || ""}
                                                 isFullWidth={true}
                                             />
                                         </div>
