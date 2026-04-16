@@ -52,6 +52,7 @@ export default async function DashboardPage() {
                                     select: {
                                         id: true,
                                         name: true,
+                                        color: true,
                                         lessons: {
                                             where: { date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
                                             orderBy: { date: 'asc' },
@@ -62,19 +63,23 @@ export default async function DashboardPage() {
                                 }
                             }
                         },
-                        fees: {
-                            orderBy: [{ year: 'desc' }, { month: 'desc' }],
+                        attendances: {
+                            orderBy: { lesson: { date: 'desc' } },
                             take: 10,
-                            select: {
-                                id: true,
-                                month: true,
-                                year: true,
-                                originalAmount: true,
-                                paidAmount: true,
-                                status: true,
-                                datePaid: true,
-                                student: { select: { name: true } }
+                            include: {
+                                lesson: { select: { date: true, topic: true, course: { select: { name: true, color: true } } } }
                             }
+                        },
+                        grades: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 5,
+                            include: {
+                                lesson: { select: { topic: true, course: { select: { color: true, name: true } } } }
+                            }
+                        },
+                        fees: {
+                            where: { status: { not: "PAID" } },
+                            select: { originalAmount: true, paidAmount: true }
                         }
                     }
                 }
@@ -109,6 +114,7 @@ export default async function DashboardPage() {
             l.student.enrollments.flatMap(e => 
                 e.course.lessons.map(lesson => ({
                     ...lesson,
+                    color: e.course.color,
                     course: { name: e.course.name },
                     studentName: l.student.name
                 }))
@@ -116,24 +122,53 @@ export default async function DashboardPage() {
         ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 6);
 
-        // Flatten fees
-        const allFees = guardianLinks.flatMap(l => l.student.fees)
-            .sort((a,b) => {
-                if (a.year !== b.year) return b.year - a.year;
-                return b.month - a.month;
-            });
+        // Flatten attendances
+        const recentAttendances = guardianLinks.flatMap(l => 
+            l.student.attendances.map((att: any) => ({
+                id: att.id,
+                status: att.status,
+                notes: att.notes,
+                date: att.lesson.date,
+                topic: att.lesson.topic,
+                courseName: att.lesson.course.name,
+                courseColor: att.lesson.course.color,
+                studentName: l.student.name
+            }))
+        ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10);
+
+        // Flatten grades
+        const recentGrades = guardianLinks.flatMap(l => 
+            l.student.grades.map((g: any) => ({
+                id: g.id,
+                score: g.score,
+                feedback: g.feedback,
+                createdAt: g.createdAt,
+                topic: g.lesson.topic,
+                courseName: g.lesson.course.name,
+                courseColor: g.lesson.course.color,
+                studentName: l.student.name
+            }))
+        ).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
+
+        // Total Debt
+        const totalDebt = students.flatMap(s => s.fees)
+            .reduce((acc, fee) => acc + (fee.originalAmount - fee.paidAmount), 0);
 
         return (
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background pb-20">
                 <Navbar currentActiveRole={activeRole} />
                 <GuardianDashboardView 
                     guardianName={sessionUser.name || "Tutor"}
                     instituteName={instituteName}
                     students={students}
                     upcomingLessons={allLessons}
-                    fees={allFees}
+                    recentAttendances={recentAttendances}
+                    recentGrades={recentGrades}
+                    totalDebt={totalDebt}
                 />
-            </div>
+             </div>
         );
     }
 

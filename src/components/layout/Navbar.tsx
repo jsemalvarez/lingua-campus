@@ -58,7 +58,9 @@ export function Navbar({
         { href: "/teachers", label: "Personal", icon: GraduationCap, roles: ["ADMIN", "SUPERADMIN"] },
         { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"] },
         { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
-        { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "STUDENT", "GUARDIAN", "SECRETARY", "SUPERADMIN"] },
+        { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "STUDENT", "SECRETARY", "SUPERADMIN"] },
+        { href: "/guardian/academics", label: "Progreso", icon: GraduationCap, roles: ["GUARDIAN"] },
+        { href: "/guardian/payments", label: "Administración", icon: DollarSign, roles: ["GUARDIAN"] },
         { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "SECRETARY", "SUPERADMIN"] },
         { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN", "SUPERADMIN"] },
     ];
