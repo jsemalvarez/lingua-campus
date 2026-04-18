@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle, Brain } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTenant } from "@/components/providers/TenantProvider";
 import Image from "next/image";
@@ -55,10 +55,13 @@ export function Navbar({
 
     const allNavLinks = [
         { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT", "GUARDIAN", "SECRETARY", "SUPERADMIN"] },
+        { href: "/academics", label: "Progreso", icon: GraduationCap, roles: ["STUDENT"] },
+        { href: "/practice", label: "Práctica", icon: Brain, roles: ["STUDENT"] },
+        { href: "/administration", label: "Administración", icon: DollarSign, roles: ["STUDENT"] },
         { href: "/teachers", label: "Personal", icon: GraduationCap, roles: ["ADMIN", "SUPERADMIN"] },
         { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"] },
         { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
-        { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "STUDENT", "SECRETARY", "SUPERADMIN"] },
+        { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
         { href: "/guardian/academics", label: "Progreso", icon: GraduationCap, roles: ["GUARDIAN"] },
         { href: "/guardian/payments", label: "Administración", icon: DollarSign, roles: ["GUARDIAN"] },
         { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "SECRETARY", "SUPERADMIN"] },
@@ -84,7 +87,7 @@ export function Navbar({
 
     const navLinks = allNavLinks.filter(link => {
         // En Modo Alumno Menor, ocultar finanzas
-        if (link.href === "/payments" && activeRole === "STUDENT" && isMinor) {
+        if ((link.href === "/payments" || link.href === "/administration") && activeRole === "STUDENT" && isMinor) {
             return false;
         }
         
