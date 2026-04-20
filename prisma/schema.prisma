@@ -136,6 +136,7 @@ model Student {
   grades        Grade[]
   fees          Fee[]
   miscellaneousIncome MiscellaneousIncome[]
+  practiceSessions PracticeSession[]
   
   // Relation for Guardian Portal
   guardianLinks GuardianStudentLink[] @relation("StudentToGuardian")
@@ -295,6 +296,8 @@ model Lesson {
   
   attendances Attendance[]
   grades      Grade[]
+  practice    LessonPractice?
+  practiceSessions PracticeSession[]
 
   scheduleId  String?
   schedule    Schedule? @relation(fields: [scheduleId], references: [id])
@@ -304,6 +307,68 @@ model Lesson {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// PRACTICE MODULE
+// -----------------------------------------------------------------------------
+
+enum PracticeType {
+  SPEAKING
+  LISTENING
+  CHAT
+}
+
+// Material cargado por el profesor para que el alumno practique lo visto en clase
+model LessonPractice {
+  id               String   @id @default(cuid())
+  lessonId         String   @unique
+  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  // Contenido de práctica cargado por el profesor
+  speakingPhrases  String[] // Frases base para pronunciación, una por elemento
+  listeningText    String?  @db.Text // Texto que se convierte a audio TTS
+  chatScenario     String?  @db.Text // Escenario para el AI Chatbot
+
+  isPublished      Boolean  @default(false) // El profesor activa cuando está listo
+
+  sessions         PracticeSession[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([lessonId])
+}
+
+// Registro de cada sesión de práctica completada por un alumno
+model PracticeSession {
+  id                 String         @id @default(cuid())
+
+  studentId          String
+  student            Student        @relation(fields: [studentId], references: [id])
+
+  lessonId           String
+  lesson             Lesson         @relation(fields: [lessonId], references: [id])
+
+  lessonPracticeId   String
+  lessonPractice     LessonPractice @relation(fields: [lessonPracticeId], references: [id])
+
+  type               PracticeType
+
+  // Métricas de precisión (Speaking + Listening)
+  phrasesAttempted   Int    @default(0)
+  phrasesCorrect     Int    @default(0)
+  accuracyPct        Float  @default(0) // 0-100, calculado al cerrar la sesión
+
+  // Área de dificultad detectada por la IA durante la sesión
+  weakArea           String? // Ej: "th fricative", "short vowels"
+
+  durationSeconds    Int    @default(0)
+  completedAt        DateTime @default(now())
+
+  @@index([studentId])
+  @@index([lessonId])
+  @@index([studentId, lessonId])
 }
 
 model Attendance {

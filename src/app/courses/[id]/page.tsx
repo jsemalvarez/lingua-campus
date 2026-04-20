@@ -41,14 +41,26 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             teacher: { select: { id: true, name: true, email: true } },
             classroom: { select: { id: true, name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
-            lessons: { orderBy: { date: 'asc' } },
+            lessons: {
+                orderBy: { date: 'asc' },
+                include: {
+                    practice: {
+                        select: {
+                            speakingPhrases: true,
+                            listeningText: true,
+                            chatScenario: true,
+                            isPublished: true,
+                        }
+                    }
+                }
+            },
             enrollments: {
-                // where: { status: "ACTIVE" }, // We want to see ALL for the detail page history
                 select: { id: true, status: true, student: { select: { id: true, name: true, phone: true } } },
                 orderBy: { student: { name: 'asc' } }
             }
         }
     });
+
 
     // Validar que el curso existe y pertenece al instituto del usuario actual
     if (!course || course.instituteId !== user.instituteId) {

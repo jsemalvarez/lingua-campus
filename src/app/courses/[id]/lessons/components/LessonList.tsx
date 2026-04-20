@@ -2,7 +2,7 @@
 
 import { CreateLessonModal } from "./CreateLessonModal";
 import { GenerateLessonsModal } from "./GenerateLessonsModal";
-import { ClipboardCheck, Calendar, BookOpen, FileText, FileEdit, CalendarRange } from "lucide-react";
+import { ClipboardCheck, Calendar, BookOpen, FileText, Sparkles } from "lucide-react";
 import { EditLessonModal } from "./EditLessonModal";
 import { DeleteLessonButton } from "./DeleteLessonButton";
 import Link from "next/link";
@@ -17,6 +17,13 @@ interface Schedule {
     room: string | null;
 }
 
+interface LessonPractice {
+    speakingPhrases: string[];
+    listeningText: string | null;
+    chatScenario: string | null;
+    isPublished: boolean;
+}
+
 interface Lesson {
     id: string;
     courseId: string;
@@ -25,6 +32,7 @@ interface Lesson {
     topic: string;
     content: string | null;
     scheduleId: string | null;
+    practice: LessonPractice | null;
 }
 
 interface LessonListProps {
@@ -75,14 +83,31 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
                                     <div className="space-y-1.5 pl-2">
                                         <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                                             <Calendar size={14} className={lesson.type === "CLASS" ? "text-blue-500" : lesson.type === "TP" ? "text-amber-500" : "text-red-500"} />
-                                            {/* Normalize to Noon before formatting to avoid GMT shifts (e.g. 00:00 UTC showing as previous day) */}
+                                            {/* Normalize to Noon before formatting to avoid GMT shifts */}
                                             {format(addHours(new Date(lesson.date), 12), "EEEE, d 'de' MMMM, yyyy", { locale: es })}
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className="text-base font-bold leading-tight">{lesson.topic}</h3>
+
+                                            {/* Practice badge — only for CLASS with practice loaded */}
+                                            {lesson.type === "CLASS" && lesson.practice && (
+                                                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${lesson.practice.isPublished
+                                                    ? "bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800"
+                                                    : "bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                                                }`}>
+                                                    <Sparkles size={9} />
+                                                    {lesson.practice.isPublished ? "Práctica activa" : "Borrador"}
+                                                </span>
+                                            )}
+
                                             {isTeacherOrAdmin && !isFinished && (
                                                 <div className="flex items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
-                                                    <EditLessonModal courseId={courseId} lesson={lesson} schedules={schedules} />
+                                                    <EditLessonModal
+                                                        courseId={courseId}
+                                                        lesson={lesson}
+                                                        lessonPractice={lesson.practice}
+                                                        schedules={schedules}
+                                                    />
                                                     <DeleteLessonButton courseId={courseId} lessonId={lesson.id} />
                                                 </div>
                                             )}
@@ -113,7 +138,7 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
                                                     <div className={`px-4 py-2 sm:px-3 sm:py-2.5 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border whitespace-nowrap ${lesson.type === "TP"
                                                         ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20"
                                                         : "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20"
-                                                        }`}>
+                                                    }`}>
                                                         <FileText size={16} /> {isFinished ? "Ver Notas" : "Notas"}
                                                     </div>
                                                 </Link>
