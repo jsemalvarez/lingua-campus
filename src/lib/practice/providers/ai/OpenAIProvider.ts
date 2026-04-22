@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion } from "./IAIProvider";
 
 /**
  * Provider de IA usando GPT-4o de OpenAI.
@@ -73,5 +73,27 @@ export class OpenAIProvider implements IAIProvider {
 
         const data = await response.json();
         return data.choices[0].message.content;
+    }
+
+    async generateVariations(
+        seedPhrases: string[],
+        count: number,
+        language?: string
+    ): Promise<string[]> {
+        throw new Error("generateVariations not implemented for OpenAIProvider yet.");
+    }
+
+    async generateListeningText(
+        seedText: string,
+        language?: string
+    ): Promise<{ text: string, questions: ListeningQuestion[] }> {
+        throw new Error("generateListeningText not implemented for OpenAIProvider yet.");
+    }
+
+    async generateListeningQuiz(
+        text: string,
+        language?: string
+    ): Promise<ListeningQuestion[]> {
+        throw new Error("generateListeningQuiz not implemented for OpenAIProvider yet.");
     }
 }

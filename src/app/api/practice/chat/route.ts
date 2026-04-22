@@ -6,10 +6,11 @@ import type { ChatMessage } from "@/lib/practice/providers/ai/IAIProvider";
 /**
  * POST /api/practice/chat
  *
- * Body: { messages: ChatMessage[], systemPrompt: string }
+ * Body: { messages: ChatMessage[], scenario: string }
+ * - messages: conversation history (empty array = first turn, AI greets)
+ * - scenario: teacher-defined scenario used as the system prompt
  *
- * Continúa la conversación del alumno con la IA usando el escenario
- * definido por el profesor.
+ * Returns: { message: string }
  */
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
@@ -19,23 +20,21 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { messages, systemPrompt } = body;
+        const { messages, scenario } = body;
 
-        if (!messages || !Array.isArray(messages) || messages.length === 0) {
-            return new Response("'messages' es requerido y debe ser un array", { status: 400 });
+        if (!scenario || typeof scenario !== "string") {
+            return new Response("'scenario' es requerido", { status: 400 });
         }
 
-        if (!systemPrompt || typeof systemPrompt !== "string") {
-            return new Response("'systemPrompt' es requerido", { status: 400 });
-        }
-
-        // Safety limit: max 50 messages per session
-        const safeMessages = (messages as ChatMessage[]).slice(-50);
+        // Empty messages = first turn. Send a synthetic user message to get AI to greet.
+        const history: ChatMessage[] = Array.isArray(messages) && messages.length > 0
+            ? (messages as ChatMessage[]).slice(-50)
+            : [{ role: "user", content: "Hello, please start the conversation according to your role." }];
 
         const provider = getAIProvider();
-        const reply = await provider.chat(safeMessages, systemPrompt.trim());
+        const reply = await provider.chat(history, scenario.trim());
 
-        return Response.json({ reply });
+        return Response.json({ message: reply });
     } catch (error: any) {
         console.error("[CHAT] Error:", error.message);
         return new Response("Error en el chat con IA", { status: 500 });

@@ -13,6 +13,11 @@ export interface ChatMessage {
     content: string;
 }
 
+export interface ListeningQuestion {
+    statement: string;
+    isTrue: boolean;
+}
+
 export interface IAIProvider {
     /**
      * Evalúa la pronunciación del alumno comparando el texto esperado con lo que transcribió.
@@ -32,4 +37,36 @@ export interface IAIProvider {
      * @param systemPrompt - Escenario definido por el profesor
      */
     chat(messages: ChatMessage[], systemPrompt: string): Promise<string>;
+
+    /**
+     * Genera variaciones de frases basadas en una lista de ejemplos (seeds).
+     * @param seedPhrases - Frases de ejemplo del profesor
+     * @param count       - Cuántas frases nuevas generar
+     * @param language    - Idioma de las frases
+     */
+    generateVariations(
+        seedPhrases: string[],
+        count: number,
+        language?: string
+    ): Promise<string[]>;
+
+    /**
+     * Genera un nuevo texto de listening basado en un texto de ejemplo, junto con un cuestionario de V/F.
+     * @param seedText - Texto de ejemplo del profesor
+     * @param language - Idioma del texto
+     */
+    generateListeningText(
+        seedText: string,
+        language?: string
+    ): Promise<{ text: string, questions: ListeningQuestion[] }>;
+
+    /**
+     * Genera un cuestionario de Verdadero/Falso para un texto de listening existente.
+     * @param text - Texto de listening
+     * @param language - Idioma del texto
+     */
+    generateListeningQuiz(
+        text: string,
+        language?: string
+    ): Promise<ListeningQuestion[]>;
 }

@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-    Mic2, MicOff, Volume2, RefreshCw, ChevronRight,
-    CheckCircle2, XCircle, Loader2, LogOut, AlertCircle
+    Mic2, Pause, Volume2, RefreshCw, ChevronRight,
+    CheckCircle2, XCircle, Loader2, LogOut, AlertCircle, Sparkles
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
 
@@ -41,7 +41,8 @@ interface SpeakingHubProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function SpeakingHub({ lessonId, lessonPracticeId, phrases, onComplete, onExit }: SpeakingHubProps) {
+export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrases, onComplete, onExit }: SpeakingHubProps) {
+    const [phrases, setPhrases] = useState<string[]>(initialPhrases);
     const [phraseIndex, setPhraseIndex] = useState(0);
     const [phase, setPhase] = useState<Phase>("idle");
     const [transcript, setTranscript] = useState("");
@@ -49,6 +50,8 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases, onComplete, o
     const [attempts, setAttempts] = useState<AttemptRecord[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isDynamic, setIsDynamic] = useState(false);
 
     const recognitionRef = useRef<any>(null);
     const startTimeRef = useRef<number>(Date.now());
@@ -57,12 +60,67 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases, onComplete, o
     const totalPhrases = phrases.length;
     const isLastPhrase = phraseIndex >= totalPhrases - 1;
 
+    // Sync state if props change (e.g. user navigates to another lesson)
+    useEffect(() => {
+        setPhrases(initialPhrases);
+        setPhraseIndex(0);
+        setIsDynamic(false);
+        setAttempts([]);
+        setTranscript("");
+        setCurrentResult(null);
+        setPhase("idle");
+    }, [initialPhrases]);
+
+    // ── DYNAMIC GENERATION ────────────────────────────────────────────────────
+
+    const generateAIPhrases = async () => {
+        if (isGenerating) return;
+        setIsGenerating(true);
+        setError(null);
+
+        try {
+            const res = await fetch("/api/practice/generate-phrases", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ seedPhrases: initialPhrases, count: 5 })
+            });
+
+            if (!res.ok) throw new Error("Error de API");
+
+            const data = await res.json();
+            if (data.phrases && Array.isArray(data.phrases)) {
+                setPhrases(data.phrases);
+                setIsDynamic(true);
+                // Reset progress
+                setPhraseIndex(0);
+                setAttempts([]);
+                setTranscript("");
+                setCurrentResult(null);
+                setPhase("idle");
+            }
+        } catch (err) {
+            setError("No pudimos generar frases nuevas. Probá con las originales.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     // Check mic permission on mount
     useEffect(() => {
         if (typeof navigator !== "undefined" && navigator.mediaDevices) {
-            navigator.permissions.query({ name: "microphone" as PermissionName })
-                .then((result) => setHasMicPermission(result.state === "granted"))
-                .catch(() => setHasMicPermission(null));
+            navigator.permissions
+                .query({ name: "microphone" as PermissionName })
+                .then((result) => {
+                    // Only disable button when permission was explicitly denied.
+                    // "prompt" means the browser hasn't asked yet — allow the click
+                    // so the native permission dialog fires when the user presses Grabar.
+                    if (result.state === "denied") {
+                        setHasMicPermission(false);
+                    }
+                })
+                .catch(() => {
+                    // Permissions API not supported — leave as null (button enabled)
+                });
         }
     }, []);
 
@@ -283,13 +341,35 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases, onComplete, o
             {/* Main card */}
             <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
                 {/* Phrase display */}
-                <div className="p-8 text-center border-b border-border/40">
+                <div className="p-8 text-center border-b border-border/40 relative overflow-hidden">
+                    {/* Dynamic AI Badge */}
+                    {isDynamic && (
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-600 dark:text-violet-400 text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in">
+                            <Sparkles size={12} className="animate-pulse" /> Modo IA
+                        </div>
+                    )}
+
                     <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
                         Pronunciá la siguiente frase
                     </p>
                     <p className="text-2xl sm:text-3xl font-bold leading-relaxed text-foreground font-mono">
                         "{currentPhrase}"
                     </p>
+
+                    {/* Generate Variations Button (only at start or if not dynamic yet) */}
+                    {!isDynamic && phraseIndex === 0 && (
+                        <button
+                            onClick={generateAIPhrases}
+                            disabled={isGenerating}
+                            className="mt-6 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-violet-500/20 disabled:opacity-50"
+                        >
+                            {isGenerating ? (
+                                <><Loader2 size={12} className="animate-spin" /> Generando...</>
+                            ) : (
+                                <><Sparkles size={12} /> Generar variaciones con IA</>
+                            )}
+                        </button>
+                    )}
                 </div>
 
                 {/* Controls */}
@@ -323,7 +403,7 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases, onComplete, o
                                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
                                 {phase === "recording"
-                                    ? <><MicOff size={16} /> Detener</>
+                                    ? <><Pause size={16} /> Grabando...</>
                                     : <><Mic2 size={16} /> Grabar</>
                                 }
                             </button>

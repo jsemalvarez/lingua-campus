@@ -4,10 +4,7 @@ import React from "react";
 import { Card } from "@/components/ui/Card";
 import { 
   Users, 
-  GraduationCap, 
   Clock, 
-  Star, 
-  Trophy, 
   Calendar, 
   ArrowRight, 
   CheckCircle2, 
@@ -17,7 +14,12 @@ import {
   Mic2,
   Brain,
   ClipboardList,
-  Info
+  Info,
+  Sparkles,
+  Target,
+  Timer,
+  TrendingUp,
+  XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
@@ -27,6 +29,27 @@ import { StudentPerformanceChart } from "./StudentPerformanceChart";
 
 dayjs.extend(relativeTime);
 dayjs.locale("es");
+
+interface PracticeSessionRecord {
+  id: string;
+  type: string;
+  accuracyPct: number;
+  phrasesAttempted: number;
+  phrasesCorrect: number;
+  durationSeconds: number;
+  weakArea: string | null;
+  completedAt: string;
+  lessonTopic: string;
+  courseName: string;
+  courseColor: string;
+}
+
+interface PracticeMetrics {
+  totalSessions: number;
+  avgAccuracy: number | null;
+  totalMinutesPracticed: number;
+  recentSessions: PracticeSessionRecord[];
+}
 
 interface StudentAcademicsViewProps {
   student: any;
@@ -40,6 +63,7 @@ interface StudentAcademicsViewProps {
     presentsCount: number;
     absentsCount: number;
   };
+  practiceMetrics: PracticeMetrics;
 }
 
 export function StudentAcademicsView({
@@ -48,7 +72,8 @@ export function StudentAcademicsView({
   pendingTasks,
   isMinor,
   recentGrades,
-  academicStats
+  academicStats,
+  practiceMetrics
 }: StudentAcademicsViewProps) {
   
   // Lógica robusta para encontrar el curso principal
@@ -311,7 +336,100 @@ export function StudentAcademicsView({
 
       </div>
 
-      {/* 4. BOLETÍN INSTITUCIONAL */}
+      {/* 4. MÉTRICAS DE PRÁCTICA CON IA */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
+            <Sparkles size={16} className="text-violet-500" />
+          </div>
+          <h3 className="text-xl font-black tracking-tight">Práctica con IA</h3>
+        </div>
+
+        {practiceMetrics.totalSessions === 0 ? (
+          <Card className="p-8 rounded-[2rem] border-dashed border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 text-center">
+            <Sparkles size={32} className="text-violet-400 mx-auto mb-3" />
+            <p className="font-bold">Aún no realizaste sesiones de práctica</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Cuando tu profesor publique material de práctica, podrás practicar y ver tus métricas aquí.
+            </p>
+          </Card>
+        ) : (
+          <>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="p-5 rounded-[1.5rem] bg-violet-600 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Sesiones</p>
+                  <div className="text-3xl font-black italic leading-none">{practiceMetrics.totalSessions}</div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Target size={20} />
+                </div>
+              </Card>
+
+              <Card className="p-5 rounded-[1.5rem] bg-emerald-500 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Precisión</p>
+                  <div className="text-3xl font-black italic leading-none">
+                    {practiceMetrics.avgAccuracy !== null ? `${practiceMetrics.avgAccuracy}%` : "—"}
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <TrendingUp size={20} />
+                </div>
+              </Card>
+
+              <Card className="p-5 rounded-[1.5rem] bg-sky-500 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Tiempo</p>
+                  <div className="text-3xl font-black italic leading-none">{practiceMetrics.totalMinutesPracticed}m</div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Timer size={20} />
+                </div>
+              </Card>
+            </div>
+
+            {/* Session history */}
+            <Card className="p-6 rounded-[2rem] border-none shadow-xl bg-card">
+              <h4 className="font-black text-base mb-4 flex items-center gap-2">
+                <Mic2 size={16} className="text-violet-500" /> Historial de Sesiones
+              </h4>
+              <div className="space-y-2.5">
+                {practiceMetrics.recentSessions.map((s) => {
+                  const scoreColor = s.accuracyPct >= 80 ? "text-emerald-600 dark:text-emerald-400"
+                    : s.accuracyPct >= 60 ? "text-amber-600 dark:text-amber-400"
+                    : "text-red-600 dark:text-red-400";
+                  return (
+                    <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 hover:bg-muted/50 transition-colors">
+                      <div
+                        className="w-2 h-10 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: s.courseColor || "#8b5cf6" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold truncate">{s.lessonTopic}</p>
+                        <p className="text-[10px] text-muted-foreground">{s.courseName} · {dayjs(s.completedAt).fromNow()}</p>
+                        {s.weakArea && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">📍 {s.weakArea}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={cn("text-lg font-black", scoreColor)}>{s.accuracyPct}%</p>
+                        <p className="text-[10px] text-muted-foreground">{s.phrasesCorrect}/{s.phrasesAttempted} frases</p>
+                      </div>
+                      {s.accuracyPct >= 70
+                        ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                        : <XCircle size={16} className="text-red-400 shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
+
+      {/* 5. BOLETÍN INSTITUCIONAL */}
       <Card className="p-10 border-none shadow-2xl bg-card rounded-[3rem] relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
               <ClipboardList size={200} />
