@@ -132,7 +132,7 @@ const TIPS: Record<PracticeType, { title: string; items: string[] }> = {
 
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
-export function StudentPracticeView({ practiceData }: { practiceData: PracticeData[] }) {
+export function StudentPracticeView({ practiceData, isPreview = false }: { practiceData: PracticeData[], isPreview?: boolean }) {
     const [view, setView] = useState<View>({ mode: "landing" });
 
     // ── Logic & Prep ──────────────────────────────────────────────────────────
@@ -259,9 +259,9 @@ export function StudentPracticeView({ practiceData }: { practiceData: PracticeDa
 
                                 {/* ── CENTER: Practice component ── */}
                                 <div className="order-1 lg:order-2">
-                                    {type === "SPEAKING" && <SpeakingHub lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} phrases={item.speakingPhrases} onComplete={onComplete} onExit={handleExit} />}
-                                    {type === "LISTENING" && item.listeningText && <ListeningLab lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} listeningText={item.listeningText} onComplete={onComplete} onExit={handleExit} />}
-                                    {type === "CHAT" && item.chatScenario && <AIChatbot lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} scenario={item.chatScenario} onComplete={onComplete} onExit={handleExit} />}
+                                    {type === "SPEAKING" && <SpeakingHub lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} phrases={item.speakingPhrases} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
+                                    {type === "LISTENING" && item.listeningText && <ListeningLab lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} listeningText={item.listeningText} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
+                                    {type === "CHAT" && item.chatScenario && <AIChatbot lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} scenario={item.chatScenario} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
                                 </div>
 
                                 {/* ── RIGHT SIDEBAR: Practice Navigator (Course lessons) ── */}

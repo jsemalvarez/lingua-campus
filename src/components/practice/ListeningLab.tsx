@@ -27,6 +27,7 @@ interface ListeningLabProps {
     listeningText: string;
     onComplete: (summary: SessionSummary) => void;
     onExit: () => void;
+    isPreview?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ export function ListeningLab({
     listeningText,
     onComplete,
     onExit,
+    isPreview = false,
 }: ListeningLabProps) {
     const [phase, setPhase] = useState<Phase>("idle");
     const [listenCount, setListenCount] = useState(0);
@@ -190,23 +192,25 @@ export function ListeningLab({
         
         const accuracyPct = phrasesAttempted > 0 ? Math.round((phrasesCorrect / phrasesAttempted) * 100) : 0;
 
-        try {
-            await fetch("/api/practice/session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    lessonId,
-                    lessonPracticeId,
-                    type: "LISTENING",
-                    phrasesAttempted,
-                    phrasesCorrect,
-                    accuracyPct,
-                    durationSeconds,
-                    weakArea: accuracyPct < 50 ? "Comprensión auditiva general" : undefined,
-                }),
-            });
-        } catch (err) {
-            console.error("Error saving session:", err);
+        if (!isPreview) {
+            try {
+                await fetch("/api/practice/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        lessonId,
+                        lessonPracticeId,
+                        type: "LISTENING",
+                        phrasesAttempted,
+                        phrasesCorrect,
+                        accuracyPct,
+                        durationSeconds,
+                        weakArea: accuracyPct < 50 ? "Comprensión auditiva general" : undefined,
+                    }),
+                });
+            } catch (err) {
+                console.error("Error saving session:", err);
+            }
         }
 
         onComplete({

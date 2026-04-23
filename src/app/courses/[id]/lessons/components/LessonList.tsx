@@ -129,9 +129,17 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
 
                                             {lesson.type === "CLASS" ? (
                                                 <div className="w-full">
-                                                    <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-blue-500/20 whitespace-nowrap">
-                                                        <BookOpen size={16} /> Práctica
-                                                    </div>
+                                                    {lesson.practice && (lesson.practice.speakingPhrases.length > 0 || lesson.practice.listeningText || lesson.practice.chatScenario) ? (
+                                                        <Link href={`/courses/${courseId}/lessons/${lesson.id}/practice-preview`}>
+                                                            <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-blue-500/20 whitespace-nowrap">
+                                                                <BookOpen size={16} /> Práctica
+                                                            </div>
+                                                        </Link>
+                                                    ) : (
+                                                        <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-muted/50 text-muted-foreground/50 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-not-allowed border border-border/50 whitespace-nowrap" title="No hay práctica cargada para esta clase">
+                                                            <BookOpen size={16} /> Práctica
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <Link href={`/courses/${courseId}/lessons/${lesson.id}/grades`} className="w-full">

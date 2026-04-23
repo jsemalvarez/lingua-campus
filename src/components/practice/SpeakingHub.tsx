@@ -37,11 +37,12 @@ interface SpeakingHubProps {
     phrases: string[];
     onComplete: (summary: SessionSummary) => void;
     onExit: () => void;
+    isPreview?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrases, onComplete, onExit }: SpeakingHubProps) {
+export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrases, onComplete, onExit, isPreview = false }: SpeakingHubProps) {
     const [phrases, setPhrases] = useState<string[]>(initialPhrases);
     const [phraseIndex, setPhraseIndex] = useState(0);
     const [phase, setPhase] = useState<Phase>("idle");
@@ -282,18 +283,20 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
             )[0]
             : undefined;
 
-        // Save session to DB
-        try {
-            await fetch("/api/practice/session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    lessonId, lessonPracticeId, type: "SPEAKING",
-                    phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea
-                })
-            });
-        } catch (err) {
-            console.error("Error saving session:", err);
+        // Save session to DB if not in preview mode
+        if (!isPreview) {
+            try {
+                await fetch("/api/practice/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        lessonId, lessonPracticeId, type: "SPEAKING",
+                        phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea
+                    })
+                });
+            } catch (err) {
+                console.error("Error saving session:", err);
+            }
         }
 
         onComplete({ phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea });

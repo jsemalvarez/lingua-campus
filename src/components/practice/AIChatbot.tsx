@@ -19,6 +19,7 @@ interface AIChatbotProps {
     scenario: string;
     onComplete: (summary: SessionSummary) => void;
     onExit: () => void;
+    isPreview?: boolean;
 }
 
 const MIN_EXCHANGES = 3; // minimum turns before "Finalizar" appears
@@ -31,6 +32,7 @@ export function AIChatbot({
     scenario,
     onComplete,
     onExit,
+    isPreview = false,
 }: AIChatbotProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
@@ -119,22 +121,24 @@ export function AIChatbot({
         const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
         const phrasesAttempted = userTurns;
 
-        try {
-            await fetch("/api/practice/session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    lessonId,
-                    lessonPracticeId,
-                    type: "CHAT",
-                    phrasesAttempted,
-                    phrasesCorrect: phrasesAttempted,
-                    accuracyPct: 80, // chat is self-paced; fixed passing score
-                    durationSeconds,
-                }),
-            });
-        } catch (err) {
-            console.error("Error saving session:", err);
+        if (!isPreview) {
+            try {
+                await fetch("/api/practice/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        lessonId,
+                        lessonPracticeId,
+                        type: "CHAT",
+                        phrasesAttempted,
+                        phrasesCorrect: phrasesAttempted,
+                        accuracyPct: 80, // chat is self-paced; fixed passing score
+                        durationSeconds,
+                    }),
+                });
+            } catch (err) {
+                console.error("Error saving session:", err);
+            }
         }
 
         onComplete({
