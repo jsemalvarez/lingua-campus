@@ -70,7 +70,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
     const instituteTeachers = (user.role === "ADMIN" || user.role === "SECRETARY") ? await prisma.user.findMany({
-        where: { instituteId: user.instituteId, role: "TEACHER" },
+        where: { 
+            instituteId: user.instituteId, 
+            OR: [
+                { role: "TEACHER" },
+                { roles: { has: "TEACHER" } }
+            ]
+        },
         select: { id: true, name: true, email: true },
         orderBy: { name: 'asc' }
     }) : [];

@@ -530,7 +530,10 @@ export default async function DashboardPage() {
     const totalTeachers = await prisma.user.count({
         where: {
             instituteId: user.instituteId,
-            role: "TEACHER"
+            OR: [
+                { role: "TEACHER" },
+                { roles: { has: "TEACHER" } }
+            ]
         }
     });
 

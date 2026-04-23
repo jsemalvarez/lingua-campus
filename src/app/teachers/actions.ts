@@ -162,7 +162,7 @@ export async function resetTeacherPassword(teacherId: string, customPassword?: s
             where: { id: teacherId }
         });
 
-        if (!teacher || teacher.role !== "TEACHER" || (admin.role === "ADMIN" && teacher.instituteId !== admin.instituteId)) {
+        if (!teacher || (teacher.role !== "TEACHER" && !teacher.roles.includes("TEACHER" as any)) || (admin.role === "ADMIN" && teacher.instituteId !== admin.instituteId)) {
             return { success: false, error: "Profesor no encontrado o sin permisos" };
         }
 
