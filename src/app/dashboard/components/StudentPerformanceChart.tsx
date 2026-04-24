@@ -35,12 +35,12 @@ export function StudentPerformanceChart({ data }: StudentPerformanceChartProps) 
         fullDate: new Date(g.createdAt).toLocaleDateString()
       }))
     : [
-        { name: 'Lun', score: 65 },
-        { name: 'Mar', score: 75 },
-        { name: 'Mié', score: 70 },
-        { name: 'Jue', score: 85 },
-        { name: 'Vie', score: 80 },
-        { name: 'Sáb', score: 90 },
+        { name: 'Lun', score: 65, fullDate: 'Lunes' },
+        { name: 'Mar', score: 75, fullDate: 'Martes' },
+        { name: 'Mié', score: 70, fullDate: 'Miércoles' },
+        { name: 'Jue', score: 85, fullDate: 'Jueves' },
+        { name: 'Vie', score: 80, fullDate: 'Viernes' },
+        { name: 'Sáb', score: 90, fullDate: 'Sábado' },
       ];
 
   return (

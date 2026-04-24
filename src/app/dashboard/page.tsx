@@ -306,8 +306,13 @@ export default async function DashboardPage() {
             where: { studentId: student.id },
             select: { score: true }
         });
-        const averageGrade = allGrades.length > 0 
-            ? (allGrades.reduce((acc, curr) => acc + curr.score, 0) / allGrades.length).toFixed(1)
+        
+        const numericGrades = allGrades
+            .map(g => parseFloat(g.score || ""))
+            .filter(n => !isNaN(n));
+
+        const averageGrade = numericGrades.length > 0 
+            ? (numericGrades.reduce((acc, curr) => acc + curr, 0) / numericGrades.length).toFixed(1)
             : null;
 
         return (

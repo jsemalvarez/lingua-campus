@@ -78,7 +78,7 @@ export default async function GuardianPaymentsPage() {
             return b.month - a.month;
         });
 
-    const pendingFees = allFees.filter(f => f.status !== "PAID" && f.status !== "VOIDED");
+    const pendingFees = allFees.filter(f => f.status !== "PAID");
     const paidFees = allFees.filter(f => f.status === "PAID" && f.paidAmount > 0);
     
     // Nueva lógica de segmentación de deuda

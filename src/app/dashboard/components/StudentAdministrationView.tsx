@@ -32,7 +32,7 @@ export function StudentAdministrationView({
   const currentMonth = now.month();
   const currentYear = now.year();
 
-  const pendingFees = fees.filter(f => f.status !== "PAID" && f.status !== "VOIDED");
+  const pendingFees = fees.filter(f => f.status !== "PAID");
   const paidFees = fees.filter(f => f.status === "PAID" && f.paidAmount > 0);
 
   const oldDebtSum = pendingFees

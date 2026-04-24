@@ -306,7 +306,7 @@ export function ListeningLab({
                     )}
 
                     {/* Self-assessment / Quiz */}
-                    {phase === "done_listening" && (
+                    {(phase === "done_listening" || phase === "saving") && (
                         <div className="space-y-4 animate-in fade-in">
                             {questions === null || questions.length === 0 ? (
                                 <div className="py-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-3 animate-pulse">
