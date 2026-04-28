@@ -62,6 +62,17 @@ export class GeminiProvider implements IAIProvider {
         actual: string,
         language: string = "English"
     ): Promise<EvaluationResult> {
+        // 1. Shortcut: Identical strings (ignoring case/punctuation)
+        const normalize = (s: string) => s.toLowerCase().replace(/[.,!?;:]/g, "").trim();
+        if (normalize(expected) === normalize(actual)) {
+            return {
+                score: 100,
+                isCorrect: true,
+                feedback: "¡Excelente! Tu pronunciación fue perfecta.",
+                weakArea: undefined
+            };
+        }
+
         const prompt = `You are a ${language} pronunciation coach evaluating a language learner.
 
 The student was asked to say: "${expected}"
@@ -84,26 +95,37 @@ Rules:
 
         const text = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
+            generationConfig: { 
+                temperature: 0.1, 
+                maxOutputTokens: 256,
+                // If the model supports it, we could use:
+                // response_mime_type: "application/json"
+            },
         });
 
-        // Strip markdown code blocks if present
-        const json = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        // 2. Robust JSON Extraction
+        // Find the first '{' and the last '}' to extract the JSON block
+        const startIdx = text.indexOf("{");
+        const endIdx = text.lastIndexOf("}");
+
+        if (startIdx === -1 || endIdx === -1) {
+            console.error("[GEMINI] Invalid response format (no JSON found):", text);
+            throw new Error("La respuesta de la IA no tiene un formato válido.");
+        }
+
+        const jsonStr = text.substring(startIdx, endIdx + 1);
 
         try {
-            const parsed = JSON.parse(json);
+            const parsed = JSON.parse(jsonStr);
             return {
                 score: Math.max(0, Math.min(100, Number(parsed.score) || 0)),
                 isCorrect: Boolean(parsed.isCorrect),
                 feedback: String(parsed.feedback || "¡Bien intento!"),
                 weakArea: parsed.weakArea || undefined,
             };
-        } catch {
-            return {
-                score: 50,
-                isCorrect: false,
-                feedback: "No pude evaluar la pronunciación. ¡Intentá de nuevo!",
-            };
+        } catch (err: any) {
+            console.error("[GEMINI] JSON Parse error:", err.message, "Raw string:", jsonStr);
+            throw new Error("No se pudo procesar la evaluación de la IA.");
         }
     }
 

@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
         return Response.json(result);
     } catch (error: any) {
-        console.error("[EVALUATE] Error:", error.message);
-        return new Response("Error al evaluar pronunciación", { status: 500 });
+        console.error("[EVALUATE] Server Error:", error.message || error);
+        return new Response(error.message || "Error al evaluar pronunciación", { status: 500 });
     }
 }
