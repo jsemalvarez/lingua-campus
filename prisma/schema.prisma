@@ -90,6 +90,10 @@ model User {
   guardianLinks GuardianStudentLink[] @relation("GuardianToStudent")
   
   notifications Notification[]
+
+  // Messaging
+  threadParticipations ThreadParticipant[]
+  sentMessages         Message[]           @relation("UserSentMessages")
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -146,6 +150,10 @@ model Student {
   
   notifications Notification[]
 
+  // Messaging
+  threadParticipations ThreadParticipant[]
+  sentMessages         Message[]           @relation("StudentSentMessages")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -186,6 +194,7 @@ model Course {
   enrollments Enrollment[]
   schedules   Schedule[]
   lessons     Lesson[]
+  threads     MessageThread[]
 
 
   startDate   DateTime?
@@ -595,4 +604,79 @@ model StudentDataToken {
   expiresAt DateTime
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// MESSAGING
+// -----------------------------------------------------------------------------
+
+enum ThreadType {
+  DIRECT        // Dirigido a persona(s) específica(s)
+  COURSE_BLAST  // Dirigido a todos los alumnos/tutores de un curso
+}
+
+// Hilo de conversación (agrupa mensajes bajo un asunto)
+model MessageThread {
+  id          String     @id @default(cuid())
+  instituteId String
+
+  subject     String     // Asunto — siempre requerido (estilo email)
+  type        ThreadType @default(DIRECT)
+
+  // Contexto opcional: si el hilo está relacionado a un curso específico
+  courseId    String?
+  course      Course?    @relation(fields: [courseId], references: [id])
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  participants ThreadParticipant[]
+  messages     Message[]
+
+  @@index([instituteId])
+  @@index([instituteId, updatedAt])
+}
+
+// Participantes del hilo (polimórfico: User o Student)
+model ThreadParticipant {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Exactamente uno de los dos debe estar poblado
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId String?
+  student   Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  isAuthor   Boolean  @default(false)   // true = quien inició el hilo
+  lastReadAt DateTime?                   // Para calcular mensajes no leídos
+
+  createdAt  DateTime @default(now())
+
+  @@unique([threadId, userId])
+  @@unique([threadId, studentId])
+  @@index([userId])
+  @@index([studentId])
+}
+
+// Mensaje individual dentro de un hilo
+model Message {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Polimórfico: o un User (teacher, admin, guardian) o un Student
+  senderUserId    String?
+  senderUser      User?    @relation("UserSentMessages", fields: [senderUserId], references: [id])
+
+  senderStudentId String?
+  senderStudent   Student? @relation("StudentSentMessages", fields: [senderStudentId], references: [id])
+
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([threadId])
+  @@index([threadId, createdAt])
 }
