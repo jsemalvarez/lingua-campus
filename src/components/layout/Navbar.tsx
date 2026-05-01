@@ -245,8 +245,7 @@ export function Navbar({
                                         "flex flex-col items-center justify-center w-12 h-10 rounded-xl transition-all",
                                         isActive && "bg-primary/5"
                                     )}>
-                                        <Icon size={20} className="mb-0.5" />
-                                        <span className="text-[10px] font-bold uppercase tracking-tight">{label.charAt(0)}</span>
+                                        <Icon size={20} />
                                     </div>
                                 </Link>
                             );

@@ -90,11 +90,8 @@ export function MessagesBell({
                     isActive && "bg-primary/5"
                 )}
             >
-                <Mail size={20} className="mb-0.5" />
+                <Mail size={20} />
                 {badge}
-                <span className="text-[10px] font-bold uppercase tracking-tight">
-                    {label.charAt(0)}
-                </span>
             </div>
         </Link>
     );
