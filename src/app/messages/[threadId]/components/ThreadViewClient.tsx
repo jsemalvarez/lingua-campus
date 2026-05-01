@@ -3,10 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { sendMessage } from "@/app/actions/messages";
+import { sendMessage, getThread } from "@/app/actions/messages";
 import { ArrowLeft, Send, Users, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { ThreadDetail } from "@/app/actions/messages";
+
+const POLL_INTERVAL_MS = 10_000; // 10 s
 
 interface Props {
     thread: ThreadDetail;
@@ -25,14 +27,40 @@ function formatDateTime(date: Date): string {
 }
 
 export function ThreadViewClient({ thread, currentUserId, isStudent }: Props) {
+    const [messages, setMessages] = useState(thread.messages);
     const [body, setBody] = useState("");
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
+    // ── Scroll on new messages ──
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [thread.messages]);
+    }, [messages]);
+
+    // ── Polling: fetch new messages every 10 s ──
+    useEffect(() => {
+        const poll = async () => {
+            try {
+                const updated = await getThread({
+                    threadId: thread.id,
+                    currentUserId,
+                    isStudent,
+                });
+                if (!updated) return;
+                setMessages((prev) => {
+                    // Only update if there are actually new messages
+                    if (updated.messages.length === prev.length) return prev;
+                    return updated.messages;
+                });
+            } catch {
+                // silent — keep showing existing messages
+            }
+        };
+
+        const timer = setInterval(poll, POLL_INTERVAL_MS);
+        return () => clearInterval(timer);
+    }, [thread.id, currentUserId, isStudent]);
 
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
@@ -48,6 +76,9 @@ export function ThreadViewClient({ thread, currentUserId, isStudent }: Props) {
                 senderStudentId: isStudent ? currentUserId : undefined,
             });
             setBody("");
+            // Immediately fetch the updated thread so the sent message appears
+            const updated = await getThread({ threadId: thread.id, currentUserId, isStudent });
+            if (updated) setMessages(updated.messages);
         } catch (err: any) {
             setError(err.message ?? "Error al enviar el mensaje.");
         } finally {
@@ -113,7 +144,7 @@ export function ThreadViewClient({ thread, currentUserId, isStudent }: Props) {
 
             {/* Messages */}
             <div className="space-y-4">
-                {thread.messages.map((msg) => {
+                {messages.map((msg) => {
                     const isMine = msg.isCurrentUser;
                     return (
                         <div

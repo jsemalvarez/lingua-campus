@@ -11,6 +11,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useTenant } from "@/components/providers/TenantProvider";
 import Image from "next/image";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { MessagesBell } from "@/components/layout/MessagesBell";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
 
 /**
@@ -53,6 +54,8 @@ export function Navbar({
         }
     }, [currentActiveRole, userRoles]);
 
+    // /messages is shown as an icon in the right-side actions area (desktop) and in the bottom tab (mobile).
+    // It is intentionally excluded from allNavLinks to avoid appearing in the left desktop nav.
     const allNavLinks = [
         { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT", "GUARDIAN", "SECRETARY", "SUPERADMIN"] },
         { href: "/academics", label: "Progreso", icon: GraduationCap, roles: ["STUDENT"] },
@@ -62,12 +65,14 @@ export function Navbar({
         { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"] },
         { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
         { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
-        { href: "/messages", label: "Mensajes", icon: Mail, roles: ["ADMIN", "TEACHER", "STUDENT", "GUARDIAN", "SECRETARY", "SUPERADMIN"] },
         { href: "/guardian/academics", label: "Progreso", icon: GraduationCap, roles: ["GUARDIAN"] },
         { href: "/guardian/payments", label: "Administración", icon: DollarSign, roles: ["GUARDIAN"] },
         { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "SECRETARY", "SUPERADMIN"] },
         { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN", "SUPERADMIN"] },
     ];
+
+    // Mobile bottom tab uses the same links as desktop (no /messages — it's in the top bar)
+    const allNavLinksMobile = [...allNavLinks];
 
     // Calcular edad si es estudiante
     let isMinor = true;
@@ -87,12 +92,12 @@ export function Navbar({
     }
 
     const navLinks = allNavLinks.filter(link => {
-        // En Modo Alumno Menor, ocultar finanzas
-        if ((link.href === "/payments" || link.href === "/administration") && activeRole === "STUDENT" && isMinor) {
-            return false;
-        }
-        
-        // El link debe ser permitido para el rol ACTUAl (activeRole)
+        if ((link.href === "/payments" || link.href === "/administration") && activeRole === "STUDENT" && isMinor) return false;
+        return link.roles.includes(activeRole);
+    });
+
+    const mobileNavLinks = allNavLinksMobile.filter(link => {
+        if ((link.href === "/payments" || link.href === "/administration") && activeRole === "STUDENT" && isMinor) return false;
         return link.roles.includes(activeRole);
     });
 
@@ -115,22 +120,25 @@ export function Navbar({
                     {/* Desktop nav links */}
                     {status === "authenticated" && (
                         <div className="hidden md:flex items-center gap-1">
-                            {navLinks.map(({ href, label, icon: Icon }) => (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
-                                        pathname.startsWith(href) && href !== "/dashboard" || (pathname === "/dashboard" && href === "/dashboard")
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-foreground/65 hover:text-foreground hover:bg-muted"
-                                    )}
-                                    title={label}
-                                >
-                                    <Icon size={18} className="lg:w-4 lg:h-4" />
-                                    <span className="hidden lg:inline">{label}</span>
-                                </Link>
-                            ))}
+                            {navLinks.map(({ href, label, icon: Icon }) => {
+                                const isActive = pathname.startsWith(href) && href !== "/dashboard" || (pathname === "/dashboard" && href === "/dashboard");
+                                return (
+                                    <Link
+                                        key={href}
+                                        href={href}
+                                        className={cn(
+                                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
+                                            isActive
+                                                ? "bg-primary/10 text-primary"
+                                                : "text-foreground/65 hover:text-foreground hover:bg-muted"
+                                        )}
+                                        title={label}
+                                    >
+                                        <Icon size={18} className="lg:w-4 lg:h-4" />
+                                        <span className="hidden lg:inline">{label}</span>
+                                    </Link>
+                                );
+                            })}
                         </div>
                     )}
 
@@ -147,10 +155,20 @@ export function Navbar({
                                 />
 
                                 {sessionUser?.id && (
-                                    <NotificationBell 
-                                        userId={sessionUser.id} 
-                                        isStudent={userRoles.includes("STUDENT")}
-                                    />
+                                    <>
+                                        <MessagesBell
+                                            userId={sessionUser.id}
+                                            isStudent={userRoles.includes("STUDENT")}
+                                            instituteId={sessionUser.instituteId ?? ""}
+                                            isAdmin={userRoles.some((r: string) => ["ADMIN", "SECRETARY", "SUPERADMIN"].includes(r))}
+                                            variant="icon"
+                                            isActive={pathname.startsWith("/messages")}
+                                        />
+                                        <NotificationBell
+                                            userId={sessionUser.id}
+                                            isStudent={userRoles.includes("STUDENT")}
+                                        />
+                                    </>
                                 )}
 
                                 {(activeRole === "ADMIN" || activeRole === "SECRETARY" || activeRole === "SUPERADMIN") && (
@@ -198,8 +216,22 @@ export function Navbar({
             {status === "authenticated" && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass border-t border-border/50 safe-area-bottom">
                     <div className="flex items-center justify-around h-14 px-2">
-                        {navLinks.map(({ href, label, icon: Icon }) => {
+                        {mobileNavLinks.map(({ href, label, icon: Icon }) => {
                             const isActive = pathname === href || (pathname.startsWith(href) && href !== "/dashboard");
+                            if (href === "/messages" && sessionUser?.id) {
+                                return (
+                                    <MessagesBell
+                                        key={href}
+                                        userId={sessionUser.id}
+                                        isStudent={userRoles.includes("STUDENT")}
+                                        instituteId={sessionUser.instituteId ?? ""}
+                                        isAdmin={userRoles.some((r: string) => ["ADMIN", "SECRETARY", "SUPERADMIN"].includes(r))}
+                                        variant="mobile"
+                                        isActive={isActive}
+                                        label={label}
+                                    />
+                                );
+                            }
                             return (
                                 <Link
                                     key={href}
