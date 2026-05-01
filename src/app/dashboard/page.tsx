@@ -19,6 +19,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
+import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
 import { GuardianDashboardView } from "./components/GuardianDashboardView";
 import { getActiveRole } from "@/lib/roles";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
@@ -691,6 +692,9 @@ export default async function DashboardPage() {
                             <AnnualFinanceChartServer instituteId={user.instituteId} />
                          </Suspense>
                     )}
+                    <Suspense fallback={<Card className="h-[480px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                        <PlaygroundChartServer instituteId={user.instituteId} />
+                    </Suspense>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
