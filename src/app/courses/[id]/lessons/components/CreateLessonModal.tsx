@@ -156,7 +156,7 @@ export function CreateLessonModal({
                                 className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
                                 defaultValue={schedules.length === 1 ? schedules[0].id : ""}
                             >
-                                <option value="">Seleccionar horario (Opcional)</option>
+                                <option value="">Seleccionar horario </option>
                                 {schedules.map((s) => (
                                     <option key={s.id} value={s.id}>
                                         {daysMapping[s.dayOfWeek]} {s.startTime} - {s.endTime}{s.room ? ` (${s.room})` : ""}
@@ -278,7 +278,7 @@ export function CreateLessonModal({
                                         className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all select-none ${practicePublished
                                             ? "border-violet-400/50 bg-violet-500/10"
                                             : "border-border/50 bg-background hover:border-violet-400/30 hover:bg-violet-500/5"
-                                        }`}
+                                            }`}
                                     >
                                         <input
                                             type="hidden"
@@ -288,7 +288,7 @@ export function CreateLessonModal({
                                         <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${practicePublished
                                             ? "bg-violet-500 border-violet-500"
                                             : "border-muted-foreground/40"
-                                        }`}>
+                                            }`}>
                                             {practicePublished && (
                                                 <svg viewBox="0 0 10 8" className="w-3 h-3 fill-white">
                                                     <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />

@@ -108,7 +108,7 @@ export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
                     <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
-                        <label className="text-sm font-semibold text-foreground/80">DNI (Opcional)</label>
+                        <label className="text-sm font-semibold text-foreground/80">DNI</label>
                         <input
                             name="dni"
                             placeholder="Ej: 45123456"
