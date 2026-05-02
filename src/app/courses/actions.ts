@@ -157,7 +157,7 @@ export async function updateCourseTeacherAction(courseId: string, teacherId: str
         // Verify teacher belongs to the same institute (if not clearing)
         if (teacherId) {
             const teacher = await prisma.user.findUnique({ where: { id: teacherId } });
-            if (!teacher || teacher.instituteId !== user.instituteId || teacher.role !== "TEACHER") {
+            if (!teacher || teacher.instituteId !== user.instituteId || (teacher.role !== "TEACHER" && !teacher.roles.includes("TEACHER" as any))) {
                 return { success: false, error: "Profesor no válido" };
             }
         }

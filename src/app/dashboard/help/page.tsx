@@ -321,36 +321,52 @@ export default async function HelpCenterPage() {
                         <Card className="p-6 border-border/50 shadow-sm space-y-6 bg-card/60">
                             <div>
                                 <h3 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
-                                    <Info size={18} className="text-fuchsia-500" /> Funcionamiento Integrado (Académico y Contable)
+                                    <Info size={18} className="text-fuchsia-500" /> Funcionamiento Integrado (Modalidad Preguntas Frecuentes)
                                 </h3>
                                 <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                                    El flujo de fin de año está automatizado para evitar carga manual duplicada. Al habilitar a un alumno para rendir, se afectan simultáneamente sus finanzas y libretas de asistencia.
+                                    Todo el flujo para la gestión de exámenes finales está diseñado para ser completamente automático. Aquí te respondemos las consultas más comunes paso a paso.
                                 </p>
                             </div>
 
-                            <div className="pl-4 border-l-2 border-fuchsia-500/30 space-y-4 text-sm text-muted-foreground">
+                            <div className="pl-4 border-l-2 border-fuchsia-500/30 space-y-6 text-sm text-muted-foreground">
                                 <div>
-                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">1. Configurar el valor Base</h4>
+                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">¿Cómo creo el examen?</h4>
                                     <p>
-                                        Al crear o editar un Curso, verás el campo <strong>Derecho de Examen ($)</strong>. Todos los alumnos inscriptos en ese curso heredarán este precio al habilitarles el examen.
+                                        En Lingua Campus <strong>no tienes que crear un examen manualmente</strong> desde cero. El examen final es un concepto que está ligado directamente al Curso. Detrás de escena, la primera vez que anotas a un alumno para rendir, el sistema automáticamente genera la clase especial en el calendario llamada "Examen Final" para ese curso.
                                     </p>
                                 </div>
+                                
                                 <div>
-                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">2. Activar a un Alumno (Inscripción al Examen)</h4>
+                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">¿Cómo le pongo el precio al examen?</h4>
                                     <p>
-                                        Ingresa a la <strong>Ficha del Alumno</strong>. En la lista de sus cursos activos notarás un interruptor o <i>switch</i> de <strong>"Examen Final"</strong>. Al encenderlo ocurren tres cosas en tiempo real:
+                                        El precio general del derecho a examen se define <strong>en la configuración del Curso</strong>. Al crear un curso nuevo (o si editas uno existente), verás que hay un campo llamado <strong>Precio del Examen</strong>. Lo que pongas allí será el valor base que se le cobrará automáticamente a todos los alumnos de ese curso por el derecho a rendir.
                                     </p>
-                                    <ul className="list-disc list-inside mt-2 space-y-1 ml-2">
-                                        <li>Se activa administrativamente para rendir.</li>
-                                        <li>Aparece automáticamente el cargo o deuda etiquetada como <strong>"Derecho de Examen"</strong> en su cuenta bancaria/corriente.</li>
-                                        <li>El profesor de su curso verá generada la clase especial (Libro de temas de tipo <i>EXAM</i>) para cargar notas/asistencias.</li>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">¿Cómo anoto los estudiantes al examen?</h4>
+                                    <p>La inscripción se realiza directamente desde el perfil del estudiante:</p>
+                                    <ul className="list-decimal list-outside mt-2 space-y-1 ml-4">
+                                        <li>Ve a la pestaña de <b>Alumnos</b> y abre la ficha específica del estudiante.</li>
+                                        <li>En su lista de cursos activos (Inscripciones), vas a ver un interruptor que, por defecto, indica <i>«No está inscrito para el examen»</i>.</li>
+                                        <li>Al hacer clic en este botón, se pintará de color y dirá <strong>«Inscrito para rendir a fin de año»</strong>. ¡Listo!</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-[15px] font-semibold mb-1 text-foreground">¿Cómo le cobro el derecho de examen a los estudiantes?</h4>
+                                    <p>El cobro también está completamente automatizado:</p>
+                                    <ul className="list-disc list-outside mt-2 space-y-1 ml-4">
+                                        <li>Al activar el interruptor de inscripción (paso anterior), el sistema <strong>genera instantáneamente la cuota pendiente (Derecho a Examen)</strong> a nombre de este estudiante.</li>
+                                        <li>Para cobrarlo, simplemente debes ir a la pestaña de <b>Finanzas</b> de ese alumno (o a la vista global). Allí verás el concepto "Examen" en estado <i>Pendiente</i>.</li>
+                                        <li>Haz clic en el botón <strong>Cobrar</strong> e ingresa el método de pago tal cual como si fuera una cuota mensual normal.</li>
                                     </ul>
                                 </div>
 
                                 <div className="mt-6 p-4 bg-fuchsia-50 dark:bg-fuchsia-950/20 border border-fuchsia-200 dark:border-fuchsia-800/50 rounded-xl">
-                                    <h4 className="text-[14px] font-semibold mb-1 text-fuchsia-800 dark:text-fuchsia-400">¿Me equivoqué al inscribirlo?</h4>
+                                    <h4 className="text-[14px] font-semibold mb-1 text-fuchsia-800 dark:text-fuchsia-400">Dato extra: ¿Qué pasa si me equivoqué al inscribirlo?</h4>
                                     <p className="text-fuchsia-700/80 dark:text-fuchsia-300/80 leading-relaxed">
-                                        Simplemente <b>apaga el interruptor</b> en la ficha del alumno. Si el estudiante aún no abonó el derecho de examen, la deuda "fantasma" será eliminada inmediatamente del sistema para no alterar tu contabilidad. <i>(Si ya había pagado, deberás generar un reintegro anulando su pago en la pestaña de Finanzas primero).</i>
+                                        Simplemente <b>apaga el interruptor</b> en la ficha del alumno. Si el estudiante aún no abonó el derecho de examen, la deuda "fantasma" que se había generado será eliminada inmediatamente del sistema para no alterar tu contabilidad. <i>(Nota: Si ya lo había pagado, deberás generar un reintegro anulando su pago en la pestaña de Finanzas primero para poder desinscribirlo).</i>
                                     </p>
                                 </div>
                             </div>

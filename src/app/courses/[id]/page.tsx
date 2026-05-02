@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange, AlertTriangle } from "lucide-react";
 import { ScheduleList } from "./ScheduleList";
 import { LessonList } from "./lessons/components/LessonList";
+import { CoursePracticeMetrics } from "./lessons/components/CoursePracticeMetrics";
 import { EditCourseModal } from "../components/EditCourseModal";
 import { RemoveStudentButton } from "../components/RemoveStudentButton";
 import { DeleteCourseButton } from "../components/DeleteCourseButton";
@@ -41,14 +42,26 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             teacher: { select: { id: true, name: true, email: true } },
             classroom: { select: { id: true, name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
-            lessons: { orderBy: { date: 'asc' } },
+            lessons: {
+                orderBy: { date: 'asc' },
+                include: {
+                    practice: {
+                        select: {
+                            speakingPhrases: true,
+                            listeningText: true,
+                            chatScenario: true,
+                            isPublished: true,
+                        }
+                    }
+                }
+            },
             enrollments: {
-                // where: { status: "ACTIVE" }, // We want to see ALL for the detail page history
                 select: { id: true, status: true, student: { select: { id: true, name: true, phone: true } } },
                 orderBy: { student: { name: 'asc' } }
             }
         }
     });
+
 
     // Validar que el curso existe y pertenece al instituto del usuario actual
     if (!course || course.instituteId !== user.instituteId) {
@@ -57,7 +70,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
     const instituteTeachers = (user.role === "ADMIN" || user.role === "SECRETARY") ? await prisma.user.findMany({
-        where: { instituteId: user.instituteId, role: "TEACHER" },
+        where: { 
+            instituteId: user.instituteId, 
+            OR: [
+                { role: "TEACHER" },
+                { roles: { has: "TEACHER" } }
+            ]
+        },
         select: { id: true, name: true, email: true },
         orderBy: { name: 'asc' }
     }) : [];
@@ -74,6 +93,36 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
     const isTeacherOrAdmin = user.role === "ADMIN" || user.role === "SECRETARY" || user.id === course.teacher?.id;
     const isFinished = course.status === "FINISHED";
+
+    // ── Practice metrics (only for teacher/admin view) ───────────────────────
+    const publishedLessons = course.lessons.filter(l => l.practice?.isPublished);
+    const publishedLessonIds = publishedLessons.map(l => l.id);
+
+    const practiceSessions = isTeacherOrAdmin && publishedLessonIds.length > 0
+        ? await prisma.practiceSession.findMany({
+            where: { lessonId: { in: publishedLessonIds } },
+            select: { lessonId: true, studentId: true, accuracyPct: true }
+        })
+        : [];
+
+    // Group by lesson
+    const practiceByLesson = publishedLessons.map(lesson => {
+        const sessions = practiceSessions.filter(s => s.lessonId === lesson.id);
+        const uniqueStudents = new Set(sessions.map(s => s.studentId)).size;
+        const avgAcc = sessions.length > 0
+            ? Math.round(sessions.reduce((s, x) => s + x.accuracyPct, 0) / sessions.length)
+            : null;
+        return {
+            lessonId: lesson.id,
+            lessonTopic: lesson.topic,
+            lessonDate: lesson.date.toISOString(),
+            sessionCount: sessions.length,
+            studentCount: uniqueStudents,
+            avgAccuracy: avgAcc,
+        };
+    });
+
+    const totalEnrolled = course.enrollments.filter(e => e.status === "ACTIVE").length;
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -150,6 +199,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                             </div>
                         </div>
                     </div>
+
                 </header>
 
                 <div className="space-y-6 lg:space-y-8">
@@ -270,6 +320,16 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                             </Card>
                         </div>
                     </div>
+
+                    {/* ── PRACTICE METRICS (teacher/admin) ── */}
+                    {isTeacherOrAdmin && (
+                        <Card className="p-6 shadow-md border-border/40 bg-card/60 backdrop-blur-sm">
+                            <CoursePracticeMetrics
+                                totalEnrolled={totalEnrolled}
+                                byLesson={practiceByLesson}
+                            />
+                        </Card>
+                    )}
 
                     {/* ── SECCIÓN DE GESTIÓN Y PELIGRO (ANCHO COMPLETO) ── */}
                     <div className="space-y-6 lg:space-y-8 mt-12 pt-8 border-t border-border/40">

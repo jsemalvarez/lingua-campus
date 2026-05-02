@@ -14,9 +14,11 @@ interface StudentData {
     guardian1Name: string | null;
     guardian1Relation: string | null;
     guardian1Phone: string | null;
+    guardian1Email: string | null;
     guardian2Name: string | null;
     guardian2Relation: string | null;
     guardian2Phone: string | null;
+    guardian2Email: string | null;
     dni: string | null;
     address: string | null;
     schoolInfo: string | null;
@@ -149,7 +151,7 @@ export function EditStudentForm({
                         * Este tutor tiene una cuenta vinculada. Sus datos solo se pueden editar desde su propia cuenta.
                     </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre / Apellido</label>
                         <input type="text" name="guardian1Name" defaultValue={student.guardian1Name || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
@@ -161,6 +163,10 @@ export function EditStudentForm({
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular Confirmado</label>
                         <input type="tel" name="guardian1Phone" defaultValue={student.guardian1Phone || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email (Acceso)</label>
+                        <input type="email" name="guardian1Email" defaultValue={student.guardian1Email || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="tutor1@mail.com" />
                     </div>
                 </div>
             </div>
@@ -174,7 +180,7 @@ export function EditStudentForm({
                         * Este tutor tiene una cuenta vinculada. Sus datos solo se pueden editar desde su propia cuenta.
                     </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre / Apellido</label>
                         <input type="text" name="guardian2Name" defaultValue={student.guardian2Name || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
@@ -186,6 +192,10 @@ export function EditStudentForm({
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular</label>
                         <input type="tel" name="guardian2Phone" defaultValue={student.guardian2Phone || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email (Acceso)</label>
+                        <input type="email" name="guardian2Email" defaultValue={student.guardian2Email || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="tutor2@mail.com" />
                     </div>
                 </div>
             </div>

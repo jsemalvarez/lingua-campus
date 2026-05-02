@@ -25,7 +25,10 @@ export default async function NewCoursePage() {
     const teachers = await prisma.user.findMany({
         where: {
             instituteId: user.instituteId,
-            role: { in: ["TEACHER", "ADMIN"] }
+            OR: [
+                { role: { in: ["TEACHER", "ADMIN"] } },
+                { roles: { hasSome: ["TEACHER", "ADMIN"] } }
+            ]
         },
         select: { id: true, name: true, email: true }
     });

@@ -23,7 +23,7 @@ type Notification = {
     createdAt: Date;
 };
 
-export function NotificationBell({ instituteId }: { instituteId: string }) {
+export function NotificationBell({ userId, isStudent = false }: { userId: string, isStudent?: boolean }) {
     const [open, setOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -34,21 +34,21 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
     useEffect(() => {
         async function loadInitial() {
             const [unread, recent] = await Promise.all([
-                getUnreadNotifications(instituteId),
-                getRecentNotifications(instituteId),
+                getUnreadNotifications(userId, isStudent),
+                getRecentNotifications(userId, isStudent),
             ]);
             setUnreadCount(unread.length);
             setNotifications(recent as Notification[]);
         }
         loadInitial();
-    }, [instituteId]);
+    }, [userId, isStudent]);
 
     // ── Supabase Broadcast subscription ──
     useEffect(() => {
-        if (!supabaseClient || !instituteId) return;
+        if (!supabaseClient || !userId) return;
 
         const channel = supabaseClient
-            .channel(`institute:${instituteId}`)
+            .channel(`user:${userId}`)
             .on(
                 "broadcast",
                 { event: "new_notification" },
@@ -69,7 +69,7 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
         return () => {
             supabaseClient?.removeChannel(channel);
         };
-    }, [instituteId]);
+    }, [userId]);
 
     // ── Cerrar al hacer clic afuera ──
     useEffect(() => {
@@ -88,7 +88,7 @@ export function NotificationBell({ instituteId }: { instituteId: string }) {
 
     function handleMarkAll() {
         startTransition(async () => {
-            await markAllAsRead(instituteId);
+            await markAllAsRead(userId, isStudent);
             setUnreadCount(0);
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
         });

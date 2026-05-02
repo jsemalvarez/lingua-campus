@@ -108,7 +108,7 @@ export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
                     <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
-                        <label className="text-sm font-semibold text-foreground/80">DNI (Opcional)</label>
+                        <label className="text-sm font-semibold text-foreground/80">DNI</label>
                         <input
                             name="dni"
                             placeholder="Ej: 45123456"
@@ -159,7 +159,7 @@ export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
                     <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">Principal</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5 md:col-span-1">
                         <label className="text-sm font-semibold text-foreground/80">Nombre Completo</label>
                         <input
@@ -185,12 +185,27 @@ export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
                     </div>
                     <div className="space-y-1.5 md:col-span-1">
                         <label className="text-sm font-semibold text-foreground/80">Celular del Tutor</label>
-                        <input
-                            name="g1Phone"
-                            type="tel"
-                            placeholder="Ej: +54 9 11 0000-0000"
-                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
-                        />
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <input
+                                name="g1Phone"
+                                type="tel"
+                                placeholder="Ej: +54 9 11 0000-0000"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1.5 md:col-span-1">
+                        <label className="text-sm font-semibold text-foreground/80">Email (Acceso)</label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <input
+                                name="g1Email"
+                                type="email"
+                                placeholder="tutor1@mail.com"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -204,7 +219,7 @@ export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5 md:col-span-1">
                         <label className="text-sm font-semibold text-foreground/80">Nombre Completo</label>
                         <input
@@ -230,12 +245,27 @@ export function StudentForm({ instituteLevels }: { instituteLevels: Level[] }) {
                     </div>
                     <div className="space-y-1.5 md:col-span-1">
                         <label className="text-sm font-semibold text-foreground/80">Celular del Tutor</label>
-                        <input
-                            name="g2Phone"
-                            type="tel"
-                            placeholder="Ej: +54 9 11 0000-0000"
-                            className="w-full px-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
-                        />
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <input
+                                name="g2Phone"
+                                type="tel"
+                                placeholder="Ej: +54 9 11 0000-0000"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1.5 md:col-span-1">
+                        <label className="text-sm font-semibold text-foreground/80">Email (Acceso)</label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <input
+                                name="g2Email"
+                                type="email"
+                                placeholder="tutor2@mail.com"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-ring/30 transition-all text-sm"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

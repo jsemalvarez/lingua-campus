@@ -19,8 +19,10 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
+import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
 import { GuardianDashboardView } from "./components/GuardianDashboardView";
 import { getActiveRole } from "@/lib/roles";
+import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -52,6 +54,7 @@ export default async function DashboardPage() {
                                     select: {
                                         id: true,
                                         name: true,
+                                        color: true,
                                         lessons: {
                                             where: { date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
                                             orderBy: { date: 'asc' },
@@ -62,19 +65,23 @@ export default async function DashboardPage() {
                                 }
                             }
                         },
-                        fees: {
-                            orderBy: [{ year: 'desc' }, { month: 'desc' }],
+                        attendances: {
+                            orderBy: { lesson: { date: 'desc' } },
                             take: 10,
-                            select: {
-                                id: true,
-                                month: true,
-                                year: true,
-                                originalAmount: true,
-                                paidAmount: true,
-                                status: true,
-                                datePaid: true,
-                                student: { select: { name: true } }
+                            include: {
+                                lesson: { select: { date: true, topic: true, course: { select: { name: true, color: true } } } }
                             }
+                        },
+                        grades: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 5,
+                            include: {
+                                lesson: { select: { topic: true, course: { select: { color: true, name: true } } } }
+                            }
+                        },
+                        fees: {
+                            where: { status: { not: "PAID" } },
+                            select: { originalAmount: true, paidAmount: true }
                         }
                     }
                 }
@@ -109,6 +116,7 @@ export default async function DashboardPage() {
             l.student.enrollments.flatMap(e => 
                 e.course.lessons.map(lesson => ({
                     ...lesson,
+                    color: e.course.color,
                     course: { name: e.course.name },
                     studentName: l.student.name
                 }))
@@ -116,24 +124,53 @@ export default async function DashboardPage() {
         ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 6);
 
-        // Flatten fees
-        const allFees = guardianLinks.flatMap(l => l.student.fees)
-            .sort((a,b) => {
-                if (a.year !== b.year) return b.year - a.year;
-                return b.month - a.month;
-            });
+        // Flatten attendances
+        const recentAttendances = guardianLinks.flatMap(l => 
+            l.student.attendances.map((att: any) => ({
+                id: att.id,
+                status: att.status,
+                notes: att.notes,
+                date: att.lesson.date,
+                topic: att.lesson.topic,
+                courseName: att.lesson.course.name,
+                courseColor: att.lesson.course.color,
+                studentName: l.student.name
+            }))
+        ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10);
+
+        // Flatten grades
+        const recentGrades = guardianLinks.flatMap(l => 
+            l.student.grades.map((g: any) => ({
+                id: g.id,
+                score: g.score,
+                feedback: g.feedback,
+                createdAt: g.createdAt,
+                topic: g.lesson.topic,
+                courseName: g.lesson.course.name,
+                courseColor: g.lesson.course.color,
+                studentName: l.student.name
+            }))
+        ).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
+
+        // Total Debt
+        const totalDebt = students.flatMap(s => s.fees)
+            .reduce((acc, fee) => acc + (fee.originalAmount - fee.paidAmount), 0);
 
         return (
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background pb-20">
                 <Navbar currentActiveRole={activeRole} />
                 <GuardianDashboardView 
                     guardianName={sessionUser.name || "Tutor"}
                     instituteName={instituteName}
                     students={students}
                     upcomingLessons={allLessons}
-                    fees={allFees}
+                    recentAttendances={recentAttendances}
+                    recentGrades={recentGrades}
+                    totalDebt={totalDebt}
                 />
-            </div>
+             </div>
         );
     }
 
@@ -141,28 +178,43 @@ export default async function DashboardPage() {
     if (activeRole === "STUDENT") {
         const student = await prisma.student.findUnique({
             where: { id: (session.user as any).id },
-            select: { id: true, name: true, birthDate: true, instituteId: true, institute: { select: { name: true } } }
-        });
-
-        if (!student) redirect("/login");
-
-        // Cursos del estudiante
-        const enrollments = await prisma.enrollment.findMany({
-            where: { studentId: student.id, status: "ACTIVE" },
             include: {
-                course: {
-                    select: {
-                        id: true,
-                        name: true,
-                        level: true,
-                        teacher: { select: { name: true } },
-                        schedules: { select: { dayOfWeek: true, startTime: true, endTime: true }, orderBy: { dayOfWeek: 'asc' } }
+                institute: { select: { name: true } },
+                enrollments: {
+                    where: { status: "ACTIVE" },
+                    include: {
+                        course: {
+                            include: {
+                                teacher: { select: { name: true, avatarUrl: true } },
+                                schedules: { orderBy: { dayOfWeek: 'asc' } }
+                            }
+                        }
+                    }
+                },
+                attendances: {
+                    orderBy: { lesson: { date: 'desc' } },
+                    take: 20,
+                    include: {
+                        lesson: {
+                            include: {
+                                course: { select: { name: true, color: true } }
+                            }
+                        }
+                    }
+                },
+                grades: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 10,
+                    include: {
+                        lesson: { select: { topic: true, course: { select: { name: true, color: true } } } }
                     }
                 }
             }
         });
 
-        const courseIds = enrollments.map(e => e.course.id);
+        if (!student) redirect("/login");
+
+        const courseIds = student.enrollments.map(e => e.course.id);
 
         // Próximas clases de sus cursos
         const today = new Date();
@@ -175,7 +227,12 @@ export default async function DashboardPage() {
             orderBy: { date: 'asc' },
             take: 5,
             include: {
-                course: { select: { name: true } }
+                course: {
+                    include: {
+                        teacher: { select: { name: true, avatarUrl: true } }
+                    }
+                },
+                schedule: true
             }
         });
 
@@ -188,12 +245,37 @@ export default async function DashboardPage() {
         });
         const attendanceRate = totalAttendances > 0 ? Math.round((presentCount / totalAttendances) * 100) : 0;
 
+        // Horas totales (clases asistidas)
+        let totalMinutes = 0;
+        student.attendances.forEach(att => {
+            if (att.status === "PRESENT" || att.status === "LATE") {
+                const sched = att.lesson.scheduleId ? student.enrollments.flatMap(e => e.course.schedules).find(s => s.id === att.lesson.scheduleId) : null;
+                if (sched) {
+                    const [h1, m1] = sched.startTime.split(":").map(Number);
+                    const [h2, m2] = sched.endTime.split(":").map(Number);
+                    totalMinutes += (h2 * 60 + m2) - (h1 * 60 + m1);
+                } else {
+                    totalMinutes += 60; // Default 1 hour
+                }
+            }
+        });
+        const practiceHours = (totalMinutes / 60).toFixed(1);
+
         // Cuotas pendientes
-        const pendingFees = await prisma.fee.count({
+        const pendingFeesCount = await prisma.fee.count({
             where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } }
         });
 
-        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        // Tareas pendientes
+        const pendingTasks = [
+            ...(pendingFeesCount > 0 ? [{ id: 'fees', title: `Pagar cuotas pendientes (${pendingFeesCount})`, type: 'FINANCE', dueDate: 'Urgente' }] : []),
+            ...upcomingLessons.filter(l => l.type === 'EXAM').map(l => ({
+                id: l.id,
+                title: `Examen: ${l.topic}`,
+                type: 'ACADEMIC',
+                dueDate: l.date.toLocaleDateString()
+            }))
+        ];
 
         // Calcular edad
         let isMinor = false;
@@ -208,105 +290,46 @@ export default async function DashboardPage() {
             isMinor = age < 18;
         }
 
-        const studentStats = [
-            { label: "Mis Cursos", value: enrollments.length.toString(), icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50" },
-            { label: "Asistencia", value: totalAttendances > 0 ? `${attendanceRate}%` : "—", icon: GraduationCap, color: "text-blue-600", bg: "bg-blue-50" },
-            // Solo mostrar cuotas si es mayor de 18
-            ...(!isMinor ? [{ label: "Cuotas Pendientes", value: pendingFees.toString(), icon: DollarSign, color: pendingFees > 0 ? "text-amber-600" : "text-green-600", bg: pendingFees > 0 ? "bg-amber-50" : "bg-green-50" }] : []),
-        ];
 
+        // Calcular progreso del curso principal (Maestría)
+        let courseProgress = 0;
+        let lessonStats = { current: 0, total: 0 };
+        if (student.enrollments.length > 0) {
+            const mainCourseId = student.enrollments[0].courseId;
+            const total = await prisma.lesson.count({ where: { courseId: mainCourseId } });
+            const passed = await prisma.lesson.count({ where: { courseId: mainCourseId, date: { lt: new Date() } } });
+            courseProgress = total > 0 ? Math.round((passed / total) * 100) : 0;
+            lessonStats = { current: passed, total };
+        }
+
+        // Calcular promedio general (GPA)
+        const allGrades = await prisma.grade.findMany({
+            where: { studentId: student.id },
+            select: { score: true }
+        });
+        
+        const numericGrades = allGrades
+            .map(g => parseFloat(g.score || ""))
+            .filter(n => !isNaN(n));
+
+        const averageGrade = numericGrades.length > 0 
+            ? (numericGrades.reduce((acc, curr) => acc + curr, 0) / numericGrades.length).toFixed(1)
+            : null;
 
         return (
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background pb-20">
                 <Navbar currentActiveRole={activeRole} />
-                <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div>
-                        <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
-                            {student.institute?.name || "Instituto"}
-                        </span>
-                        <h1 className="text-3xl font-bold tracking-tight mt-1">Panel de Control</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Bienvenido/a de nuevo, {student.name.split(" ")[0]}. Esto está pasando hoy.
-                        </p>
-                    </div>
-
-                    {/* Stats */}
-                    <div className={`grid gap-4 ${
-                        studentStats.length === 1 ? "grid-cols-1" : 
-                        studentStats.length === 2 ? "md:grid-cols-2" : 
-                        "md:grid-cols-3"
-                    }`}>
-                        {studentStats.map((stat, i) => (
-                            <Card key={i} className="p-6 hover:shadow-md transition-shadow">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                                        <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
-                                    </div>
-                                    <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
-                                        <stat.icon size={24} />
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {/* Mis Cursos */}
-                        <Card className="p-6">
-                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
-                                <BookOpen className="text-purple-500" size={20} /> Mis Cursos
-                            </h3>
-                            <div className="space-y-3">
-                                {enrollments.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground italic text-center py-4">No estás inscripto en ningún curso actualmente.</p>
-                                ) : enrollments.map((enrol) => (
-                                    <div key={enrol.course.id} className="p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-semibold text-sm">{enrol.course.name}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {enrol.course.level || "Sin nivel"} • Prof. {enrol.course.teacher?.name || "N/A"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        {enrol.course.schedules.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                                {enrol.course.schedules.map((s, i) => (
-                                                    <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                                        {dayNames[s.dayOfWeek]} {s.startTime}–{s.endTime}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-
-                        {/* Próximas Clases */}
-                        <Card className="p-6">
-                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
-                                <Clock className="text-blue-500" size={20} /> Próximas Clases
-                            </h3>
-                            <div className="space-y-3">
-                                {upcomingLessons.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground italic text-center py-4">No hay próximas clases programadas.</p>
-                                ) : upcomingLessons.map((lesson) => (
-                                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-sm">{lesson.course.name}</span>
-                                            <span className="text-xs text-muted-foreground">{lesson.topic}</span>
-                                        </div>
-                                        <div className="text-sm font-semibold tabular-nums">
-                                            {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-                </main>
+                <StudentDashboardV2View 
+                    student={student}
+                    attendanceRate={attendanceRate}
+                    practiceHours={practiceHours}
+                    upcomingLessons={upcomingLessons}
+                    pendingTasks={pendingTasks}
+                    isMinor={isMinor}
+                    courseProgress={courseProgress}
+                    lessonStats={lessonStats}
+                    averageGrade={averageGrade}
+                />
             </div>
         );
     }
@@ -513,7 +536,10 @@ export default async function DashboardPage() {
     const totalTeachers = await prisma.user.count({
         where: {
             instituteId: user.instituteId,
-            role: "TEACHER"
+            OR: [
+                { role: "TEACHER" },
+                { roles: { has: "TEACHER" } }
+            ]
         }
     });
 
@@ -666,6 +692,9 @@ export default async function DashboardPage() {
                             <AnnualFinanceChartServer instituteId={user.instituteId} />
                          </Suspense>
                     )}
+                    <Suspense fallback={<Card className="h-[480px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                        <PlaygroundChartServer instituteId={user.instituteId} />
+                    </Suspense>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">

@@ -69,10 +69,12 @@ export async function updateStudentFromTokenAction(formData: FormData, token: st
         const guardian1Name = formData.get("guardian1Name") as string;
         const guardian1Relation = formData.get("guardian1Relation") as string;
         const guardian1Phone = formData.get("guardian1Phone") as string;
+        const guardian1Email = formData.get("guardian1Email") as string;
 
         const guardian2Name = formData.get("guardian2Name") as string;
         const guardian2Relation = formData.get("guardian2Relation") as string;
         const guardian2Phone = formData.get("guardian2Phone") as string;
+        const guardian2Email = formData.get("guardian2Email") as string;
 
         await prisma.$transaction([
             prisma.student.update({
@@ -88,9 +90,11 @@ export async function updateStudentFromTokenAction(formData: FormData, token: st
                     guardian1Name: guardian1Name || null,
                     guardian1Relation: guardian1Relation || null,
                     guardian1Phone: guardian1Phone || null,
+                    guardian1Email: guardian1Email || null,
                     guardian2Name: guardian2Name || null,
                     guardian2Relation: guardian2Relation || null,
                     guardian2Phone: guardian2Phone || null,
+                    guardian2Email: guardian2Email || null,
                 }
             }),
             prisma.studentDataToken.update({

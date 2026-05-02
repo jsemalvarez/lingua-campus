@@ -217,6 +217,7 @@ export default async function StudentsPage(props: PageProps) {
                 {/* Filters & Search */}
                 <Card className="p-4 mb-6 shadow-sm border-border/40">
                     <form className="flex flex-col md:flex-row gap-4" action="/students" method="GET">
+                        <input type="hidden" name="tab" value={tabParam} />
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                             <input
@@ -232,7 +233,7 @@ export default async function StudentsPage(props: PageProps) {
                                 Buscar
                             </Button>
                             {query && (
-                                <Link href="/students">
+                                <Link href={`/students${tabParam !== 'active' ? `?tab=${tabParam}` : ''}`}>
                                     <Button variant="outline" className="border-border/60 text-muted-foreground">
                                         Limpiar
                                     </Button>
@@ -414,7 +415,7 @@ export default async function StudentsPage(props: PageProps) {
 
                                 <div className="flex items-center gap-2 ml-auto sm:ml-0">
                                     <Link
-                                        href={`/students?page=${currentPage - 1}${query ? `&q=${encodeURIComponent(query)}` : ''}`}
+                                        href={`/students?page=${currentPage - 1}${query ? `&q=${encodeURIComponent(query)}` : ''}${tabParam !== 'active' ? `&tab=${tabParam}` : ''}`}
                                         className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
                                     >
                                         <Button variant="outline" size="sm" disabled={currentPage <= 1} className="border-border/60">
@@ -427,7 +428,7 @@ export default async function StudentsPage(props: PageProps) {
                                     </div>
 
                                     <Link
-                                        href={`/students?page=${currentPage + 1}${query ? `&q=${encodeURIComponent(query)}` : ''}`}
+                                        href={`/students?page=${currentPage + 1}${query ? `&q=${encodeURIComponent(query)}` : ''}${tabParam !== 'active' ? `&tab=${tabParam}` : ''}`}
                                         className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
                                     >
                                         <Button variant="outline" size="sm" disabled={currentPage >= totalPages} className="border-border/60">

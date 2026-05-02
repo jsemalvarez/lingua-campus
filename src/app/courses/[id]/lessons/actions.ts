@@ -18,6 +18,12 @@ export async function createLessonAction(formData: FormData) {
     const type = (formData.get("type") as any) || "CLASS";
     const scheduleId = formData.get("scheduleId") as string;
 
+    // Practice fields (only relevant for CLASS type)
+    const speakingPhrasesRaw = formData.get("speakingPhrases") as string;
+    const listeningText = formData.get("listeningText") as string;
+    const chatScenario = formData.get("chatScenario") as string;
+    const practicePublished = formData.get("practicePublished") === "true";
+
     if (!courseId || !dateStr || !topic) {
         return { success: false, error: "Faltan datos requeridos (Fecha y Tema)" };
     }
@@ -45,6 +51,14 @@ export async function createLessonAction(formData: FormData) {
             return { success: false, error: "No autorizado (El curso no pertenece a tu instituto)" };
         }
 
+        // Parse speaking phrases: split by newline, trim, remove empty lines
+        const speakingPhrases = speakingPhrasesRaw
+            ? speakingPhrasesRaw.split("\n").map((p) => p.trim()).filter(Boolean)
+            : [];
+
+        // Only create LessonPractice if it's a CLASS and has at least one phrase
+        const hasPractice = type === "CLASS" && speakingPhrases.length > 0;
+
         await prisma.lesson.create({
             data: {
                 courseId,
@@ -52,7 +66,17 @@ export async function createLessonAction(formData: FormData) {
                 topic,
                 content: content || null,
                 type,
-                scheduleId: scheduleId || null
+                scheduleId: scheduleId || null,
+                ...(hasPractice && {
+                    practice: {
+                        create: {
+                            speakingPhrases,
+                            listeningText: listeningText || null,
+                            chatScenario: chatScenario || null,
+                            isPublished: practicePublished,
+                        }
+                    }
+                })
             }
         });
 
@@ -78,6 +102,12 @@ export async function editLessonAction(formData: FormData) {
     const type = (formData.get("type") as any) || "CLASS";
     const scheduleId = formData.get("scheduleId") as string;
 
+    // Practice fields
+    const speakingPhrasesRaw = formData.get("speakingPhrases") as string;
+    const listeningText = formData.get("listeningText") as string;
+    const chatScenario = formData.get("chatScenario") as string;
+    const practicePublished = formData.get("practicePublished") === "true";
+
     if (!lessonId || !courseId || !dateStr || !topic) {
         return { success: false, error: "Faltan datos requeridos (Fecha y Tema)" };
     }
@@ -92,10 +122,8 @@ export async function editLessonAction(formData: FormData) {
             return { success: false, error: "No autorizado" };
         }
 
-        // Store as UTC noon
         const date = new Date(`${dateStr}T12:00:00Z`);
 
-        // Verify lesson and course belong to same institute
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
             include: { course: { select: { instituteId: true } } }
@@ -105,6 +133,14 @@ export async function editLessonAction(formData: FormData) {
             return { success: false, error: "No autorizado (La clase no pertenece a tu instituto)" };
         }
 
+        // Parse speaking phrases
+        const speakingPhrases = speakingPhrasesRaw
+            ? speakingPhrasesRaw.split("\n").map((p) => p.trim()).filter(Boolean)
+            : [];
+
+        const hasPractice = type === "CLASS" && speakingPhrases.length > 0;
+
+        // Update lesson core fields
         await prisma.lesson.update({
             where: { id: lessonId },
             data: {
@@ -112,9 +148,32 @@ export async function editLessonAction(formData: FormData) {
                 topic,
                 content: content || null,
                 type,
-                scheduleId: scheduleId || null
+                scheduleId: scheduleId || null,
             }
         });
+
+        if (hasPractice) {
+            // Upsert: create if doesn't exist, update if it does
+            await prisma.lessonPractice.upsert({
+                where: { lessonId },
+                create: {
+                    lessonId,
+                    speakingPhrases,
+                    listeningText: listeningText || null,
+                    chatScenario: chatScenario || null,
+                    isPublished: practicePublished,
+                },
+                update: {
+                    speakingPhrases,
+                    listeningText: listeningText || null,
+                    chatScenario: chatScenario || null,
+                    isPublished: practicePublished,
+                }
+            });
+        } else if (type === "CLASS" && speakingPhrases.length === 0) {
+            // If phrases were cleared, delete the practice record if it exists
+            await prisma.lessonPractice.deleteMany({ where: { lessonId } });
+        }
 
         revalidatePath(`/courses/${courseId}`);
         return { success: true };
@@ -123,6 +182,7 @@ export async function editLessonAction(formData: FormData) {
         return { success: false, error: error.message || "No se pudo editar la clase" };
     }
 }
+
 
 export async function deleteLessonAction(lessonId: string, courseId: string) {
     const session = await getServerSession(authOptions);

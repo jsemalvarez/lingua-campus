@@ -89,6 +89,12 @@ model User {
   // Relation for Guardian Portal
   guardianLinks GuardianStudentLink[] @relation("GuardianToStudent")
   
+  notifications Notification[]
+
+  // Messaging
+  threadParticipations ThreadParticipant[]
+  sentMessages         Message[]           @relation("UserSentMessages")
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -113,11 +119,13 @@ model Student {
   guardian1Name     String?
   guardian1Relation String?
   guardian1Phone    String?
+  guardian1Email    String?
   
   // Tutor Legal 2
   guardian2Name     String?
   guardian2Relation String?
   guardian2Phone    String?
+  guardian2Email    String?
   birthDate     DateTime?
   joinDate      DateTime @default(now())
 
@@ -132,12 +140,19 @@ model Student {
   grades        Grade[]
   fees          Fee[]
   miscellaneousIncome MiscellaneousIncome[]
+  practiceSessions PracticeSession[]
   
   // Relation for Guardian Portal
   guardianLinks GuardianStudentLink[] @relation("StudentToGuardian")
 
   // Relation for data completion tokens
   dataTokens    StudentDataToken[]
+  
+  notifications Notification[]
+
+  // Messaging
+  threadParticipations ThreadParticipant[]
+  sentMessages         Message[]           @relation("StudentSentMessages")
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -179,6 +194,7 @@ model Course {
   enrollments Enrollment[]
   schedules   Schedule[]
   lessons     Lesson[]
+  threads     MessageThread[]
 
 
   startDate   DateTime?
@@ -289,6 +305,8 @@ model Lesson {
   
   attendances Attendance[]
   grades      Grade[]
+  practice    LessonPractice?
+  practiceSessions PracticeSession[]
 
   scheduleId  String?
   schedule    Schedule? @relation(fields: [scheduleId], references: [id])
@@ -298,6 +316,68 @@ model Lesson {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// PRACTICE MODULE
+// -----------------------------------------------------------------------------
+
+enum PracticeType {
+  SPEAKING
+  LISTENING
+  CHAT
+}
+
+// Material cargado por el profesor para que el alumno practique lo visto en clase
+model LessonPractice {
+  id               String   @id @default(cuid())
+  lessonId         String   @unique
+  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  // Contenido de práctica cargado por el profesor
+  speakingPhrases  String[] // Frases base para pronunciación, una por elemento
+  listeningText    String?  @db.Text // Texto que se convierte a audio TTS
+  chatScenario     String?  @db.Text // Escenario para el AI Chatbot
+
+  isPublished      Boolean  @default(false) // El profesor activa cuando está listo
+
+  sessions         PracticeSession[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([lessonId])
+}
+
+// Registro de cada sesión de práctica completada por un alumno
+model PracticeSession {
+  id                 String         @id @default(cuid())
+
+  studentId          String
+  student            Student        @relation(fields: [studentId], references: [id])
+
+  lessonId           String
+  lesson             Lesson         @relation(fields: [lessonId], references: [id])
+
+  lessonPracticeId   String
+  lessonPractice     LessonPractice @relation(fields: [lessonPracticeId], references: [id])
+
+  type               PracticeType
+
+  // Métricas de precisión (Speaking + Listening)
+  phrasesAttempted   Int    @default(0)
+  phrasesCorrect     Int    @default(0)
+  accuracyPct        Float  @default(0) // 0-100, calculado al cerrar la sesión
+
+  // Área de dificultad detectada por la IA durante la sesión
+  weakArea           String? // Ej: "th fricative", "short vowels"
+
+  durationSeconds    Int    @default(0)
+  completedAt        DateTime @default(now())
+
+  @@index([studentId])
+  @@index([lessonId])
+  @@index([studentId, lessonId])
 }
 
 model Attendance {
@@ -468,6 +548,13 @@ model Notification {
   id          String   @id @default(cuid())
   instituteId String
   institute   Institute @relation(fields: [instituteId], references: [id])
+  
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  studentId   String?
+  student     Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
   type        String   // "NEW_ENROLLMENT", "PAYMENT_RECEIVED", etc.
   title       String
   body        String
@@ -477,6 +564,8 @@ model Notification {
   createdAt   DateTime @default(now())
 
   @@index([instituteId, read])
+  @@index([userId, read])
+  @@index([studentId, read])
 }
 
 model MiscellaneousIncome {
@@ -515,4 +604,79 @@ model StudentDataToken {
   expiresAt DateTime
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// MESSAGING
+// -----------------------------------------------------------------------------
+
+enum ThreadType {
+  DIRECT        // Dirigido a persona(s) específica(s)
+  COURSE_BLAST  // Dirigido a todos los alumnos/tutores de un curso
+}
+
+// Hilo de conversación (agrupa mensajes bajo un asunto)
+model MessageThread {
+  id          String     @id @default(cuid())
+  instituteId String
+
+  subject     String     // Asunto — siempre requerido (estilo email)
+  type        ThreadType @default(DIRECT)
+
+  // Contexto opcional: si el hilo está relacionado a un curso específico
+  courseId    String?
+  course      Course?    @relation(fields: [courseId], references: [id])
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  participants ThreadParticipant[]
+  messages     Message[]
+
+  @@index([instituteId])
+  @@index([instituteId, updatedAt])
+}
+
+// Participantes del hilo (polimórfico: User o Student)
+model ThreadParticipant {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Exactamente uno de los dos debe estar poblado
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId String?
+  student   Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  isAuthor   Boolean  @default(false)   // true = quien inició el hilo
+  lastReadAt DateTime?                   // Para calcular mensajes no leídos
+
+  createdAt  DateTime @default(now())
+
+  @@unique([threadId, userId])
+  @@unique([threadId, studentId])
+  @@index([userId])
+  @@index([studentId])
+}
+
+// Mensaje individual dentro de un hilo
+model Message {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Polimórfico: o un User (teacher, admin, guardian) o un Student
+  senderUserId    String?
+  senderUser      User?    @relation("UserSentMessages", fields: [senderUserId], references: [id])
+
+  senderStudentId String?
+  senderStudent   Student? @relation("StudentSentMessages", fields: [senderStudentId], references: [id])
+
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([threadId])
+  @@index([threadId, createdAt])
 }
