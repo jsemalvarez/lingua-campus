@@ -11,38 +11,31 @@ import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, Clipbo
 import { format, addDays, subDays, addWeeks, subWeeks, startOfWeek, isSameDay, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
+import { ScheduleFilters } from "./components/ScheduleFilters";
 import { getActiveRole } from "@/lib/roles";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-export default async function SchedulePage({
-    searchParams
-}: {
-    searchParams: Promise<{ 
-        view?: string; 
-        date?: string;
-        courseId?: string;
-        teacherId?: string;
-        classroomId?: string;
-    }>
-}) {
+interface PageProps {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function SchedulePage(props: PageProps) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) redirect("/login");
 
-    const params = await searchParams;
-    const view = params.view || "week";
+    const params = await props.searchParams;
+    const view = (params.view as string) || "week";
 
     // Parse the date from URL or use today
     let baseDate = new Date();
     if (params.date) {
-        const parsed = parseISO(params.date);
+        const parsed = parseISO(params.date as string);
         if (isValid(parsed)) {
             baseDate = parsed;
         }
     }
 
-    // CRITICAL: Normalize to UTC Noon to avoid timezone shifts (e.g., UTC-3)
-    // and ensure perfect matching with @db.Date records
     const displayDateNoon = new Date(baseDate);
     displayDateNoon.setUTCHours(12, 0, 0, 0);
 
@@ -99,7 +92,7 @@ export default async function SchedulePage({
 
     const isTeacher = role === "TEACHER";
     const isStudentOrGuardian = role === "STUDENT" || role === "GUARDIAN";
-    const effectiveTeacherId = isTeacher ? (session.user as any).id : params.teacherId;
+    const effectiveTeacherId = isTeacher ? (session.user as any).id : (params.teacherId as string);
 
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
@@ -126,13 +119,12 @@ export default async function SchedulePage({
         })
     ]);
 
-    const activeCourseId = params.courseId;
-    const activeTeacherId = effectiveTeacherId;
-    const activeClassroomId = params.classroomId;
+    const activeCourseId = params.courseId as string;
+    const activeTeacherId = effectiveTeacherId as string;
+    const activeClassroomId = params.classroomId as string;
 
     const displayDayIndex = displayDateNoon.getUTCDay();
 
-    // If weekly view, fetch lessons for the whole week
     const weekStart = startOfWeek(displayDateNoon, { weekStartsOn: 1 });
     const weekEnd = addDays(weekStart, 6);
     const weekStartNoon = new Date(weekStart);
@@ -144,17 +136,14 @@ export default async function SchedulePage({
         ? { date: displayDateNoon }
         : { date: { gte: weekStartNoon, lte: weekEndNoon } };
 
-    // Get all scheduled class templates
     const allSchedules = await prisma.schedule.findMany({
         where: {
             course: {
                 instituteId: instituteId,
                 status: "ACTIVE",
-                // Apply optional filters
                 ...(activeCourseId ? { id: activeCourseId } : {}),
                 ...(activeTeacherId ? { teacherId: activeTeacherId } : {}),
                 ...(activeClassroomId ? { classroomId: activeClassroomId } : {}),
-                // If student/guardian, ONLY show their enrolled courses
                 ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             }
         },
@@ -174,13 +163,11 @@ export default async function SchedulePage({
         ]
     });
 
-    // Filter by day if in "day" view
     const schedules = view === "day"
         ? allSchedules.filter(s => {
             const isCorrectDay = s.dayOfWeek === displayDayIndex;
             if (!isCorrectDay) return false;
 
-            // @ts-ignore - Prisma types might be lagging in IDE
             const courseStart = s.course.startDate ? new Date(s.course.startDate) : null;
             const courseEnd = s.course.endDate ? new Date(s.course.endDate) : null;
 
@@ -197,15 +184,13 @@ export default async function SchedulePage({
         })
         : allSchedules;
 
-    // Navigation calculation
+    const filterParams = `${activeCourseId ? `&courseId=${activeCourseId}` : ""}${activeTeacherId ? `&teacherId=${activeTeacherId}` : ""}${activeClassroomId ? `&classroomId=${activeClassroomId}` : ""}`;
+
     const prevDate = view === "day" ? subDays(displayDateNoon, 1) : subWeeks(displayDateNoon, 1);
     const nextDate = view === "day" ? addDays(displayDateNoon, 1) : addWeeks(displayDateNoon, 1);
 
-    const filterParams = `${activeCourseId ? `&courseId=${activeCourseId}` : ""}${activeTeacherId ? `&teacherId=${activeTeacherId}` : ""}${activeClassroomId ? `&classroomId=${activeClassroomId}` : ""}`;
-
     const prevUrl = `/schedule?view=${view}&date=${format(prevDate, "yyyy-MM-dd")}${filterParams}`;
     const nextUrl = `/schedule?view=${view}&date=${format(nextDate, "yyyy-MM-dd")}${filterParams}`;
-
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -247,7 +232,18 @@ export default async function SchedulePage({
                     </div>
                 </header>
 
-                {/* Date Navigation Control */}
+                <ScheduleFilters 
+                    allCourses={allCourses}
+                    allTeachers={allTeachers}
+                    allClassrooms={allClassrooms}
+                    userRole={role}
+                    currentFilters={{
+                        courseId: activeCourseId,
+                        teacherId: activeTeacherId,
+                        classroomId: activeClassroomId
+                    }}
+                />
+
                 <div className="flex items-center justify-between mb-8 bg-muted/15 p-5 rounded-[2rem] border border-border/30 backdrop-blur-sm shadow-inner">
                     <div className="flex items-center gap-5">
                         <Link href={prevUrl}>
@@ -283,9 +279,8 @@ export default async function SchedulePage({
                 </div>
 
                 <div className="grid gap-8 grid-cols-1">
-                    {/* Weekly Grid or Daily List */}
                     <div className="space-y-4">
-                        {schedules.length === 0 ? (
+                        {allSchedules.length === 0 ? (
                             <div className="text-center p-12 border border-dashed rounded-xl border-border/50 bg-muted/20">
                                 <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                                 <h3 className="text-xl font-bold mb-2">Sin clases programadas</h3>
@@ -299,9 +294,8 @@ export default async function SchedulePage({
                             ) : (
                                 <div className="space-y-4">
                                     {schedules.map((schedule) => {
-                                        // @ts-ignore
                                         const hasLesson = schedule.lessons && schedule.lessons.length > 0;
-                                        const cardColor = hasLesson ? schedule.course.color : "#94a3b8"; // SLATE-400 for empty slots
+                                        const cardColor = hasLesson ? schedule.course.color : "#94a3b8";
 
                                         return (
                                             <Card 
@@ -334,13 +328,6 @@ export default async function SchedulePage({
                                                                         {/* @ts-ignore */}
                                                                         {schedule.lessons[0].topic}
                                                                     </p>
-                                                                    {/* @ts-ignore */}
-                                                                    {schedule.lessons[0].content && (
-                                                                        <p className="text-xs text-muted-foreground line-clamp-1 italic">
-                                                                            {/* @ts-ignore */}
-                                                                            {schedule.lessons[0].content}
-                                                                        </p>
-                                                                    )}
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1.5 -mt-0.5">
@@ -355,26 +342,11 @@ export default async function SchedulePage({
                                                         </div>
                                                     </div>
                                                     <div className="sm:text-right w-full sm:w-auto flex sm:flex-col gap-2">
-                                                        {hasLesson ? (
-                                                            <Link
-                                                                // @ts-ignore
-                                                                href={`/courses/${schedule.course.id}/lessons/${schedule.lessons[0].id}/attendance`}
-                                                                className="flex-1 sm:flex-none"
-                                                            >
-                                                                <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 border-emerald-500/20 transition-all flex items-center justify-center gap-1.5">
-                                                                    <ClipboardCheck size={14} /> Asistencia
-                                                                </Button>
-                                                            </Link>
-                                                        ) : (
-                                                            <Link
-                                                                href={`/courses/${schedule.course.id}`}
-                                                                className="flex-1 sm:flex-none"
-                                                            >
-                                                                <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-all flex items-center justify-center gap-1.5">
-                                                                    <BookOpen size={14} /> Ir al Curso
-                                                                </Button>
-                                                            </Link>
-                                                        )}
+                                                        <Link href={`/courses/${schedule.course.id}`} className="flex-1 sm:flex-none">
+                                                            <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-all flex items-center justify-center gap-1.5">
+                                                                <BookOpen size={14} /> Ver Curso
+                                                            </Button>
+                                                        </Link>
                                                     </div>
                                                 </div>
                                             </Card>
