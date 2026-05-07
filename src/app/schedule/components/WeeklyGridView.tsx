@@ -22,11 +22,17 @@ interface Schedule {
         teacher: {
             name: string;
         } | null;
-        lessons: {
+        lessons?: {
             id: string;
+            date: string | Date;
             topic: string;
         }[];
     };
+    lessons: {
+        id: string;
+        date: string | Date;
+        topic: string;
+    }[];
 }
 
 interface WeeklyGridViewProps {
@@ -87,9 +93,9 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                     </div>
                                 ) : (
                                     daySchedules.map((schedule) => {
-                                        // Find the specific lesson for this day/slot
-                                        const linkedLesson = schedule.lessons?.find((l: any) => 
-                                            // Add 12 hours to avoid timezone shifts (00:00 UTC showing as previous day)
+                                        const linkedLesson = (schedule.lessons || []).find((l: any) => 
+                                            dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
+                                        ) || (schedule.course.lessons || []).find((l: any) => 
                                             dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
                                         );
 

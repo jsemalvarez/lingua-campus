@@ -126,15 +126,20 @@ export default async function SchedulePage(props: PageProps) {
     const displayDayIndex = displayDateNoon.getUTCDay();
 
     const weekStart = startOfWeek(displayDateNoon, { weekStartsOn: 1 });
-    const weekEnd = addDays(weekStart, 6);
-    const weekStartNoon = new Date(weekStart);
-    weekStartNoon.setUTCHours(12, 0, 0, 0);
-    const weekEndNoon = new Date(weekEnd);
-    weekEndNoon.setUTCHours(12, 0, 0, 0);
+    const weekStartUTC = new Date(weekStart);
+    weekStartUTC.setUTCHours(0, 0, 0, 0);
+    
+    const weekEndUTC = addDays(weekStartUTC, 6);
+    weekEndUTC.setUTCHours(23, 59, 59, 999);
+
+    const dayStartUTC = new Date(displayDateNoon);
+    dayStartUTC.setUTCHours(0, 0, 0, 0);
+    const dayEndUTC = new Date(displayDateNoon);
+    dayEndUTC.setUTCHours(23, 59, 59, 999);
 
     const lessonsWhere = view === "day" 
-        ? { date: displayDateNoon }
-        : { date: { gte: weekStartNoon, lte: weekEndNoon } };
+        ? { date: { gte: dayStartUTC, lte: dayEndUTC } }
+        : { date: { gte: weekStartUTC, lte: weekEndUTC } };
 
     const allSchedules = await prisma.schedule.findMany({
         where: {
@@ -150,7 +155,10 @@ export default async function SchedulePage(props: PageProps) {
         include: {
             course: {
                 include: {
-                    teacher: true
+                    teacher: true,
+                    lessons: {
+                        where: lessonsWhere
+                    }
                 }
             },
             lessons: {
@@ -294,7 +302,7 @@ export default async function SchedulePage(props: PageProps) {
                             ) : (
                                 <div className="space-y-4">
                                     {schedules.map((schedule) => {
-                                        const hasLesson = schedule.lessons && schedule.lessons.length > 0;
+                                        const hasLesson = (schedule.lessons && schedule.lessons.length > 0) || (schedule.course.lessons && schedule.course.lessons.length > 0);
                                         const cardColor = hasLesson ? schedule.course.color : "#94a3b8";
 
                                         return (
