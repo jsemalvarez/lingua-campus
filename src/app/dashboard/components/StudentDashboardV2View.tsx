@@ -106,6 +106,8 @@ export function StudentDashboardV2View({
             </Card>
          </div>
 
+
+
          {/* 2. ASYMMETRIC HIGHLIGHT ROW (Course 2/3 vs Next Session 1/3) */}
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
 
