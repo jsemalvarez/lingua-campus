@@ -38,9 +38,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     const isAdmin = ["ADMIN", "SECRETARY"].includes(activeRole);
     const isGuardian = activeRole === "GUARDIAN";
 
-    // Si NO es admin, verificar si es el tutor de ESTE alumno específico
+    // Si NO es admin, verificar si el acceso está permitido por otro rol
     if (!isAdmin) {
         if (isGuardian) {
+            // Tutor: solo puede ver el perfil del alumno al que está vinculado
             const link = await prisma.guardianStudentLink.findUnique({
                 where: {
                     guardianId_studentId: {
@@ -50,10 +51,20 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 }
             });
             if (!link) redirect("/dashboard");
+        } else if (activeRole === "TEACHER") {
+            // Profesor: puede ver el perfil si el alumno está inscrito en alguno de sus cursos activos
+            const enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    studentId: id,
+                    course: {
+                        teacherId: user.id,
+                        status: "ACTIVE"
+                    }
+                }
+            });
+            if (!enrollment) redirect("/students");
         } else {
-            // No es admin ni tutor vinculado (o docente en modo docente)
-            // Permitir el flujo si es admin real pero está en otro modo? 
-            // Para seguridad, si no es Admin en activeRole, restringimos.
+            // Cualquier otro caso: verificar si tiene rol ADMIN/SECRETARY real
             const realIsAdmin = userRoles.some((r: any) => ["ADMIN", "SECRETARY"].includes(r));
             if (!realIsAdmin) {
                 redirect("/dashboard");
