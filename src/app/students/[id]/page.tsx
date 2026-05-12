@@ -18,8 +18,49 @@ import { formatFeeLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+// ─── NAVEGACIÓN CONTEXTUAL (?from= pattern) ───────────────────────────────
+// Helpers reutilizables para el patrón ?from=. Para adoptar este patrón en
+// otra página destino:
+//   1. Agregar `searchParams: Promise<{ from?: string }>` a los props del page.
+//   2. Leer el param con `const { from } = await searchParams;`
+//   3. Validar con isValidBackUrl() para evitar open-redirect.
+//   4. Calcular href y label con resolveBack().
+//   5. En la página origen, agregar `?from=<ruta>` al Link correspondiente.
+//
+// IMPORTANTE: `searchParams` debe declararse en la firma del page para que
+// Next.js App Router lo exponga correctamente como prop asíncrono.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Acepta solo rutas relativas internas. Rechaza URLs absolutas y esquemas peligrosos. */
+function isValidBackUrl(url: string): boolean {
+    return (
+        typeof url === "string" &&
+        url.startsWith("/") &&
+        !url.startsWith("//") &&       // Evita //evil.com
+        !url.includes(":")             // Evita javascript:, data:, etc.
+    );
+}
+
+/** Devuelve un label legible según la ruta de origen. Extender a medida que se sumen flujos. */
+function resolveBackLabel(url: string): string {
+    if (url.startsWith("/courses/")) return "Volver al Curso";
+    if (url.startsWith("/students")) return "Volver a Estudiantes";
+    return "Volver";
+}
+
+export default async function StudentDetailPage({
+    params,
+    searchParams,
+}: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ from?: string }>;
+}) {
     const { id } = await params;
+    const { from } = await searchParams;
+
+    // URL y label del botón "Volver" — dinámico si viene ?from=, fallback hardcodeado.
+    const backUrl   = from && isValidBackUrl(from) ? from : "/students";
+    const backLabel = resolveBackLabel(backUrl);
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
 
@@ -38,9 +79,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     const isAdmin = ["ADMIN", "SECRETARY"].includes(activeRole);
     const isGuardian = activeRole === "GUARDIAN";
 
-    // Si NO es admin, verificar si es el tutor de ESTE alumno específico
+    // Si NO es admin, verificar si el acceso está permitido por otro rol
     if (!isAdmin) {
         if (isGuardian) {
+            // Tutor: solo puede ver el perfil del alumno al que está vinculado
             const link = await prisma.guardianStudentLink.findUnique({
                 where: {
                     guardianId_studentId: {
@@ -50,10 +92,20 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 }
             });
             if (!link) redirect("/dashboard");
+        } else if (activeRole === "TEACHER") {
+            // Profesor: puede ver el perfil si el alumno está inscrito en alguno de sus cursos activos
+            const enrollment = await prisma.enrollment.findFirst({
+                where: {
+                    studentId: id,
+                    course: {
+                        teacherId: user.id,
+                        status: "ACTIVE"
+                    }
+                }
+            });
+            if (!enrollment) redirect("/students");
         } else {
-            // No es admin ni tutor vinculado (o docente en modo docente)
-            // Permitir el flujo si es admin real pero está en otro modo? 
-            // Para seguridad, si no es Admin en activeRole, restringimos.
+            // Cualquier otro caso: verificar si tiene rol ADMIN/SECRETARY real
             const realIsAdmin = userRoles.some((r: any) => ["ADMIN", "SECRETARY"].includes(r));
             if (!realIsAdmin) {
                 redirect("/dashboard");
@@ -116,11 +168,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 <header className="mb-8">
                     {!isGuardian && (
                         <Link
-                            href="/students"
+                            href={backUrl}
                             className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4"
                         >
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver a la lista de estudiantes
+                            {backLabel}
                         </Link>
                     )}
                     <h1 className="text-3xl font-bold tracking-tight">Ficha del Estudiante</h1>

@@ -31,6 +31,7 @@ interface GeminiRequest {
     generationConfig?: {
         temperature?: number;
         maxOutputTokens?: number;
+        responseMimeType?: string;
     };
 }
 
@@ -97,9 +98,8 @@ Rules:
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: { 
                 temperature: 0.1, 
-                maxOutputTokens: 256,
-                // If the model supports it, we could use:
-                // response_mime_type: "application/json"
+                maxOutputTokens: 1024,
+                responseMimeType: "application/json"
             },
         });
 
@@ -178,7 +178,7 @@ CRITICAL CONSTRAINTS:
 
         const text = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 1.0, maxOutputTokens: 512 },
+            generationConfig: { temperature: 1.0, maxOutputTokens: 1024, responseMimeType: "application/json" },
         });
 
         // Extreme JSON cleaning
@@ -243,7 +243,7 @@ CRITICAL CONSTRAINTS:
 
         const textResponse = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 1.0, maxOutputTokens: 2048 },
+            generationConfig: { temperature: 1.0, maxOutputTokens: 2048, responseMimeType: "application/json" },
         });
 
         const jsonStr = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -282,7 +282,7 @@ CRITICAL CONSTRAINTS:
 
         const textResponse = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1024, responseMimeType: "application/json" },
         });
 
         const jsonStr = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

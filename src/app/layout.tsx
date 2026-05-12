@@ -22,6 +22,25 @@ export async function generateMetadata(): Promise<Metadata> {
     ? `Plataforma de gestión para ${institute.name}. Administrá alumnos, cursos, pagos y más.`
     : "Plataforma de gestión para institutos de idiomas. Administrá alumnos, cursos, pagos y más.";
 
+  // Dynamic icon logic for iOS (apple-touch-icon)
+  // @ts-ignore
+  const isPremium = institute?.plan === 'PREMIUM';
+  const isInternalDomain = host.includes('lingua-campus') || host.includes('vercel.app') || host.includes('localhost');
+  const isCustomDomain = !isInternalDomain;
+
+  const isDefaultBrand = !institute || !isPremium || !isCustomDomain;
+  const hasCloudinaryLogo = !isDefaultBrand && institute?.logoUrl?.includes('res.cloudinary.com');
+
+  function buildCloudinaryIcon(logoUrl: string, size: number): string {
+    return logoUrl.replace('/upload/', `/upload/c_fill,w_${size},h_${size},f_png/`);
+  }
+
+  // @ts-ignore
+  const appleIcon = hasCloudinaryLogo
+    ? buildCloudinaryIcon(institute!.logoUrl!, 192)
+    // @ts-ignore
+    : (!isDefaultBrand && institute?.pwaIcon192 ? institute.pwaIcon192 : '/icon-192x192.png');
+
   return {
     title: {
       default: `${brandName} — Gestión Administrativa`,
@@ -39,7 +58,7 @@ export async function generateMetadata(): Promise<Metadata> {
       telephone: false,
     },
     icons: {
-      apple: "/icon-192x192.png",
+      apple: appleIcon,
     },
   };
 }

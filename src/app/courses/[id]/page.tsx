@@ -278,8 +278,22 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                                                 {enrol.student.name.charAt(0).toUpperCase()}
                                                             </div>
                                                             <div>
+                                                                {/*
+                                                                 * NAVEGACIÓN CONTEXTUAL (?from= pattern)
+                                                                 * ─────────────────────────────────────────
+                                                                 * Pasamos la URL actual como query param `from` al navegar
+                                                                 * al perfil del alumno. Esto permite que la página destino
+                                                                 * muestre un botón "Volver" dinámico que lleve de regreso
+                                                                 * al curso correcto, en lugar de ir siempre a /students.
+                                                                 *
+                                                                 * Para implementar este patrón en otro flujo:
+                                                                 *   1. Aquí (origen): agregar `?from=<ruta-actual>` al href.
+                                                                 *   2. En la página destino: leer `searchParams.from`,
+                                                                 *      validarlo con isValidBackUrl() y usarlo como href
+                                                                 *      del botón "Volver". Ver students/[id]/page.tsx.
+                                                                 */}
                                                                 <Link 
-                                                                    href={`/students/${enrol.student.id}`}
+                                                                    href={`/students/${enrol.student.id}?from=/courses/${id}`}
                                                                     className="font-semibold text-sm hover:text-primary transition-colors cursor-pointer"
                                                                 >
                                                                     {enrol.student.name}

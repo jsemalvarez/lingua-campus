@@ -141,13 +141,13 @@ export default function InstituteLanding({ institute }: { institute: Institute }
             </div>
 
             <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.05] mb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 block drop-shadow-sm">
-              Tu futuro en <br className="hidden sm:block" />
+              Tu instituto de inglés <br className="hidden sm:block" />
               <span style={{ color: primaryColor }}>{institute.name}</span>
             </h1>
 
-            <p className="text-lg sm:text-2xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000 font-medium drop-shadow-sm">
-              Transformá tu manera de comunicarte. Aprender un idioma te abre las puertas al mundo, a nuevas culturas y a mejores oportunidades.
-            </p>
+            <h2 className="text-lg sm:text-2xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000 font-medium drop-shadow-sm">
+              Transformá tu manera de comunicarte. Aprender inglés en nuestra academia te abre las puertas al mundo, a nuevas culturas y a mejores oportunidades.
+            </h2>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
               <Link href="/inscription" className="w-full sm:w-auto">
@@ -163,7 +163,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
                   variant="outline" 
                   className="w-full sm:w-auto rounded-full px-10 py-7 text-lg font-bold transition-all hover:bg-white/90 dark:hover:bg-slate-800/90 backdrop-blur-sm border-slate-300 dark:border-slate-700 shadow-sm"
                 >
-                  Ver Cursos
+                  Ver Cursos de Inglés
                 </Button>
               </Link>
             </div>
@@ -180,14 +180,14 @@ export default function InstituteLanding({ institute }: { institute: Institute }
           <div className="container mx-auto px-6 max-w-7xl relative z-10">
             <div className="flex flex-col md:flex-row gap-12 items-end mb-16">
               <div className="flex-1 text-left">
-                <h2 className="text-sm font-bold tracking-widest uppercase mb-3 text-slate-300">Nuestra Oferta</h2>
+                <h2 className="text-sm font-bold tracking-widest uppercase mb-3 text-slate-300">Cursos de Inglés</h2>
                 <h3 className="text-4xl sm:text-5xl font-black text-white leading-tight drop-shadow-lg">
-                  Un curso diseñado <br/>para cada etapa.
+                  Un curso de inglés <br/>para cada etapa.
                 </h3>
               </div>
               <div className="flex-1 md:text-right">
                 <p className="text-slate-200 text-lg sm:text-xl max-w-lg md:ml-auto drop-shadow-md">
-                  Metodología adaptada a las necesidades cognitivas y objetivos de cada grupo etario.
+                  Metodología de enseñanza de idiomas adaptada a las necesidades cognitivas y objetivos de cada grupo etario.
                 </p>
               </div>
             </div>
@@ -232,12 +232,12 @@ export default function InstituteLanding({ institute }: { institute: Institute }
         <section id="nosotros" className="py-24 sm:py-32 bg-slate-50 dark:bg-slate-900 border-t border-slate-200/50 dark:border-slate-800/50">
           <div className="container mx-auto px-6 max-w-5xl relative z-10">
             <div className="text-center mb-16">
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: primaryColor }}>Quiénes Somos</h2>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: primaryColor }}>Tu Academia de Inglés</h2>
               <h3 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
-                Más que un instituto, <br className="hidden sm:block"/> una comunidad.
+                Más que un instituto de inglés, <br className="hidden sm:block"/> una comunidad.
               </h3>
               <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Con años de trayectoria formando alumnos bilingües, nuestro equipo de profesionales está enfocado en brindarte las herramientas exactas para dominar el idioma en el mundo real.
+                Con años de trayectoria formando alumnos bilingües, nuestro equipo de profesores de inglés está enfocado en brindarte las herramientas exactas para dominar el idioma en el mundo real.
               </p>
             </div>
             
@@ -270,13 +270,13 @@ export default function InstituteLanding({ institute }: { institute: Institute }
           <div className="container mx-auto px-6 max-w-6xl relative z-10">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div>
-                <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: primaryColor }}>Por qué elegirnos</h2>
+                <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: primaryColor }}>Por qué estudiar inglés con nosotros</h2>
                 <h3 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] text-slate-900 dark:text-white">
                   Una experiencia <br/>
-                  <span style={{ color: secondaryColor }}>inmersiva.</span>
+                  <span style={{ color: secondaryColor }}>inmersiva para aprender.</span>
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400 text-lg sm:text-xl mb-12 font-medium leading-relaxed max-w-md">
-                  Rompemos la estructura tradicional. Generamos dinámicas de interacción constante para un aprendizaje real y motivador.
+                  Rompemos la estructura tradicional de las academias de idiomas. Generamos dinámicas de interacción constante para un aprendizaje real y motivador del idioma inglés.
                 </p>
                 
                 <div className="space-y-6">
@@ -324,7 +324,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
         {/* --- SECTION 4: CTA FOOTER PRE TENSION (Inverted Theme mode) --- */}
         <section className="py-24 bg-slate-950 dark:bg-slate-50 border-t border-slate-800 dark:border-slate-200">
           <div className="container mx-auto px-6 text-center max-w-3xl">
-            <h2 className="text-4xl font-black text-white dark:text-slate-900 mb-6">Empezá hoy tu camino bilingüe</h2>
+            <h2 className="text-4xl font-black text-white dark:text-slate-900 mb-6">Empezá hoy tus clases de inglés</h2>
             <p className="text-xl text-slate-300 dark:text-slate-600 mb-10">No dejes para mañana el idioma que te abrirá las puertas del mundo hoy.</p>
             <Link href="/inscription">
               <Button 
