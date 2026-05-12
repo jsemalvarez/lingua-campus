@@ -23,6 +23,7 @@ import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
 import { GuardianDashboardView } from "./components/GuardianDashboardView";
 import { getActiveRole } from "@/lib/roles";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
+import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
     // ─── GUARDIAN View ───
     if (activeRole === "GUARDIAN") {
         const guardianId = sessionUser.id;
-        
+
         const guardianLinks = await prisma.guardianStudentLink.findMany({
             where: { guardianId },
             include: {
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
                                         name: true,
                                         color: true,
                                         lessons: {
-                                            where: { date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
+                                            where: { date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
                                             orderBy: { date: 'asc' },
                                             take: 5,
                                             select: { id: true, date: true, topic: true }
@@ -110,10 +111,10 @@ export default async function DashboardPage() {
 
         const students = guardianLinks.map(l => l.student);
         const instituteName = students[0]?.institute?.name || "Lingua Campus";
-        
+
         // Flatten lessons
-        const allLessons = guardianLinks.flatMap(l => 
-            l.student.enrollments.flatMap(e => 
+        const allLessons = guardianLinks.flatMap(l =>
+            l.student.enrollments.flatMap(e =>
                 e.course.lessons.map(lesson => ({
                     ...lesson,
                     color: e.course.color,
@@ -121,11 +122,11 @@ export default async function DashboardPage() {
                     studentName: l.student.name
                 }))
             )
-        ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 6);
+        ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .slice(0, 6);
 
         // Flatten attendances
-        const recentAttendances = guardianLinks.flatMap(l => 
+        const recentAttendances = guardianLinks.flatMap(l =>
             l.student.attendances.map((att: any) => ({
                 id: att.id,
                 status: att.status,
@@ -136,11 +137,11 @@ export default async function DashboardPage() {
                 courseColor: att.lesson.course.color,
                 studentName: l.student.name
             }))
-        ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10);
+        ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 10);
 
         // Flatten grades
-        const recentGrades = guardianLinks.flatMap(l => 
+        const recentGrades = guardianLinks.flatMap(l =>
             l.student.grades.map((g: any) => ({
                 id: g.id,
                 score: g.score,
@@ -151,8 +152,8 @@ export default async function DashboardPage() {
                 courseColor: g.lesson.course.color,
                 studentName: l.student.name
             }))
-        ).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5);
+        ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 5);
 
         // Total Debt
         const totalDebt = students.flatMap(s => s.fees)
@@ -161,7 +162,7 @@ export default async function DashboardPage() {
         return (
             <div className="min-h-screen bg-background pb-20">
                 <Navbar currentActiveRole={activeRole} />
-                <GuardianDashboardView 
+                <GuardianDashboardView
                     guardianName={sessionUser.name || "Tutor"}
                     instituteName={instituteName}
                     students={students}
@@ -170,7 +171,7 @@ export default async function DashboardPage() {
                     recentGrades={recentGrades}
                     totalDebt={totalDebt}
                 />
-             </div>
+            </div>
         );
     }
 
@@ -307,19 +308,19 @@ export default async function DashboardPage() {
             where: { studentId: student.id },
             select: { score: true }
         });
-        
+
         const numericGrades = allGrades
             .map(g => parseFloat(g.score || ""))
             .filter(n => !isNaN(n));
 
-        const averageGrade = numericGrades.length > 0 
+        const averageGrade = numericGrades.length > 0
             ? (numericGrades.reduce((acc, curr) => acc + curr, 0) / numericGrades.length).toFixed(1)
             : null;
 
         return (
             <div className="min-h-screen bg-background pb-20">
                 <Navbar currentActiveRole={activeRole} />
-                <StudentDashboardV2View 
+                <StudentDashboardV2View
                     student={student}
                     attendanceRate={attendanceRate}
                     practiceHours={practiceHours}
@@ -355,9 +356,9 @@ export default async function DashboardPage() {
         const teacherCourses = await prisma.course.findMany({
             where: { teacherId: user.id, instituteId: user.instituteId, status: "ACTIVE" },
             include: {
-                schedules: { 
-                    select: { dayOfWeek: true, startTime: true, endTime: true, room: true }, 
-                    orderBy: { dayOfWeek: 'asc' } 
+                schedules: {
+                    select: { dayOfWeek: true, startTime: true, endTime: true, room: true },
+                    orderBy: { dayOfWeek: 'asc' }
                 }
             }
         });
@@ -426,9 +427,17 @@ export default async function DashboardPage() {
                         ))}
                     </div>
 
+                    {/* Birthday Widget - Teacher */}
+                    <Suspense fallback={<div className="h-32 rounded-xl bg-muted/40 animate-pulse" />}>
+                        <BirthdayWidgetTeacherServer
+                            instituteId={user.instituteId!}
+                            courseIds={teacherCourseIds}
+                        />
+                    </Suspense>
+
                     <div className="grid gap-6 md:grid-cols-2">
-                         {/* Mis Cursos */}
-                         <Card className="p-6">
+                        {/* Mis Cursos */}
+                        <Card className="p-6">
                             <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
                                 <BookOpen className="text-purple-500" size={20} /> Mis Cursos
                             </h3>
@@ -482,8 +491,8 @@ export default async function DashboardPage() {
                                         </div>
                                     </div>
                                 ) : myUpcomingLessons.map((lesson) => (
-                                    <div 
-                                        key={lesson.id} 
+                                    <div
+                                        key={lesson.id}
                                         className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-all border-l-4 group relative"
                                         style={{ borderLeftColor: lesson.course.color || "#3b82f6" }}
                                     >
@@ -499,7 +508,7 @@ export default async function DashboardPage() {
                                             </div>
                                             <span className="text-[11px] text-muted-foreground/80 line-clamp-1">{lesson.topic}</span>
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-2 shrink-0">
                                             <Link href={`/courses/${lesson.courseId}/lessons/${lesson.id}/attendance`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                                 <Button variant="outline" size="sm" className="h-8 px-2 text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1.5 flex items-center shadow-sm">
@@ -664,11 +673,10 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className={`grid gap-4 md:grid-cols-2 ${
-                    stats.length === 3 ? "lg:grid-cols-3" : 
-                    stats.length === 4 ? "lg:grid-cols-4" : 
-                    "lg:grid-cols-3 xl:grid-cols-5"
-                }`}>
+                <div className={`grid gap-4 md:grid-cols-2 ${stats.length === 3 ? "lg:grid-cols-3" :
+                        stats.length === 4 ? "lg:grid-cols-4" :
+                            "lg:grid-cols-3 xl:grid-cols-5"
+                    }`}>
                     {stats.map((stat, i) => (
                         <Card key={i} className="p-6 hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
@@ -684,13 +692,18 @@ export default async function DashboardPage() {
                     ))}
                 </div>
 
+                {/* Birthday Widget - Admin/Secretary */}
+                <Suspense fallback={<div className="h-32 rounded-xl bg-muted/40 animate-pulse" />}>
+                    <BirthdayWidgetServer instituteId={user.instituteId!} />
+                </Suspense>
+
                 {/* Enhanced Wow-Factor Graphics Section */}
                 <div className="mb-6 space-y-6">
                     <StudentsChart data={chartData} totalActive={totalStudents} />
                     {!isSecretary && (
                         <Suspense fallback={<Card className="h-[450px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
                             <AnnualFinanceChartServer instituteId={user.instituteId} />
-                         </Suspense>
+                        </Suspense>
                     )}
                     <Suspense fallback={<Card className="h-[480px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
                         <PlaygroundChartServer instituteId={user.instituteId} />
