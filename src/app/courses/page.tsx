@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, BookOpen, Layers, MapPin, Archive, CheckCircle2 } from "lucide-react";
+import { Plus, BookOpen, Layers, MapPin, Archive, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { CourseListClientRenderer } from "./components/CourseListClientRenderer";
 import { getActiveRole } from "@/lib/roles";
 
@@ -104,13 +104,22 @@ export default async function CoursesPage(props: PageProps) {
                         </p>
                     </div>
 
-                    {(activeRole === "ADMIN" || activeRole === "SECRETARY") && (
+                    {(activeRole === "ADMIN" || activeRole === "SECRETARY" || activeRole === "TEACHER") && (
                         <div className="flex flex-wrap items-center gap-2">
-                            <Link href="/courses/new">
-                                <Button className="h-11 px-6 shadow-lg shadow-primary/20 premium-gradient border-none hover:opacity-90 font-bold transition-all hover:scale-[1.02]">
-                                    <Plus className="mr-2 h-5 w-5" />Curso
+                            <Link href="/courses/spreadsheet">
+                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4 border-border/60 group hover:border-emerald-500/50 transition-colors">
+                                    <FileSpreadsheet size={18} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                                    <span className="hidden xs:inline">Vista Planilla</span>
+                                    <span className="xs:hidden">Planilla</span>
                                 </Button>
                             </Link>
+                            {(activeRole === "ADMIN" || activeRole === "SECRETARY") && (
+                                <Link href="/courses/new">
+                                    <Button className="h-11 px-6 shadow-lg shadow-primary/20 premium-gradient border-none hover:opacity-90 font-bold transition-all hover:scale-[1.02]">
+                                        <Plus className="mr-2 h-5 w-5" />Curso
+                                    </Button>
+                                </Link>
+                            )}
                             <Link href="/courses/levels">
                                 <Button variant="outline" className="flex items-center gap-2 h-11 px-4 border-border/60">
                                     <Layers size={18} className="text-primary" />
