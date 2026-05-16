@@ -56,8 +56,10 @@ export default function LoginForm({ institute }: LoginFormProps) {
     const brandName = institute ? institute.name : "Lingua Campus";
 
     return (
-        // bg-gradient usando los tonos primary/accent de la app (ahora azul/celeste)
-        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-12 bg-gradient-to-br from-blue-900 via-sky-200 to-blue-950 dark:from-sky-600 dark:via-blue-950/40 dark:to-blue-sky-400 transition-colors duration-700 overflow-hidden relative">
+        // Contenedor principal
+        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-12 transition-colors duration-700 relative">
+            {/* Fondo fijo para cubrir toda la pantalla, incluyendo el padding del body en mobile */}
+            <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-sky-200 to-blue-950 dark:from-sky-600 dark:via-blue-950/40 dark:to-sky-400 z-[-1]" />
             {/* Decorative background gradients from Landing Page */}
             {/* <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-950/20 pointer-events-none" /> */}
             {/* <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-violet-400/20 dark:bg-violet-600/15 blur-[120px] pointer-events-none animate-pulse-slow" /> */}
@@ -72,7 +74,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
             <div className="relative flex flex-col lg:flex-row items-center justify-center lg:items-stretch z-10">
 
                 {/* Mobile Illustration (Top overlap on mobile) */}
-                <div className="lg:hidden w-full max-w-[320px] h-[320px] bg-slate-900 rounded-[3rem] shadow-2xl flex items-center justify-center mb-[-60px] overflow-hidden relative z-20">
+                <div className="lg:hidden w-[200px] h-[200px] bg-slate-900 rounded-[2rem] shadow-2xl flex items-center justify-center mb-[-50px] overflow-hidden relative z-20 mt-4 mx-auto">
                     <Image
                         src="/login-mobile-blue-1.png"
                         alt="Lingua Campus Mobile"
@@ -83,7 +85,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                 </div>
 
                 {/* Left Card: Form (Shorter and wider) */}
-                <div className="w-full sm:w-[640px] lg:h-[500px] bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 rounded-[3.5rem] border border-white/60 dark:border-sky-400/60 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 p-10 sm:px-16 sm:py-16 lg:pr-32 flex flex-col justify-center z-10 lg:-mr-20 animate-in self-center transition-colors">
+                <div className="w-full sm:w-[640px] lg:h-[500px] bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 rounded-[2rem] sm:rounded-[3.5rem] border border-white/60 dark:border-sky-400/60 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 px-6 pt-20 pb-10 sm:px-16 sm:py-16 lg:pr-32 flex flex-col justify-center z-10 lg:-mr-20 animate-in self-center transition-colors">
                     <div className="mb-10 text-center">
                         <h1 className="text-3xl sm:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-b from-sky-600 to-blue-950 dark:from-white dark:to-sky-400 mb-2 tracking-tight">
                             {brandName}
@@ -154,7 +156,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                         <div className="pt-2">
                             <Button
                                 type="submit"
-                                className="w-full py-4 rounded-full bg-gradient-to-b from-sky-600 to-blue-950 dark:from-blue-950 dark:to-sky-500 text-white font-bold text-xl shadow-xl shadow-sky-900/30 dark:shadow-sky-500/20 disabled:opacity-50 flex items-center justify-center transition-all hover:brightness-110"
+                                className="w-full py-3 sm:py-4 rounded-xl sm:rounded-full bg-gradient-to-b from-sky-600 to-blue-950 dark:from-blue-950 dark:to-sky-500 text-white font-bold text-lg sm:text-xl shadow-xl shadow-sky-900/30 dark:shadow-sky-500/20 disabled:opacity-50 flex items-center justify-center transition-all hover:brightness-110"
                                 disabled={loading || !isOnline}
                             >
                                 {loading ? (
