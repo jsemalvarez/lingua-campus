@@ -192,7 +192,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                     </div>
 
                     {/* Dynamic Branding */}
-                    {institute?.logoUrl && (
+                    {/* {institute?.logoUrl && (
                         <div className="absolute top-12 right-12 w-20 h-20 rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-white/10 backdrop-blur-md p-3">
                             <Image
                                 src={institute.logoUrl}
@@ -202,7 +202,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                                 className="object-contain w-full h-full"
                             />
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
         </div>
