@@ -152,6 +152,21 @@ html.theme-transition *::after {
   animation: fade-in-up 0.4s ease both;
 }
 
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+
 /* Ocultar scrollbar en mobile para más espacio */
 @media (max-width: 767px) {
   * {
