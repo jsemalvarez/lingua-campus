@@ -30,70 +30,70 @@
      ================================== */
   :root,
   html.light {
-    --c-bg: #f7f7fc;
-    --c-fg: #0e0e14;
+    --c-bg: #f0f9ff;
+    --c-fg: #0f172a;
 
     --c-card: #ffffff;
-    --c-card-fg: #0e0e14;
+    --c-card-fg: #0f172a;
 
-    --c-muted: #f1f1f5;
-    --c-muted-fg: #71717a;
+    --c-muted: #e2e8f0;
+    --c-muted-fg: #64748b;
 
-    --c-primary: #4f46e5;
-    --c-primary-hover: #4338ca;
+    --c-primary: #0284c7;
+    --c-primary-hover: #0369a1;
     --c-primary-fg: #ffffff;
 
-    --c-accent: #ec4899;
+    --c-accent: #4f46e5;
 
-    --c-border: #e4e4e7;
-    --c-input: #e4e4e7;
-    --c-ring: #4f46e5;
+    --c-border: #cbd5e1;
+    --c-input: #cbd5e1;
+    --c-ring: #0284c7;
   }
 
   /* ==================================
      DARK MODE (Manual o Sistema si no hay override)
      ================================== */
   html.dark {
-    --c-bg: #09090b;
-    --c-fg: #fafafa;
+    --c-bg: #050b14;
+    --c-fg: #f8fafc;
 
-    --c-card: #121214;
-    --c-card-fg: #fafafa;
+    --c-card: #0d1526;
+    --c-card-fg: #f8fafc;
 
-    --c-muted: #27272a;
-    --c-muted-fg: #a1a1aa;
+    --c-muted: #1e293b;
+    --c-muted-fg: #94a3b8;
 
-    --c-primary: #6366f1;
-    --c-primary-hover: #818cf8;
+    --c-primary: #0ea5e9;
+    --c-primary-hover: #38bdf8;
     --c-primary-fg: #ffffff;
 
-    --c-accent: #f472b6;
+    --c-accent: #6366f1;
 
-    --c-border: #27272a;
-    --c-input: #27272a;
-    --c-ring: #6366f1;
+    --c-border: #1e293b;
+    --c-input: #1e293b;
+    --c-ring: #0ea5e9;
   }
 
   @media (prefers-color-scheme: dark) {
     html:not(.light) {
-      --c-bg: #09090b;
-      --c-fg: #fafafa;
+      --c-bg: #050b14;
+      --c-fg: #f8fafc;
 
-      --c-card: #121214;
-      --c-card-fg: #fafafa;
+      --c-card: #0d1526;
+      --c-card-fg: #f8fafc;
 
-      --c-muted: #27272a;
-      --c-muted-fg: #a1a1aa;
+      --c-muted: #1e293b;
+      --c-muted-fg: #94a3b8;
 
-      --c-primary: #6366f1;
-      --c-primary-hover: #818cf8;
+      --c-primary: #0ea5e9;
+      --c-primary-hover: #38bdf8;
       --c-primary-fg: #ffffff;
 
-      --c-accent: #f472b6;
+      --c-accent: #6366f1;
 
-      --c-border: #27272a;
-      --c-input: #27272a;
-      --c-ring: #6366f1;
+      --c-border: #1e293b;
+      --c-input: #1e293b;
+      --c-ring: #0ea5e9;
     }
   }
 
