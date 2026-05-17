@@ -74,7 +74,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
             <div className="relative flex flex-col lg:flex-row items-center justify-center lg:items-stretch z-10">
 
                 {/* Mobile Illustration (Top overlap on mobile) */}
-                <div className="lg:hidden w-[200px] h-[200px] bg-slate-900 rounded-[2rem] shadow-2xl flex items-center justify-center mb-[-50px] overflow-hidden relative z-20 mt-4 mx-auto">
+                {/* <div className="lg:hidden w-[200px] h-[200px] bg-slate-900 rounded-[2rem] shadow-2xl flex items-center justify-center mb-[-50px] overflow-hidden relative z-20 mt-4 mx-auto">
                     <Image
                         src="/login-mobile-blue-1.png"
                         alt="Lingua Campus Mobile"
@@ -82,7 +82,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                         priority
                         className="object-cover drop-shadow-2xl animate-pulse-slow"
                     />
-                </div>
+                </div> */}
 
                 {/* Left Card: Form (Shorter and wider) */}
                 <div className="w-full sm:w-[640px] lg:h-[500px] bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 rounded-[2rem] sm:rounded-[3.5rem] border border-white/60 dark:border-sky-400/60 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 px-6 pt-20 pb-10 sm:px-16 sm:py-16 lg:pr-32 flex flex-col justify-center z-10 lg:-mr-20 animate-in self-center transition-colors">
