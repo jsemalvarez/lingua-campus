@@ -81,7 +81,7 @@ export function PlaygroundActivityChart({
     const hasNoData = totalSessions === 0;
 
     return (
-        <Card className="p-6 relative overflow-hidden group hover:shadow-lg transition-all duration-500">
+        <Card variant="premium-glass" className="p-6 relative overflow-hidden group">
             {/* Ambient glow */}
             <div className="absolute top-0 left-0 -ml-20 -mt-20 w-72 h-72 bg-violet-500/5 rounded-full blur-3xl group-hover:bg-violet-500/10 transition-colors duration-700 pointer-events-none" />
 

@@ -62,7 +62,7 @@ export function BirthdayWidget({ weekBirthdays, monthBirthdays, currentMonth }: 
     const monthName = MONTH_NAMES[currentMonth - 1];
 
     return (
-        <Card className="p-6 relative overflow-hidden group hover:shadow-lg transition-all duration-500">
+        <Card variant="premium-glass" className="p-6 relative overflow-hidden group">
             {/* Ambient glow */}
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-pink-500/5 rounded-full blur-3xl group-hover:bg-pink-500/10 transition-colors duration-700 pointer-events-none" />
 

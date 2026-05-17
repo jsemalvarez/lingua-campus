@@ -21,7 +21,7 @@ export function StudentsChart({ data, totalActive }: StudentsChartProps) {
     // Si no hay datos, mostramos un estado vacío amable.
     if (!data || data.length === 0 || totalActive === 0) {
         return (
-            <Card className="p-6 flex flex-col items-center justify-center h-[400px]">
+            <Card variant="premium-glass" className="p-6 flex flex-col items-center justify-center h-[400px]">
                 <div className="text-muted-foreground w-16 h-16 mb-4 opacity-50">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
@@ -37,7 +37,7 @@ export function StudentsChart({ data, totalActive }: StudentsChartProps) {
     }
 
     return (
-        <Card className="p-6 col-span-1 md:col-span-2 relative overflow-hidden group hover:shadow-lg transition-all duration-500">
+        <Card variant="premium-glass" className="p-6 col-span-1 md:col-span-2 relative overflow-hidden group">
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-700 pointer-events-none" />
             

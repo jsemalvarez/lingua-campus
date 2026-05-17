@@ -674,17 +674,17 @@ export default async function DashboardPage() {
 
                 {/* Stats Grid */}
                 <div className={`grid gap-4 md:grid-cols-2 ${stats.length === 3 ? "lg:grid-cols-3" :
-                        stats.length === 4 ? "lg:grid-cols-4" :
-                            "lg:grid-cols-3 xl:grid-cols-5"
+                    stats.length === 4 ? "lg:grid-cols-4" :
+                        "lg:grid-cols-3 xl:grid-cols-5"
                     }`}>
                     {stats.map((stat, i) => (
-                        <Card key={i} className="p-6 hover:shadow-md transition-shadow">
-                            <div className="flex items-center justify-between">
+                        <Card key={i} variant="premium-glass" className="p-6 !bg-gradient-to-b !from-sky-600 !to-blue-950 dark:!from-blue-950 dark:!to-sky-500 !border-none relative overflow-hidden group">
+                            <div className="flex items-center justify-between relative z-10">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                                    <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                                    <p className="text-sm font-medium text-sky-100/80">{stat.label}</p>
+                                    <h3 className="text-3xl font-bold mt-1 text-white tracking-tight">{stat.value}</h3>
                                 </div>
-                                <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
+                                <div className="bg-white/10 text-white p-3 rounded-xl backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform duration-300">
                                     <stat.icon size={24} />
                                 </div>
                             </div>
@@ -711,7 +711,7 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
-                    <Card className="p-6">
+                    <Card variant="premium-glass" className="p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <Clock className="text-blue-500" size={20} /> Próximas Clases
@@ -735,7 +735,7 @@ export default async function DashboardPage() {
                         </div>
                     </Card>
 
-                    <Card className="p-6">
+                    <Card variant="premium-glass" className="p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="font-semibold text-lg flex items-center gap-2">
                                 <DollarSign className="text-green-500" size={20} /> Pagos Recientes

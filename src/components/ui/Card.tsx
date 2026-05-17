@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * Supports different styles like 'elevated' or 'bordered'.
  */
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-    variant?: "default" | "glass" | "bordered";
+    variant?: "default" | "glass" | "bordered" | "premium-glass";
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -15,6 +15,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
             default: "bg-card text-card-foreground shadow-xs border border-border",
             glass: "glass text-foreground shadow-lg backdrop-blur-xl",
             bordered: "bg-transparent border-2 border-dashed border-border text-foreground hover:border-primary/50 transition-colors",
+            "premium-glass": "premium-glass-card text-foreground",
         };
 
         return (

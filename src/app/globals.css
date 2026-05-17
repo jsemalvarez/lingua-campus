@@ -104,14 +104,32 @@
   }
 
   body {
-    background-color: var(--c-bg);
+    background: linear-gradient(135deg, #1e3a8a 0%, #bae6fd 50%, #172554 100%) no-repeat fixed;
+    background-size: cover;
     color: var(--c-fg);
+  }
+
+  html.dark body {
+    background: linear-gradient(135deg, #0284c7 0%, rgba(23, 37, 84, 0.4) 50%, #38bdf8 100%) no-repeat fixed;
+    background-size: cover;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not(.light) body {
+      background: linear-gradient(135deg, #0284c7 0%, rgba(23, 37, 84, 0.4) 50%, #38bdf8 100%) no-repeat fixed;
+      background-size: cover;
+    }
+  }
+
+  /* Hacer transparentes los contenedores principales de las páginas para revelar el degradado global */
+  div.min-h-screen.bg-background {
+    background-color: transparent !important;
   }
 }
 
 /* Glass card / navbar */
 .glass {
-  background: color-mix(in srgb, var(--c-bg) 85%, transparent);
+  background: color-mix(in srgb, var(--c-card) 85%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid color-mix(in srgb, var(--c-border) 70%, transparent);
@@ -215,4 +233,34 @@ html.theme-transition *::after {
   body {
     padding-bottom: 4.5rem;
   }
+}
+
+/* Tarjeta de Cristal Premium (Estilo Login) */
+.premium-glass-card {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.08) 0%, rgba(186, 230, 253, 0.22) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 25px -5px rgba(255, 255, 255, 0.55), 0 8px 10px -6px rgba(255, 255, 255, 0.55), 0 10px 20px rgba(30, 58, 138, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Adaptado para Modo Oscuro */
+html.dark .premium-glass-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.45) 0%, rgba(56, 189, 248, 0.12) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  box-shadow: 0 20px 25px -5px rgba(56, 189, 248, 0.35), 0 8px 10px -6px rgba(56, 189, 248, 0.35);
+}
+
+/* Efecto hover interactivo al pasar el mouse */
+.premium-glass-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 25px 30px -5px rgba(255, 255, 255, 0.75), 0 12px 15px -6px rgba(255, 255, 255, 0.75);
+}
+
+html.dark .premium-glass-card:hover {
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 25px 30px -5px rgba(56, 189, 248, 0.55), 0 12px 15px -6px rgba(56, 189, 248, 0.55);
 }

@@ -35,7 +35,7 @@ export function AnnualFinanceChart({ data, year }: AnnualFinanceChartProps) {
         new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
 
     return (
-        <Card className="p-6 border-border/40 shadow-sm relative overflow-hidden">
+        <Card variant="premium-glass" className="p-6 relative overflow-hidden">
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h3 className="font-semibold text-lg flex items-center gap-2">
