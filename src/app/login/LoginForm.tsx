@@ -57,7 +57,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
 
     return (
         // Contenedor principal
-        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-12 transition-colors duration-700 relative">
+        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-12 lg:p-8 xl:p-12 transition-colors duration-700 relative">
             {/* Fondo fijo para cubrir toda la pantalla, incluyendo el padding del body en mobile */}
             <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-sky-200 to-blue-950 dark:from-sky-600 dark:via-blue-950/40 dark:to-sky-400 z-[-1]" />
             {/* Decorative background gradients from Landing Page */}
@@ -85,7 +85,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                 </div> */}
 
                 {/* Left Card: Form (Shorter and wider) */}
-                <div className="w-full sm:w-[640px] lg:h-[500px] bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 rounded-[2rem] sm:rounded-[3.5rem] border border-white/60 dark:border-sky-400/60 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 px-6 pt-20 pb-10 sm:px-16 sm:py-16 lg:pr-32 flex flex-col justify-center z-10 lg:-mr-20 animate-in self-center transition-colors">
+                <div className="w-full sm:max-w-[480px] lg:w-[460px] xl:w-[560px] 2xl:w-[640px] lg:h-[480px] xl:h-[520px] 2xl:h-[550px] bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 rounded-[2rem] sm:rounded-[3.5rem] border border-white/60 dark:border-sky-400/60 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 px-6 pt-20 pb-10 sm:px-12 sm:py-12 lg:pr-24 xl:pr-28 2xl:pr-32 flex flex-col justify-center z-10 lg:-mr-16 xl:-mr-20 2xl:-mr-20 animate-in self-center transition-colors">
                     <div className="mb-10 text-center">
                         <h1 className="text-3xl sm:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-b from-sky-600 to-blue-950 dark:from-white dark:to-sky-400 mb-2 tracking-tight">
                             {brandName}
@@ -176,7 +176,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                 </div>
 
                 {/* Right Card: Illustration (Taller, wider, and z-indexed) */}
-                <div className="hidden lg:flex w-[700px] h-[600px] bg-slate-900 dark:bg-slate-950 border border-white/10 dark:border-sky-400/60 rounded-[4.5rem] shadow-2xl shadow-sky-500/30 dark:shadow-sky-400/60 items-center justify-center relative overflow-hidden group z-20 self-center">
+                <div className="hidden lg:flex lg:w-[480px] lg:h-[520px] xl:w-[600px] xl:h-[560px] 2xl:w-[700px] 2xl:h-[600px] bg-slate-900 dark:bg-slate-950 border border-white/10 dark:border-sky-400/60 rounded-[4.5rem] shadow-2xl shadow-sky-500/30 dark:shadow-sky-400/60 items-center justify-center relative overflow-hidden group z-20 self-center">
                     {/* Overlay Glow */}
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent pointer-events-none" />
 
