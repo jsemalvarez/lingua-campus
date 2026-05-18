@@ -662,7 +662,16 @@ export default async function DashboardPage() {
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
+                        <span
+                            className="font-black uppercase tracking-widest inline-flex items-center gap-2 mb-2 select-none"
+                            style={{
+                                color: "#e0f7ff",
+                                textShadow: "0 0 4px rgba(0, 240, 255, 0.6), 0 0 12px rgba(0, 240, 255, 0.45), 0 0 25px rgba(2, 132, 199, 0.35)",
+                                WebkitTextStroke: "0.5px rgba(0, 240, 255, 0.8)",
+                                letterSpacing: "0.2em"
+                            }}
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00f0ff]" />
                             {user.institute?.name || "Instituto"}
                         </span>
                         <h1 className="text-3xl font-bold tracking-tight mt-1">Panel de Control</h1>

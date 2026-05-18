@@ -103,11 +103,10 @@ export function PlaygroundActivityChart({
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
-                                period === p
-                                    ? "bg-background text-foreground shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground"
-                            }`}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${period === p
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
+                                }`}
                         >
                             {p === "7d" ? "7 días" : "30 días"}
                         </button>
@@ -132,25 +131,25 @@ export function PlaygroundActivityChart({
                             icon={<Gamepad2 size={16} />}
                             label="Total sesiones"
                             value={totalSessionsInPeriod.toString()}
-                            color="bg-violet-500/10 text-violet-600"
+                            type="violet"
                         />
                         <SummaryPill
                             icon={<Mic size={16} />}
                             label="Speaking"
                             value={filteredDailyData.reduce((a, d) => a + d.SPEAKING, 0).toString()}
-                            color="bg-purple-500/10 text-purple-600"
+                            type="purple"
                         />
                         <SummaryPill
                             icon={<Headphones size={16} />}
                             label="Listening"
                             value={filteredDailyData.reduce((a, d) => a + d.LISTENING, 0).toString()}
-                            color="bg-amber-500/10 text-amber-600"
+                            type="amber"
                         />
                         <SummaryPill
                             icon={<MessageSquare size={16} />}
                             label="Chat IA"
                             value={filteredDailyData.reduce((a, d) => a + d.CHAT, 0).toString()}
-                            color="bg-emerald-500/10 text-emerald-600"
+                            type="emerald"
                         />
                     </div>
 
@@ -388,22 +387,47 @@ export function PlaygroundActivityChart({
 }
 
 // ── Small helper component ──
+const PILL_STYLES = {
+    violet: {
+        bg: "bg-violet-500/20 dark:bg-violet-950/20",
+        border: "border border-violet-500/50 dark:border-violet-500/30",
+        text: "text-violet-600 dark:text-violet-400"
+    },
+    purple: {
+        bg: "bg-purple-500/20 dark:bg-purple-950/20",
+        border: "border border-purple-500/50 dark:border-purple-500/30",
+        text: "text-purple-600 dark:text-purple-400"
+    },
+    amber: {
+        bg: "bg-amber-500/20 dark:bg-amber-950/20",
+        border: "border border-amber-500/50 dark:border-amber-500/30",
+        text: "text-amber-600 dark:text-amber-400"
+    },
+    emerald: {
+        bg: "bg-emerald-500/20 dark:bg-emerald-950/20",
+        border: "border border-emerald-500/50 dark:border-emerald-500/30",
+        text: "text-emerald-600 dark:text-emerald-400"
+    }
+};
+
 function SummaryPill({
     icon,
     label,
     value,
-    color,
+    type,
 }: {
     icon: React.ReactNode;
     label: string;
     value: string;
-    color: string;
+    type: "violet" | "purple" | "amber" | "emerald";
 }) {
+    const styles = PILL_STYLES[type];
+
     return (
-        <div className={`flex items-center gap-3 rounded-xl p-3 ${color.split(" ")[0]}`}>
-            <div className={`${color.split(" ")[1]} shrink-0`}>{icon}</div>
+        <div className={`flex items-center gap-3 rounded-xl p-3 ${styles.bg} ${styles.border} transition-all duration-300 hover:shadow-sm`}>
+            <div className={`${styles.text} shrink-0`}>{icon}</div>
             <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">{label}</p>
+                <p className="text-xs text-muted-foreground truncate font-medium">{label}</p>
                 <p className="text-lg font-bold text-foreground leading-tight">{value}</p>
             </div>
         </div>

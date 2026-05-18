@@ -107,7 +107,7 @@ export default async function CoursesPage(props: PageProps) {
                     {(activeRole === "ADMIN" || activeRole === "SECRETARY" || activeRole === "TEACHER") && (
                         <div className="flex flex-wrap items-center gap-2">
                             <Link href="/courses/spreadsheet">
-                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4 border-border/60 group hover:border-emerald-500/50 transition-colors">
+                                <Button variant="outline" className="flex items-center gap-2 h-11 px-4 border border-white/50 group hover:border-emerald-500/50 transition-colors">
                                     <FileSpreadsheet size={18} className="text-emerald-500 group-hover:scale-110 transition-transform" />
                                     <span className="hidden xs:inline">Vista Planilla</span>
                                     <span className="xs:hidden">Planilla</span>
@@ -170,7 +170,7 @@ export default async function CoursesPage(props: PageProps) {
                         </div>
                         <h2 className="text-xl font-bold">{isActiveTab ? "No hay cursos activos" : "El historial está vacío"}</h2>
                         <p className="text-muted-foreground mt-2 max-w-xs mx-auto text-sm">
-                            {isActiveTab 
+                            {isActiveTab
                                 ? "Comienza creando tu primer curso para empezar a gestionar los niveles y alumnos."
                                 : "Aquí aparecerán los cursos que hayas finalizado para su consulta histórica."}
                         </p>

@@ -52,7 +52,7 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
             <div className="min-w-[1000px] grid grid-cols-7 gap-4 items-start">
                 {weekDays.map((dayIndex) => {
                     const dayName = daysMapping[dayIndex];
-                    
+
                     // Specific date for this column
                     const columnDate = startOfViewWeek.add((dayIndex + 6) % 7, 'day').startOf('day');
 
@@ -74,7 +74,7 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                     return (
                         <div key={dayIndex} className="flex flex-col gap-4 min-h-[500px]">
                             {/* Day Header */}
-                            <div className="text-center p-3 rounded-2xl bg-muted/20 border border-border/40 backdrop-blur-sm flex flex-col items-center gap-0.5">
+                            <div className="text-center p-3 rounded-2xl bg-muted/40 border border-border/40 backdrop-blur-sm flex flex-col items-center gap-0.5">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">
                                     {dayName}
                                 </span>
@@ -86,26 +86,26 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                             {/* Column Content */}
                             <div className="flex flex-col gap-3">
                                 {daySchedules.length === 0 ? (
-                                    <div className="h-24 rounded-2xl border border-dashed border-border/30 flex items-center justify-center">
-                                        <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                    <div className="h-24 rounded-2xl bg-muted/20 border border-dashed border-border/60 backdrop-blur-sm flex items-center justify-center">
+                                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                             Sin clases
                                         </span>
                                     </div>
                                 ) : (
                                     daySchedules.map((schedule) => {
-                                        const linkedLesson = (schedule.lessons || []).find((l: any) => 
+                                        const linkedLesson = (schedule.lessons || []).find((l: any) =>
                                             dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
-                                        ) || (schedule.course.lessons || []).find((l: any) => 
+                                        ) || (schedule.course.lessons || []).find((l: any) =>
                                             dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
                                         );
 
                                         const cardColor = linkedLesson ? schedule.course.color : "#94a3b8";
 
                                         return (
-                                            <Card 
-                                                key={schedule.id} 
+                                            <Card
+                                                key={schedule.id}
                                                 className={`p-3 border-l-4 transition-all duration-300 hover:scale-[1.03] hover:shadow-md cursor-pointer group ${!linkedLesson ? 'border-dashed opacity-80' : ''}`}
-                                                style={{ 
+                                                style={{
                                                     borderLeftColor: cardColor,
                                                     backgroundColor: linkedLesson ? `${cardColor}10` : 'transparent'
                                                 }}
@@ -138,7 +138,7 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                                                 {schedule.course.teacher ? schedule.course.teacher.name : "Sin prof."}
                                                             </span>
                                                         </div>
-                                                        
+
                                                         {linkedLesson ? (
                                                             <div className="flex items-center gap-1.5 text-[10px] text-primary/70 font-bold shrink-0">
                                                                 <BookOpen size={10} className="shrink-0" />
@@ -157,7 +157,7 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
 
                                                     {/* Quick Action */}
                                                     <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Link 
+                                                        <Link
                                                             href={linkedLesson
                                                                 ? `/courses/${schedule.course.id}/lessons/${linkedLesson.id}/attendance`
                                                                 : `/courses/${schedule.course.id}`}

@@ -31,13 +31,13 @@
   :root,
   html.light {
     --c-bg: #f0f9ff;
-    --c-fg: #0f172a;
+    --c-fg: #172554;
 
     --c-card: #ffffff;
-    --c-card-fg: #0f172a;
+    --c-card-fg: #172554;
 
     --c-muted: #e2e8f0;
-    --c-muted-fg: #64748b;
+    --c-muted-fg: rgba(12, 10, 9, 0.6);
 
     --c-primary: #0284c7;
     --c-primary-hover: #0369a1;

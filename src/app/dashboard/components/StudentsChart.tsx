@@ -40,9 +40,9 @@ export function StudentsChart({ data, totalActive }: StudentsChartProps) {
         <Card variant="premium-glass" className="p-6 col-span-1 md:col-span-2 relative overflow-hidden group">
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-700 pointer-events-none" />
-            
+
             <div className="mb-6 relative z-10">
-                <h3 className="font-bold text-xl flex items-center gap-2">
+                <h3 className="font-bold text-xl text-foreground flex items-center gap-2">
                     Distribución de Alumnos
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -68,9 +68,9 @@ export function StudentsChart({ data, totalActive }: StudentsChartProps) {
                             cornerRadius={6}
                         >
                             {data.map((entry, index) => (
-                                <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={entry.color} 
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.color}
                                     className="transition-all duration-300"
                                     style={{
                                         filter: activeIndex === index ? `drop-shadow(0px 4px 12px ${entry.color}66)` : 'none',
@@ -81,14 +81,14 @@ export function StudentsChart({ data, totalActive }: StudentsChartProps) {
                                 />
                             ))}
                         </Pie>
-                        <Tooltip 
-                            content={<CustomTooltip />} 
+                        <Tooltip
+                            content={<CustomTooltip />}
                             cursor={{ fill: 'transparent' }}
                             wrapperStyle={{ zIndex: 100, outline: 'none' }}
                         />
-                        <Legend 
-                            layout="vertical" 
-                            verticalAlign="middle" 
+                        <Legend
+                            layout="vertical"
+                            verticalAlign="middle"
                             align="right"
                             iconType="circle"
                             formatter={(value, entry: any) => (
@@ -99,7 +99,7 @@ export function StudentsChart({ data, totalActive }: StudentsChartProps) {
                         />
                     </PieChart>
                 </ResponsiveContainer>
-                
+
                 {/* Center text for the donut chart */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none md:pr-[120px]">
                     <span className="text-3xl font-extrabold text-foreground tracking-tight">
