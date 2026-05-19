@@ -105,7 +105,7 @@ export function RegisterSalaryForm({ employees }: RegisterSalaryFormProps) {
                 </div>
             )}
 
-            <Button type="submit" className="w-full font-bold mt-2 bg-rose-600 hover:bg-rose-700 text-white" disabled={isPending}>
+            <Button type="submit" className="w-full font-bold mt-2 bg-gradient-to-b from-sky-100/40 to-rose-600 hover:bg-rose-700 text-white" disabled={isPending}>
                 {isPending ? "Procesando..." : "Registrar Pago de Sueldo (-)"}
             </Button>
         </form>

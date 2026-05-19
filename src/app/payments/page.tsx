@@ -72,13 +72,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         select: { id: true, name: true, role: true, roles: true },
         orderBy: { name: "asc" }
     });
-    
+
     const staffRoles = ["ADMIN", "TEACHER", "SECRETARY"];
-    const employees = allUsers.filter(u => 
-        staffRoles.includes(u.role) || 
+    const employees = allUsers.filter(u =>
+        staffRoles.includes(u.role) ||
         (u.roles && u.roles.some((r: string) => staffRoles.includes(r)))
     );
-    
+
     // Mapeo rápido de operador
     const userMap = Object.fromEntries(allUsers.map(u => [u.id, u.name]));
 
@@ -101,10 +101,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     // Filter ledger for current month stats
     const startOfMonth = dayjs().startOf('month').toDate();
     const endOfMonth = dayjs().endOf('month').toDate();
-    
-    const currentMonthTransactions = ledger.filter(t => 
-        t.date >= startOfMonth && 
-        t.date <= endOfMonth && 
+
+    const currentMonthTransactions = ledger.filter(t =>
+        t.date >= startOfMonth &&
+        t.date <= endOfMonth &&
         t.status === "VALID"
     );
 
@@ -117,7 +117,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         .reduce((acc, t) => acc + t.amount, 0);
 
     const totalCollected = feesIncome + miscIncome;
-        
+
     const payrollExpenses = currentMonthTransactions
         .filter(t => t.type === "PAYROLL")
         .reduce((acc, t) => acc + Math.abs(t.amount), 0);
@@ -125,9 +125,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const otherExpenses = currentMonthTransactions
         .filter(t => t.type === "EXPENSE")
         .reduce((acc, t) => acc + Math.abs(t.amount), 0);
-        
+
     const totalExpenses = payrollExpenses + otherExpenses;
-        
+
     const rentabilidad = totalCollected - totalExpenses;
 
     // 5. Calcular Descuentos e Intereses (Mes actual)
@@ -170,7 +170,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             icon: ArrowUpRight,
             color: "text-blue-600",
             bg: "bg-blue-50 dark:bg-blue-950/40",
-            borderColor: "border-l-blue-600"
+            borderColor: "border-blue-600/20 border-l-blue-600"
         },
         {
             label: "Rentabilidad (Neto)",
@@ -178,7 +178,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             icon: TrendingUp,
             color: "text-emerald-600",
             bg: "bg-emerald-50 dark:bg-emerald-950/40",
-            borderColor: "border-l-emerald-600"
+            borderColor: "border-emerald-600/20 border-l-emerald-600"
         },
         {
             label: "Gastos Operativos",
@@ -190,7 +190,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             icon: ArrowDownLeft,
             color: "text-rose-600",
             bg: "bg-rose-50 dark:bg-rose-950/40",
-            borderColor: "border-l-rose-500"
+            borderColor: "border-rose-600/20 border-l-rose-500"
         },
     ];
 
@@ -204,7 +204,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             chartType: "COLLECTION",
             badgeText: "Gestión de Cobro",
             badgeColor: "text-blue-600 bg-blue-50 dark:bg-blue-950/40",
-            borderColor: "border-l-blue-600"
+            borderColor: "border-blue-600/20 border-l-blue-600"
         },
         {
             label: "Deuda Total (Alumnos)",
@@ -215,7 +215,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             chartType: "DEBT",
             badgeText: "Estado de Mora",
             badgeColor: "text-rose-600 bg-rose-50 dark:bg-rose-950/40",
-            borderColor: "border-l-rose-600"
+            borderColor: "border-rose-600/20 border-l-rose-600"
         },
     ];
 
@@ -226,7 +226,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             icon: Coins,
             color: "text-amber-600",
             bg: "bg-amber-50 dark:bg-amber-950/40",
-            borderColor: "border-l-amber-600",
+            borderColor: "border-amber-600/20 border-l-amber-600",
             description: "Recargos por mora en cuotas"
         },
         {
@@ -235,16 +235,16 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             icon: Percent,
             color: "text-indigo-600",
             bg: "bg-indigo-50 dark:bg-indigo-950/40",
-            borderColor: "border-l-indigo-600",
+            borderColor: "border-indigo-600/20 border-l-indigo-600",
             description: "Bonificaciones y becas directas"
         }
     ];
 
     let filteredLedger = ledger;
     if (isSecretary) {
-        filteredLedger = ledger.filter(t => 
-            t.type !== "EXPENSE" && 
-            t.type !== "PAYROLL" && 
+        filteredLedger = ledger.filter(t =>
+            t.type !== "EXPENSE" &&
+            t.type !== "PAYROLL" &&
             t.expenseId === null
         );
     }
@@ -260,11 +260,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             const fee = t.payment.fee;
             vTitle = `${formatFeeLabel(fee.type, fee.month, fee.year)} - ${fee.student.name}`;
         } else if ((t.type === "EXPENSE" || t.type === "PAYROLL") && t.expense) {
-            vTitle = t.type === "PAYROLL" && t.expense.recipient?.name 
-                ? `Sueldo: ${t.expense.recipient.name}` 
+            vTitle = t.type === "PAYROLL" && t.expense.recipient?.name
+                ? `Sueldo: ${t.expense.recipient.name}`
                 : `${t.expense.category}: ${t.expense.description}`;
         } else if (t.type === "MISC_INCOME" && t.miscIncome) {
-             vTitle = t.miscIncome.student ? `${t.miscIncome.category} - ${t.miscIncome.student.name}` : t.miscIncome.description;
+            vTitle = t.miscIncome.student ? `${t.miscIncome.category} - ${t.miscIncome.student.name}` : t.miscIncome.description;
         }
         voidedTitlesMap.set(oid, vTitle);
     });
@@ -288,7 +288,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         if (t.type === "PAYMENT" && t.payment?.fee?.student) {
             const fee = t.payment.fee;
             let feeLabel = formatFeeLabel(fee.type, fee.month, fee.year);
-            
+
             title = `${feeLabel} - ${fee.student.name}`;
             if (t.payment.notes) {
                 note = t.payment.notes;
@@ -298,10 +298,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             recipientName = t.expense.recipient?.name || null;
             ticketNumber = t.expense.ticketNumber || null;
         } else if (t.type === "PAYROLL" && t.expense) {
-             title = t.expense.recipient?.name ? `Sueldo: ${t.expense.recipient.name}` : `Pago de Salario`;
-             note = t.expense.description; // Aquí asignamos el concepto del sueldo a la nota
-             recipientName = t.expense.recipient?.name || null;
-             ticketNumber = t.expense.ticketNumber || null;
+            title = t.expense.recipient?.name ? `Sueldo: ${t.expense.recipient.name}` : `Pago de Salario`;
+            note = t.expense.description; // Aquí asignamos el concepto del sueldo a la nota
+            recipientName = t.expense.recipient?.name || null;
+            ticketNumber = t.expense.ticketNumber || null;
         } else if (t.type === "MISC_INCOME" && t.miscIncome) {
             const mi = t.miscIncome;
             if (mi.category === "ADELANTO") {
@@ -335,7 +335,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     const totalTransactions = allTransactionsRaw.length;
     const totalPages = Math.ceil(totalTransactions / ITEMS_PER_PAGE);
-    
+
     // Slice para la página actual
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const allTransactions = allTransactionsRaw.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -383,7 +383,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 {!isSecretary && (
                     <div className="grid gap-4 md:grid-cols-3 mb-6 items-stretch">
                         {primaryStats.map((stat: any, i) => (
-                            <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 flex flex-col justify-between ${stat.borderColor}`}>
+                            <Card key={i} className={`p-6 bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 border-l-4 flex flex-col justify-between ${stat.borderColor}`}>
                                 <div className="flex flex-col gap-3">
                                     <div className={`${stat.bg} ${stat.color} w-fit p-3 rounded-xl`}>
                                         <stat.icon size={24} />
@@ -412,7 +412,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 {!isSecretary && (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-6">
                         {secondaryStats.map((stat: any, i) => (
-                            <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
+                            <Card key={i} className={`p-6 bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 border-l-4 ${stat.borderColor}`}>
                                 <div className="h-full flex flex-col justify-between gap-4">
                                     <div className="flex items-center justify-between">
                                         <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
@@ -502,7 +502,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 {!isSecretary && (
                     <div className="grid gap-4 md:grid-cols-2 mb-8">
                         {adjustmentStats.map((stat: any, i) => (
-                            <Card key={i} className={`p-5 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
+                            <Card key={i} className={`p-5 bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 border-l-4 ${stat.borderColor}`}>
                                 <div className="flex items-center gap-4">
                                     <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
                                         <stat.icon size={22} />
@@ -521,20 +521,20 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 <div className="grid gap-6 lg:grid-cols-3 items-start">
                     {/* Caja FUERTE Izquierda: Formularios para Agregar Dinero / Gastos */}
                     <div className="lg:col-span-1 space-y-6">
-                        <Card className="p-5 border-border/40 border-l-4 border-l-emerald-500 bg-emerald-500/5">
+                        <Card className="p-5 bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 border-emerald-500/20 border-l-4 border-l-emerald-500">
                             <RegisterIncomesForm students={students} />
                         </Card>
 
                         {!isSecretary && (
-                            <Card className="p-5 border-border/40 border-l-4 border-l-rose-500 bg-rose-500/5">
+                            <Card className="p-5 bg-gradient-to-r from-blue-900/40 to-sky-100/40 dark:from-sky-950/40 dark:to-sky-400/40 shadow-[0_0_50px_rgba(255,255,255,0.7)] dark:shadow-xl dark:shadow-sky-400/60 border-rose-500/20 border-l-4 border-l-rose-500">
                                 <RegisterOutgoingsForm employees={employees} />
                             </Card>
                         )}
                     </div>
 
                     {/* CENTRO-DERECHA: El libro contable de vida (Buscador y Tabla) */}
-                    <TransactionTable 
-                        transactions={allTransactions} 
+                    <TransactionTable
+                        transactions={allTransactions}
                         totalPages={totalPages}
                         currentPage={currentPage}
                     />

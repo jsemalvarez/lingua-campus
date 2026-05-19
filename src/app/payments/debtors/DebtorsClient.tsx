@@ -85,8 +85,8 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
 
             // ── Totales ───────────────────────────────────────────────────────
             const totalHistorical = filtered.reduce((a, s) => a + s.previousMonthsOwed, 0);
-            const totalCurrent    = filtered.reduce((a, s) => a + s.currentMonthOwed,   0);
-            const totalAll        = filtered.reduce((a, s) => a + s.totalOwed,           0);
+            const totalCurrent = filtered.reduce((a, s) => a + s.currentMonthOwed, 0);
+            const totalAll = filtered.reduce((a, s) => a + s.totalOwed, 0);
 
             doc.setTextColor(30, 30, 30);
             doc.setFont("helvetica", "bold");
@@ -198,15 +198,15 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
 
     // ── Totales sobre la lista filtrada (no paginada) ─────────────────────────
     const totalHistorical = filtered.reduce((acc, s) => acc + s.previousMonthsOwed, 0);
-    const totalCurrent    = filtered.reduce((acc, s) => acc + s.currentMonthOwed, 0);
-    const totalAll        = filtered.reduce((acc, s) => acc + s.totalOwed, 0);
+    const totalCurrent = filtered.reduce((acc, s) => acc + s.currentMonthOwed, 0);
+    const totalAll = filtered.reduce((acc, s) => acc + s.totalOwed, 0);
 
     return (
         <>
             {/* ── Summary cards ─────────────────────────────────────────────── */}
             {summaryList.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <Card className="p-5 border-rose-200 dark:border-rose-900/30 bg-rose-50/30 dark:bg-rose-950/10">
+                    <Card className="p-5 border-rose-200 dark:border-rose-500/60 bg-rose-50/70 dark:bg-rose-950/60">
                         <div className="flex items-center gap-3 mb-2 text-rose-600">
                             <div className="p-2 bg-rose-100 dark:bg-rose-900/40 rounded-lg">
                                 <Clock size={20} />
@@ -217,7 +217,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                         <p className="text-[10px] text-muted-foreground mt-1">Total acumulado de meses anteriores</p>
                     </Card>
 
-                    <Card className="p-5 border-amber-200 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-950/10">
+                    <Card className="p-5 border-amber-200 dark:border-amber-500/50 bg-amber-50/70 dark:bg-amber-950/50">
                         <div className="flex items-center gap-3 mb-2 text-amber-600">
                             <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
                                 <Calendar size={20} />
@@ -285,22 +285,20 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                     <span className="text-xs text-muted-foreground font-medium mr-1">Ordenar:</span>
                     <button
                         onClick={() => toggleSort("name")}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                            sortField === "name"
-                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                : "border-border text-foreground hover:bg-muted/60"
-                        }`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${sortField === "name"
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "border-border text-foreground hover:bg-muted/60"
+                            }`}
                     >
                         <SortIcon field="name" />
                         Nombre
                     </button>
                     <button
                         onClick={() => toggleSort("debt")}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                            sortField === "debt"
-                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                : "border-border text-foreground hover:bg-muted/60"
-                        }`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${sortField === "debt"
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "border-border text-foreground hover:bg-muted/60"
+                            }`}
                     >
                         <SortIcon field="debt" />
                         Monto de deuda
@@ -368,14 +366,14 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
 
                                     <div className="flex flex-wrap gap-3">
                                         {s.previousMonthsOwed > 0 && (
-                                            <div className="bg-rose-50 dark:bg-rose-950/20 px-4 py-3 rounded-2xl border border-rose-200 dark:border-rose-900/40 text-center min-w-[140px]">
+                                            <div className="bg-rose-100 dark:bg-rose-950/40 px-4 py-3 rounded-2xl border border-rose-200 dark:border-rose-500/60 text-center min-w-[140px]">
                                                 <p className="text-[10px] uppercase font-black text-rose-600 dark:text-rose-400 tracking-tighter mb-1">
                                                     Vencido (Histórico)
                                                 </p>
                                                 <h4 className="text-lg font-black text-rose-600">${s.previousMonthsOwed.toLocaleString()}</h4>
                                             </div>
                                         )}
-                                        <div className="bg-amber-50 dark:bg-amber-950/20 px-4 py-3 rounded-2xl border border-amber-200 dark:border-amber-900/40 text-center min-w-[140px]">
+                                        <div className="bg-amber-50 dark:bg-amber-950/50 px-4 py-3 rounded-2xl border border-amber-200 dark:border-amber-500/50 text-center min-w-[140px]">
                                             <p className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-tighter mb-1">
                                                 {getMonthName(currentMonth)}
                                             </p>
@@ -397,11 +395,10 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                                         {s.months.map((m, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`group p-3 rounded-xl border flex flex-col justify-between gap-1 shadow-sm transition-all hover:bg-muted/10 ${
-                                                    m.isCurrent
-                                                        ? "bg-amber-50/30 border-amber-200/50 dark:bg-amber-950/10 dark:border-amber-900/20"
-                                                        : "bg-rose-50/30 border-rose-200/50 dark:bg-rose-950/10 dark:border-rose-900/20"
-                                                }`}
+                                                className={`group p-3 rounded-xl border flex flex-col justify-between gap-1 shadow-sm transition-all hover:bg-muted/10 ${m.isCurrent
+                                                    ? "bg-amber-100/40 border-amber-200/50 dark:bg-amber-950/40 dark:border-amber-500/50"
+                                                    : "bg-rose-100/50 border-rose-200/50 dark:bg-rose-950/40 dark:border-rose-500/60"
+                                                    }`}
                                             >
                                                 <div className="flex justify-between items-start gap-2">
                                                     <span className={`text-[10px] sm:text-xs font-bold ${m.isCurrent ? "text-amber-600" : "text-rose-600"}`}>
@@ -462,11 +459,10 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                         <button
                             key={p}
                             onClick={() => goTo(p)}
-                            className={`w-9 h-9 rounded-lg border text-sm font-medium transition-colors ${
-                                p === safePage
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : "border-border hover:bg-muted/60"
-                            }`}
+                            className={`w-9 h-9 rounded-lg border text-sm font-medium transition-colors ${p === safePage
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "border-border hover:bg-muted/60"
+                                }`}
                         >
                             {p}
                         </button>

@@ -74,11 +74,11 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                     return (
                         <div key={dayIndex} className="flex flex-col gap-4 min-h-[500px]">
                             {/* Day Header */}
-                            <div className="text-center p-3 rounded-2xl bg-muted/40 border border-border/40 backdrop-blur-sm flex flex-col items-center gap-0.5">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">
+                            <div className="text-center p-3 rounded-2xl bg-gradient-to-b from-blue-950 to-sky-500 dark:from-sky-600 dark:to-blue-950 flex flex-col items-center gap-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-100">
                                     {dayName}
                                 </span>
-                                <span className="text-[11px] font-bold text-muted-foreground/60">
+                                <span className="text-[11px] font-bold text-blue-300">
                                     {columnDate.format('D/M')}
                                 </span>
                             </div>
@@ -86,7 +86,7 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                             {/* Column Content */}
                             <div className="flex flex-col gap-3">
                                 {daySchedules.length === 0 ? (
-                                    <div className="h-24 rounded-2xl bg-muted/20 border border-dashed border-border/60 backdrop-blur-sm flex items-center justify-center">
+                                    <div className="h-24 rounded-2xl bg-muted/20 border border-dashed border-blue-950/60 dark:border-blue-300/60 backdrop-blur-sm flex items-center justify-center">
                                         <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                             Sin clases
                                         </span>

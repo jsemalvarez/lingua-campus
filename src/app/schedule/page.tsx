@@ -67,11 +67,11 @@ export default async function SchedulePage(props: PageProps) {
                 }
             }
         });
-        
+
         if (guardianLinks.length === 0) redirect("/dashboard");
-        
+
         instituteId = guardianLinks[0].student.instituteId;
-        
+
         guardianLinks.forEach(link => {
             link.student.enrollments.forEach(e => {
                 if (!studentEnrollments.includes(e.courseId)) {
@@ -97,8 +97,8 @@ export default async function SchedulePage(props: PageProps) {
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
         prisma.course.findMany({
-            where: { 
-                instituteId: instituteId, 
+            where: {
+                instituteId: instituteId,
                 status: "ACTIVE",
                 ...(isTeacher ? { teacherId: (session.user as any).id } : {}),
                 ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
@@ -106,9 +106,9 @@ export default async function SchedulePage(props: PageProps) {
             orderBy: { name: "asc" }
         }),
         prisma.user.findMany({
-            where: { 
-                instituteId: instituteId, 
-                role: "TEACHER", 
+            where: {
+                instituteId: instituteId,
+                role: "TEACHER",
                 status: "ACTIVE"
             },
             orderBy: { name: "asc" }
@@ -128,7 +128,7 @@ export default async function SchedulePage(props: PageProps) {
     const weekStart = startOfWeek(displayDateNoon, { weekStartsOn: 1 });
     const weekStartUTC = new Date(weekStart);
     weekStartUTC.setUTCHours(0, 0, 0, 0);
-    
+
     const weekEndUTC = addDays(weekStartUTC, 6);
     weekEndUTC.setUTCHours(23, 59, 59, 999);
 
@@ -137,7 +137,7 @@ export default async function SchedulePage(props: PageProps) {
     const dayEndUTC = new Date(displayDateNoon);
     dayEndUTC.setUTCHours(23, 59, 59, 999);
 
-    const lessonsWhere = view === "day" 
+    const lessonsWhere = view === "day"
         ? { date: { gte: dayStartUTC, lte: dayEndUTC } }
         : { date: { gte: weekStartUTC, lte: weekEndUTC } };
 
@@ -217,7 +217,7 @@ export default async function SchedulePage(props: PageProps) {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="flex bg-muted/30 p-1.5 rounded-2xl border border-border/50 shadow-sm">
+                        <div className="flex bg-muted/30 p-1.5 rounded-2xl border border-blue-950/30 dark:border-blue-300/30 shadow-sm">
                             <Link href={`/schedule?view=day&date=${dateStr}${filterParams}`}>
                                 <Button
                                     variant="ghost"
@@ -240,7 +240,7 @@ export default async function SchedulePage(props: PageProps) {
                     </div>
                 </header>
 
-                <ScheduleFilters 
+                <ScheduleFilters
                     allCourses={allCourses}
                     allTeachers={allTeachers}
                     allClassrooms={allClassrooms}
@@ -252,7 +252,7 @@ export default async function SchedulePage(props: PageProps) {
                     }}
                 />
 
-                <div className="flex items-center justify-between mb-8 bg-muted/15 p-5 rounded-[2rem] border border-border/30 backdrop-blur-sm shadow-inner">
+                <div className="flex items-center justify-between mb-8 bg-muted/15 p-5 rounded-[2rem] border border-blue-950/30 dark:border-blue-300/30 backdrop-blur-sm shadow-inner">
                     <div className="flex items-center gap-5">
                         <Link href={prevUrl}>
                             <Button variant="outline" size="icon" className="h-9 w-9 rounded-full border-border/50 bg-background/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300 shadow-sm active:scale-95">
@@ -306,10 +306,10 @@ export default async function SchedulePage(props: PageProps) {
                                         const cardColor = hasLesson ? schedule.course.color : "#94a3b8";
 
                                         return (
-                                            <Card 
-                                                key={schedule.id} 
+                                            <Card
+                                                key={schedule.id}
                                                 className={`p-0 overflow-hidden border-l-4 transition-all hover:scale-[1.01] hover:shadow-lg group shadow-sm sm:shadow-md cursor-pointer ${!hasLesson ? 'border-dashed opacity-80' : ''}`}
-                                                style={{ 
+                                                style={{
                                                     borderLeftColor: cardColor,
                                                     backgroundColor: hasLesson ? `${cardColor}08` : 'transparent'
                                                 }}
@@ -328,7 +328,7 @@ export default async function SchedulePage(props: PageProps) {
                                                                 </span>
                                                             </div>
                                                             <h3 className="text-lg font-bold tracking-tight text-foreground/90">{schedule.course.name} <span className="text-muted-foreground font-medium text-sm ml-1">({schedule.course.level || "General"})</span></h3>
-                                                            
+
                                                             {hasLesson ? (
                                                                 <div className="flex flex-col gap-1 mt-1">
                                                                     <p className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -343,7 +343,7 @@ export default async function SchedulePage(props: PageProps) {
                                                                     Programación: Pendiente de registro
                                                                 </p>
                                                             )}
-                                                            
+
                                                             <p className="text-sm font-medium text-muted-foreground flex items-center gap-2 mt-1">
                                                                 <span className="text-[10px]"><User size={13} /></span> {schedule.course.teacher ? schedule.course.teacher.name : "Sin profesor asignado"}
                                                             </p>

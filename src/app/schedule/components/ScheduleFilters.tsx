@@ -46,7 +46,7 @@ export function ScheduleFilters({
 
     return (
         <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="bg-muted/10 backdrop-blur-md border border-border/30 rounded-[2rem] p-2 sm:p-3 shadow-inner flex flex-wrap items-center gap-3">
+            <div className="bg-muted/10 backdrop-blur-md border border-blue-950/30 dark:border-blue-300/30 rounded-[2rem] p-2 sm:p-3 shadow-inner flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-2xl border border-border/20 shadow-sm ml-1">
                     <Filter size={16} className="text-primary" />
                     <span className="text-xs font-black uppercase tracking-widest text-foreground/70">Filtros</span>

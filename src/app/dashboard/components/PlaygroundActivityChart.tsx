@@ -63,8 +63,8 @@ export function PlaygroundActivityChart({
     const [period, setPeriod] = useState<PeriodFilter>("30d");
     const [activeTypeIndex, setActiveTypeIndex] = useState<number | null>(null);
 
-    const axisColor = isDark ? "#94a3b8" : "#64748b";
-    const gridColor = isDark ? "#334155" : "#e2e8f0";
+    const axisColor = isDark ? "rgba(255, 255, 255, 0.7)" : "#64748b";
+    const gridColor = isDark ? "rgba(255, 255, 255, 0.2)" : "#e2e8f0";
 
     const filteredDailyData = useMemo(() => {
         if (period === "7d") return dailyData.slice(-7);
@@ -81,7 +81,7 @@ export function PlaygroundActivityChart({
     const hasNoData = totalSessions === 0;
 
     return (
-        <Card variant="premium-glass" className="p-6 relative overflow-hidden group">
+        <Card variant="premium-glass" className="p-6 relative overflow-hidden group !bg-gradient-to-r !from-blue-900/40 !to-sky-100/60 dark:!from-sky-950/40 dark:!to-sky-400/40">
             {/* Ambient glow */}
             <div className="absolute top-0 left-0 -ml-20 -mt-20 w-72 h-72 bg-violet-500/5 rounded-full blur-3xl group-hover:bg-violet-500/10 transition-colors duration-700 pointer-events-none" />
 

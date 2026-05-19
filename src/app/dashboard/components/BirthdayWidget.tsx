@@ -62,7 +62,7 @@ export function BirthdayWidget({ weekBirthdays, monthBirthdays, currentMonth }: 
     const monthName = MONTH_NAMES[currentMonth - 1];
 
     return (
-        <Card variant="premium-glass" className="p-6 relative overflow-hidden group">
+        <Card variant="premium-glass" className="p-6 relative overflow-hidden group !bg-gradient-to-r !from-blue-900/40 !to-sky-100/60 dark:!from-sky-950/40 dark:!to-sky-400/40">
             {/* Ambient glow */}
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-pink-500/5 rounded-full blur-3xl group-hover:bg-pink-500/10 transition-colors duration-700 pointer-events-none" />
 
@@ -79,21 +79,19 @@ export function BirthdayWidget({ weekBirthdays, monthBirthdays, currentMonth }: 
                 <div className="flex items-center bg-muted rounded-lg p-0.5 text-xs font-semibold">
                     <button
                         onClick={() => setView("week")}
-                        className={`px-3 py-1.5 rounded-md transition-all duration-200 ${
-                            view === "week"
-                                ? "bg-background shadow text-foreground"
-                                : "text-muted-foreground hover:text-foreground"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md transition-all duration-200 ${view === "week"
+                            ? "bg-background shadow text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                            }`}
                     >
                         Esta semana
                     </button>
                     <button
                         onClick={() => setView("month")}
-                        className={`px-3 py-1.5 rounded-md transition-all duration-200 ${
-                            view === "month"
-                                ? "bg-background shadow text-foreground"
-                                : "text-muted-foreground hover:text-foreground"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md transition-all duration-200 ${view === "month"
+                            ? "bg-background shadow text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                            }`}
                     >
                         {monthName}
                     </button>
@@ -164,9 +162,8 @@ function BirthdayRow({ student }: { student: BirthdayStudent }) {
         >
             {/* Avatar */}
             <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor} ${
-                    student.isToday ? "ring-2 ring-pink-400 ring-offset-1" : ""
-                }`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor} ${student.isToday ? "ring-2 ring-pink-400 ring-offset-1" : ""
+                    }`}
             >
                 {initials}
             </div>

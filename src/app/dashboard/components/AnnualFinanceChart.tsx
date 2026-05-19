@@ -35,7 +35,7 @@ export function AnnualFinanceChart({ data, year }: AnnualFinanceChartProps) {
         new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
 
     return (
-        <Card variant="premium-glass" className="p-6 relative overflow-hidden">
+        <Card variant="premium-glass" className="p-6 relative overflow-hidden !bg-gradient-to-r !from-blue-900/40 !to-sky-100/60 dark:!from-sky-950/40 dark:!to-sky-400/40">
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h3 className="font-bold text-lg flex items-center gap-2">
@@ -58,7 +58,7 @@ export function AnnualFinanceChart({ data, year }: AnnualFinanceChartProps) {
                         <CartesianGrid
                             strokeDasharray="3 3"
                             vertical={false}
-                            stroke={isDark ? "#334155" : "#e2e8f0"}
+                            stroke={isDark ? "#e2e8f0" : "#334155"}
                         />
                         <XAxis
                             dataKey="name"
@@ -88,7 +88,7 @@ export function AnnualFinanceChart({ data, year }: AnnualFinanceChartProps) {
                             wrapperStyle={{ paddingTop: '20px' }}
                             iconType="circle"
                         />
-                        <ReferenceLine y={0} stroke={isDark ? "#475569" : "#cbd5e1"} />
+                        <ReferenceLine y={0} stroke={isDark ? "#cbd5e1" : "#475569"} />
                         <Bar
                             dataKey="ingresos"
                             name="Ingresos Totales"

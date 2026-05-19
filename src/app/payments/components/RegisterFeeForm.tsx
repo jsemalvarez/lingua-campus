@@ -31,7 +31,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
     const [baseAmount, setBaseAmount] = useState<number>(0);
     const [surcharge, setSurcharge] = useState<number>(0);
     const [discount, setDiscount] = useState<number>(0);
-    
+
     // Auto-select fee and populate base amount
     useEffect(() => {
         if (selectedFeeId && pendingFees.length > 0) {
@@ -66,7 +66,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
     const handleApplyCredit = async () => {
         if (!selectedFeeId || studentCredit <= 0) return;
-        
+
         setIsApplyingCredit(true);
         const fee = pendingFees.find(f => f.id === selectedFeeId);
         const debt = fee.originalAmount - fee.paidAmount;
@@ -168,7 +168,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                     } else {
                                         label = `Cuota ${getMonthName(f.month)} ${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
                                     }
-                                    
+
                                     return (
                                         <option key={f.id} value={f.id}>
                                             {label} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
@@ -191,9 +191,9 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                     <p className="text-sm font-bold text-blue-700 dark:text-blue-300">${studentCredit.toLocaleString()}</p>
                                 </div>
                             </div>
-                            <Button 
+                            <Button
                                 type="button"
-                                size="sm" 
+                                size="sm"
                                 onClick={handleApplyCredit}
                                 disabled={isApplyingCredit || !selectedFeeId}
                                 className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-3"
@@ -208,37 +208,37 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
             <div className="space-y-4">
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Monto a cancelar de la deuda ($)</label>
-                    <input 
-                        type="number" 
-                        min="1" 
-                        step="0.01" 
-                        required 
+                    <input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        required
                         value={baseAmount || ""}
                         onChange={(e) => setBaseAmount(parseFloat(e.target.value) || 0)}
-                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20" 
+                        className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20"
                     />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-red-600 dark:text-red-400">Recargo (+)</label>
-                        <input 
-                            type="number" 
-                            min="0" 
-                            step="0.01" 
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
                             value={surcharge || ""}
                             onChange={(e) => setSurcharge(parseFloat(e.target.value) || 0)}
-                            className="w-full px-4 py-2 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-950/20 text-sm outline-none shadow-sm focus:ring-2 focus:ring-red-500/20" 
+                            className="w-full px-4 py-2 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-950/20 text-sm outline-none shadow-sm focus:ring-2 focus:ring-red-500/20"
                         />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Descuento (-)</label>
-                        <input 
-                            type="number" 
-                            min="0" 
-                            step="0.01" 
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
                             value={discount || ""}
                             onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                            className="w-full px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-950/20 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20" 
+                            className="w-full px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-950/20 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20"
                         />
                     </div>
                 </div>
@@ -294,7 +294,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                 </div>
             )}
 
-            <Button type="submit" className="w-full font-bold mt-2 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={isPending}>
+            <Button type="submit" className="w-full font-bold mt-2 bg-gradient-to-b from-sky-100/40 to-emerald-600 hover:bg-emerald-700  text-white" disabled={isPending}>
                 {isPending ? "Grabando..." : "Confirmar Ingreso (+)"}
             </Button>
         </form>
