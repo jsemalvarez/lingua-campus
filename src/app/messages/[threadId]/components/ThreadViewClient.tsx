@@ -14,6 +14,7 @@ interface Props {
     thread: ThreadDetail;
     currentUserId: string;
     isStudent: boolean;
+    activeRole: string;
 }
 
 function formatDateTime(date: Date): string {
@@ -26,7 +27,7 @@ function formatDateTime(date: Date): string {
     });
 }
 
-export function ThreadViewClient({ thread, currentUserId, isStudent }: Props) {
+export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole }: Props) {
     const [messages, setMessages] = useState(thread.messages);
     const [body, setBody] = useState("");
     const [sending, setSending] = useState(false);
@@ -74,6 +75,7 @@ export function ThreadViewClient({ thread, currentUserId, isStudent }: Props) {
                 body,
                 senderUserId: isStudent ? undefined : currentUserId,
                 senderStudentId: isStudent ? currentUserId : undefined,
+                senderRole: activeRole,
             });
             setBody("");
             // Immediately fetch the updated thread so the sent message appears
