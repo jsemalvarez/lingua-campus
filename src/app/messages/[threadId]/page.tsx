@@ -36,6 +36,7 @@ export default async function ThreadPage({ params }: Props) {
                     thread={thread}
                     currentUserId={sessionUser.id}
                     isStudent={isStudent}
+                    activeRole={activeRole}
                 />
             </main>
         </div>

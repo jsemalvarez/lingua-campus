@@ -17,11 +17,12 @@ interface Props {
     courses: Course[];
     allTeachers: Teacher[];
     isAdmin: boolean;
+    activeRole: string;
 }
 
 type RecipientType = "course" | "students" | "teachers";
 
-export function ComposeClient({ senderUserId, instituteId, courses, allTeachers, isAdmin }: Props) {
+export function ComposeClient({ senderUserId, instituteId, courses, allTeachers, isAdmin, activeRole }: Props) {
     const router = useRouter();
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
@@ -32,7 +33,7 @@ export function ComposeClient({ senderUserId, instituteId, courses, allTeachers,
     const [recipientType, setRecipientType] = useState<RecipientType>("students");
     const [selectedCourseId, setSelectedCourseId] = useState<string>("");
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
-    const [includeGuardians, setIncludeGuardians] = useState(false);
+    const [includeGuardians, setIncludeGuardians] = useState(true);
     const [sendToAllCourse, setSendToAllCourse] = useState(false);
     const [selectedTeacherIds, setSelectedTeacherIds] = useState<Set<string>>(new Set());
     const [showStudentPicker, setShowStudentPicker] = useState(false);
@@ -104,11 +105,12 @@ export function ComposeClient({ senderUserId, instituteId, courses, allTeachers,
                 type: recipientType === "course" ? "COURSE_BLAST" : "DIRECT",
                 courseId: selectedCourseId || undefined,
                 senderUserId,
+                senderRole: activeRole,
                 recipientStudentIds:
                     recipientType === "students" ? Array.from(selectedStudentIds) : [],
                 recipientUserIds:
                     recipientType === "teachers" ? Array.from(selectedTeacherIds) : [],
-                includeGuardians: recipientType === "students" ? includeGuardians : false,
+                includeGuardians,
             });
             router.push(`/messages/${threadId}`);
         } catch (err: any) {
@@ -268,6 +270,22 @@ export function ComposeClient({ senderUserId, instituteId, courses, allTeachers,
                                         Incluir también a los tutores de estos alumnos
                                     </label>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Checkbox for Course type */}
+                        {recipientType === "course" && selectedCourseId && (
+                            <div className="pt-2 border-t border-border/40 mt-3">
+                                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:opacity-80 transition-opacity px-1 font-medium bg-primary/5 py-2 rounded-xl border border-primary/20">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeGuardians}
+                                        onChange={(e) => setIncludeGuardians(e.target.checked)}
+                                        className="h-4 w-4 accent-primary rounded ml-2"
+                                    />
+                                    <Users size={16} className="text-primary" />
+                                    <span className="text-primary">Incluir también a los tutores del curso</span>
+                                </label>
                             </div>
                         )}
                     </div>

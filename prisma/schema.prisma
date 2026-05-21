@@ -652,6 +652,7 @@ model ThreadParticipant {
 
   isAuthor   Boolean  @default(false)   // true = quien inició el hilo
   lastReadAt DateTime?                   // Para calcular mensajes no leídos
+  actingRole String?                     // El rol activo que tenía al crear/unirse al hilo (ej: "ADMIN", "TEACHER")
 
   createdAt  DateTime @default(now())
 
@@ -673,6 +674,8 @@ model Message {
 
   senderStudentId String?
   senderStudent   Student? @relation("StudentSentMessages", fields: [senderStudentId], references: [id])
+
+  senderRole      String?  // El rol activo al enviar este mensaje (ej: "ADMIN", "TEACHER")
 
   body      String   @db.Text
   createdAt DateTime @default(now())

@@ -81,7 +81,7 @@ export async function getThreadsForUser({
             course: { select: { name: true } },
             participants: {
                 include: {
-                    user: { select: { id: true, name: true } },
+                    user: { select: { id: true, name: true, roles: true, role: true } },
                     student: { select: { id: true, name: true } },
                 },
             },
@@ -95,10 +95,22 @@ export async function getThreadsForUser({
 
     return threads.map((thread) => {
         const authorParticipant = thread.participants.find((p) => p.isAuthor);
-        const authorName =
-            authorParticipant?.user?.name ||
-            authorParticipant?.student?.name ||
-            "Sistema";
+        let authorName = "Sistema";
+        if (authorParticipant?.user) {
+            const u = authorParticipant.user as any;
+            const actingRole = authorParticipant.actingRole;
+            const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+            
+            if (actingRole === "ADMIN" || actingRole === "SUPERADMIN" || (!actingRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
+                authorName = "Administración";
+            } else if (actingRole === "SECRETARY" || (!actingRole && userRoles.includes("SECRETARY"))) {
+                authorName = "Secretaría";
+            } else {
+                authorName = u.name;
+            }
+        } else if (authorParticipant?.student) {
+            authorName = authorParticipant.student.name;
+        }
 
         // Calcular no leídos para este usuario
         let lastReadAt: Date | null = null;
@@ -159,14 +171,14 @@ export async function getThread({
             course: { select: { name: true } },
             participants: {
                 include: {
-                    user: { select: { id: true, name: true } },
+                    user: { select: { id: true, name: true, roles: true, role: true } },
                     student: { select: { id: true, name: true } },
                 },
             },
             messages: {
                 orderBy: { createdAt: "asc" },
                 include: {
-                    senderUser: { select: { id: true, name: true } },
+                    senderUser: { select: { id: true, name: true, roles: true, role: true } },
                     senderStudent: { select: { id: true, name: true } },
                 },
             },
@@ -196,25 +208,58 @@ export async function getThread({
         courseId: thread.courseId,
         courseName: thread.course?.name ?? null,
         createdAt: thread.createdAt,
-        participants: thread.participants.map((p) => ({
-            id: p.id,
-            name: p.user?.name || p.student?.name || "Desconocido",
-            isAuthor: p.isAuthor,
-            userId: p.userId,
-            studentId: p.studentId,
-        })),
-        messages: thread.messages.map((msg) => ({
-            id: msg.id,
-            body: msg.body,
-            createdAt: msg.createdAt,
-            senderName:
-                msg.senderUser?.name || msg.senderStudent?.name || "Sistema",
-            senderUserId: msg.senderUserId,
-            senderStudentId: msg.senderStudentId,
-            isCurrentUser: isStudent
-                ? msg.senderStudentId === currentUserId
-                : msg.senderUserId === currentUserId,
-        })),
+        participants: thread.participants.map((p) => {
+            let name = "Desconocido";
+            if (p.user) {
+                const u = p.user as any;
+                const actingRole = p.actingRole;
+                const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+                if (actingRole === "ADMIN" || actingRole === "SUPERADMIN" || (!actingRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
+                    name = "Administración";
+                } else if (actingRole === "SECRETARY" || (!actingRole && userRoles.includes("SECRETARY"))) {
+                    name = "Secretaría";
+                } else {
+                    name = u.name;
+                }
+            } else if (p.student) {
+                name = p.student.name;
+            }
+            return {
+                id: p.id,
+                name,
+                isAuthor: p.isAuthor,
+                userId: p.userId,
+                studentId: p.studentId,
+            };
+        }),
+        messages: thread.messages.map((msg) => {
+            let senderName = "Sistema";
+            if (msg.senderUser) {
+                const u = msg.senderUser as any;
+                const senderRole = msg.senderRole;
+                const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+                if (senderRole === "ADMIN" || senderRole === "SUPERADMIN" || (!senderRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
+                    senderName = "Administración";
+                } else if (senderRole === "SECRETARY" || (!senderRole && userRoles.includes("SECRETARY"))) {
+                    senderName = "Secretaría";
+                } else {
+                    senderName = u.name;
+                }
+            } else if (msg.senderStudent) {
+                senderName = msg.senderStudent.name;
+            }
+            return {
+                id: msg.id,
+                body: msg.body,
+                createdAt: msg.createdAt,
+                senderName,
+                senderUserId: msg.senderUserId,
+                senderStudentId: msg.senderStudentId,
+                isCurrentUser: isStudent
+                    ? msg.senderStudentId === currentUserId
+                    : msg.senderUserId === currentUserId,
+            };
+        }),
     };
 }
 
@@ -257,6 +302,7 @@ export async function createThread({
     type = "DIRECT",
     courseId,
     senderUserId,
+    senderRole,
     recipientUserIds = [],
     recipientStudentIds = [],
     includeGuardians = false,
@@ -267,6 +313,7 @@ export async function createThread({
     type?: "DIRECT" | "COURSE_BLAST";
     courseId?: string;
     senderUserId: string; // Solo Users pueden iniciar en Fase 1
+    senderRole?: string;
     recipientUserIds?: string[];
     recipientStudentIds?: string[];
     includeGuardians?: boolean; // Si true, agrega tutores de los alumnos seleccionados
@@ -302,7 +349,7 @@ export async function createThread({
     // Construir participantes
     const participantsData = [
         // Autor (sender)
-        { userId: senderUserId, isAuthor: true, lastReadAt: new Date() },
+        { userId: senderUserId, isAuthor: true, lastReadAt: new Date(), actingRole: senderRole ?? null },
         // Destinatarios User
         ...finalUserIds.map((id) => ({ userId: id, isAuthor: false })),
         // Destinatarios Student
@@ -322,6 +369,7 @@ export async function createThread({
             messages: {
                 create: {
                     senderUserId,
+                    senderRole: senderRole ?? null,
                     body: body.trim(),
                 },
             },
@@ -341,11 +389,13 @@ export async function sendMessage({
     body,
     senderUserId,
     senderStudentId,
+    senderRole,
 }: {
     threadId: string;
     body: string;
     senderUserId?: string;
     senderStudentId?: string;
+    senderRole?: string;
 }): Promise<void> {
     if (!body.trim()) throw new Error("El mensaje no puede estar vacío.");
 
@@ -368,6 +418,7 @@ export async function sendMessage({
                 body: body.trim(),
                 senderUserId: senderUserId ?? null,
                 senderStudentId: senderStudentId ?? null,
+                senderRole: senderRole ?? null,
             },
         }),
         // Actualizar updatedAt del hilo para que suba en el inbox

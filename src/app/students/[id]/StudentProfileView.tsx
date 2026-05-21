@@ -50,19 +50,20 @@ export function StudentProfileView({
 }) {
     const [isEditing, setIsEditing] = useState(false);
 
-    // Buscar si ya tienen accesos habilitados de forma más flexible
-    // Primero intentamos por relación exacta, si no existe, por nombre
+    // Matching robusto por email (determinístico) — el email es el dato que se usa
+    // para crear la cuenta del tutor, por lo que siempre coincide.
     const g1Link = student.guardianLinks?.find((l: any) => 
-        l.relation?.trim().toLowerCase() === student.guardian1Relation?.trim().toLowerCase()
-    ) || student.guardianLinks?.find((l: any) => 
-        l.guardian.name?.trim().toLowerCase() === student.guardian1Name?.trim().toLowerCase()
+        student.guardian1Email && l.guardian?.email?.toLowerCase().trim() === student.guardian1Email.toLowerCase().trim()
+    );
+    const g2Link = student.guardianLinks?.find((l: any) => 
+        student.guardian2Email && l.guardian?.email?.toLowerCase().trim() === student.guardian2Email.toLowerCase().trim()
     );
 
-    const g2Link = student.guardianLinks?.find((l: any) => 
-        l.relation?.trim().toLowerCase() === student.guardian2Relation?.trim().toLowerCase()
-    ) || student.guardianLinks?.find((l: any) => 
-        l.guardian.name?.trim().toLowerCase() === student.guardian2Name?.trim().toLowerCase()
-    );
+    // Tutores vinculados que no corresponden a ningún slot guardian1/guardian2
+    // (por ejemplo, si se cambió el email del tutor en la ficha del alumno)
+    const extraLinks = student.guardianLinks?.filter((l: any) => 
+        l !== g1Link && l !== g2Link
+    ) || [];
 
     const canManageAccess = userRoles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r));
 

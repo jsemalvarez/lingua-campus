@@ -61,6 +61,7 @@ export default async function NewMessagePage() {
                     courses={courses}
                     allTeachers={allTeachers}
                     isAdmin={isAdmin}
+                    activeRole={activeRole}
                 />
             </main>
         </div>
