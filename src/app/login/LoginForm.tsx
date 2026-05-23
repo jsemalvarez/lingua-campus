@@ -96,7 +96,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                         {/* Email / Username */}
                         <div className="relative group">
                             <div className="flex items-center justify-between">
-                                <label htmlFor="identifier" className="block text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">
+                                <label htmlFor="identifier" className="block text-sm font-bold text-blue-950 dark:text-slate-200 ml-1">
                                     Email o DNI
                                 </label>
                             </div>
@@ -106,11 +106,11 @@ export default function LoginForm({ institute }: LoginFormProps) {
                                     type="text"
                                     value={identifier}
                                     onChange={(e) => setIdentifier(e.target.value)}
-                                    className="w-full bg-transparent border-b-2 border-slate-900/20 dark:border-white/20 focus:border-indigo-600 dark:focus:border-indigo-400 py-2 pr-10 outline-none transition-all text-slate-900 dark:text-white font-medium"
+                                    className="w-full bg-transparent border-b-2 border-slate-900/20 dark:border-white/20 focus:border-white/70 dark:focus:border-white/70 py-2 pr-10 outline-none transition-all text-slate-900 dark:text-white font-medium"
                                     required
                                     disabled={loading || !isOnline}
                                 />
-                                <div className="absolute right-0 bottom-2 text-slate-700 dark:text-white">
+                                <div className="absolute right-0 bottom-2 text-blue-950 dark:text-white">
                                     <User size={24} />
                                 </div>
                             </div>
@@ -119,7 +119,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
                         {/* Password */}
                         <div className="relative group">
                             <div className="flex items-center justify-between">
-                                <label htmlFor="password" className="block text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">
+                                <label htmlFor="password" className="block text-sm font-bold text-blue-950 dark:text-slate-200 ml-1">
                                     Contraseña
                                 </label>
                             </div>
@@ -129,14 +129,14 @@ export default function LoginForm({ institute }: LoginFormProps) {
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-transparent border-b-2 border-slate-900/20 dark:border-white/20 focus:border-indigo-600 dark:focus:border-indigo-400 py-2 pr-10 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 transition-all text-slate-900 dark:text-white font-medium"
+                                    className="w-full bg-transparent border-b-2 border-slate-900/20 dark:border-white/20 focus:border-white/70 dark:focus:border-white/70 py-2 pr-10 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 transition-all text-slate-900 dark:text-white font-medium"
                                     required
                                     disabled={loading || !isOnline}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-0 bottom-2 text-slate-700 dark:text-white hover:opacity-100 transition-opacity"
+                                    className="absolute right-0 bottom-2 text-blue-950 dark:text-white hover:opacity-100 transition-opacity"
                                     tabIndex={-1}
                                 >
                                     {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}

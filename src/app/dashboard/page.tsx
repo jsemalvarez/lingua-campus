@@ -400,7 +400,16 @@ export default async function DashboardPage() {
                 <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <span className="text-sm font-semibold text-primary/80 uppercase tracking-wider">
+                            <span
+                                className="font-black uppercase tracking-widest inline-flex items-center gap-2 mb-2 select-none"
+                                style={{
+                                    color: "#e0f7ff",
+                                    textShadow: "0 0 4px rgba(0, 240, 255, 0.6), 0 0 12px rgba(0, 240, 255, 0.45), 0 0 25px rgba(2, 132, 199, 0.35)",
+                                    WebkitTextStroke: "0.5px rgba(0, 240, 255, 0.8)",
+                                    letterSpacing: "0.2em"
+                                }}
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00f0ff]" />
                                 {user.institute?.name || "Instituto"}
                             </span>
                             <h1 className="text-3xl font-bold tracking-tight mt-1">Panel de Control</h1>
@@ -413,7 +422,7 @@ export default async function DashboardPage() {
                     {/* Stats Grid */}
                     <div className="grid gap-4 md:grid-cols-2">
                         {teacherStats.map((stat, i) => (
-                            <Card key={i} className="p-6 hover:shadow-md transition-shadow">
+                            <Card variant="premium-glass" key={i} className="p-6 hover:shadow-md transition-shadow">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
@@ -437,7 +446,7 @@ export default async function DashboardPage() {
 
                     <div className="grid gap-6 md:grid-cols-2">
                         {/* Mis Cursos */}
-                        <Card className="p-6">
+                        <Card variant="premium-glass" className="p-6">
                             <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
                                 <BookOpen className="text-purple-500" size={20} /> Mis Cursos
                             </h3>
@@ -471,7 +480,7 @@ export default async function DashboardPage() {
                         </Card>
 
                         {/* Próximas Clases del profesor */}
-                        <Card className="p-6">
+                        <Card variant="premium-glass" className="p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-semibold text-lg flex items-center gap-2">
                                     <Clock className="text-blue-500" size={20} /> Mis Próximas Clases

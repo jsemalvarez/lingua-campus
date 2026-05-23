@@ -180,8 +180,9 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                     <div
                                         className="rounded-2xl p-5 space-y-2"
                                         style={{
+                                            border: `1px solid ${item.courseColor}`,
                                             borderLeft: `4px solid ${item.courseColor}`,
-                                            background: `linear-gradient(135deg, ${item.courseColor}18, ${item.courseColor}06 60%, transparent)`,
+                                            background: `linear-gradient(135deg, ${item.courseColor}40, ${item.courseColor}20)`,
                                             boxShadow: `0 0 0 1px ${item.courseColor}20, 0 4px 16px ${item.courseColor}14`,
                                         }}
                                     >
@@ -265,7 +266,11 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                 </div>
 
                                 {/* ── RIGHT SIDEBAR: Practice Navigator (Course lessons) ── */}
-                                <aside className="order-3 rounded-2xl" style={{ boxShadow: `0 0 0 1px ${item.courseColor}20, 0 4px 16px ${item.courseColor}40` }}>
+                                <aside className="order-3 rounded-2xl" style={{ 
+                                    border: `1px solid ${item.courseColor}`,
+                                    background: `linear-gradient(135deg, ${item.courseColor}20, ${item.courseColor}10)`,
+                                    boxShadow: `0 0 0 1px ${item.courseColor}20, 0 4px 16px ${item.courseColor}40` 
+                                }}>
                                     <div className={`overflow-hidden p-6 space-y-6`}>
                                         {/* Header */}
                                         <div className="flex items-center gap-4 px-2">
@@ -313,11 +318,11 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                                             {/* Base Inactive Layer (Gray) */}
                                                             <div 
                                                                 className={cn(
-                                                                    "absolute inset-0 rounded-2xl border-l-4 transition-all duration-300",
+                                                                    "absolute inset-0 rounded-2xl border border-l-4 transition-all duration-300",
                                                                     isActive ? "opacity-0" : "opacity-100 group-hover:opacity-0"
                                                                 )}
                                                                 style={{
-                                                                    borderLeftColor: "rgb(156 163 175 / 0.2)",
+                                                                    borderColor: "rgb(156 163 175)",
                                                                     background: `linear-gradient(to right, rgb(156 163 175 / 0.05), transparent)`,
                                                                     boxShadow: `0 0 0 1px rgb(156 163 175 / 0.1)`
                                                                 }}
@@ -326,11 +331,11 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                                             {/* Active/Hover Layer (Course Color) */}
                                                             <div 
                                                                 className={cn(
-                                                                    "absolute inset-0 rounded-2xl border-l-4 transition-all duration-300",
+                                                                    "absolute inset-0 rounded-2xl border border-l-4 transition-all duration-300",
                                                                     isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                                                                 )}
                                                                 style={{
-                                                                    borderLeftColor: practice.courseColor,
+                                                                    borderColor: practice.courseColor,
                                                                     background: `linear-gradient(to right, ${practice.courseColor}25, ${practice.courseColor}05 50%, transparent)`,
                                                                     boxShadow: `0 0 0 1px ${practice.courseColor}20, 0 4px 16px ${practice.courseColor}14`
                                                                 }}
@@ -353,7 +358,7 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
 
                                                                 <p className={cn(
                                                                     "text-[15px] font-black leading-tight transition-colors",
-                                                                    isActive ? "text-indigo-400" : "text-muted-foreground group-hover:[color:var(--hover-color)]"
+                                                                    isActive ? "text-white" : "text-muted-foreground group-hover:[color:var(--hover-color)]"
                                                                 )}>
                                                                     {practice.topic}
                                                                 </p>
@@ -445,7 +450,7 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                             { icon: MessageSquare, title: "AI Chatbot", desc: "Practicá conversaciones reales en inglés con la IA." },
                             { icon: Gamepad2, title: "Daily Quest", desc: "Próximamente: desafíos y puntos para motivarte." },
                         ].map((feat, i) => (
-                            <Card key={i} className="p-8 rounded-[2.5rem] border-none shadow-xl bg-card hover:translate-y-[-8px] transition-all duration-500 group">
+                            <Card key={i} className="p-8 rounded-[2.5rem] border-none shadow-xl dark:shadow-sky-400/60 bg-card hover:translate-y-[-8px] transition-all duration-500 group">
                                 <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-lg shadow-primary/20">
                                     <feat.icon size={28} />
                                 </div>
@@ -501,8 +506,9 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                                             key={item.lessonPracticeId}
                                                             className="flex items-center gap-4 px-5 py-4 rounded-2xl"
                                                             style={{
-                                                                borderLeft: `4px solid ${courseColor}`,
-                                                                background: `linear-gradient(to right, ${courseColor}20, ${courseColor}06 40%, transparent 70%)`,
+                                                                border: `1px solid ${courseColor}`,
+                                                                borderLeft: `6px solid ${courseColor}`,
+                                                                background: `linear-gradient(to right, ${courseColor}40, ${courseColor}20)`,
                                                                 boxShadow: `0 0 0 1px ${courseColor}20, 0 2px 8px rgba(0,0,0,0.07), 0 6px 20px ${courseColor}18`,
                                                             }}
                                                         >

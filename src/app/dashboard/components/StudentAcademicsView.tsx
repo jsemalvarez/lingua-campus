@@ -97,7 +97,7 @@ export function StudentAcademicsView({
         
         {/* Left: Performance Chart (Master Container) */}
         <div className="lg:col-span-2">
-          <Card className="h-full p-8 rounded-[2.5rem] border-none shadow-xl bg-card relative overflow-hidden flex flex-col">
+          <Card className="h-full p-8 rounded-[2.5rem] border-none shadow-xl dark:shadow-sky-400/60 bg-card relative overflow-hidden flex flex-col">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 shrink-0">
                <div>
                  <h3 className="text-2xl font-black tracking-tight">Rendimiento Académico</h3>
@@ -145,7 +145,7 @@ export function StudentAcademicsView({
         <div className="flex flex-col gap-8">
           
           {/* Información del Profesor / Cursada (Centrado y horizontal) */}
-          <Card className="flex-1 p-8 rounded-[2.5rem] border-none shadow-xl bg-card flex flex-col items-center justify-center gap-8 overflow-hidden relative group">
+          <Card className="flex-1 p-8 rounded-[2.5rem] border-none shadow-xl dark:shadow-sky-400/60 bg-card flex flex-col items-center justify-center gap-8 overflow-hidden relative group">
             <div className="absolute top-0 left-0 w-full h-1 bg-primary/20" />
             
             {/* Bloque Principal: Avatar + Textos */}
@@ -207,7 +207,7 @@ export function StudentAcademicsView({
           </Card>
 
           {/* Pending Tasks (Llamativa) */}
-          <Card className="flex-1 p-8 rounded-[2.5rem] border-none shadow-2xl bg-slate-900 text-white relative overflow-hidden group flex flex-col justify-between">
+          <Card className="flex-1 p-8 rounded-[2.5rem] border-none shadow-2xl dark:shadow-sky-400/60 bg-slate-900 text-white relative overflow-hidden group flex flex-col justify-between">
              <div className="absolute top-0 right-0 p-8 text-primary/10 group-hover:scale-110 transition-transform duration-700">
                 <AlertCircle size={120} />
              </div>
@@ -255,7 +255,7 @@ export function StudentAcademicsView({
         {/* Left: 2x2 Impact Grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Total Classes - Blue */}
-          <Card className="p-5 rounded-[1.5rem] bg-indigo-600 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+          <Card className="p-5 rounded-[1.5rem] bg-indigo-600 text-white border-none shadow-lg dark:shadow-sky-400/60 flex items-center justify-between hover:scale-[1.02] transition-transform">
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Total Clases</p>
               <div className="text-3xl font-black italic leading-none">{academicStats.totalLessons}</div>
@@ -266,7 +266,7 @@ export function StudentAcademicsView({
           </Card>
 
           {/* Passed Classes - Gold */}
-          <Card className="p-5 rounded-[1.5rem] bg-amber-500 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+          <Card className="p-5 rounded-[1.5rem] bg-amber-500 text-white border-none shadow-lg dark:shadow-sky-400/60 flex items-center justify-between hover:scale-[1.02] transition-transform">
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Clases Dictadas</p>
               <div className="text-3xl font-black italic leading-none">{academicStats.passedLessons}</div>
@@ -277,7 +277,7 @@ export function StudentAcademicsView({
           </Card>
 
           {/* Attendances - Green */}
-          <Card className="p-5 rounded-[1.5rem] bg-emerald-500 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+          <Card className="p-5 rounded-[1.5rem] bg-emerald-500 text-white border-none shadow-lg dark:shadow-sky-400/60 flex items-center justify-between hover:scale-[1.02] transition-transform">
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Asistencias</p>
               <div className="text-3xl font-black italic leading-none">{academicStats.presentsCount}</div>
@@ -288,7 +288,7 @@ export function StudentAcademicsView({
           </Card>
 
           {/* Absences - Red */}
-          <Card className="p-5 rounded-[1.5rem] bg-rose-500 text-white border-none shadow-lg flex items-center justify-between hover:scale-[1.02] transition-transform">
+          <Card className="p-5 rounded-[1.5rem] bg-rose-500 text-white border-none shadow-lg dark:shadow-sky-400/60 flex items-center justify-between hover:scale-[1.02] transition-transform">
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">Faltas</p>
               <div className="text-3xl font-black italic leading-none">{academicStats.absentsCount}</div>
@@ -300,7 +300,7 @@ export function StudentAcademicsView({
         </div>
 
         {/* Right: Recent Sessions List */}
-        <Card className="p-8 rounded-[2.5rem] border-none shadow-xl bg-card">
+        <Card className="p-8 rounded-[2.5rem] border-none shadow-xl dark:shadow-sky-400/60 bg-card">
           <h3 className="text-lg font-black tracking-tight mb-6 flex items-center gap-2">
             <Clock size={20} className="text-primary" /> Historial de Cursada
           </h3>
@@ -340,7 +340,7 @@ export function StudentAcademicsView({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
-            <Sparkles size={16} className="text-violet-500" />
+            <Sparkles size={16} className="text-violet-900 dark:violet-400" />
           </div>
           <h3 className="text-xl font-black tracking-tight">Práctica con IA</h3>
         </div>
@@ -391,7 +391,7 @@ export function StudentAcademicsView({
             </div>
 
             {/* Session history */}
-            <Card className="p-6 rounded-[2rem] border-none shadow-xl bg-card">
+            <Card className="p-6 rounded-[2rem] border-none shadow-xl dark:shadow-sky-400/60 bg-card">
               <h4 className="font-black text-base mb-4 flex items-center gap-2">
                 <Mic2 size={16} className="text-violet-500" /> Historial de Sesiones
               </h4>
@@ -430,7 +430,7 @@ export function StudentAcademicsView({
       </div>
 
       {/* 5. BOLETÍN INSTITUCIONAL */}
-      <Card className="p-10 border-none shadow-2xl bg-card rounded-[3rem] relative overflow-hidden group">
+      <Card className="p-10 border-none shadow-2xl dark:shadow-sky-400/60 bg-card rounded-[3rem] relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
               <ClipboardList size={200} />
           </div>

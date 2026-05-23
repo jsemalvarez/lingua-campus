@@ -67,7 +67,7 @@ export function StudentDashboardV2View({
       <main className="container mx-auto px-4 sm:px-6 py-8 space-y-12 animate-in mt-12 mb-24">
 
          {/* 1. HERO BANNER */}
-         <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 md:p-12 shadow-2xl min-h-[300px] flex flex-col justify-center">
+         <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 md:p-12 shadow-2xl dark:shadow-xl dark:shadow-sky-400/60 min-h-[300px] flex flex-col justify-center">
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-primary/20 rounded-full blur-[80px]" />
             <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-accent/20 rounded-full blur-[60px]" />
 
@@ -99,7 +99,7 @@ export function StudentDashboardV2View({
 
          {/* MOTIVATION CAPSULE (2/3 Centered) */}
          <div className="flex justify-center">
-            <Card className="w-full lg:w-2/3 p-8 rounded-[2rem] border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-xl bg-gradient-to-br from-emerald-500/10 to-transparent flex flex-col items-center justify-center gap-4 group text-center">
+            <Card className="w-full lg:w-2/3 p-8 rounded-[2rem] border border-l-6 border-emerald-500 shadow-xl bg-gradient-to-br from-emerald-500/40 to-emerald-500/10 flex flex-col items-center justify-center gap-4 group text-center">
                <p className="text-lg md:text-xl font-black italic tracking-tight text-foreground/80 leading-snug max-w-2xl">
                   {motivationQuote || "Preparando tu dosis de inspiración..."}
                </p>
@@ -112,7 +112,7 @@ export function StudentDashboardV2View({
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
 
             {/* Tu Curso Actual (2/3) - Estética Llamativa */}
-            <Card className="lg:col-span-2 p-8 rounded-[3rem] border-none shadow-2xl bg-slate-900 text-white relative overflow-hidden group min-h-[250px] flex flex-col justify-between">
+            <Card className="lg:col-span-2 p-8 rounded-[3rem] border-none shadow-2xl dark:shadow-xl dark:shadow-sky-400/60 bg-slate-900 text-white relative overflow-hidden group min-h-[250px] flex flex-col justify-between">
                {/* Background Decoration */}
                <div className="absolute top-0 right-0 p-8 text-primary/10 group-hover:scale-110 transition-transform duration-1000">
                   <GraduationCap size={200} />
@@ -181,7 +181,7 @@ export function StudentDashboardV2View({
             </Card>
 
             {/* Próxima Sesión (1/3) - Compacta */}
-            <Card className="p-8 rounded-[3rem] border-none shadow-xl bg-card flex flex-col justify-between min-h-[250px]">
+            <Card className="p-8 rounded-[3rem] border-none shadow-xl dark:shadow-xl dark:shadow-sky-400/60 bg-card flex flex-col justify-between min-h-[250px]">
                <div>
                   <h3 className="text-lg font-black tracking-tight mb-4">Próxima Sesión</h3>
 
@@ -202,11 +202,11 @@ export function StudentDashboardV2View({
                   )}
                </div>
 
-               <div className="flex justify-end pt-4">
+               {/* <div className="flex justify-end pt-4">
                   <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary hover:gap-3 transition-all">
                      Unirse <ArrowRight size={14} />
                   </button>
-               </div>
+               </div> */}
             </Card>
 
          </div>
@@ -215,9 +215,9 @@ export function StudentDashboardV2View({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 pb-12">
         
         {/* Attendance Card */}
-        <Card className="p-8 rounded-[2.5rem] border-y-0 border-r-0 border-l-4 border-l-indigo-500 shadow-xl bg-gradient-to-br from-indigo-500/10 to-transparent hover:translate-y-[-4px] transition-all duration-300 group">
+        <Card className="p-8 rounded-[2.5rem] border border-l-4 border-indigo-500 shadow-xl bg-gradient-to-br from-indigo-500/40 to-indigo-500/10 hover:translate-y-[-4px] transition-all duration-300 group">
           <div className="flex justify-between items-start mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
               <Calendar size={24} />
             </div>
             <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">Al día</span>
@@ -235,9 +235,9 @@ export function StudentDashboardV2View({
         </Card>
 
         {/* GPA / Average Card */}
-        <Card className="p-8 rounded-[2.5rem] border-y-0 border-r-0 border-l-4 border-l-orange-500 shadow-xl bg-gradient-to-br from-orange-500/10 to-transparent hover:translate-y-[-4px] transition-all duration-300 group">
+        <Card className="p-8 rounded-[2.5rem] border border-l-4 border-orange-500 shadow-xl bg-gradient-to-br from-orange-500/40 to-orange-500/10 hover:translate-y-[-4px] transition-all duration-300 group">
           <div className="flex justify-between items-start mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/40 flex items-center justify-center text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
               <Star size={24} />
             </div>
             {averageGrade && <span className="text-[10px] font-black text-orange-500 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-full">Destacado</span>}
@@ -257,9 +257,9 @@ export function StudentDashboardV2View({
         </Card>
 
         {/* Working Hours Card */}
-        <Card className="p-8 rounded-[2.5rem] border-y-0 border-r-0 border-l-4 border-l-sky-500 shadow-xl bg-gradient-to-br from-sky-500/10 to-transparent hover:translate-y-[-4px] transition-all duration-300 group">
+        <Card className="p-8 rounded-[2.5rem] border border-l-4 border-sky-500 shadow-xl bg-gradient-to-br from-sky-500/40 to-500/10  hover:translate-y-[-4px] transition-all duration-300 group">
           <div className="flex justify-between items-start mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-sky-500/10 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/60 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
               <Clock size={24} />
             </div>
             <span className="text-[10px] font-black text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 rounded-full">Acumulado</span>
