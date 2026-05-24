@@ -439,7 +439,7 @@ export function StudentAcademicsView({
               <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
                   <ClipboardList className="text-primary" size={32} />
               </div>
-              <h2 className="text-3xl font-black tracking-tight">Boletín del Instituto</h2>
+              <h2 className="text-3xl font-black tracking-tight">Informe Trimestral</h2>
               <p className="text-muted-foreground font-medium leading-relaxed">
                   Este espacio está reservado para el reporte oficial académico emitido por el instituto. 
                   Aquí podrás ver el desglose trimestral, promedios finales y la firma digital de las autoridades. 

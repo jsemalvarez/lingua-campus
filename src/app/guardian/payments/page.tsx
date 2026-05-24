@@ -102,7 +102,7 @@ export default async function GuardianPaymentsPage() {
             <main className="container mx-auto px-4 sm:px-6 py-10 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl">
                 
                 {/* Header */}
-                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-border/50">
+                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-sky-800/50 dark:border-sky-100/50">
                     <div className="space-y-1">
                         <span className="text-sm font-bold text-primary/80 uppercase tracking-widest flex items-center gap-2">
                             <Wallet size={16} /> Panel Administrativo
@@ -115,8 +115,8 @@ export default async function GuardianPaymentsPage() {
                 {/* METRICS ROW */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* DEUDA CARD (ANTERIOR) */}
-                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-rose-500 shadow-xl bg-gradient-to-br from-rose-500/10 to-transparent relative overflow-hidden rounded-[2.5rem]">
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <Card className="p-8 border border-l-6 border-rose-500 shadow-xl dark:shadow-xl dark:shadow-sky-400/60 bg-gradient-to-br from-rose-500/10 to-transparent relative overflow-hidden rounded-[2.5rem]">
+                        <div className="absolute top-0 right-0 p-8 opacity-50">
                             <AlertCircle size={80} className="text-rose-600" />
                         </div>
                         <p className="text-xs font-black uppercase tracking-widest text-rose-600 mb-2">Deuda</p>
@@ -127,8 +127,8 @@ export default async function GuardianPaymentsPage() {
                     </Card>
 
                     {/* PENDIENTE CARD (MES ACTUAL) */}
-                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-amber-500 shadow-xl bg-gradient-to-br from-amber-500/10 to-transparent relative overflow-hidden rounded-[2.5rem]">
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <Card className="p-8 border border-l-6 border-amber-500 shadow-xl dark:shadow-xl dark:shadow-sky-400/60 bg-gradient-to-br from-amber-500/10 to-transparent relative overflow-hidden rounded-[2.5rem]">
+                        <div className="absolute top-0 right-0 p-8 opacity-50">
                             <Calendar size={80} className="text-amber-600" />
                         </div>
                         <p className="text-xs font-black uppercase tracking-widest text-amber-600 mb-2">Pendiente</p>
@@ -137,8 +137,8 @@ export default async function GuardianPaymentsPage() {
                     </Card>
 
                     {/* SALDO A FAVOR CARD */}
-                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-xl bg-gradient-to-br from-emerald-500/10 to-transparent relative overflow-hidden group rounded-[2.5rem]">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                    <Card className="p-8 border border-l-6 border-emerald-500 shadow-xl dark:shadow-xl dark:shadow-sky-400/60 bg-gradient-to-br from-emerald-500/10 to-transparent relative overflow-hidden group rounded-[2.5rem]">
+                        <div className="absolute top-0 right-0 p-8 opacity-50 group-hover:scale-110 transition-transform duration-500">
                             <ArrowUpRight size={80} className="text-emerald-600" />
                         </div>
                         <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-2">Saldo a Favor</p>
@@ -169,7 +169,7 @@ export default async function GuardianPaymentsPage() {
                                 </div>
                             ) : (
                                 pendingFees.map(fee => (
-                                    <Card key={`pending-${fee.id}`} className="p-6 border-none shadow-md bg-card rounded-[2rem] hover:shadow-lg transition-all active:scale-[0.99] group overflow-hidden">
+                                    <Card key={`pending-${fee.id}`} className="p-6 border-none shadow-md dark:shadow-md dark:shadow-sky-400/60 bg-card rounded-[2rem] hover:shadow-lg transition-all active:scale-[0.99] group overflow-hidden">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                                             <div className="flex items-center gap-5">
                                                 <div className="w-14 h-14 bg-muted/50 rounded-2xl flex items-center justify-center shrink-0">
@@ -219,7 +219,7 @@ export default async function GuardianPaymentsPage() {
                                         .reduce((acc:number, f:any) => acc + (f.originalAmount - f.paidAmount), 0);
                                     
                                     return (
-                                        <Card key={`student-${student.id}`} className="p-6 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg bg-card rounded-[2rem] flex items-center justify-between">
+                                        <Card key={`student-${student.id}`} className="p-6 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[2rem] flex items-center justify-between">
                                             <div>
                                                 <h4 className="font-black text-lg">{student.name}</h4>
                                                 <p className="text-xs text-muted-foreground font-medium">Balance detallado</p>
@@ -243,7 +243,7 @@ export default async function GuardianPaymentsPage() {
                             <h3 className="text-lg font-black tracking-tight flex items-center gap-2 px-2">
                                 <CheckCircle2 size={20} className="text-emerald-500" /> Pagos Recientes
                             </h3>
-                            <Card className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] shadow-sm relative overflow-hidden group">
+                            <Card className="p-8 bg-emerald-500/20 border border-emerald-500/40 rounded-[2.5rem] shadow-sm dark:shadow-xl dark:shadow-sky-400/60 relative overflow-hidden group">
                                 <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:scale-110 group-hover:rotate-12 transition-all duration-700">
                                     <Receipt size={120} />
                                 </div>
@@ -258,12 +258,12 @@ export default async function GuardianPaymentsPage() {
                                                         <DollarSign size={18} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-black truncate">Cuota {getMonthName(fee.month)}</p>
+                                                        <p className="text-sm text-emerald-50 dark:text-emerald-500 font-black truncate">Cuota {getMonthName(fee.month)}</p>
                                                         <p className="text-[10px] text-muted-foreground font-medium">{dayjs(fee.datePaid).format("DD/MM/YYYY")}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-sm font-black text-emerald-600">{formatter.format(fee.paidAmount)}</p>
+                                                    <p className="text-sm font-black text-emerald-900 dark:text-emerald-200">{formatter.format(fee.paidAmount)}</p>
                                                     <p className="text-[9px] font-bold uppercase tracking-tighter text-muted-foreground">{fee.studentName.split(" ")[0]}</p>
                                                 </div>
                                             </div>
@@ -294,7 +294,7 @@ export default async function GuardianPaymentsPage() {
                         </h3>
                     </div>
 
-                    <Card className="p-0 border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-2xl bg-card rounded-[2.5rem] overflow-hidden">
+                    <Card className="p-0 border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-2xl dark:shadow-2xl dark:shadow-sky-400/60 bg-card rounded-[2.5rem] overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>

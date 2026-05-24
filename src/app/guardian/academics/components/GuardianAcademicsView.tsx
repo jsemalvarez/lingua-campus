@@ -84,7 +84,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
 
             {/* ROW 1: Proficiency & Course Summary Layer */}
             <div className="grid lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 p-6 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg bg-gradient-to-r from-card to-card/50 relative overflow-hidden rounded-[2rem]">
+                <Card className="lg:col-span-2 p-6 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-gradient-to-r from-card to-card/50 relative overflow-hidden rounded-[2rem]">
                     <div className="absolute top-0 right-0 p-8 opacity-5">
                         <GraduationCap size={150} />
                     </div>
@@ -124,7 +124,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                     </div>
                 </Card>
 
-                <Card className="p-6 border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-lg bg-card rounded-[2rem] flex flex-col justify-center items-center text-center">
+                <Card className="p-6 border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[2rem] flex flex-col justify-center items-center text-center">
                     <span className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4">Progreso de Asistencia</span>
                     <div className="relative w-32 h-32 flex items-center justify-center">
                         <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -155,7 +155,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
             <div className={cn("grid lg:grid-cols-2 gap-8 items-stretch", !hasEnrollment && "opacity-60")}>
                 
                 {/* COLUMN LEFT: Próximas Clases (Tall) */}
-                <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg bg-card rounded-[2rem] flex flex-col h-full min-h-[680px]">
+                <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[2rem] flex flex-col h-full min-h-[680px]">
                     <div className="flex items-center gap-3 mb-6">
                         <CalendarDays className="text-primary" size={24} />
                         <h3 className="text-2xl font-extrabold tracking-tight">Próximas Clases</h3>
@@ -189,7 +189,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                 <div className="flex flex-col gap-8 h-full">
                     
                     {/* Registro de Faltas (Superior - Menor altura) */}
-                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-rose-500 shadow-lg bg-card rounded-[2rem] flex-1 max-h-[280px] flex flex-col">
+                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-rose-500 shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[2rem] flex-1 max-h-[280px] flex flex-col">
                         <div className="flex items-center gap-3 mb-5">
                             <AlertCircle className="text-rose-500" size={22} />
                             <h3 className="text-xl font-extrabold tracking-tight text-foreground/90">Registro de Faltas</h3>
@@ -238,7 +238,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                     </Card>
 
                     {/* Notas (Inferior - Mayor altura) */}
-                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-amber-500 shadow-lg bg-card rounded-[2rem] flex-1 max-h-[360px] flex flex-col">
+                    <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-amber-500 shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[2rem] flex-1 max-h-[360px] flex flex-col">
                         <div className="flex items-center gap-3 mb-5">
                             <PenTool className="text-amber-500" size={22} />
                             <h3 className="text-xl font-extrabold tracking-tight text-foreground/90">Notas</h3>
@@ -276,7 +276,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
             </div>
 
             {/* ROW 4: Boletín Institucional (Full Width - Placeholder) */}
-            <Card className="p-10 border-none shadow-2xl bg-card rounded-[3rem] relative overflow-hidden group">
+            <Card className="p-10 border-none shadow-2xl dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[3rem] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
                     <ClipboardList size={200} />
                 </div>
@@ -285,7 +285,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                     <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
                         <ClipboardList className="text-primary" size={32} />
                     </div>
-                    <h2 className="text-3xl font-black tracking-tight">Boletín del Instituto</h2>
+                    <h2 className="text-3xl font-black tracking-tight">Informe Trimestral</h2>
                     <p className="text-muted-foreground font-medium leading-relaxed">
                         Este espacio está reservado para el reporte oficial académico emitido por el instituto. 
                         Aquí podrás ver el desglose trimestral, promedios finales y la firma digital de las autoridades. 

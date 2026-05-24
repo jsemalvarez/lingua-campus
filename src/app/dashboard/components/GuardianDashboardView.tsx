@@ -91,7 +91,7 @@ export function GuardianDashboardView({
                     
                     {/* LEFT COLUMN (Span 2): Recent Performance */}
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="p-6 md:p-8 border-none shadow-xl bg-card rounded-3xl relative overflow-hidden">
+                        <Card className="p-6 md:p-8 border-none shadow-xl dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-3xl relative overflow-hidden">
                             <div className="mb-6">
                                 <h3 className="font-extrabold text-2xl flex items-center gap-3 tracking-tight">
                                     Rendimiento Reciente
@@ -139,7 +139,7 @@ export function GuardianDashboardView({
                     <div className="space-y-6">
                         
                         {/* Attendance Card (Dark Mode Style) */}
-                        <Card className="p-6 border-none shadow-xl bg-slate-900 text-slate-50 dark:bg-slate-950 rounded-3xl relative overflow-hidden">
+                        <Card className="p-6 border-none shadow-xl dark:shadow-xl dark:shadow-sky-400/60 bg-slate-900 text-slate-50 dark:bg-slate-950 rounded-3xl relative overflow-hidden">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h3 className="font-extrabold text-xl tracking-tight">Asistencia</h3>
@@ -183,7 +183,7 @@ export function GuardianDashboardView({
                         </Card>
 
                         {/* Upcoming Lessons Card */}
-                        <Card className="p-6 border-none shadow-lg bg-card rounded-3xl">
+                        <Card className="p-6 border-none shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-3xl">
                             <h3 className="font-extrabold text-lg mb-4 tracking-tight flex items-center gap-2">
                                 Próximas Clases
                             </h3>
@@ -210,7 +210,7 @@ export function GuardianDashboardView({
                         </Card>
 
                         {/* Financial Status Mini-Widget */}
-                        <Card className="p-6 border-none shadow-lg bg-card rounded-3xl text-center relative overflow-hidden">
+                        <Card className="p-6 border-none shadow-lg dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-3xl text-center relative overflow-hidden">
                             <div className="mx-auto w-12 h-12 rounded-2xl bg-background shadow-sm border border-border/50 flex items-center justify-center mb-3">
                                 {totalDebt > 0 ? (
                                     <AlertCircle className="text-amber-500" size={24} />
