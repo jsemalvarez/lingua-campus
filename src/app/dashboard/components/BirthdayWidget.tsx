@@ -175,7 +175,7 @@ function BirthdayRow({ student }: { student: BirthdayStudent }) {
                         {student.name}
                     </p>
                     {student.turningAge > 0 && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
+                        <span className="text-[10px] bg-primary/20 text-sky-100 dark:text-primary border border-sky-100 dark:border-primary px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
                             Cumple {student.turningAge}
                         </span>
                     )}
