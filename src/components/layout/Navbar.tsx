@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle, Brain, Mail } from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle, Brain, Mail, ClipboardList } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTenant } from "@/components/providers/TenantProvider";
 import Image from "next/image";
@@ -69,6 +69,7 @@ export function Navbar({
         { href: "/guardian/payments", label: "Administración", icon: DollarSign, roles: ["GUARDIAN"] },
         { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "SECRETARY", "SUPERADMIN"] },
         { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN", "SUPERADMIN"] },
+        { href: "/dashboard/settings/reports", label: "Informes", icon: ClipboardList, roles: ["ADMIN", "SUPERADMIN"] },
     ];
 
     // Mobile bottom tab uses the same links as desktop (no /messages — it's in the top bar)

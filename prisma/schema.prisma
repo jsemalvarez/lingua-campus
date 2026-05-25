@@ -51,6 +51,7 @@ model Institute {
   classrooms    Classroom[]
   levels        Level[]
   notifications Notification[]
+  reportTemplates ReportTemplate[]
 }
 
 // -----------------------------------------------------------------------------
@@ -149,6 +150,7 @@ model Student {
   dataTokens    StudentDataToken[]
   
   notifications Notification[]
+  studentReports StudentReport[]
 
   // Messaging
   threadParticipations ThreadParticipant[]
@@ -195,6 +197,8 @@ model Course {
   schedules   Schedule[]
   lessons     Lesson[]
   threads     MessageThread[]
+  reportTemplates CourseReportTemplate[]
+  studentReports  StudentReport[]
 
 
   startDate   DateTime?
@@ -683,3 +687,106 @@ model Message {
   @@index([threadId])
   @@index([threadId, createdAt])
 }
+
+// -----------------------------------------------------------------------------
+// REPORTING & TEMPLATES SYSTEM
+// -----------------------------------------------------------------------------
+
+model ReportTemplate {
+  id            String   @id @default(cuid())
+  instituteId   String
+  institute     Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+
+  name          String   // "Boletín Trimestral Inglés", "Informe Mensual Niños"
+  isActive      Boolean  @default(true)
+
+  // Períodos
+  periodType    String   // MONTHLY | BIMONTHLY | QUARTERLY | CUSTOM
+  periodCount   Int      // Cantidad de períodos (ej: 3, 6, 12)
+  periodLabels  String[] // Etiquetas: ["1° Trimestre", "2° Trimestre", ...]
+
+  // Campos especiales guardados como JSON (comentarios, firmas de tutor, alumno, prof)
+  specialFields Json     // { teacherComments: boolean, teacherSignature: boolean, parentSignature: boolean, studentSignature: boolean }
+
+  categories    ReportCategory[]
+  reports       StudentReport[]
+  courses       CourseReportTemplate[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([name, instituteId])
+}
+
+model ReportCategory {
+  id            String         @id @default(cuid())
+  templateId    String
+  template      ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  name          String         // Ej: "Oral Work", "Attitude", etc.
+  order         Int            // Para ordenar las columnas/filas
+  scaleType     String         // NUMERIC | CONCEPTUAL | LETTER | CUSTOM
+  scaleOptions  Json           // Opciones guardadas como JSON: [{"label": "Excelente", "value": "E"}, ...]
+  scaleMin      Float?         // Para escalas numéricas: valor mínimo
+  scaleMax      Float?         // Para escalas numéricas: valor máximo
+
+  entries       ReportEntry[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([templateId, order])
+}
+
+model CourseReportTemplate {
+  id            String         @id @default(cuid())
+  courseId      String
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  templateId    String
+  template      ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  isActive      Boolean        @default(true)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([courseId, templateId])
+}
+
+model StudentReport {
+  id              String         @id @default(cuid())
+  templateId      String
+  template        ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  year            Int            // Año lectivo (ej: 2026)
+  periodIndex     Int            // Índice del período (0-based)
+  teacherComments String?        @db.Text
+  publishedAt     DateTime?      // null = Borrador | Fecha = Publicado
+
+  entries         ReportEntry[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([studentId, courseId, year, periodIndex, templateId])
+  @@index([courseId, year, periodIndex])
+}
+
+model ReportEntry {
+  id            String         @id @default(cuid())
+  reportId      String
+  report        StudentReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  categoryId    String
+  category      ReportCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  value         String?        // Guardamos el valor como string ("8.5", "E", "A-", etc.)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([reportId, categoryId])
+}
+
