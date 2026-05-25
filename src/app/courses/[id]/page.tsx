@@ -15,6 +15,8 @@ import { DeleteCourseButton } from "../components/DeleteCourseButton";
 import { FinishCourseButton } from "../components/FinishCourseButton";
 import { BadgeCheck, Info } from "lucide-react";
 import { getActiveRole } from "@/lib/roles";
+import { CourseReportsPanel } from "@/features/courses/CourseReportsPanel";
+
 
 // TODO: Create StudentList component to handle enrollments. For now we will create an empty block
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -344,6 +346,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                             />
                         </Card>
                     )}
+
+                    {/* ── SECCIÓN DE INFORMES ACADÉMICOS (Fase 1) ── */}
+                    <CourseReportsPanel courseId={course.id} userRole={user.role} />
 
                     {/* ── SECCIÓN DE GESTIÓN Y PELIGRO (ANCHO COMPLETO) ── */}
                     <div className="space-y-6 lg:space-y-8 mt-12 pt-8 border-t border-border/40">
