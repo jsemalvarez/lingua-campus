@@ -25,8 +25,8 @@ export async function generateMetadata({
     const fallbackIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%23${primaryColorHex}" /><text x="50" y="50" font-family="system-ui, sans-serif" font-size="55" font-weight="bold" fill="white" dominant-baseline="central" text-anchor="middle">${initial}</text></svg>`;
 
     return {
-      title: `${institute.name} | Instituto de Inglés`,
-      description: institute.description || `Instituto de inglés ${institute.name}. Cursos de inglés para todas las edades. Aprendé a hablar inglés fluido con nuestra academia.`,
+      title: `${institute.name} | Instituto de Inglés en Mar del Plata`,
+      description: institute.description || `Instituto de inglés ${institute.name} en Mar del Plata. Cursos de inglés para niños, adolescentes y adultos. Aprendé a hablar inglés fluido con nuestra academia.`,
       icons: {
         icon: institute.logoUrl || fallbackIcon,
         shortcut: institute.pwaIcon192 || institute.logoUrl || fallbackIcon,
