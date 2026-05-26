@@ -71,6 +71,21 @@ export default async function GuardianAcademicsPage() {
                         include: {
                             lesson: { select: { topic: true, course: { select: { color: true, name: true, teacher: { select: { name: true } } } } } }
                         }
+                    },
+                    studentReports: {
+                        where: {
+                            publishedAt: { lte: new Date() }
+                        },
+                        include: {
+                            template: {
+                                include: {
+                                    categories: { orderBy: { order: "asc" } }
+                                }
+                            },
+                            entries: true,
+                            course: { select: { id: true, name: true, color: true, teacher: { select: { name: true } } } }
+                        },
+                        orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
                     }
                 }
             }

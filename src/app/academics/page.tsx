@@ -45,6 +45,21 @@ export default async function StudentAcademicsPage() {
                 include: {
                     lesson: { select: { topic: true, course: { select: { name: true, color: true } } } }
                 }
+            },
+            studentReports: {
+                where: {
+                    publishedAt: { lte: new Date() }
+                },
+                include: {
+                    template: {
+                        include: {
+                            categories: { orderBy: { order: "asc" } }
+                        }
+                    },
+                    entries: true,
+                    course: { select: { id: true, name: true, color: true, teacher: { select: { name: true } } } }
+                },
+                orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
             }
         }
     });
@@ -151,6 +166,7 @@ export default async function StudentAcademicsPage() {
                 recentGrades={student.grades}
                 academicStats={academicStats}
                 practiceMetrics={practiceMetrics}
+                reports={student.studentReports}
             />
         </div>
     );

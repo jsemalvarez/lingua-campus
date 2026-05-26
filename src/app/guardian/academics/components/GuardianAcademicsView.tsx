@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { cn } from "@/lib/utils";
+import { StudentReportViewer } from "@/components/reports/StudentReportViewer";
 
 interface GuardianAcademicsViewProps {
     students: any[];
@@ -275,31 +276,8 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                 </div>
             </div>
 
-            {/* ROW 4: Boletín Institucional (Full Width - Placeholder) */}
-            <Card className="p-10 border-none shadow-2xl dark:shadow-xl dark:shadow-sky-400/60 bg-card rounded-[3rem] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
-                    <ClipboardList size={200} />
-                </div>
-                
-                <div className="relative z-10 text-center max-w-2xl mx-auto space-y-6">
-                    <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                        <ClipboardList className="text-primary" size={32} />
-                    </div>
-                    <h2 className="text-3xl font-black tracking-tight">Informe Trimestral</h2>
-                    <p className="text-muted-foreground font-medium leading-relaxed">
-                        Este espacio está reservado para el reporte oficial académico emitido por el instituto. 
-                        Aquí podrás ver el desglose trimestral, promedios finales y la firma digital de las autoridades. 
-                    </p>
-                    <div className="pt-6 border-t border-border/50">
-                        <div className="inline-flex items-center gap-2 px-6 py-3 bg-muted/50 rounded-full text-sm font-bold text-muted-foreground border border-dashed border-muted-foreground/30 animate-pulse">
-                            <Info size={16} /> Próximamente disponible
-                        </div>
-                    </div>
-                </div>
-
-                {/* Decoration */}
-                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-            </Card>
+            {/* ROW 4: Boletín Institucional */}
+            <StudentReportViewer studentName={currentStudent.name} reports={currentStudent.studentReports || []} />
 
         </main>
     );
