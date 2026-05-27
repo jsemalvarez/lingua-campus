@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'KH Blackline Script';
+  src: url('/fonts/KH-Blackline-Script-Medium.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --font-sans: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--c-bg);
   --color-foreground: var(--c-fg);
 
@@ -30,24 +39,24 @@
      ================================== */
   :root,
   html.light {
-    --c-bg: #f7f7fc;
-    --c-fg: #0e0e14;
+    --c-bg: #ffffff;
+    --c-fg: #4d4d4d;
 
     --c-card: #ffffff;
-    --c-card-fg: #0e0e14;
+    --c-card-fg: #4d4d4d;
 
-    --c-muted: #f1f1f5;
-    --c-muted-fg: #71717a;
+    --c-muted: #e6e6e6;
+    --c-muted-fg: #808080;
 
-    --c-primary: #4f46e5;
-    --c-primary-hover: #4338ca;
+    --c-primary: #38b397;
+    --c-primary-hover: #338e76;
     --c-primary-fg: #ffffff;
 
-    --c-accent: #ec4899;
+    --c-accent: #2e3192;
 
-    --c-border: #e4e4e7;
-    --c-input: #e4e4e7;
-    --c-ring: #4f46e5;
+    --c-border: #e6e6e6;
+    --c-input: #e6e6e6;
+    --c-ring: #38b397;
   }
 
   /* ==================================
@@ -63,15 +72,15 @@
     --c-muted: #27272a;
     --c-muted-fg: #a1a1aa;
 
-    --c-primary: #6366f1;
-    --c-primary-hover: #818cf8;
+    --c-primary: #38b397;
+    --c-primary-hover: #338e76;
     --c-primary-fg: #ffffff;
 
-    --c-accent: #f472b6;
+    --c-accent: #2e3192;
 
     --c-border: #27272a;
     --c-input: #27272a;
-    --c-ring: #6366f1;
+    --c-ring: #38b397;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -85,15 +94,15 @@
       --c-muted: #27272a;
       --c-muted-fg: #a1a1aa;
 
-      --c-primary: #6366f1;
-      --c-primary-hover: #818cf8;
+      --c-primary: #38b397;
+      --c-primary-hover: #338e76;
       --c-primary-fg: #ffffff;
 
-      --c-accent: #f472b6;
+      --c-accent: #2e3192;
 
       --c-border: #27272a;
       --c-input: #27272a;
-      --c-ring: #6366f1;
+      --c-ring: #38b397;
     }
   }
 

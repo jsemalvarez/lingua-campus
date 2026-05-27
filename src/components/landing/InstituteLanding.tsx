@@ -3,13 +3,21 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Lato } from "next/font/google";
+
+const lato = Lato({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { 
-  GraduationCap, 
-  ArrowRight, 
-  Users, 
-  CheckCircle, 
+import {
+  GraduationCap,
+  ArrowRight,
+  Users,
+  CheckCircle,
   LogIn,
   Baby,
   Backpack,
@@ -29,20 +37,21 @@ import { Institute } from "@prisma/client";
 
 export default function InstituteLanding({ institute }: { institute: Institute }) {
   // Configured primary color, default to a neutral/elegant indigo if not provided
-  const primaryColor = "#4F46E5"; 
-  const secondaryColor = "#F59E0B"; // Amber for highlights
+  const primaryColor = "#38b397";
+  const secondaryColor = "#f6a138"; // Amber for highlights
+  const accentColor = "#2e3192";
 
   return (
-    <div className="min-h-screen font-sans selection:bg-indigo-500/20 dark:selection:bg-white/20 bg-slate-50 dark:bg-slate-950 pb-20 sm:pb-0 scroll-smooth">
-      
+    <div className="min-h-screen selection:bg-indigo-500/20 dark:selection:bg-white/20 bg-slate-50 dark:bg-slate-950 pb-20 sm:pb-0 scroll-smooth">
+
       {/* Navigation (Top) */}
       <nav className="fixed top-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 transition-all">
         <div className="container mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <Link href="#" className="flex items-center gap-3">
             {institute.logoUrl ? (
               <div className="relative w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-800 bg-white">
-                <Image 
-                  src={institute.logoUrl} 
+                <Image
+                  src={institute.logoUrl}
                   alt={`Logo de ${institute.name}`}
                   fill
                   sizes="44px"
@@ -50,7 +59,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
                 />
               </div>
             ) : (
-              <div 
+              <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-md"
                 style={{ backgroundColor: primaryColor }}
               >
@@ -73,7 +82,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <Link href="/login">
-              <Button 
+              <Button
                 className="text-white shadow-md transition-transform hover:scale-105 rounded-full px-6 h-10"
                 style={{ backgroundColor: primaryColor }}
               >
@@ -112,46 +121,48 @@ export default function InstituteLanding({ institute }: { institute: Institute }
         <section className="relative min-h-screen flex items-center justify-center pt-24 pb-20 sm:pb-32 overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
           {/* ── Fondo Decorativo Animado (Mesh Gradients Intensificados) ── */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-              {/* Blobs Principales */}
-              <div 
-                className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] animate-pulse duration-[10s] opacity-20 dark:opacity-30" 
-                style={{ backgroundColor: primaryColor }} 
-              />
-              <div 
-                className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] animate-pulse duration-[8s] delay-1000 opacity-20 dark:opacity-30" 
-                style={{ backgroundColor: secondaryColor }} 
-              />
-              
-              {/* Blobs Secundarios para mayor color */}
-              <div className="absolute top-[20%] right-[-5%] w-[40%] h-[40%] bg-violet-500/15 dark:bg-violet-500/25 rounded-full blur-[100px] animate-bounce-slow delay-500" />
-              <div className="absolute w-[35%] h-[35%] bg-rose-500/10 dark:bg-rose-500/20 rounded-full blur-[100px] animate-pulse duration-[12s]" style={{ top: '40%', left: '-5%' }} />
-              
-              <div className="absolute top-[10%] left-[30%] w-[25%] h-[25%] bg-blue-500/10 dark:bg-blue-300/15 rounded-full blur-[80px] animate-float" />
-              
-              {/* Patrón de puntos sutil */}
-              <div className="absolute inset-0 opacity-[0.05] dark:opacity-[0.1]" 
-                  style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '40px 40px' }} 
-              />
+            {/* Blobs Principales */}
+            <div
+              className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] animate-pulse duration-[10s] opacity-20 dark:opacity-30"
+              style={{ backgroundColor: primaryColor }}
+            />
+            <div
+              className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] animate-pulse duration-[8s] delay-1000 opacity-20 dark:opacity-30"
+              style={{ backgroundColor: secondaryColor }}
+            />
+
+            {/* Blobs Secundarios para mayor color */}
+            <div className="absolute top-[20%] right-[-5%] w-[40%] h-[40%] bg-violet-500/15 dark:bg-violet-500/25 rounded-full blur-[100px] animate-bounce-slow delay-500" />
+            <div className="absolute w-[35%] h-[35%] bg-rose-500/10 dark:bg-rose-500/20 rounded-full blur-[100px] animate-pulse duration-[12s]" style={{ top: '40%', left: '-5%' }} />
+
+            <div className="absolute top-[10%] left-[30%] w-[25%] h-[25%] bg-blue-500/10 dark:bg-blue-300/15 rounded-full blur-[80px] animate-float" />
+
+            {/* Patrón de puntos sutil */}
+            <div className="absolute inset-0 opacity-[0.05] dark:opacity-[0.1]"
+              style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+            />
           </div>
-          
+
           <div className="container mx-auto px-6 text-center max-w-5xl relative z-10 mt-16 sm:mt-0">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm text-slate-700 dark:text-slate-300 font-medium text-sm mb-8 border border-white/50 dark:border-slate-800/50 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
               <span>Inscripciones Abiertas {new Date().getFullYear()}</span>
             </div>
 
-            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.05] mb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 block drop-shadow-sm">
-              Tu instituto de inglés <br className="hidden sm:block" />
-              <span style={{ color: primaryColor }}>{institute.name}</span>
+            <h2 className={`text-3xl sm:text-4xl lg:text-5xl italic mb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 ${lato.className}`} style={{ color: primaryColor }}>be Modern, speak English</h2>
+            <h1 className="text-7xl sm:text-8xl lg:text-9xl text-slate-900 dark:text-white leading-[1.1] mb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 block drop-shadow-sm" style={{ fontFamily: "'KH Blackline Script', cursive", fontWeight: "normal" }}>
+              {/* {institute.name} */}
+              Modern English <br className="hidden sm:block" />
+              School
             </h1>
 
-            <h2 className="text-lg sm:text-2xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000 font-medium drop-shadow-sm">
+            <p className="text-lg sm:text-2xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000 font-medium drop-shadow-sm">
               Transformá tu manera de comunicarte. Aprender inglés en nuestra academia te abre las puertas al mundo, a nuevas culturas y a mejores oportunidades.
-            </h2>
+            </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
               <Link href="/inscription" className="w-full sm:w-auto">
-                <Button 
+                <Button
                   className="w-full sm:w-auto text-white rounded-full px-10 py-7 text-lg font-bold transition-all hover:scale-105 shadow-xl gap-2"
                   style={{ backgroundColor: primaryColor, boxShadow: `0 10px 25px -5px ${primaryColor}50` }}
                 >
@@ -159,8 +170,8 @@ export default function InstituteLanding({ institute }: { institute: Institute }
                 </Button>
               </Link>
               <Link href="#cursos" className="w-full sm:w-auto">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full sm:w-auto rounded-full px-10 py-7 text-lg font-bold transition-all hover:bg-white/90 dark:hover:bg-slate-800/90 backdrop-blur-sm border-slate-300 dark:border-slate-700 shadow-sm"
                 >
                   Ver Cursos de Inglés
@@ -182,7 +193,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
               <div className="flex-1 text-left">
                 <h2 className="text-sm font-bold tracking-widest uppercase mb-3 text-slate-300">Cursos de Inglés</h2>
                 <h3 className="text-4xl sm:text-5xl font-black text-white leading-tight drop-shadow-lg">
-                  Un curso de inglés <br/>para cada etapa.
+                  Un curso de inglés <br />para cada etapa.
                 </h3>
               </div>
               <div className="flex-1 md:text-right">
@@ -209,11 +220,11 @@ export default function InstituteLanding({ institute }: { institute: Institute }
                         <div className="bg-white/80 dark:bg-slate-900/80 p-8 sm:p-10 rounded-[2rem] border border-white/60 dark:border-slate-700/60 h-full flex flex-col items-start relative overflow-hidden">
                           {/* Inner glow on hover */}
                           <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-br from-transparent to-black dark:to-white pointer-events-none" />
-                          
+
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 shadow-md bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700" style={{ color: primaryColor }}>
                             <item.icon className="w-8 h-8 sm:w-10 sm:h-10" />
                           </div>
-                          
+
                           <h4 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">{item.title}</h4>
                           <p className="text-slate-600 dark:text-slate-400 text-lg font-medium leading-relaxed">
                             {item.desc}
@@ -232,22 +243,22 @@ export default function InstituteLanding({ institute }: { institute: Institute }
         <section id="nosotros" className="py-24 sm:py-32 bg-slate-50 dark:bg-slate-900 border-t border-slate-200/50 dark:border-slate-800/50">
           <div className="container mx-auto px-6 max-w-5xl relative z-10">
             <div className="text-center mb-16">
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: primaryColor }}>Tu Academia de Inglés</h2>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: accentColor }}>Tu Academia de Inglés</h2>
               <h3 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
-                Más que un instituto de inglés, <br className="hidden sm:block"/> una comunidad.
+                Más que un instituto de inglés, <br className="hidden sm:block" /> una comunidad.
               </h3>
               <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
                 Con años de trayectoria formando alumnos bilingües, nuestro equipo de profesores de inglés está enfocado en brindarte las herramientas exactas para dominar el idioma en el mundo real.
               </p>
             </div>
-            
+
             <div className="grid sm:grid-cols-3 gap-8">
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-center shadow-lg border border-slate-100 dark:border-slate-700 transition-transform hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black mb-2 text-slate-900 dark:text-white">+15</div>
+                <div className="text-4xl sm:text-5xl font-black mb-2 text-slate-900 dark:text-white">+{new Date().getFullYear() - 1996}</div>
                 <div className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Años de Exp.</div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-center shadow-lg border border-slate-100 dark:border-slate-700 transition-transform hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black mb-2 text-slate-900 dark:text-white">+500</div>
+                <div className="text-4xl sm:text-5xl font-black mb-2 text-slate-900 dark:text-white">+200</div>
                 <div className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Alumnos Activos</div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-center shadow-lg border border-slate-100 dark:border-slate-700 transition-transform hover:-translate-y-1">
@@ -265,20 +276,20 @@ export default function InstituteLanding({ institute }: { institute: Institute }
             <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-25 dark:opacity-40 transition-all duration-1000" style={{ backgroundColor: primaryColor }} />
             <div className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-25 dark:opacity-40 transition-all duration-1000" style={{ backgroundColor: primaryColor }} />
           </div>
-          
+
           {/* Content Container */}
           <div className="container mx-auto px-6 max-w-6xl relative z-10">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div>
                 <h2 className="text-sm font-bold tracking-widest uppercase mb-3" style={{ color: primaryColor }}>Por qué estudiar inglés con nosotros</h2>
                 <h3 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] text-slate-900 dark:text-white">
-                  Una experiencia <br/>
+                  Una experiencia <br />
                   <span style={{ color: secondaryColor }}>inmersiva para aprender.</span>
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400 text-lg sm:text-xl mb-12 font-medium leading-relaxed max-w-md">
                   Rompemos la estructura tradicional de las academias de idiomas. Generamos dinámicas de interacción constante para un aprendizaje real y motivador del idioma inglés.
                 </p>
-                
+
                 <div className="space-y-6">
                   <div className="flex gap-5 items-start p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all">
                     <CheckCircle className="w-8 h-8 flex-shrink-0" style={{ color: primaryColor }} />
@@ -322,14 +333,14 @@ export default function InstituteLanding({ institute }: { institute: Institute }
         </section>
 
         {/* --- SECTION 4: CTA FOOTER PRE TENSION (Inverted Theme mode) --- */}
-        <section className="py-24 bg-slate-950 dark:bg-slate-50 border-t border-slate-800 dark:border-slate-200">
+        <section className="py-24 dark:bg-slate-50" style={{ backgroundColor: primaryColor }}>
           <div className="container mx-auto px-6 text-center max-w-3xl">
             <h2 className="text-4xl font-black text-white dark:text-slate-900 mb-6">Empezá hoy tus clases de inglés</h2>
             <p className="text-xl text-slate-300 dark:text-slate-600 mb-10">No dejes para mañana el idioma que te abrirá las puertas del mundo hoy.</p>
             <Link href="/inscription">
-              <Button 
+              <Button
                 className="text-white rounded-full px-12 py-8 text-xl font-bold shadow-xl hover:-translate-y-1 transition-transform"
-                style={{ backgroundColor: primaryColor }}
+                style={{ backgroundColor: secondaryColor }}
               >
                 Inscribirse Ahora
               </Button>
@@ -339,15 +350,15 @@ export default function InstituteLanding({ institute }: { institute: Institute }
 
         {/* --- FLOATING WHATSAPP BUTTON --- */}
         {institute.whatsappNumber && (
-          <a 
-            href={`https://wa.me/${institute.whatsappNumber.replace(/[^0-9]/g, '')}`} 
-            target="_blank" 
+          <a
+            href={`https://wa.me/${institute.whatsappNumber.replace(/[^0-9]/g, '')}`}
+            target="_blank"
             rel="noopener noreferrer"
             className="fixed bottom-24 sm:bottom-8 right-4 sm:right-8 z-[60] bg-[#25D366] text-white p-3 sm:p-4 rounded-full shadow-[0_8px_30px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform duration-300 flex items-center justify-center group"
             aria-label="Contactar por WhatsApp"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 sm:w-8 sm:h-8">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
             </svg>
           </a>
         )}
@@ -357,7 +368,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
       <footer className="bg-white dark:bg-slate-950 pt-20 pb-24 sm:pb-10 border-t border-slate-200 dark:border-slate-800">
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 mb-16">
-            
+
             {/* Columna 1: Enlaces Rápidos */}
             <div>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Navegación</h4>

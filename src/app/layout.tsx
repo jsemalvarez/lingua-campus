@@ -7,7 +7,6 @@ import { getTenantByHost } from "@/lib/tenant";
 import { TenantProvider } from "@/components/providers/TenantProvider";
 
 const inter = Inter({
-  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -114,7 +113,7 @@ export default async function RootLayout({
         {/* Script anti-flash: sincroniza el tema ANTES del primer paint */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${inter.variable} antialiased min-h-screen bg-background text-foreground`}>
+      <body className={`${inter.className} antialiased min-h-screen bg-background text-foreground`}>
         <TenantProvider tenant={tenant}>
           <Providers>
             {children}
