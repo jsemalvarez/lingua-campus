@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
             select: { instituteId: true, role: true }
         });
 
-        if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN") || !user.instituteId) {
+        if (!user || !(["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user.role)) || !user.instituteId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
             select: { instituteId: true, role: true }
         });
 
-        if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN") || !user.instituteId) {
+        if (!user || !(["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user.role)) || !user.instituteId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

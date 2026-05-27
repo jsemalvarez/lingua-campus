@@ -18,7 +18,8 @@ export default async function ReportTemplatesPage() {
     const userRoles = user.roles || [user.role];
     const activeRole = await getActiveRole(userRoles);
 
-    if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") {
+    const allowedRoles = ["ADMIN", "SUPERADMIN", "SECRETARY"];
+    if (!allowedRoles.includes(activeRole)) {
         redirect("/dashboard");
     }
 

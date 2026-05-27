@@ -69,7 +69,7 @@ export function Navbar({
         { href: "/guardian/payments", label: "Administración", icon: DollarSign, roles: ["GUARDIAN"] },
         { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "SECRETARY", "SUPERADMIN"] },
         { href: "/dashboard/settings/institute", label: "Configurar", icon: Settings, roles: ["ADMIN", "SUPERADMIN"] },
-        { href: "/dashboard/settings/reports", label: "Informes", icon: ClipboardList, roles: ["ADMIN", "SUPERADMIN"] },
+        { href: "/dashboard/settings/reports", label: "Informes", icon: ClipboardList, roles: ["ADMIN", "SUPERADMIN", "SECRETARY"] },
     ];
 
     // Mobile bottom tab uses the same links as desktop (no /messages — it's in the top bar)
