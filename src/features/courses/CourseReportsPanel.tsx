@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { 
     ClipboardList, Plus, Trash2, ArrowRight, Loader2, 
     X, AlertCircle, Sparkles, CheckCircle2, Calendar
@@ -280,7 +281,7 @@ export function CourseReportsPanel({ courseId, userRole }: CourseReportsPanelPro
             </div>
 
             {/* Modal para Vincular Plantilla */}
-            {isLinkingOpen && (
+            {isLinkingOpen && createPortal(
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div 
                         className="absolute inset-0 cursor-pointer" 
@@ -321,8 +322,12 @@ export function CourseReportsPanel({ courseId, userRole }: CourseReportsPanelPro
                                     >
                                         <option value="">-- Selecciona una plantilla --</option>
                                         {available.map((tpl) => (
-                                            <option key={tpl.id} value={tpl.id}>
-                                                {tpl.name} ({tpl.periodLabels.length} Períodos)
+                                            <option 
+                                                key={tpl.id} 
+                                                value={tpl.id}
+                                                title={`${tpl.name} (${tpl.periodLabels.length} Períodos)`}
+                                            >
+                                                {tpl.name.length > 50 ? tpl.name.substring(0, 50) + '...' : tpl.name} ({tpl.periodLabels.length} Períodos)
                                             </option>
                                         ))}
                                     </select>
@@ -349,11 +354,12 @@ export function CourseReportsPanel({ courseId, userRole }: CourseReportsPanelPro
                             </Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Modal para Confirmar Desvinculación */}
-            {isUnlinkingTemplate && (
+            {isUnlinkingTemplate && createPortal(
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div 
                         className="absolute inset-0 cursor-pointer" 
@@ -395,7 +401,8 @@ export function CourseReportsPanel({ courseId, userRole }: CourseReportsPanelPro
                             </Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
