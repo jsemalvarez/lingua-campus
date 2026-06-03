@@ -11,18 +11,18 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 
 interface LoginFormProps {
-  institute?: {
-    id: string;
-    name: string;
-    logoUrl: string | null;
-  } | null;
+    institute?: {
+        id: string;
+        name: string;
+        logoUrl: string | null;
+    } | null;
 }
 
 export default function LoginForm({ institute }: LoginFormProps) {
     const [identifier, setIdentifier] = useState("");
-    const [password, setPassword]     = useState("");
-    const [error, setError]           = useState("");
-    const [loading, setLoading]       = useState(false);
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
@@ -30,7 +30,6 @@ export default function LoginForm({ institute }: LoginFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
         if (!isOnline) {
             setError("No tienes conexión a internet.");
             return;
@@ -76,9 +75,9 @@ export default function LoginForm({ institute }: LoginFormProps) {
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
                     {institute?.logoUrl ? (
-                         <div className="h-16 w-16 mx-auto mb-5 rounded-2xl flex-shrink-0 shadow-lg border border-slate-200 dark:border-slate-800 bg-white overflow-hidden relative transform transition-transform hover:scale-105">
-                            <Image 
-                                src={institute.logoUrl} 
+                        <div className="h-16 w-16 mx-auto mb-5 rounded-2xl flex-shrink-0 shadow-lg border border-slate-200 dark:border-slate-800 bg-white overflow-hidden relative transform transition-transform hover:scale-105">
+                            <Image
+                                src={institute.logoUrl}
                                 alt={`Logo de ${brandName}`}
                                 fill
                                 sizes="64px"
@@ -86,14 +85,14 @@ export default function LoginForm({ institute }: LoginFormProps) {
                             />
                         </div>
                     ) : (
-                        <div 
+                        <div
                             className={`h-16 w-16 rounded-2xl mx-auto flex items-center justify-center text-white font-extrabold text-3xl mb-5 shadow-lg shadow-primary/30 transform transition-transform hover:scale-105 ${!institute ? 'premium-gradient' : ''}`}
                             style={institute ? { backgroundColor: primaryColor } : {}}
                         >
                             {institute ? institute.name.charAt(0).toUpperCase() : "L"}
                         </div>
                     )}
-                    
+
                     <h1 className="text-3xl font-extrabold tracking-tight">{brandName}</h1>
                     <p className="text-muted-foreground mt-2 text-sm font-medium">Iniciá sesión para continuar</p>
                 </div>

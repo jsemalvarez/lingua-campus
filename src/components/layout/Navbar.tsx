@@ -118,33 +118,8 @@ export function Navbar({
                         </span>
                     </Link>
 
-                    {/* Desktop nav links */}
-                    {status === "authenticated" && (
-                        <div className="hidden md:flex items-center gap-1">
-                            {navLinks.map(({ href, label, icon: Icon }) => {
-                                const isActive = pathname.startsWith(href) && href !== "/dashboard" || (pathname === "/dashboard" && href === "/dashboard");
-                                return (
-                                    <Link
-                                        key={href}
-                                        href={href}
-                                        className={cn(
-                                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
-                                            isActive
-                                                ? "bg-primary/10 text-primary"
-                                                : "text-foreground/65 hover:text-foreground hover:bg-muted"
-                                        )}
-                                        title={label}
-                                    >
-                                        <Icon size={18} className="lg:w-4 lg:h-4" />
-                                        <span className="hidden lg:inline">{label}</span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    )}
-
                     {/* Right side actions */}
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 ml-auto">
                         <ThemeToggle variant="icon" />
 
                         {status === "authenticated" ? (
@@ -213,46 +188,58 @@ export function Navbar({
                 </div>
             </nav>
 
-            {/* MOBILE BOTTOM TAB BAR */}
+            {/* RESPONSIVE BOTTOM / LEFT SIDEBAR */}
             {status === "authenticated" && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass border-t border-border/50 safe-area-bottom">
-                    <div className="flex items-center justify-around h-14 px-2">
-                        {mobileNavLinks.map(({ href, label, icon: Icon }) => {
-                            const isActive = pathname === href || (pathname.startsWith(href) && href !== "/dashboard");
-                            if (href === "/messages" && sessionUser?.id) {
-                                return (
-                                    <MessagesBell
-                                        key={href}
-                                        userId={sessionUser.id}
-                                        isStudent={userRoles.includes("STUDENT")}
-                                        instituteId={sessionUser.instituteId ?? ""}
-                                        isAdmin={userRoles.some((r: string) => ["ADMIN", "SECRETARY", "SUPERADMIN"].includes(r))}
-                                        variant="mobile"
-                                        isActive={isActive}
-                                        label={label}
-                                    />
-                                );
+                <>
+                    <style>{`
+                        @media (min-width: 768px) {
+                            main {
+                                padding-left: 5rem;
+                                transition: padding-left 0.2s ease-in-out;
                             }
-                            return (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    className={cn(
-                                        "flex items-center justify-center flex-1 py-1 rounded-xl transition-all",
-                                        isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/60"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "flex flex-col items-center justify-center w-12 h-10 rounded-xl transition-all",
-                                        isActive && "bg-primary/5"
-                                    )}>
-                                        <Icon size={20} />
-                                    </div>
-                                </Link>
-                            );
-                        })}
+                        }
+                    `}</style>
+                    <div className="fixed bottom-0 left-0 right-0 z-40 md:top-16 md:bottom-0 md:right-auto md:w-20 md:border-t-0 md:border-r glass border-t border-border/50 safe-area-bottom">
+                        <div className="flex items-center justify-around h-14 px-2 md:flex-col md:justify-start md:h-full md:w-full md:py-4 md:gap-2 overflow-y-auto custom-scrollbar">
+                            {mobileNavLinks.map(({ href, label, icon: Icon }) => {
+                                const isActive = pathname === href || (pathname.startsWith(href) && href !== "/dashboard");
+                                if (href === "/messages" && sessionUser?.id) {
+                                    return (
+                                        <MessagesBell
+                                            key={href}
+                                            userId={sessionUser.id}
+                                            isStudent={userRoles.includes("STUDENT")}
+                                            instituteId={sessionUser.instituteId ?? ""}
+                                            isAdmin={userRoles.some((r: string) => ["ADMIN", "SECRETARY", "SUPERADMIN"].includes(r))}
+                                            variant="mobile"
+                                            isActive={isActive}
+                                            label={label}
+                                        />
+                                    );
+                                }
+                                return (
+                                    <Link
+                                        key={href}
+                                        href={href}
+                                        title={label}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all md:flex-none md:w-full",
+                                            isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/60"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "flex flex-col items-center justify-center w-12 h-10 rounded-xl transition-all",
+                                            isActive && "bg-primary/5"
+                                        )}>
+                                            <Icon size={20} />
+                                        </div>
+                                        <span className="text-[10px] hidden md:block mt-1 font-medium px-1 text-center leading-tight">{label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                </>
             )}
         </>
     );
