@@ -152,11 +152,7 @@ export function StudentReportViewer({ studentName, reports }: StudentReportViewe
       let scaleDesc = "";
 
       if (cat.scaleType === "CONCEPTUAL" || cat.scaleType === "LETTER") {
-        const options = Array.isArray(cat.scaleOptions) ? cat.scaleOptions : [];
-        const opt = options.find((o: any) => o.value === val);
-        if (opt) {
-          scaleDesc = ` (${opt.label})`;
-        }
+        // Only display the value, not the label, to maintain consistency with custom options
       } else if (cat.scaleType === "NUMERIC") {
         scaleDesc = ` [Escala: ${cat.scaleMin ?? 1} - ${cat.scaleMax ?? 10}]`;
       }
@@ -328,15 +324,8 @@ export function StudentReportViewer({ studentName, reports }: StudentReportViewe
               const percent = hasNumVal ? Math.min(100, Math.max(0, ((numVal - minVal) / (maxVal - minVal)) * 100)) : 0;
               const courseColor = activeCourseInfo?.color || "#3b82f6";
 
-              // Find label for conceptual/letter options
+              // Only use the value to maintain consistency (no descriptions)
               let displayLabel = value || "—";
-              if (!isNumeric && value) {
-                const options = Array.isArray(cat.scaleOptions) ? cat.scaleOptions : [];
-                const matchedOption = options.find((o: any) => o.value === value);
-                if (matchedOption) {
-                  displayLabel = `${value} (${matchedOption.label})`;
-                }
-              }
 
               return (
                 <div 

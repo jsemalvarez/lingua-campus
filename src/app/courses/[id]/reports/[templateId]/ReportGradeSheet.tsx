@@ -417,7 +417,7 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                                                                 <option value="">--</option>
                                                                 {(cat.scaleOptions || []).map((opt: any) => (
                                                                     <option key={opt.value} value={opt.value}>
-                                                                        {opt.value} - {opt.label}
+                                                                        {opt.value}
                                                                     </option>
                                                                 ))}
                                                             </select>
