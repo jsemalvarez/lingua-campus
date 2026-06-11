@@ -82,6 +82,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#3b82f6',
+    // Richer Install UI: categories clasifica la app para distribución
+    // https://developer.mozilla.org/en-US/docs/Web/Manifest/categories
+    categories: ['education', 'productivity', 'utilities'],
     icons: [
       {
         src: icon192,
@@ -94,6 +97,37 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
+      },
+    ],
+    // Richer Install UI: screenshots activan el diálogo enriquecido de instalación
+    // Chrome Android >= 94 | Chrome Desktop >= 108
+    // narrow = mobile (aspect ratio debe ser consistente, usamos 9:16)
+    // wide   = desktop (aspect ratio debe ser consistente, usamos 16:9)
+    // https://web.dev/patterns/web-apps/richer-install-ui
+    screenshots: [
+      {
+        src: '/screenshot-mobile-dashboard.png',
+        sizes: '540x960',
+        type: 'image/png',
+        // @ts-ignore – `form_factor` y `label` son válidos en la spec pero aún no están en los types de Next.js
+        form_factor: 'narrow',
+        label: 'Panel principal con cursos activos y próximas clases',
+      },
+      {
+        src: '/screenshot-mobile-courses.png',
+        sizes: '540x960',
+        type: 'image/png',
+        // @ts-ignore
+        form_factor: 'narrow',
+        label: 'Cursos inscriptos con progreso y horarios',
+      },
+      {
+        src: '/screenshot-desktop-dashboard.png',
+        sizes: '1280x720',
+        type: 'image/png',
+        // @ts-ignore
+        form_factor: 'wide',
+        label: 'Panel de administración con estadísticas del instituto',
       },
     ],
   };

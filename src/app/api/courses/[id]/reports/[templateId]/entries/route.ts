@@ -139,15 +139,21 @@ export async function POST(
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // Perform upserts in a single transaction
-        const result = await prisma.$transaction(async (tx) => {
-            const savedReports = [];
+        // Procesar en lotes (batches) para evitar saturar el pool de conexiones (que tiene un límite de 5).
+        // En desarrollo local (Latinoamérica -> EE.UU.), la latencia de red hace que las conexiones
+        // se mantengan ocupadas mucho tiempo. Procesar de a 5 alumnos a la vez asegura que la cola
+        // de Prisma no alcance el timeout de 10 segundos buscando conexiones libres.
+        const BATCH_SIZE = 5;
+        const result = [];
 
-            for (const rep of reports) {
+        for (let i = 0; i < reports.length; i += BATCH_SIZE) {
+            const batch = reports.slice(i, i + BATCH_SIZE);
+
+            const batchPromises = batch.map(async (rep: any) => {
                 const { studentId, teacherComments, entries } = rep;
 
                 // 1. Upsert StudentReport
-                const studentReport = await tx.studentReport.upsert({
+                const studentReport = await prisma.studentReport.upsert({
                     where: {
                         studentId_courseId_year_periodIndex_templateId: {
                             studentId,
@@ -172,12 +178,12 @@ export async function POST(
 
                 // 2. Process Entries
                 if (entries && entries.length > 0) {
-                    for (const ent of entries) {
+                    const entryPromises = entries.map((ent: any) => {
                         const { categoryId, value } = ent;
 
                         if (value === null || value === undefined || value.toString().trim() === "") {
                             // If empty, delete existing entry
-                            await tx.reportEntry.deleteMany({
+                            return prisma.reportEntry.deleteMany({
                                 where: {
                                     reportId: studentReport.id,
                                     categoryId
@@ -185,7 +191,7 @@ export async function POST(
                             });
                         } else {
                             // Else, upsert the entry value
-                            await tx.reportEntry.upsert({
+                            return prisma.reportEntry.upsert({
                                 where: {
                                     reportId_categoryId: {
                                         reportId: studentReport.id,
@@ -202,20 +208,23 @@ export async function POST(
                                 }
                             });
                         }
-                    }
+                    });
+
+                    await Promise.all(entryPromises);
                 }
 
                 // Fetch final report with entries
-                const finalReport = await tx.studentReport.findUnique({
+                const finalReport = await prisma.studentReport.findUnique({
                     where: { id: studentReport.id },
                     include: { entries: true }
                 });
 
-                savedReports.push(finalReport);
-            }
+                return finalReport;
+            });
 
-            return savedReports;
-        });
+            const batchResults = await Promise.all(batchPromises);
+            result.push(...batchResults);
+        }
 
         return NextResponse.json({ success: true, count: result.length, reports: result });
 
