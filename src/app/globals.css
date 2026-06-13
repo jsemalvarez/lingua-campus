@@ -210,3 +210,59 @@ html.theme-transition *::after {
     padding-bottom: 4.5rem;
   }
 }
+
+/* Animaciones de íconos flotantes */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes float-reverse {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(-5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.animate-float {
+  animation: float 10s ease-in-out infinite;
+}
+.animate-float-delayed {
+  animation: float 12s ease-in-out infinite;
+  animation-delay: 2s;
+}
+.animate-float-slow {
+  animation: float 15s ease-in-out infinite;
+}
+.animate-float-slow-reverse {
+  animation: float-reverse 14s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+/* Animaciones horizontales */
+@keyframes float-x {
+  0% { transform: translateX(0px) rotate(0deg); }
+  50% { transform: translateX(-20px) rotate(5deg); }
+  100% { transform: translateX(0px) rotate(0deg); }
+}
+
+@keyframes float-x-reverse {
+  0% { transform: translateX(0px) rotate(0deg); }
+  50% { transform: translateX(20px) rotate(-5deg); }
+  100% { transform: translateX(0px) rotate(0deg); }
+}
+
+.animate-float-x {
+  animation: float-x 10s ease-in-out infinite;
+}
+.animate-float-x-delayed {
+  animation: float-x 12s ease-in-out infinite;
+  animation-delay: 2s;
+}
+.animate-float-x-slow {
+  animation: float-x 15s ease-in-out infinite;
+}
+.animate-float-x-slow-reverse {
+  animation: float-x-reverse 14s ease-in-out infinite;
+  animation-delay: 1s;
+}

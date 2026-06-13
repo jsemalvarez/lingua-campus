@@ -13,6 +13,7 @@ import Image from "next/image";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MessagesBell } from "@/components/layout/MessagesBell";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
+import { StudyBackground } from "@/components/layout/StudyBackground";
 
 /**
  * Premium dashboard navigation bar.
@@ -104,6 +105,7 @@ export function Navbar({
 
     return (
         <>
+            <StudyBackground />
             {/* TOP NAVBAR */}
             <nav className={cn("sticky top-0 z-50 w-full glass border-b border-border/50", className)}>
                 <div className="container mx-auto flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
