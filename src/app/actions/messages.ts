@@ -44,6 +44,16 @@ export type ThreadDetail = {
         senderUserId: string | null;
         senderStudentId: string | null;
         isCurrentUser: boolean;
+        // Attachment
+        attachmentPath: string | null;
+        attachmentName: string | null;
+        attachmentMime: string | null;
+        attachmentSize: number | null;
+        // Shared link
+        sharedUrl: string | null;
+        sharedUrlTitle: string | null;
+        sharedUrlDesc: string | null;
+        sharedUrlImage: string | null;
     }[];
 };
 
@@ -88,7 +98,7 @@ export async function getThreadsForUser({
             messages: {
                 orderBy: { createdAt: "desc" },
                 take: 1,
-                select: { body: true, createdAt: true },
+                select: { body: true, createdAt: true, attachmentName: true, sharedUrl: true, sharedUrlTitle: true },
             },
         },
     });
@@ -144,7 +154,13 @@ export async function getThreadsForUser({
             createdAt: thread.createdAt,
             updatedAt: thread.updatedAt,
             authorName,
-            lastMessageBody: lastMsg?.body ?? null,
+            lastMessageBody: lastMsg
+                ? lastMsg.body
+                    || (lastMsg.attachmentName ? `📎 ${lastMsg.attachmentName}` : null)
+                    || (lastMsg.sharedUrlTitle ? `🔗 ${lastMsg.sharedUrlTitle}` : null)
+                    || (lastMsg.sharedUrl ? `🔗 ${lastMsg.sharedUrl}` : null)
+                    || null
+                : null,
             lastMessageAt: lastMsg?.createdAt ?? null,
             unreadCount,
             participantCount: thread.participants.length,
@@ -181,6 +197,7 @@ export async function getThread({
                     senderUser: { select: { id: true, name: true, roles: true, role: true } },
                     senderStudent: { select: { id: true, name: true } },
                 },
+                // Selects all fields by default — attachment/link fields included automatically
             },
         },
     });
@@ -258,6 +275,16 @@ export async function getThread({
                 isCurrentUser: isStudent
                     ? msg.senderStudentId === currentUserId
                     : msg.senderUserId === currentUserId,
+                // Attachment fields
+                attachmentPath: (msg as any).attachmentPath ?? null,
+                attachmentName: (msg as any).attachmentName ?? null,
+                attachmentMime: (msg as any).attachmentMime ?? null,
+                attachmentSize: (msg as any).attachmentSize ?? null,
+                // Shared link fields
+                sharedUrl: (msg as any).sharedUrl ?? null,
+                sharedUrlTitle: (msg as any).sharedUrlTitle ?? null,
+                sharedUrlDesc: (msg as any).sharedUrlDesc ?? null,
+                sharedUrlImage: (msg as any).sharedUrlImage ?? null,
             };
         }),
     };
@@ -390,14 +417,36 @@ export async function sendMessage({
     senderUserId,
     senderStudentId,
     senderRole,
+    // File attachment
+    attachmentPath,
+    attachmentName,
+    attachmentMime,
+    attachmentSize,
+    // Shared link
+    sharedUrl,
+    sharedUrlTitle,
+    sharedUrlDesc,
+    sharedUrlImage,
 }: {
     threadId: string;
     body: string;
     senderUserId?: string;
     senderStudentId?: string;
     senderRole?: string;
+    attachmentPath?: string;
+    attachmentName?: string;
+    attachmentMime?: string;
+    attachmentSize?: number;
+    sharedUrl?: string;
+    sharedUrlTitle?: string;
+    sharedUrlDesc?: string;
+    sharedUrlImage?: string;
 }): Promise<void> {
-    if (!body.trim()) throw new Error("El mensaje no puede estar vacío.");
+    const hasAttachment = !!attachmentPath;
+    const hasLink = !!sharedUrl;
+    if (!body.trim() && !hasAttachment && !hasLink) {
+        throw new Error("El mensaje no puede estar vacío.");
+    }
 
     const currentUserId = senderUserId ?? senderStudentId;
     const isStudent = !!senderStudentId;
@@ -419,6 +468,16 @@ export async function sendMessage({
                 senderUserId: senderUserId ?? null,
                 senderStudentId: senderStudentId ?? null,
                 senderRole: senderRole ?? null,
+                // Attachment
+                attachmentPath: attachmentPath ?? null,
+                attachmentName: attachmentName ?? null,
+                attachmentMime: attachmentMime ?? null,
+                attachmentSize: attachmentSize ?? null,
+                // Shared link
+                sharedUrl: sharedUrl ?? null,
+                sharedUrlTitle: sharedUrlTitle ?? null,
+                sharedUrlDesc: sharedUrlDesc ?? null,
+                sharedUrlImage: sharedUrlImage ?? null,
             },
         }),
         // Actualizar updatedAt del hilo para que suba en el inbox

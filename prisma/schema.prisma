@@ -682,6 +682,19 @@ model Message {
   senderRole      String?  // El rol activo al enviar este mensaje (ej: "ADMIN", "TEACHER")
 
   body      String   @db.Text
+
+  // File attachment (optional — max 1 per message)
+  attachmentPath  String?  // Path in Supabase Storage: "{instituteId}/{threadId}/{ts}-{id}.{ext}"
+  attachmentName  String?  // Original filename (e.g. "tarea-junio.pdf")
+  attachmentMime  String?  // MIME type (e.g. "application/pdf")
+  attachmentSize  Int?     // Size in bytes
+
+  // Shared link (optional — mutually exclusive with file attachment)
+  sharedUrl       String?  // Full URL (e.g. "https://drive.google.com/...")
+  sharedUrlTitle  String?  // og:title
+  sharedUrlDesc   String?  // og:description
+  sharedUrlImage  String?  // og:image
+
   createdAt DateTime @default(now())
 
   @@index([threadId])
