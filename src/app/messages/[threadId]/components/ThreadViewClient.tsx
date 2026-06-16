@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,8 @@ import {
     ExternalLink,
     Eye,
     ImageIcon,
+    ZoomIn,
+    ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { ThreadDetail } from "@/app/actions/messages";
@@ -225,6 +228,10 @@ function InlineImage({
     const [src, setSrc] = useState<string | null>(null);
     const [zoomed, setZoomed] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
+
+    // Ensure portal only renders client-side
+    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -239,6 +246,35 @@ function InlineImage({
         return () => { cancelled = true; };
     }, [storagePath, threadId]);
 
+    // Lock body scroll when lightbox is open
+    useEffect(() => {
+        if (zoomed) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => { document.body.style.overflow = ""; };
+    }, [zoomed]);
+
+    // Close on Escape key
+    useEffect(() => {
+        if (!zoomed) return;
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setZoomed(false);
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [zoomed]);
+
+    async function handleDownload() {
+        if (!src) return;
+        const a = document.createElement("a");
+        a.href = src;
+        a.download = fileName;
+        a.target = "_blank";
+        a.click();
+    }
+
     if (loading) {
         return (
             <div className="mt-2 h-32 w-48 rounded-xl bg-muted animate-pulse" />
@@ -246,11 +282,56 @@ function InlineImage({
     }
     if (!src) return null;
 
+    const lightbox = zoomed && mounted ? createPortal(
+        <div
+            style={{ position: "fixed", inset: 0, zIndex: 9999, height: "100dvh", width: "100vw" }}
+            className="bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center cursor-zoom-out"
+            onClick={() => setZoomed(false)}
+        >
+            {/* Toolbar */}
+            <div
+                className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <p className="text-white/70 text-sm truncate max-w-[60%]">{fileName}</p>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleDownload}
+                        className="flex items-center gap-1.5 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
+                        title="Descargar imagen"
+                    >
+                        <Download size={15} />
+                        Descargar
+                    </button>
+                    <button
+                        onClick={() => setZoomed(false)}
+                        className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                        title="Cerrar (Esc)"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Image */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                src={src}
+                alt={fileName}
+                style={{ maxHeight: "calc(100dvh - 80px)", maxWidth: "calc(100vw - 32px)" }}
+                className="object-contain rounded-xl shadow-2xl cursor-default"
+                onClick={(e) => e.stopPropagation()}
+            />
+        </div>,
+        document.body
+    ) : null;
+
     return (
         <>
             <div
-                className="mt-2 cursor-zoom-in overflow-hidden rounded-xl border border-border/40 max-w-[280px]"
+                className="mt-2 cursor-zoom-in overflow-hidden rounded-xl border border-border/40 max-w-[280px] group relative"
                 onClick={() => setZoomed(true)}
+                title="Click para ampliar"
             >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -258,29 +339,12 @@ function InlineImage({
                     alt={fileName}
                     className="w-full h-auto object-cover max-h-60 hover:scale-105 transition-transform duration-200"
                 />
-            </div>
-
-            {/* Lightbox */}
-            {zoomed && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
-                    onClick={() => setZoomed(false)}
-                >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={src}
-                        alt={fileName}
-                        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                    <button
-                        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-                        onClick={() => setZoomed(false)}
-                    >
-                        <X size={20} />
-                    </button>
+                {/* Zoom hint overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <ZoomIn size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                 </div>
-            )}
+            </div>
+            {lightbox}
         </>
     );
 }
