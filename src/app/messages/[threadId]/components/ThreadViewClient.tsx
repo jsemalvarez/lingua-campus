@@ -68,6 +68,37 @@ function formatBytes(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Splits text into segments of plain text and URLs, rendering URLs as
+ * clickable <a> tags that open in a new tab.
+ */
+function linkify(text: string, isMine: boolean): React.ReactNode {
+    const URL_REGEX = /(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?()])/g;
+    const parts = text.split(URL_REGEX);
+
+    return parts.map((part, i) => {
+        if (URL_REGEX.test(part)) {
+            URL_REGEX.lastIndex = 0; // reset after test
+            return (
+                <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                        "underline underline-offset-2 break-all transition-opacity hover:opacity-75",
+                        isMine ? "text-primary-foreground" : "text-primary"
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {part}
+                </a>
+            );
+        }
+        return part;
+    });
+}
+
 function getMimeIcon(mime: string) {
     if (mime.startsWith("image/")) return <ImageIcon size={18} className="shrink-0" />;
     if (mime === "application/pdf") return <FileText size={18} className="shrink-0 text-red-500" />;
@@ -636,9 +667,11 @@ export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole 
                                         : "bg-card border border-border/60 text-foreground rounded-tl-sm"
                                 )}
                             >
-                                {/* Text body */}
+                                {/* Text body — URLs are auto-linkified */}
                                 {msg.body && (
-                                    <p className="whitespace-pre-wrap break-words">{msg.body}</p>
+                                    <p className="whitespace-pre-wrap break-words">
+                                        {linkify(msg.body, isMine)}
+                                    </p>
                                 )}
 
                                 {/* Image attachment */}
