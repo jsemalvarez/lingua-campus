@@ -2,8 +2,8 @@
 
 import * as React from "react";
 
-// Tres estados posibles: sistema, claro o oscuro
-export type ThemeMode = "system" | "light" | "dark";
+// Dos estados posibles: claro o oscuro
+export type ThemeMode = "light" | "dark";
 
 interface ThemeContextValue {
     mode: ThemeMode;
@@ -13,7 +13,7 @@ interface ThemeContextValue {
 }
 
 export const ThemeContext = React.createContext<ThemeContextValue>({
-    mode: "system",
+    mode: "light",
     setMode: () => { },
     resolvedTheme: "light",
 });
@@ -25,14 +25,17 @@ export function useTheme() {
 const STORAGE_KEY = "lingua-theme";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [mode, setModeState] = React.useState<ThemeMode>("system");
+    const [mode, setModeState] = React.useState<ThemeMode>("light");
     const [resolvedTheme, setResolvedTheme] = React.useState<"light" | "dark">("light");
 
-    // Al montar, leer from localStorage (si hay)
+    // Al montar, leer de localStorage o detectar del sistema
     React.useEffect(() => {
         const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-        if (stored && ["system", "light", "dark"].includes(stored)) {
+        if (stored && ["light", "dark"].includes(stored)) {
             setModeState(stored);
+        } else {
+            const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            setModeState(systemTheme);
         }
     }, []);
 
@@ -54,17 +57,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         if (mode === "dark") {
             applyTheme(true);
-        } else if (mode === "light") {
-            applyTheme(false);
         } else {
-            // system: seguir prefers-color-scheme
-            const mq = window.matchMedia("(prefers-color-scheme: dark)");
-            applyTheme(mq.matches);
-
-            // Escuchar cambios del sistema
-            const handler = (e: MediaQueryListEvent) => applyTheme(e.matches);
-            mq.addEventListener("change", handler);
-            return () => mq.removeEventListener("change", handler);
+            applyTheme(false);
         }
     }, [mode]);
 

@@ -6,13 +6,12 @@ import { Monitor, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const OPTIONS: { value: ThemeMode; icon: React.ElementType; label: string }[] = [
-    { value: "system", icon: Monitor, label: "Sistema" },
     { value: "light", icon: Sun, label: "Claro" },
     { value: "dark", icon: Moon, label: "Oscuro" },
 ];
 
 interface ThemeToggleProps {
-    /** "icon" muestra solo el icono activo; "full" muestra las 3 opciones */
+    /** "icon" muestra solo el icono activo; "full" muestra las 2 opciones */
     variant?: "icon" | "full";
     className?: string;
 }
@@ -20,7 +19,7 @@ interface ThemeToggleProps {
 /**
  * Botón de tema con diseño mobile-first.
  * - variant="icon" → togglea entre claro/oscuro (compacto, para navbars)
- * - variant="full"  → muestra las 3 opciones en pill (para settings)
+ * - variant="full"  → muestra las 2 opciones en pill (para settings)
  */
 export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
     const { mode, setMode, resolvedTheme } = useTheme();
@@ -59,10 +58,9 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         );
     }
 
-    // Variant "icon": cicla sistema → claro → oscuro → sistema
-    const cycle: ThemeMode[] = ["system", "light", "dark"];
-    const nextMode = cycle[(cycle.indexOf(mode) + 1) % cycle.length];
-    const CurrentIcon = OPTIONS.find((o) => o.value === mode)?.icon ?? Monitor;
+    // Variant "icon": cicla claro ↔ oscuro
+    const nextMode: ThemeMode = mode === "light" ? "dark" : "light";
+    const CurrentIcon = OPTIONS.find((o) => o.value === mode)?.icon ?? Sun;
 
     return (
         <button
