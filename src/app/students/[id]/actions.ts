@@ -344,7 +344,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
 
     try {
         const normalizedEmail = email.toLowerCase().trim();
-        const defaultPassword = "Lingua2026";
+        const defaultPassword = "Modern2026";
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         // 1. Buscar si ya existe el usuario
