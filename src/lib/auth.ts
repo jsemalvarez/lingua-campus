@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
             async authorize(credentials) {
                 if (!credentials?.identifier || !credentials?.password) return null;
 
-                const identifier  = credentials.identifier.trim();
+                const identifier  = credentials.identifier.trim().toLowerCase();
                 const instituteId = credentials.instituteId?.trim() || undefined;
                 const isEmail     = identifier.includes("@");
 

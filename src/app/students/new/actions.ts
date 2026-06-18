@@ -31,7 +31,7 @@ export async function createStudentAction(formData: FormData) {
     try {
         // Datos Personales
         const name = formData.get("name") as string;
-        const email = formData.get("email") as string;
+        const email = formData.get("email")?.toString().toLowerCase().trim();
         const phone = formData.get("phone") as string;
         const birthDateStr = formData.get("birthDate") as string;
         const customPassword = formData.get("password") as string;
@@ -44,13 +44,13 @@ export async function createStudentAction(formData: FormData) {
         const g1Name = formData.get("g1Name") as string;
         const g1Relation = formData.get("g1Relation") as string;
         const g1Phone = formData.get("g1Phone") as string;
-        const g1Email = formData.get("g1Email") as string;
+        const g1Email = formData.get("g1Email")?.toString().toLowerCase().trim();
 
         // Tutor 2
         const g2Name = formData.get("g2Name") as string;
         const g2Relation = formData.get("g2Relation") as string;
         const g2Phone = formData.get("g2Phone") as string;
-        const g2Email = formData.get("g2Email") as string;
+        const g2Email = formData.get("g2Email")?.toString().toLowerCase().trim();
 
         if (!name) {
             return { success: false, error: "El nombre del estudiante es obligatorio" };
