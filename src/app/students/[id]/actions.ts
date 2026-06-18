@@ -87,10 +87,10 @@ export async function editStudentAction(formData: FormData) {
         };
 
         if (guardian1Email !== student.guardian1Email) {
-            await updateGuardianEmail(student.guardian1Email, guardian1Email);
+            await updateGuardianEmail(student.guardian1Email, guardian1Email ?? null);
         }
         if (guardian2Email !== student.guardian2Email) {
-            await updateGuardianEmail(student.guardian2Email, guardian2Email);
+            await updateGuardianEmail(student.guardian2Email, guardian2Email ?? null);
         }
 
         await prisma.student.update({
