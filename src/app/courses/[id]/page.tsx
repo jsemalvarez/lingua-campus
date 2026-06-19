@@ -25,14 +25,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
+        select: { id: true, role: true, roles: true, instituteId: true }
     });
 
     const sessionUser = session.user as any;
     const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
     const activeRole = await getActiveRole(userRoles);
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+    if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
     }
 
@@ -71,7 +71,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     }
 
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
-    const instituteTeachers = (user.role === "ADMIN" || user.role === "SECRETARY") ? await prisma.user.findMany({
+    const instituteTeachers = (activeRole === "ADMIN" || activeRole === "SECRETARY") ? await prisma.user.findMany({
         where: { 
             instituteId: user.instituteId, 
             OR: [
@@ -93,7 +93,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         orderBy: { name: 'asc' }
     });
 
-    const isTeacherOrAdmin = user.role === "ADMIN" || user.role === "SECRETARY" || user.id === course.teacher?.id;
+    const isTeacherOrAdmin = activeRole === "ADMIN" || activeRole === "SECRETARY" || user.id === course.teacher?.id;
     const isFinished = course.status === "FINISHED";
 
     // ── Practice metrics (only for teacher/admin view) ───────────────────────
@@ -152,7 +152,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                     <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                                         {course.name}
                                     </h1>
-                                    {(user.role === "ADMIN" || user.role === "SECRETARY") && !isFinished && (
+                                    {(activeRole === "ADMIN" || activeRole === "SECRETARY") && !isFinished && (
                                         <EditCourseModal
                                             courseId={course.id}
                                             currentName={course.name}
@@ -319,7 +319,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                                                     Activo
                                                                 </div>
                                                             )}
-                                                            {(user.role === "ADMIN" || user.role === "SECRETARY") && enrol.status === "ACTIVE" && !isFinished && (
+                                                            {(activeRole === "ADMIN" || activeRole === "SECRETARY") && enrol.status === "ACTIVE" && !isFinished && (
                                                                 <RemoveStudentButton
                                                                     enrollmentId={enrol.id}
                                                                     courseId={course.id}
@@ -348,12 +348,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                     )}
 
                     {/* ── SECCIÓN DE INFORMES ACADÉMICOS (Fase 1) ── */}
-                    <CourseReportsPanel courseId={course.id} userRole={user.role} />
+                    <CourseReportsPanel courseId={course.id} userRole={activeRole} />
 
                     {/* ── SECCIÓN DE GESTIÓN Y PELIGRO (ANCHO COMPLETO) ── */}
                     <div className="space-y-6 lg:space-y-8 mt-12 pt-8 border-t border-border/40">
                         {/* GESTIÓN DE CICLO (WARNING) */}
-                        {(user.role === "ADMIN" || user.role === "SECRETARY") && !isFinished && (
+                        {(activeRole === "ADMIN" || activeRole === "SECRETARY") && !isFinished && (
                             <Card className="border-amber-500/30 bg-amber-500/5 overflow-hidden">
                                 <div className="p-6 sm:p-8">
                                     <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 mb-6">
@@ -384,7 +384,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                         )}
 
                         {/* DANGER ZONE (ANCHO COMPLETO) */}
-                        {(user.role === "ADMIN" || user.role === "SECRETARY") && (
+                        {(activeRole === "ADMIN" || activeRole === "SECRETARY") && (
                             <Card className="border-red-500/30 bg-red-500/5 overflow-hidden">
                                 <div className="p-6 sm:p-8">
                                     <div className="flex items-center gap-3 text-red-600 mb-6">
