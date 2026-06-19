@@ -10,7 +10,8 @@ import {
    MapPin,
    GraduationCap,
    Sparkles,
-   Star
+   Star,
+   Quote
 } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -79,9 +80,15 @@ export function StudentDashboardV2View({
                   <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-6 leading-[1.1]">
                      ¿Qué tal tu día,<br /> {firstName}?
                   </h1>
-                  <p className="text-slate-300 text-lg font-medium leading-relaxed max-w-md">
-                     Has completado el <span className="text-white font-bold">{attendanceRate}%</span> de tus módulos de asistencia semanal. ¡Sigue con ese impulso!
-                  </p>
+                  <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm max-w-md flex gap-3 items-start group hover:bg-white/10 transition-all duration-300">
+                     <Quote className="text-primary h-5 w-5 shrink-0 mt-0.5 opacity-80 group-hover:scale-110 transition-transform" />
+                     <div className="space-y-1">
+                        <span className="text-[9px] font-black uppercase tracking-[0.15em] text-primary/80">Inspiración de hoy</span>
+                        <p className="text-slate-200 text-sm md:text-base font-semibold leading-relaxed italic">
+                           "{motivationQuote || "Preparando tu dosis de inspiración..."}"
+                        </p>
+                     </div>
+                  </div>
                </div>
 
                {/* Illustration Card */}
@@ -95,15 +102,6 @@ export function StudentDashboardV2View({
                   </div>
                </div>
             </div>
-         </div>
-
-         {/* MOTIVATION CAPSULE (2/3 Centered) */}
-         <div className="flex justify-center">
-            <Card className="w-full lg:w-2/3 p-8 rounded-[2rem] border-y-0 border-r-0 border-l-4 border-l-emerald-500 shadow-xl bg-gradient-to-br from-emerald-500/10 to-transparent flex flex-col items-center justify-center gap-4 group text-center">
-               <p className="text-lg md:text-xl font-black italic tracking-tight text-foreground/80 leading-snug max-w-2xl">
-                  {motivationQuote || "Preparando tu dosis de inspiración..."}
-               </p>
-            </Card>
          </div>
 
 

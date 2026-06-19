@@ -236,9 +236,9 @@ export async function softDeleteTeacher(teacherId: string) {
 }
 
 export async function processTeacherPayment(
-    teacherId: string, 
-    amount: number, 
-    description: string, 
+    teacherId: string,
+    amount: number,
+    description: string,
     date: string,
     bonus: number = 0,
     deduction: number = 0,
@@ -421,7 +421,7 @@ export async function processBulkPayrollAction(
         revalidatePath("/payments");
         revalidatePath("/payments/payroll");
         revalidatePath("/teachers");
-        
+
         return { success: true };
     } catch (e) {
         console.error("Error processing bulk payroll:", e);

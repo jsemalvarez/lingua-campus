@@ -41,7 +41,7 @@ export function CreateGuardianModal({ studentId, guardianName, relation, existin
       const res = await createGuardianAccount(studentId, guardianName, relation, email);
       if (res.success) {
         toast.success("¡Cuenta de tutor creada/vinculada con éxito!");
-        toast.info("La contraseña inicial es: Lingua2026");
+        toast.info("La contraseña inicial es: Modern2026");
         setOpen(false);
       } else {
         toast.error(res.error || "Error al crear la cuenta");
@@ -96,7 +96,7 @@ export function CreateGuardianModal({ studentId, guardianName, relation, existin
           <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <p className="text-[11px] text-primary/80 font-medium uppercase tracking-tight mb-1">Nota Importante</p>
             <p className="text-xs text-muted-foreground">
-              La contraseña provisional será <span className="font-mono font-bold text-primary">Lingua2026</span>.
+              La contraseña provisional será <span className="font-mono font-bold text-primary">Modern2026</span>.
               Si el usuario ya tiene cuenta de profesor o admin, se le añadirán los permisos de tutor a su misma cuenta.
             </p>
           </div>

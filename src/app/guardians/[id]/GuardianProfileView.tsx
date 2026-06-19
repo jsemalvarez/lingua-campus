@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditGuardianForm } from "./EditGuardianForm";
+import { GuardianDangerZone } from "./GuardianDangerZone";
 import { Mail, Phone, Edit3, UserCheck, GraduationCap } from "lucide-react";
 import Link from "next/link";
 
@@ -28,8 +29,9 @@ export function GuardianProfileView({ guardian }: { guardian: GuardianData }) {
 
     if (isEditing) {
         return (
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-3xl mx-auto space-y-6">
                 <EditGuardianForm guardian={guardian} onCancel={() => setIsEditing(false)} />
+                <GuardianDangerZone guardianId={guardian.id} />
             </div>
         );
     }

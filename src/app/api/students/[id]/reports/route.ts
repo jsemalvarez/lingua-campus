@@ -34,9 +34,10 @@ export async function GET(
         if (!isStudent && !isGuardian) {
             const user = await prisma.user.findUnique({
                 where: { email: sessionUser.email },
-                select: { role: true, instituteId: true }
+                select: { role: true, instituteId: true, roles: true }
             });
-            isStaff = user?.role === "ADMIN" || user?.role === "SECRETARY" || user?.role === "TEACHER";
+            isStaff = ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"].includes(user?.role || "") ||
+                (user?.roles || []).some((r: string) => ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"].includes(r));
         }
 
         if (!isStudent && !isGuardian && !isStaff) {

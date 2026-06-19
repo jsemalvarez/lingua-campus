@@ -8,7 +8,6 @@ import { ProfileForm } from "./ProfileForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { Card } from "@/components/ui/Card";
 import { getActiveRole } from "@/lib/roles";
-import { StudentQRCard } from "../students/[id]/components/StudentQRCard";
 
 export default async function ProfilePage() {
     const session = await getServerSession(authOptions);
@@ -76,13 +75,6 @@ export default async function ProfilePage() {
                     </p>
                 </header>
 
-                {role === "STUDENT" && (
-                    <div className="mb-8 flex justify-center">
-                        <div className="w-full max-w-sm">
-                            <StudentQRCard studentId={userData.id} studentName={userData.name} />
-                        </div>
-                    </div>
-                )}
 
                 <Card className="p-5 sm:p-8 border-border/40 shadow-sm animate-in">
                     <ProfileForm initialData={userData} />

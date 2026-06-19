@@ -16,7 +16,7 @@ export async function PATCH(
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true }
+            select: { id: true, instituteId: true, role: true, roles: true }
         });
 
         if (!user || !user.instituteId) {
@@ -33,11 +33,8 @@ export async function PATCH(
         }
 
         // Both ADMIN/SECRETARY/SUPERADMIN AND the teacher of the course can publish reports (user request)
-        const isAuthorized = 
-            user.role === "ADMIN" || 
-            user.role === "SECRETARY" || 
-            user.role === "SUPERADMIN" || 
-            user.id === course.teacherId;
+        const hasAccessRoles = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+        const isAuthorized = hasAccessRoles || user.id === course.teacherId;
 
         if (!isAuthorized) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });

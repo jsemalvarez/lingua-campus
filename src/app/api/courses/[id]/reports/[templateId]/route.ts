@@ -16,7 +16,7 @@ export async function DELETE(
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true }
+            select: { id: true, instituteId: true, role: true, roles: true }
         });
 
         if (!user || !user.instituteId) {
@@ -24,10 +24,7 @@ export async function DELETE(
         }
 
         // Only ADMIN, SECRETARY or SUPERADMIN can unlink templates from course
-        const isAuthorizedDelete = 
-            user.role === "ADMIN" || 
-            user.role === "SECRETARY" || 
-            user.role === "SUPERADMIN";
+        const isAuthorizedDelete = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
 
         if (!isAuthorizedDelete) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });

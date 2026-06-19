@@ -13,6 +13,8 @@ import Image from "next/image";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MessagesBell } from "@/components/layout/MessagesBell";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
+import { StudyBackground } from "@/components/layout/StudyBackground";
+import { StudentQRModal } from "@/components/layout/StudentQRModal";
 
 /**
  * Premium dashboard navigation bar.
@@ -60,6 +62,7 @@ export function Navbar({
         { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT", "GUARDIAN", "SECRETARY", "SUPERADMIN"] },
         { href: "/academics", label: "Progreso", icon: GraduationCap, roles: ["STUDENT"] },
         { href: "/practice", label: "Práctica", icon: Brain, roles: ["STUDENT"] },
+        { href: "__qr__", label: "Mi QR", icon: Brain, roles: ["STUDENT"] }, // icon overridden in render
         { href: "/administration", label: "Administración", icon: DollarSign, roles: ["STUDENT"] },
         { href: "/teachers", label: "Personal", icon: GraduationCap, roles: ["ADMIN", "SUPERADMIN"] },
         { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"] },
@@ -104,6 +107,7 @@ export function Navbar({
 
     return (
         <>
+            <StudyBackground />
             {/* TOP NAVBAR */}
             <nav className={cn("sticky top-0 z-50 w-full glass border-b border-border/50", className)}>
                 <div className="container mx-auto flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
@@ -203,6 +207,17 @@ export function Navbar({
                         <div className="flex items-center justify-around h-14 px-2 md:flex-col md:justify-start md:h-full md:w-full md:py-4 md:gap-2 overflow-y-auto custom-scrollbar">
                             {mobileNavLinks.map(({ href, label, icon: Icon }) => {
                                 const isActive = pathname === href || (pathname.startsWith(href) && href !== "/dashboard");
+                                if (href === "__qr__" && sessionUser?.id) {
+                                    return (
+                                        <StudentQRModal
+                                            key="__qr__"
+                                            studentId={sessionUser.id}
+                                            studentName={sessionUser.name ?? ""}
+                                            variant="nav"
+                                            isActive={false}
+                                        />
+                                    );
+                                }
                                 if (href === "/messages" && sessionUser?.id) {
                                     return (
                                         <MessagesBell

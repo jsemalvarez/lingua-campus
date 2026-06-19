@@ -21,7 +21,7 @@ export async function editStudentAction(formData: FormData) {
 
     const studentId = formData.get("studentId") as string;
     const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
+    const email = formData.get("email")?.toString().toLowerCase().trim();
     const phone = formData.get("phone") as string;
     const birthDateStr = formData.get("birthDate") as string;
     const dni = formData.get("dni") as string;
@@ -32,12 +32,12 @@ export async function editStudentAction(formData: FormData) {
     const guardian1Name = formData.get("guardian1Name") as string;
     const guardian1Relation = formData.get("guardian1Relation") as string;
     const guardian1Phone = formData.get("guardian1Phone") as string;
-    const guardian1Email = formData.get("guardian1Email") as string;
+    const guardian1Email = formData.get("guardian1Email")?.toString().toLowerCase().trim();
 
     const guardian2Name = formData.get("guardian2Name") as string;
     const guardian2Relation = formData.get("guardian2Relation") as string;
     const guardian2Phone = formData.get("guardian2Phone") as string;
-    const guardian2Email = formData.get("guardian2Email") as string;
+    const guardian2Email = formData.get("guardian2Email")?.toString().toLowerCase().trim();
 
     if (!studentId || !name) {
         return { success: false, error: "Faltan datos obligatorios (nombre)" };
@@ -87,10 +87,10 @@ export async function editStudentAction(formData: FormData) {
         };
 
         if (guardian1Email !== student.guardian1Email) {
-            await updateGuardianEmail(student.guardian1Email, guardian1Email);
+            await updateGuardianEmail(student.guardian1Email, guardian1Email ?? null);
         }
         if (guardian2Email !== student.guardian2Email) {
-            await updateGuardianEmail(student.guardian2Email, guardian2Email);
+            await updateGuardianEmail(student.guardian2Email, guardian2Email ?? null);
         }
 
         await prisma.student.update({
@@ -344,7 +344,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
 
     try {
         const normalizedEmail = email.toLowerCase().trim();
-        const defaultPassword = "Lingua2026";
+        const defaultPassword = "Modern2026";
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         // 1. Buscar si ya existe el usuario
