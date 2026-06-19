@@ -12,10 +12,12 @@ export async function GET(req: NextRequest) {
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { instituteId: true, role: true }
+            select: { instituteId: true, role: true, roles: true }
         });
 
-        if (!user || !(["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user.role)) || !user.instituteId) {
+        const hasAccess = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+
+        if (!user || !hasAccess || !user.instituteId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -45,10 +47,12 @@ export async function POST(req: NextRequest) {
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { instituteId: true, role: true }
+            select: { instituteId: true, role: true, roles: true }
         });
 
-        if (!user || !(["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user.role)) || !user.instituteId) {
+        const hasAccess = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+
+        if (!user || !hasAccess || !user.instituteId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

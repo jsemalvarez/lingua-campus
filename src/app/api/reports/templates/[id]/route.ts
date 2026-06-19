@@ -16,10 +16,12 @@ export async function PUT(
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { instituteId: true, role: true }
+            select: { instituteId: true, role: true, roles: true }
         });
 
-        if (!user || !(["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user.role)) || !user.instituteId) {
+        const hasAccess = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+
+        if (!user || !hasAccess || !user.instituteId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -143,10 +145,12 @@ export async function DELETE(
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { instituteId: true, role: true }
+            select: { instituteId: true, role: true, roles: true }
         });
 
-        if (!user || !(["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user.role)) || !user.instituteId) {
+        const hasAccess = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+
+        if (!user || !hasAccess || !user.instituteId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

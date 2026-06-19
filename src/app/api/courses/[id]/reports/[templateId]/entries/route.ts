@@ -16,7 +16,7 @@ export async function GET(
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true }
+            select: { id: true, instituteId: true, role: true, roles: true }
         });
 
         if (!user || !user.instituteId) {
@@ -32,11 +32,8 @@ export async function GET(
             return NextResponse.json({ error: "Course not found" }, { status: 404 });
         }
 
-        const isAuthorized = 
-            user.role === "ADMIN" || 
-            user.role === "SECRETARY" || 
-            user.role === "SUPERADMIN" || 
-            user.id === course.teacherId;
+        const hasAccessRoles = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+        const isAuthorized = hasAccessRoles || user.id === course.teacherId;
 
         if (!isAuthorized) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -106,7 +103,7 @@ export async function POST(
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true }
+            select: { id: true, instituteId: true, role: true, roles: true }
         });
 
         if (!user || !user.instituteId) {
@@ -122,11 +119,8 @@ export async function POST(
             return NextResponse.json({ error: "Course not found" }, { status: 404 });
         }
 
-        const isAuthorized = 
-            user.role === "ADMIN" || 
-            user.role === "SECRETARY" || 
-            user.role === "SUPERADMIN" || 
-            user.id === course.teacherId;
+        const hasAccessRolesPost = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
+        const isAuthorized = hasAccessRolesPost || user.id === course.teacherId;
 
         if (!isAuthorized) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
