@@ -439,7 +439,15 @@ export default function InstituteLanding({ institute }: { institute: Institute }
               © {new Date().getFullYear()} {institute.name}. Todos los derechos reservados.
             </p>
             <p className="text-slate-400 text-xs flex justify-center items-center gap-1">
-              Plataforma impulsada por <span className="font-bold text-slate-600 dark:text-slate-300">Lingua Campus</span>
+              Plataforma impulsada por{" "}
+              <a 
+                href="https://www.lingua-campus.com.ar" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="font-bold text-slate-600 dark:text-slate-300 hover:underline"
+              >
+                Lingua Campus
+              </a>
             </p>
           </div>
         </div>
