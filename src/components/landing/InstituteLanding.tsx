@@ -309,7 +309,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
                     <MonitorSmartphone className="w-8 h-8 flex-shrink-0" style={{ color: secondaryColor }} />
                     <div>
                       <h4 className="text-xl font-black mb-1 text-slate-900 dark:text-white">Campus Virtual Exclusivo</h4>
-                      <p className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">Nuestra App PWA integrada para alumnos. Notas, asistencia y autogestión 24/7 en tu celular.</p>
+                      <p className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">Nuestra App integrada para alumnos. Notas, asistencia y autogestión 24/7 en tu celular.</p>
                     </div>
                   </div>
                 </div>
@@ -440,10 +440,10 @@ export default function InstituteLanding({ institute }: { institute: Institute }
             </p>
             <p className="text-slate-400 text-xs flex justify-center items-center gap-1">
               Plataforma impulsada por{" "}
-              <a 
-                href="https://www.lingua-campus.com.ar" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href="https://www.lingua-campus.com.ar"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="font-bold text-slate-600 dark:text-slate-300 hover:underline"
               >
                 Lingua Campus
