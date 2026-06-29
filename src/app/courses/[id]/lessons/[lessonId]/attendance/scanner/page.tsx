@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { QRKioskClient } from "./QRKioskClient";
+import { getActiveRole } from "@/lib/roles";
 
 export default async function QRScannerKioskPage({
     params
@@ -17,7 +18,11 @@ export default async function QRScannerKioskPage({
         select: { id: true, role: true, instituteId: true }
     });
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+    const sessionUser = session.user as any;
+    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const activeRole = await getActiveRole(userRoles);
+
+    if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
     }
 
@@ -30,6 +35,11 @@ export default async function QRScannerKioskPage({
 
     if (!course || course.instituteId !== user.instituteId) {
         redirect("/courses");
+    }
+
+    const isAuthorized = activeRole === "ADMIN" || activeRole === "SECRETARY" || user.id === course.teacher?.id;
+    if (!isAuthorized) {
+        redirect(`/courses/${courseId}`);
     }
 
     const lesson = await prisma.lesson.findUnique({

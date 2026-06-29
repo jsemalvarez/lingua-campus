@@ -25,7 +25,7 @@ export default async function ReportGradeSheetPage({
     const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
     const activeRole = await getActiveRole(userRoles);
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+    if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
     }
 
@@ -43,8 +43,8 @@ export default async function ReportGradeSheetPage({
 
     // Verify authorized user (admin, secretary, or the teacher assigned to the course)
     const isAuthorized = 
-        user.role === "ADMIN" || 
-        user.role === "SECRETARY" || 
+        activeRole === "ADMIN" || 
+        activeRole === "SECRETARY" || 
         user.id === course.teacherId;
 
     if (!isAuthorized) {

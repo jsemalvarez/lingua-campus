@@ -197,7 +197,7 @@ export default function LandingPage() {
           <div className="relative lg:absolute right-0 top-0 bottom-0 w-full lg:w-2/3 h-[240px] sm:h-[360px] lg:h-full z-0 select-none pointer-events-none shrink-0">
             <div className="relative w-full h-full">
               <Image
-                src="/hero_background.jpg"
+                src="/hero_background.png"
                 alt="Lingua Campus AI Assistant"
                 fill
                 priority

@@ -27,7 +27,7 @@ export default async function AttendancePage({
     const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
     const activeRole = await getActiveRole(userRoles);
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+    if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
         redirect("/dashboard");
     }
 
@@ -50,7 +50,7 @@ export default async function AttendancePage({
         redirect("/courses");
     }
 
-    const isAuthorized = user.role === "ADMIN" || user.role === "SECRETARY" || user.id === course.teacher?.id;
+    const isAuthorized = activeRole === "ADMIN" || activeRole === "SECRETARY" || user.id === course.teacher?.id;
     if (!isAuthorized) {
         redirect(`/courses/${courseId}`);
     }
