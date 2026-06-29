@@ -28,7 +28,7 @@ import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user || !session.user.email) {
+    if (!session || !session.user) {
         redirect("/login");
     }
 
@@ -337,7 +337,7 @@ export default async function DashboardPage() {
 
     // Flujo normal para Admin/Teacher
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
+        where: { email: session.user.email as string },
         select: { id: true, name: true, role: true, instituteId: true, institute: { select: { name: true } } }
     });
 
