@@ -28,7 +28,7 @@ import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user || !session.user.email) {
+    if (!session || !session.user) {
         redirect("/login");
     }
 
