@@ -337,7 +337,7 @@ export default async function DashboardPage() {
 
     // Flujo normal para Admin/Teacher
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
+        where: { email: session.user.email as string },
         select: { id: true, name: true, role: true, instituteId: true, institute: { select: { name: true } } }
     });
 
