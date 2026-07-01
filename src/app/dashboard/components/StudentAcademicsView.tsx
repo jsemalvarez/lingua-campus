@@ -433,7 +433,11 @@ export function StudentAcademicsView({
       </div>
 
       {/* 5. BOLETÍN INSTITUCIONAL */}
-      <StudentReportViewer studentName={student.name} reports={reports || []} />
+      <StudentReportViewer 
+        studentName={student.name} 
+        reports={reports || []} 
+        instituteName={student.institute?.name} 
+      />
 
     </main>
   );

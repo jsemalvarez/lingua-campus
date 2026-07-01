@@ -57,7 +57,7 @@ export default async function StudentAcademicsPage() {
                         }
                     },
                     entries: true,
-                    course: { select: { id: true, name: true, color: true, teacher: { select: { name: true } } } }
+                    course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } }
                 },
                 orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
             }
