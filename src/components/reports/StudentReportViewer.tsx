@@ -20,9 +20,10 @@ import autoTable from "jspdf-autotable";
 interface StudentReportViewerProps {
   studentName: string;
   reports: any[];
+  instituteName?: string;
 }
 
-export function StudentReportViewer({ studentName, reports }: StudentReportViewerProps) {
+export function StudentReportViewer({ studentName, reports, instituteName }: StudentReportViewerProps) {
   // Group reports by course
   const reportsByCourse = useMemo(() => {
     const groups: { [courseId: string]: any[] } = {};
@@ -99,18 +100,19 @@ export function StudentReportViewer({ studentName, reports }: StudentReportViewe
     if (!displayedReport) return;
 
     const doc = new jsPDF();
-    const courseName = displayedReport.course?.name || "Curso";
+    const courseName = displayedReport.course?.level || displayedReport.course?.name || "Curso";
     const periodLabel = periodLabels[displayedReport.periodIndex] || `${displayedReport.periodIndex + 1}° Período`;
     const reportYear = displayedReport.year;
 
     // Header Design
-    doc.setFillColor(30, 41, 59); // Slate-800
+    doc.setFillColor(56, 179, 151); // Client primary color #38b397
     doc.rect(0, 0, 210, 40, "F");
 
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.text("LINGUA CAMPUS", 14, 20);
+    const displayName = (instituteName || "LINGUA CAMPUS").toUpperCase();
+    doc.text(displayName, 14, 20);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Reporte de Rendimiento Académico Oficial", 14, 28);
@@ -164,7 +166,7 @@ export function StudentReportViewer({ studentName, reports }: StudentReportViewe
       startY: 95,
       head: [["Criterio de Evaluación", "Calificación / Estado"]],
       body: tableRows,
-      headStyles: { fillColor: [51, 65, 85], fontStyle: "bold" },
+      headStyles: { fillColor: [56, 179, 151], fontStyle: "bold" },
       theme: "striped",
       styles: { fontSize: 10, cellPadding: 5 },
     });
@@ -259,7 +261,7 @@ export function StudentReportViewer({ studentName, reports }: StudentReportViewe
                   className="w-2.5 h-2.5 rounded-full shrink-0" 
                   style={{ backgroundColor: courseColor }}
                 />
-                {firstReport?.course?.name}
+                {firstReport?.course?.level || firstReport?.course?.name}
               </button>
             );
           })}

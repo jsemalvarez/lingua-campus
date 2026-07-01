@@ -83,7 +83,7 @@ export default async function GuardianAcademicsPage() {
                                 }
                             },
                             entries: true,
-                            course: { select: { id: true, name: true, color: true, teacher: { select: { name: true } } } }
+                            course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } }
                         },
                         orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
                     }
