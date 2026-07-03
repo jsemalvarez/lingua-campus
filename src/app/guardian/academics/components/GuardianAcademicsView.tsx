@@ -95,7 +95,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                                 <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full mb-3 inline-block">
                                     Curso Activo
                                 </span>
-                                <h2 className="text-3xl font-black mb-1">{activeCourse?.name}</h2>
+                                <h2 className="text-3xl font-black mb-1">{activeCourse?.level || activeCourse?.name}</h2>
                                 <p className="text-muted-foreground font-medium flex items-center gap-2">
                                     <BookOpen size={16} /> Nivel: {activeCourse?.level || "General"}
                                 </p>
