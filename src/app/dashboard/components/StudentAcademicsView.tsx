@@ -183,7 +183,7 @@ export function StudentAcademicsView({
                   {mainCourse?.teacher?.name || "Docente no asignado"}
                 </h3>
                 <p className="text-[13px] font-medium text-primary/60">
-                  {mainCourse?.name || "Sin curso activo"}
+                  {mainCourse?.level || mainCourse?.name || "Sin curso activo"}
                 </p>
               </div>
             </div>
