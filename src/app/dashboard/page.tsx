@@ -55,6 +55,7 @@ export default async function DashboardPage() {
                                     select: {
                                         id: true,
                                         name: true,
+                                        level: true,
                                         color: true,
                                         lessons: {
                                             where: { date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
@@ -70,14 +71,14 @@ export default async function DashboardPage() {
                             orderBy: { lesson: { date: 'desc' } },
                             take: 10,
                             include: {
-                                lesson: { select: { date: true, topic: true, course: { select: { name: true, color: true } } } }
+                                lesson: { select: { date: true, topic: true, course: { select: { name: true, level: true, color: true } } } }
                             }
                         },
                         grades: {
                             orderBy: { createdAt: 'desc' },
                             take: 5,
                             include: {
-                                lesson: { select: { topic: true, course: { select: { color: true, name: true } } } }
+                                lesson: { select: { topic: true, course: { select: { color: true, name: true, level: true } } } }
                             }
                         },
                         fees: {
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
                 e.course.lessons.map(lesson => ({
                     ...lesson,
                     color: e.course.color,
-                    course: { name: e.course.name },
+                    course: { name: e.course.level || e.course.name },
                     studentName: l.student.name
                 }))
             )
@@ -133,7 +134,7 @@ export default async function DashboardPage() {
                 notes: att.notes,
                 date: att.lesson.date,
                 topic: att.lesson.topic,
-                courseName: att.lesson.course.name,
+                courseName: att.lesson.course.level || att.lesson.course.name,
                 courseColor: att.lesson.course.color,
                 studentName: l.student.name
             }))
@@ -148,7 +149,7 @@ export default async function DashboardPage() {
                 feedback: g.feedback,
                 createdAt: g.createdAt,
                 topic: g.lesson.topic,
-                courseName: g.lesson.course.name,
+                courseName: g.lesson.course.level || g.lesson.course.name,
                 courseColor: g.lesson.course.color,
                 studentName: l.student.name
             }))
@@ -198,7 +199,7 @@ export default async function DashboardPage() {
                     include: {
                         lesson: {
                             include: {
-                                course: { select: { name: true, color: true } }
+                                course: { select: { name: true, level: true, color: true } }
                             }
                         }
                     }
@@ -207,7 +208,7 @@ export default async function DashboardPage() {
                     orderBy: { createdAt: 'desc' },
                     take: 10,
                     include: {
-                        lesson: { select: { topic: true, course: { select: { name: true, color: true } } } }
+                        lesson: { select: { topic: true, course: { select: { name: true, level: true, color: true } } } }
                     }
                 }
             }
@@ -382,7 +383,7 @@ export default async function DashboardPage() {
             orderBy: { date: 'asc' },
             take: 10,
             include: {
-                course: { select: { name: true, color: true } },
+                course: { select: { name: true, level: true, color: true } },
                 schedule: { select: { startTime: true, endTime: true, room: true } }
             }
         });
@@ -498,7 +499,7 @@ export default async function DashboardPage() {
                                     >
                                         <div className="flex flex-col gap-0.5">
                                             <Link href={`/courses/${lesson.courseId}`} className="hover:underline decoration-primary/30 underline-offset-2 transition-all">
-                                                <span className="font-bold text-sm text-foreground/90">{lesson.course.name}</span>
+                                                <span className="font-bold text-sm text-foreground/90">{lesson.course.level || lesson.course.name}</span>
                                             </Link>
                                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                 <span className="flex items-center gap-1"><Clock size={12} /> {lesson.schedule?.startTime || '--:--'}</span>
@@ -577,7 +578,7 @@ export default async function DashboardPage() {
             student: { status: 'ACTIVE' }
         },
         include: {
-            course: { select: { name: true, color: true } }
+            course: { select: { name: true, level: true, color: true } }
         }
     });
 
@@ -604,7 +605,7 @@ export default async function DashboardPage() {
         orderBy: { date: 'asc' },
         take: 3,
         include: {
-            course: { select: { name: true, teacher: { select: { name: true } } } }
+            course: { select: { name: true, level: true, teacher: { select: { name: true } } } }
         }
     });
 
@@ -630,7 +631,7 @@ export default async function DashboardPage() {
     // Grouping for chart
     const courseInfo: Record<string, { count: number; color: string }> = {};
     activeEnrollments.forEach(enrollment => {
-        const courseName = enrollment.course.name;
+        const courseName = enrollment.course.level || enrollment.course.name;
         if (!courseInfo[courseName]) {
             courseInfo[courseName] = { count: 0, color: enrollment.course.color || "#3b82f6" };
         }

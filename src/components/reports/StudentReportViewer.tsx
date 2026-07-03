@@ -156,7 +156,7 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
       if (cat.scaleType === "CONCEPTUAL" || cat.scaleType === "LETTER") {
         // Only display the value, not the label, to maintain consistency with custom options
       } else if (cat.scaleType === "NUMERIC") {
-        scaleDesc = ` [Escala: ${cat.scaleMin ?? 1} - ${cat.scaleMax ?? 10}]`;
+        // Scale description omitted per request
       }
 
       return [cat.name, val + scaleDesc];
@@ -358,10 +358,7 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
                           }}
                         />
                       </div>
-                      <div className="flex justify-between text-[9px] font-bold text-muted-foreground/60">
-                        <span>Min: {minVal}</span>
-                        <span>Max: {maxVal}</span>
-                      </div>
+
                     </div>
                   )}
 

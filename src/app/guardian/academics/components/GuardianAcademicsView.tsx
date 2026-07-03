@@ -258,7 +258,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
                                             <div className="min-w-0 pr-4">
                                                 <p className="font-black text-sm truncate">{grade.lesson.topic}</p>
                                                 <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mt-1">
-                                                    {dayjs(grade.createdAt).format("DD/MM")} • {grade.lesson.course.name}
+                                                    {dayjs(grade.createdAt).format("DD/MM")} • {grade.lesson.course.level || grade.lesson.course.name}
                                                 </p>
                                             </div>
                                             <div className="shrink-0 text-right">

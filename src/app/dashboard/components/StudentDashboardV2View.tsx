@@ -127,7 +127,7 @@ export function StudentDashboardV2View({
                   {mainCourse ? (
                      <div className="space-y-6">
                         <h2 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase leading-none max-w-xl">
-                           {mainCourse.name}
+                           {mainCourse.level || mainCourse.name}
                         </h2>
 
                         {/* Mastery Progress Bar */}
