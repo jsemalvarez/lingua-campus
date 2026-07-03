@@ -69,6 +69,7 @@ export async function PlaygroundChartServer({ instituteId }: PlaygroundChartServ
                         select: {
                             id: true,
                             name: true,
+                            level: true,
                             color: true,
                         }
                     }
