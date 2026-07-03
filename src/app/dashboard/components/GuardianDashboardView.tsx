@@ -40,17 +40,17 @@ export function GuardianDashboardView({
     const firstName = guardianName.split(" ")[0];
 
     // Lógica del Saludo Narrativo
-    let narrativeGreeting = "El recorrido académico de tus alumnos avanza estupendamente.";
+    let narrativeGreeting = "Con gusto te presentamos el desempeño académico de los estudiantes.";
     if (students.length === 1) {
         const s = students[0];
-        const courseName = s.enrollments?.[0]?.course?.name || "sus estudios";
-        narrativeGreeting = `El recorrido académico de ${s.name.split(" ")[0]} avanza estupendamente. Actualmente de cursando ${courseName}.`;
+        const courseName = s.enrollments?.[0]?.course?.level || s.enrollments?.[0]?.course?.name || "sus estudios";
+        narrativeGreeting = `Con gusto te presentamos el desempeño académico de ${s.name.split(" ")[0]} en el curso ${courseName}.`;
     } else if (students.length === 2) {
-        narrativeGreeting = `Los recorridos académicos de ${students[0].name.split(" ")[0]} y ${students[1].name.split(" ")[0]} avanzan estupendamente bien.`;
+        narrativeGreeting = `Con gusto te presentamos el desempeño académico de ${students[0].name.split(" ")[0]} y ${students[1].name.split(" ")[0]}.`;
     } else if (students.length > 2) {
         const names = students.slice(0, -1).map(s => s.name.split(" ")[0]).join(", ");
         const lastName = students[students.length - 1].name.split(" ")[0];
-        narrativeGreeting = `Los recorridos académicos de ${names} y ${lastName} avanzan estupendamente bien.`;
+        narrativeGreeting = `Con gusto te presentamos el desempeño académico de ${names} y ${lastName}.`;
     }
 
     return (
@@ -60,7 +60,7 @@ export function GuardianDashboardView({
                 {/* Header Section (Narrativo) */}
                 <div className="flex flex-col gap-2 max-w-4xl border-b border-border/50 pb-6">
                     <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-                        Bienvenido de nuevo, {firstName}.
+                        Hola {firstName}, qué bueno volver a verte.
                     </h1>
                     <p className="text-lg text-muted-foreground/90 font-medium">
                         {narrativeGreeting}
