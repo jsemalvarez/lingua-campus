@@ -23,7 +23,7 @@ export function StudentAgenda({ enrollments }: StudentAgendaProps) {
         .filter((s: any) => s.dayOfWeek === i)
         .map((s: any) => ({
           ...s,
-          courseName: enrol.course.name,
+          courseName: enrol.course.level || enrol.course.name,
           teacherName: enrol.course.teacher?.name,
           teacherAvatar: enrol.course.teacher?.avatarUrl,
           color: enrol.course.color || "var(--c-primary)"

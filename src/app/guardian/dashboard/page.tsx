@@ -90,7 +90,7 @@ export default async function GuardianDashboard() {
                     <div className="flex flex-wrap gap-1 mt-2">
                         {student.enrollments.map(e => (
                              <span key={e.id} className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-medium">
-                                 {e.course.name}
+                                 {e.course.level || e.course.name}
                              </span>
                         ))}
                     </div>

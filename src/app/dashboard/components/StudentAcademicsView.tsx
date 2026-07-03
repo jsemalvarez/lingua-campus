@@ -317,7 +317,7 @@ export function StudentAcademicsView({
                       att.status === 'PRESENT' || att.status === 'LATE' ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"
                     )} />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-black truncate">{att.lesson.course.name}</p>
+                      <p className="text-[11px] font-black truncate">{att.lesson.course.level || att.lesson.course.name}</p>
                       <p className="text-[10px] text-muted-foreground font-bold">{dayjs(att.lesson.date).format('DD MMMM, YYYY')}</p>
                     </div>
                   </div>

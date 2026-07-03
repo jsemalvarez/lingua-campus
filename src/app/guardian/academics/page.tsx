@@ -63,13 +63,13 @@ export default async function GuardianAcademicsPage() {
                         orderBy: { lesson: { date: 'desc' } },
                         take: 30, // Mostramos un historial un poco más largo
                         include: {
-                            lesson: { select: { date: true, topic: true, course: { select: { name: true, color: true } } } }
+                            lesson: { select: { date: true, topic: true, course: { select: { name: true, level: true, color: true } } } }
                         }
                     },
                     grades: {
                         orderBy: { createdAt: 'desc' },
                         include: {
-                            lesson: { select: { topic: true, course: { select: { color: true, name: true, teacher: { select: { name: true } } } } } }
+                            lesson: { select: { topic: true, course: { select: { color: true, name: true, level: true, teacher: { select: { name: true } } } } } }
                         }
                     },
                     studentReports: {

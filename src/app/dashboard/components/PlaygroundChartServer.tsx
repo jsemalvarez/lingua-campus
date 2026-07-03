@@ -82,7 +82,7 @@ export async function PlaygroundChartServer({ instituteId }: PlaygroundChartServ
     courseAccuracyRaw.forEach(s => {
         const course = s.lesson.course;
         if (!courseMap[course.id]) {
-            courseMap[course.id] = { name: course.name, color: course.color, total: 0, count: 0 };
+            courseMap[course.id] = { name: course.level || course.name, color: course.color, total: 0, count: 0 };
         }
         courseMap[course.id].total += s.accuracyPct;
         courseMap[course.id].count += 1;
