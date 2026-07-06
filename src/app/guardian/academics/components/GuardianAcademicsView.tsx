@@ -278,6 +278,7 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
 
             {/* ROW 4: Boletín Institucional */}
             <StudentReportViewer 
+                key={selectedStudentId}
                 studentName={currentStudent.name} 
                 reports={currentStudent.studentReports || []} 
                 instituteName={currentStudent.institute?.name} 
