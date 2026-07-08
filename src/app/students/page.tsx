@@ -10,6 +10,7 @@ import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, C
 import dayjs from "dayjs";
 import { StudentListActions } from "./components/StudentListActions";
 import { getActiveRole } from "@/lib/roles";
+import { StudentSearchBar } from "./components/StudentSearchBar";
 
 interface PageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -216,31 +217,9 @@ export default async function StudentsPage(props: PageProps) {
 
                 {/* Filters & Search */}
                 <Card className="p-4 mb-6 shadow-sm border-border/40">
-                    <form className="flex flex-col md:flex-row gap-4" action="/students" method="GET">
-                        <input type="hidden" name="tab" value={tabParam} />
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                            <input
-                                type="text"
-                                name="q"
-                                defaultValue={query || ""}
-                                placeholder="Buscar por nombre, email o teléfono..."
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all text-sm font-medium"
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <Button type="submit" variant="secondary" className="border-border/60">
-                                Buscar
-                            </Button>
-                            {query && (
-                                <Link href={`/students${tabParam !== 'active' ? `?tab=${tabParam}` : ''}`}>
-                                    <Button variant="outline" className="border-border/60 text-muted-foreground">
-                                        Limpiar
-                                    </Button>
-                                </Link>
-                            )}
-                        </div>
-                    </form>
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <StudentSearchBar initialQuery={query || ""} tabParam={tabParam} />
+                    </div>
                 </Card>
 
                 {/* Students Table/List */}
