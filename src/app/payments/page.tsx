@@ -47,6 +47,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const ITEMS_PER_PAGE = 20;
     const params = await searchParams;
     const currentPage = Number(params?.page) || 1;
+    const searchQuery = typeof params?.search === 'string' ? params.search : "";
 
     // 1. Conseguir Lista de estudiantes para el Selector del Cobro
     const students = await prisma.student.findMany({
@@ -333,12 +334,36 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         };
     }).filter(t => t.amount > 0);
 
-    const totalTransactions = allTransactionsRaw.length;
+    const normalizeString = (str: string) => {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    };
+
+    let filteredTransactions = allTransactionsRaw;
+    if (searchQuery) {
+        const query = normalizeString(searchQuery);
+        filteredTransactions = allTransactionsRaw.filter((tx) => {
+            const title = normalizeString(tx.title || "");
+            const note = normalizeString(tx.note || "");
+            const ticket = normalizeString(tx.ticketNumber || "");
+            const operator = normalizeString(tx.operatorName || "");
+            const recipient = normalizeString(tx.recipientName || "");
+            
+            return (
+                title.includes(query) ||
+                note.includes(query) ||
+                ticket.includes(query) ||
+                operator.includes(query) ||
+                recipient.includes(query)
+            );
+        });
+    }
+
+    const totalTransactions = filteredTransactions.length;
     const totalPages = Math.ceil(totalTransactions / ITEMS_PER_PAGE);
     
     // Slice para la página actual
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const allTransactions = allTransactionsRaw.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const allTransactions = filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -537,6 +562,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                         transactions={allTransactions} 
                         totalPages={totalPages}
                         currentPage={currentPage}
+                        searchQuery={searchQuery}
                     />
                 </div>
             </main>
