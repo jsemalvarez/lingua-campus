@@ -18,6 +18,7 @@ import { DebtChart } from "./components/DebtChart";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Users, BookOpen } from "lucide-react";
+import { MonthYearSelector } from "./components/MonthYearSelector";
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const session = await getServerSession(authOptions);
@@ -47,6 +48,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const ITEMS_PER_PAGE = 20;
     const params = await searchParams;
     const currentPage = Number(params?.page) || 1;
+    const searchQuery = typeof params?.search === 'string' ? params.search : "";
 
     // 1. Conseguir Lista de estudiantes para el Selector del Cobro
     const students = await prisma.student.findMany({
@@ -82,9 +84,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     // Mapeo rápido de operador
     const userMap = Object.fromEntries(allUsers.map(u => [u.id, u.name]));
 
-    // 4. Calcular KPIs Básicos (Mes actual)
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
+    // 4. Calcular KPIs Básicos (Mes seleccionado)
+    const currentMonth = params?.month ? parseInt(params.month as string, 10) : new Date().getMonth() + 1;
+    const currentYear = params?.year ? parseInt(params.year as string, 10) : new Date().getFullYear();
 
     const monthlyFeesData = await prisma.fee.findMany({
         where: {
@@ -99,8 +101,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const feesCollectedThisMonth = monthlyFeesData.reduce((acc: number, f: any) => acc + f.paidAmount, 0);
 
     // Filter ledger for current month stats
-    const startOfMonth = dayjs().startOf('month').toDate();
-    const endOfMonth = dayjs().endOf('month').toDate();
+    const selectedDate = dayjs(`${currentYear}-${currentMonth}-01`, "YYYY-M-DD");
+    const startOfMonth = selectedDate.startOf('month').toDate();
+    const endOfMonth = selectedDate.endOf('month').toDate();
     
     const currentMonthTransactions = ledger.filter(t => 
         t.date >= startOfMonth && 
@@ -159,9 +162,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     const totalDebt = historicalDebt + currentMonthDebt;
 
+    const monthsSpanish = [
+        "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+    const monthLabel = monthsSpanish[currentMonth];
+
     const primaryStats = [
         {
-            label: "Cobrado este Mes",
+            label: `Cobrado en ${monthLabel}`,
             value: `$${totalCollected.toLocaleString()}`,
             breakdown: [
                 { key: "Cuotas y Matrículas", val: `$${feesIncome.toLocaleString()}` },
@@ -173,7 +182,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             borderColor: "border-l-blue-600"
         },
         {
-            label: "Rentabilidad (Neto)",
+            label: `Rentabilidad (Neto - ${monthLabel})`,
             value: rentabilidad >= 0 ? `+$${rentabilidad.toLocaleString()}` : `-$${Math.abs(rentabilidad).toLocaleString()}`,
             icon: TrendingUp,
             color: "text-emerald-600",
@@ -181,7 +190,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             borderColor: "border-l-emerald-600"
         },
         {
-            label: "Gastos Operativos",
+            label: `Gastos Operativos (${monthLabel})`,
             value: `$${totalExpenses.toLocaleString()}`,
             breakdown: [
                 { key: "Sueldos / Honorarios", val: `$${payrollExpenses.toLocaleString()}` },
@@ -196,7 +205,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     const secondaryStats = [
         {
-            label: "Progreso de Cobro (Mes)",
+            label: `Progreso de Cobro (${monthLabel})`,
             value: `$${feesCollectedThisMonth.toLocaleString()} / $${totalToCollect.toLocaleString()}`,
             icon: Calculator,
             color: "text-blue-600",
@@ -221,22 +230,22 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     const adjustmentStats = [
         {
-            label: "Intereses Cobrados (Mes)",
+            label: `Intereses Cobrados (${monthLabel})`,
             value: `$${totalSurcharges.toLocaleString()}`,
             icon: Coins,
             color: "text-amber-600",
             bg: "bg-amber-50 dark:bg-amber-950/40",
             borderColor: "border-l-amber-600",
-            description: "Recargos por mora en cuotas"
+            description: `Recargos por mora en cuotas de ${monthLabel}`
         },
         {
-            label: "Descuentos Otorgados (Mes)",
+            label: `Descuentos Otorgados (${monthLabel})`,
             value: `$${totalDiscounts.toLocaleString()}`,
             icon: Percent,
             color: "text-indigo-600",
             bg: "bg-indigo-50 dark:bg-indigo-950/40",
             borderColor: "border-l-indigo-600",
-            description: "Bonificaciones y becas directas"
+            description: `Bonificaciones y becas directas de ${monthLabel}`
         }
     ];
 
@@ -333,12 +342,36 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         };
     }).filter(t => t.amount > 0);
 
-    const totalTransactions = allTransactionsRaw.length;
+    const normalizeString = (str: string) => {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    };
+
+    let filteredTransactions = allTransactionsRaw;
+    if (searchQuery) {
+        const query = normalizeString(searchQuery);
+        filteredTransactions = allTransactionsRaw.filter((tx) => {
+            const title = normalizeString(tx.title || "");
+            const note = normalizeString(tx.note || "");
+            const ticket = normalizeString(tx.ticketNumber || "");
+            const operator = normalizeString(tx.operatorName || "");
+            const recipient = normalizeString(tx.recipientName || "");
+            
+            return (
+                title.includes(query) ||
+                note.includes(query) ||
+                ticket.includes(query) ||
+                operator.includes(query) ||
+                recipient.includes(query)
+            );
+        });
+    }
+
+    const totalTransactions = filteredTransactions.length;
     const totalPages = Math.ceil(totalTransactions / ITEMS_PER_PAGE);
     
     // Slice para la página actual
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const allTransactions = allTransactionsRaw.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const allTransactions = filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -354,12 +387,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                        <Link href="/dashboard/help#pagos">
-                            <Button variant="secondary" className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 shadow-sm border border-emerald-500/20 font-bold">
-                                <BookOpen size={16} className="text-emerald-500" />
-                                Manual de Uso
-                            </Button>
-                        </Link>
                         <Link href="/payments/debtors">
                             <Button variant="outline" className="flex items-center gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-50">
                                 <AlertCircle size={16} />
@@ -378,6 +405,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
                     </div>
                 </header>
+
+                {/* Selector de Fecha */}
+                {!isSecretary && (
+                    <div className="flex justify-end mb-4">
+                        <MonthYearSelector currentMonth={currentMonth} currentYear={currentYear} />
+                    </div>
+                )}
 
                 {/* Bloques Estadísticos (KPIs) - Row 1 */}
                 {!isSecretary && (
@@ -408,9 +442,29 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     </div>
                 )}
 
-                {/* Bloques Estadísticos (KPIs) - Row 2 (Charts & Health) */}
+                {/* Bloques Estadísticos (KPIs) - Row 2 (Adjustments) */}
                 {!isSecretary && (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-6">
+                    <div className="grid gap-4 md:grid-cols-2 mb-6">
+                        {adjustmentStats.map((stat: any, i) => (
+                            <Card key={i} className={`p-5 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
+                                        <stat.icon size={22} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                                        <h3 className="text-2xl font-bold mt-0.5 tracking-tight">{stat.value}</h3>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">{stat.description}</p>
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+
+                {/* Bloques Estadísticos (KPIs) - Row 3 (Charts & Health) */}
+                {!isSecretary && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mb-8">
                         {secondaryStats.map((stat: any, i) => (
                             <Card key={i} className={`p-6 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
                                 <div className="h-full flex flex-col justify-between gap-4">
@@ -498,26 +552,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     </div>
                 )}
 
-                {/* Bloques Estadísticos (KPIs) - Row 3 (Adjustments) */}
-                {!isSecretary && (
-                    <div className="grid gap-4 md:grid-cols-2 mb-8">
-                        {adjustmentStats.map((stat: any, i) => (
-                            <Card key={i} className={`p-5 border-border/40 hover:shadow-md transition-shadow border-l-4 ${stat.borderColor}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
-                                        <stat.icon size={22} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                                        <h3 className="text-2xl font-bold mt-0.5 tracking-tight">{stat.value}</h3>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">{stat.description}</p>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-
                 <div className="grid gap-6 lg:grid-cols-3 items-start">
                     {/* Caja FUERTE Izquierda: Formularios para Agregar Dinero / Gastos */}
                     <div className="lg:col-span-1 space-y-6">
@@ -537,6 +571,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                         transactions={allTransactions} 
                         totalPages={totalPages}
                         currentPage={currentPage}
+                        searchQuery={searchQuery}
                     />
                 </div>
             </main>

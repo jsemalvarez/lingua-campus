@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
 import dayjs from "dayjs";
 import { TransactionActions } from "./TransactionActions";
@@ -28,13 +28,37 @@ interface TransactionTableProps {
     transactions: Transaction[];
     totalPages: number;
     currentPage: number;
+    searchQuery: string;
 }
 
-export function TransactionTable({ transactions, totalPages, currentPage }: TransactionTableProps) {
-    const [searchQuery, setSearchQuery] = useState("");
+export function TransactionTable({ transactions, totalPages, currentPage, searchQuery: initialSearchQuery }: TransactionTableProps) {
+    const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
     const [hoveredOriginalId, setHoveredOriginalId] = useState<string | null>(null);
     const router = useRouter();
     const pathname = usePathname();
+
+    // Sync state with prop if prop changes externally
+    useEffect(() => {
+        setSearchQuery(initialSearchQuery);
+    }, [initialSearchQuery]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+            const currentSearch = params.get("search") || "";
+            if (searchQuery !== currentSearch) {
+                if (searchQuery) {
+                    params.set("search", searchQuery);
+                } else {
+                    params.delete("search");
+                }
+                params.set("page", "1");
+                router.push(`${pathname}?${params.toString()}`, { scroll: false });
+            }
+        }, 400);
+
+        return () => clearTimeout(handler);
+    }, [searchQuery, pathname, router]);
 
     const goToPage = (page: number) => {
         const params = new URLSearchParams(window.location.search);
@@ -42,24 +66,7 @@ export function TransactionTable({ transactions, totalPages, currentPage }: Tran
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    const normalizeString = (str: string) => {
-        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    };
-
-    const filteredTransactions = transactions.filter((tx) => {
-        const query = normalizeString(searchQuery);
-        const title = normalizeString(tx.title || "");
-        const description = normalizeString(tx.description || "");
-        const category = normalizeString(tx.category || "");
-        const ticket = normalizeString(tx.ticketNumber || "");
-        
-        return (
-            title.includes(query) ||
-            description.includes(query) ||
-            category.includes(query) ||
-            ticket.includes(query)
-        );
-    });
+    const filteredTransactions = transactions;
 
     return (
         <div className="lg:col-span-2 space-y-4">
