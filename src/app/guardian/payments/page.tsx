@@ -19,6 +19,12 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { getMonthName, cn } from "@/lib/utils";
+
+function getFeeLabel(fee: { type: string; month: number; year: number }) {
+    if (fee.type === "ENROLLMENT") return `Matrícula ${fee.year}`;
+    if (fee.type === "EXAM") return `Examen ${getMonthName(fee.month)} ${fee.year}`;
+    return `Cuota ${getMonthName(fee.month)} ${fee.year}`;
+}
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
 
@@ -177,7 +183,7 @@ export default async function GuardianPaymentsPage() {
                                                 </div>
                                                 <div>
                                                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{fee.studentName}</p>
-                                                    <h4 className="text-lg font-black tracking-tight">Cuota {getMonthName(fee.month)} {fee.year}</h4>
+                                                    <h4 className="text-lg font-black tracking-tight">{getFeeLabel(fee)}</h4>
                                                     <p className={cn(
                                                         "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded w-fit mt-1",
                                                         (fee.year < currentYear || (fee.year === currentYear && fee.month < currentMonth)) 
@@ -258,7 +264,7 @@ export default async function GuardianPaymentsPage() {
                                                         <DollarSign size={18} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-black truncate">Cuota {getMonthName(fee.month)}</p>
+                                                        <p className="text-sm font-black truncate">{getFeeLabel(fee)}</p>
                                                         <p className="text-[10px] text-muted-foreground font-medium">{dayjs(fee.datePaid).format("DD/MM/YYYY")}</p>
                                                     </div>
                                                 </div>
@@ -311,7 +317,7 @@ export default async function GuardianPaymentsPage() {
                                         <tr key={`hist-row-${fee.id}`} className="hover:bg-muted/10 transition-colors group">
                                             <td className="p-6">
                                                 <p className="text-[10px] font-bold text-muted-foreground uppercase mb-0.5">{fee.studentName}</p>
-                                                <p className="font-black">Cuota {getMonthName(fee.month)} {fee.year}</p>
+                                                <p className="font-black">{getFeeLabel(fee)}</p>
                                             </td>
                                             <td className="p-6">
                                                 <span className="font-bold text-emerald-600">PAGADO</span>
