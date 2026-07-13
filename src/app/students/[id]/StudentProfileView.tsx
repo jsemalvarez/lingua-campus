@@ -50,17 +50,18 @@ export function StudentProfileView({
 }) {
     const [isEditing, setIsEditing] = useState(false);
 
-    // Matching robusto por email (determinístico) — el email es el dato que se usa
-    // para crear la cuenta del tutor, por lo que siempre coincide.
+    // Matching robusto por email. Si el estudiante no tiene email de tutor cargado,
+    // pero existe un vínculo físico en la base de datos (guardianLinks), hacemos fallback
+    // secuencial (el primer vínculo es el Tutor 1, el segundo es el Tutor 2).
     const g1Link = student.guardianLinks?.find((l: any) => 
         student.guardian1Email && l.guardian?.email?.toLowerCase().trim() === student.guardian1Email.toLowerCase().trim()
-    );
+    ) || student.guardianLinks?.[0];
+
     const g2Link = student.guardianLinks?.find((l: any) => 
         student.guardian2Email && l.guardian?.email?.toLowerCase().trim() === student.guardian2Email.toLowerCase().trim()
-    );
+    ) || (student.guardianLinks?.[0] && student.guardianLinks?.[0] !== g1Link ? student.guardianLinks?.[0] : student.guardianLinks?.[1]);
 
-    // Tutores vinculados que no corresponden a ningún slot guardian1/guardian2
-    // (por ejemplo, si se cambió el email del tutor en la ficha del alumno)
+    // Tutores vinculados que no corresponden a ninguno de los slots anteriores
     const extraLinks = student.guardianLinks?.filter((l: any) => 
         l !== g1Link && l !== g2Link
     ) || [];
