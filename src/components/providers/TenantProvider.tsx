@@ -5,6 +5,7 @@ import { createContext, useContext, ReactNode } from "react";
 type MinimalTenant = {
   name: string;
   logoUrl: string | null;
+  plan: string | null;
 } | null;
 
 const TenantContext = createContext<MinimalTenant>(null);
@@ -20,3 +21,4 @@ export function TenantProvider({ children, tenant }: { children: ReactNode; tena
 export function useTenant() {
   return useContext(TenantContext);
 }
+

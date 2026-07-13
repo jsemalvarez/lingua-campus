@@ -105,7 +105,7 @@ export default async function RootLayout({
   const host = headersList.get("host") || "";
   const institute = await getTenantByHost(host);
   
-  const tenant = institute ? { name: institute.name, logoUrl: institute.logoUrl } : null;
+  const tenant = institute ? { name: institute.name, logoUrl: institute.logoUrl, plan: institute.plan } : null;
 
   return (
     <html lang="es" suppressHydrationWarning className="scroll-smooth">
