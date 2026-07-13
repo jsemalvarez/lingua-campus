@@ -23,16 +23,16 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         const schoolInfo = formData.get("schoolInfo") as string;
 
         // Tutor 1 (Opcional)
-        const g1Name = formData.get("g1Name") as string;
-        const g1Relation = formData.get("g1Relation") as string;
-        const g1Phone = formData.get("g1Phone") as string;
-        const g1Email = formData.get("g1Email") as string;
+        const g1Name = formData.get("guardian1Name") as string || formData.get("g1Name") as string;
+        const g1Relation = formData.get("guardian1Relation") as string || formData.get("g1Relation") as string;
+        const g1Phone = formData.get("guardian1Phone") as string || formData.get("g1Phone") as string;
+        const g1Email = formData.get("guardian1Email") as string || formData.get("g1Email") as string;
 
         // Tutor 2 (Opcional)
-        const g2Name = formData.get("g2Name") as string;
-        const g2Relation = formData.get("g2Relation") as string;
-        const g2Phone = formData.get("g2Phone") as string;
-        const g2Email = formData.get("g2Email") as string;
+        const g2Name = formData.get("guardian2Name") as string || formData.get("g2Name") as string;
+        const g2Relation = formData.get("guardian2Relation") as string || formData.get("g2Relation") as string;
+        const g2Phone = formData.get("guardian2Phone") as string || formData.get("g2Phone") as string;
+        const g2Email = formData.get("guardian2Email") as string || formData.get("g2Email") as string;
 
         if (!name) {
             return { success: false, error: "El nombre es obligatorio" };
@@ -51,13 +51,15 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         // Para pre-inscripciones públicas, usamos una contraseña genérica
         const hashedPassword = await bcrypt.hash("inscripcion123", 10);
 
+        const parsedBirthDate = (birthDateStr && !isNaN(Date.parse(birthDateStr))) ? new Date(birthDateStr) : null;
+
         await prisma.student.create({
             data: {
                 name,
                 email: email || null,
                 password: hashedPassword,
                 phone: phone || null,
-                birthDate: birthDateStr ? new Date(birthDateStr) : null,
+                birthDate: parsedBirthDate,
                 dni: dni || null,
                 address: address || null,
                 schoolInfo: schoolInfo || null,
@@ -81,24 +83,38 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         revalidatePath("/students");
 
         // 🔔 Crear notificación en DB usando el nuevo sistema para Roles
-        const levelLabel = registeredLevel ? ` — Nivel: ${registeredLevel}` : "";
-        const notifTitle = "Nueva pre-inscripción recibida";
-        const notifBody = `${name}${levelLabel} se pre-inscribió al instituto`;
+        try {
+            const levelLabel = registeredLevel ? ` — Nivel: ${registeredLevel}` : "";
+            const notifTitle = "Nueva pre-inscripción recibida";
+            const notifBody = `${name}${levelLabel} se pre-inscribió al instituto`;
 
-        const { createNotificationForRoles } = await import("@/app/actions/notifications");
-        
-        await createNotificationForRoles({
-            instituteId,
-            roles: ["ADMIN", "SECRETARY"],
-            type: "NEW_ENROLLMENT",
-            title: notifTitle,
-            body: notifBody,
-            link: "/students"
-        });
+            const { createNotificationForRoles } = await import("@/app/actions/notifications");
+            
+            await createNotificationForRoles({
+                instituteId,
+                roles: ["ADMIN", "SECRETARY"],
+                type: "NEW_ENROLLMENT",
+                title: notifTitle,
+                body: notifBody,
+                link: "/students"
+            });
+        } catch (notifErr) {
+            console.error("Error creating pre-enrollment notification:", notifErr);
+        }
 
         return { success: true };
     } catch (e: any) {
         console.error("Error in pre-enrollment:", e);
+        if (e.code === 'P2002') {
+            const target = e.meta?.target || [];
+            if (target.includes('dni')) {
+                return { success: false, error: "El DNI del alumno ya se encuentra registrado en este instituto." };
+            }
+            if (target.includes('email')) {
+                return { success: false, error: "El correo electrónico del alumno ya se encuentra registrado en este instituto." };
+            }
+            return { success: false, error: "El alumno ya se encuentra registrado en el sistema." };
+        }
         return { success: false, error: "Error al procesar la inscripción. Intente nuevamente." };
     }
 }
