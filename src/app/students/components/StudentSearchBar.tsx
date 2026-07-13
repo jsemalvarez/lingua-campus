@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
@@ -10,21 +10,28 @@ interface StudentSearchBarProps {
 }
 
 export function StudentSearchBar({ initialQuery, tabParam }: StudentSearchBarProps) {
-    // 1. Inicializamos el estado interno únicamente con el prop inicial.
-    // Evitamos por completo el useEffect de sincronización bidireccional que pisa el input.
-    const [searchQuery, setSearchQuery] = useState(initialQuery);
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-
-    // 2. Si el parámetro de búsqueda en la URL cambia externamente (ej: el usuario limpia la URL
-    // o cambia de pestaña/sección y la query desaparece de la URL), sincronizamos el estado.
-    // Pero lo hacemos comparando directamente con los searchParams de lectura en el cliente
-    // (que cambian inmediatamente al navegar) en lugar de depender del ciclo de renderizado 
-    // y propagación de props del servidor.
+    
+    // Obtenemos la query actual de la URL en tiempo real
     const urlQuery = searchParams.get("q") || "";
+
+    // 1. El estado del input sólo contiene el texto localmente
+    const [searchQuery, setSearchQuery] = useState(urlQuery);
+
+    // 2. Usamos una referencia para saber si el cambio en la URL fue iniciado por tipeo del usuario
+    const isTypingRef = useRef(false);
+
+    // Sincronizar el input con la URL ÚNICAMENTE cuando la URL cambia por un motivo externo 
+    // (por ejemplo: al volver a la página de estudiantes desde otro lado, cambiar de pestaña,
+    // o limpiar la búsqueda desde otra acción). 
+    // Si isTypingRef.current es true, significa que el usuario causó el cambio en la URL,
+    // por lo tanto no tocamos el input para evitar cortarle la escritura (race condition).
     useEffect(() => {
-        setSearchQuery(urlQuery);
+        if (!isTypingRef.current) {
+            setSearchQuery(urlQuery);
+        }
     }, [urlQuery]);
 
     // 3. Debounce para enviar la búsqueda al servidor.
@@ -41,10 +48,23 @@ export function StudentSearchBar({ initialQuery, tabParam }: StudentSearchBarPro
                 params.set("page", "1"); // reset a página 1 al buscar
                 router.push(`${pathname}?${params.toString()}`, { scroll: false });
             }
+            // Una vez que el router.push se procesó y la URL se actualizó,
+            // permitimos que futuras actualizaciones de URL externas puedan resetear el input
+            isTypingRef.current = false;
         }, 400);
 
         return () => clearTimeout(handler);
     }, [searchQuery, pathname, router]);
+
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+        isTypingRef.current = true;
+        setSearchQuery(e.target.value);
+    }
+
+    function handleClear() {
+        isTypingRef.current = false;
+        setSearchQuery("");
+    }
 
     return (
         <div className="relative flex-1">
@@ -54,12 +74,12 @@ export function StudentSearchBar({ initialQuery, tabParam }: StudentSearchBarPro
                 placeholder="Buscar por nombre, email o teléfono..."
                 className="w-full pl-10 pr-10 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all text-sm font-medium"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleChange}
             />
             {searchQuery && (
                 <button
                     type="button"
-                    onClick={() => setSearchQuery("")}
+                    onClick={handleClear}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted"
                 >
                     <X className="h-4 w-4" />
