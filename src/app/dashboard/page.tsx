@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { formatFeeLabel } from "@/lib/utils";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
+
 import { GuardianDashboardView } from "./components/GuardianDashboardView";
 import { getActiveRole } from "@/lib/roles";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
@@ -750,7 +752,7 @@ export default async function DashboardPage() {
                                 <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
                                     <div className="flex flex-col">
                                         <span className="font-medium text-sm">{payment.student.name || 'Sin nombre'}</span>
-                                        <span className="text-xs text-muted-foreground">Cuota {getMonthName(payment.month)} {payment.year}</span>
+                                        <span className="text-xs text-muted-foreground">{formatFeeLabel(payment.type, payment.month, payment.year)}</span>
                                     </div>
                                     <div className="text-sm font-bold text-green-600">
                                         +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.paidAmount)}

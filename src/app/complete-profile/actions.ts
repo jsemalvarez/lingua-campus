@@ -76,6 +76,24 @@ export async function updateStudentFromTokenAction(formData: FormData, token: st
         const guardian2Phone = formData.get("guardian2Phone") as string;
         const guardian2Email = formData.get("guardian2Email") as string;
 
+        // Obtener el estado actual del student para proteger datos de tutores vinculados
+        const currentStudent = foundToken.student;
+
+        // Si un tutor ya tiene cuenta vinculada (GuardianStudentLink), no sobreescribir
+        // sus campos con valores vacíos — esos datos solo se editan desde la cuenta del tutor.
+        const existingLinks = await prisma.guardianStudentLink.findMany({
+            where: { studentId },
+            include: { guardian: true }
+        });
+        const linkedEmails = new Set(existingLinks.map(l => l.guardian.email.toLowerCase().trim()));
+
+        const g1HasLink = currentStudent.guardian1Email
+            ? linkedEmails.has(currentStudent.guardian1Email.toLowerCase().trim())
+            : false;
+        const g2HasLink = currentStudent.guardian2Email
+            ? linkedEmails.has(currentStudent.guardian2Email.toLowerCase().trim())
+            : false;
+
         await prisma.$transaction([
             prisma.student.update({
                 where: { id: studentId },
@@ -87,14 +105,15 @@ export async function updateStudentFromTokenAction(formData: FormData, token: st
                     address: address || null,
                     schoolInfo: schoolInfo || null,
                     registeredLevel: registeredLevel || null,
-                    guardian1Name: guardian1Name || null,
-                    guardian1Relation: guardian1Relation || null,
-                    guardian1Phone: guardian1Phone || null,
-                    guardian1Email: guardian1Email || null,
-                    guardian2Name: guardian2Name || null,
-                    guardian2Relation: guardian2Relation || null,
-                    guardian2Phone: guardian2Phone || null,
-                    guardian2Email: guardian2Email || null,
+                    // Solo actualizar campos del tutor si NO tiene cuenta vinculada
+                    guardian1Name: g1HasLink ? currentStudent.guardian1Name : (guardian1Name || null),
+                    guardian1Relation: g1HasLink ? currentStudent.guardian1Relation : (guardian1Relation || null),
+                    guardian1Phone: g1HasLink ? currentStudent.guardian1Phone : (guardian1Phone || null),
+                    guardian1Email: g1HasLink ? currentStudent.guardian1Email : (guardian1Email || null),
+                    guardian2Name: g2HasLink ? currentStudent.guardian2Name : (guardian2Name || null),
+                    guardian2Relation: g2HasLink ? currentStudent.guardian2Relation : (guardian2Relation || null),
+                    guardian2Phone: g2HasLink ? currentStudent.guardian2Phone : (guardian2Phone || null),
+                    guardian2Email: g2HasLink ? currentStudent.guardian2Email : (guardian2Email || null),
                 }
             }),
             prisma.studentDataToken.update({

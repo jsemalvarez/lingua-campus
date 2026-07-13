@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { cn, getMonthName } from "@/lib/utils";
+import { formatFeeLabel } from "@/lib/utils";
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 
 interface StudentAdministrationViewProps {
@@ -111,7 +112,7 @@ export function StudentAdministrationView({
                                )} size={24} />
                             </div>
                             <div>
-                               <h4 className="text-lg font-black tracking-tight italic uppercase">Cuota {getMonthName(fee.month)} {fee.year}</h4>
+                               <h4 className="text-lg font-black tracking-tight italic uppercase">{formatFeeLabel(fee.type, fee.month, fee.year)}</h4>
                                <p className="text-[10px] font-bold uppercase text-muted-foreground mt-1 tracking-widest">
                                  {fee.year < currentYear || (fee.year === currentYear && fee.month < currentMonth) ? "Vencida" : "En Fecha"}
                                </p>
@@ -150,7 +151,7 @@ export function StudentAdministrationView({
                                <DollarSign size={18} />
                             </div>
                             <div>
-                               <p className="text-sm font-black italic uppercase">Cuota {getMonthName(fee.month)}</p>
+                               <p className="text-sm font-black italic uppercase">{formatFeeLabel(fee.type, fee.month, fee.year)}</p>
                                <p className="text-[10px] font-bold text-muted-foreground">{dayjs(fee.datePaid).format('DD/MM/YYYY')}</p>
                             </div>
                          </div>

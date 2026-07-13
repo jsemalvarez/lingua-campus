@@ -118,8 +118,8 @@ export async function editStudentAction(formData: FormData) {
         revalidatePath(`/students/${studentId}`);
         revalidatePath("/students");
         return { success: true };
-    } catch {
-        return { success: false, error: "Error de base de datos al actualizar el estudiante" };
+    } catch (err: any) {
+        return { success: false, error: err.message || "Error de base de datos al actualizar el estudiante" };
     }
 }
 
@@ -399,6 +399,48 @@ export async function createGuardianAccount(studentId: string, guardianName: str
                 relation: relation
             }
         });
+
+        // 5. Sincronizar los campos del Student con los datos del User si estaban vacíos.
+        //    Esto garantiza que la ficha del alumno siempre muestre al tutor incluso si
+        //    la cuenta se creó antes de que se completaran los datos del Student.
+        const studentRecord = await prisma.student.findUnique({ where: { id: studentId } });
+        if (studentRecord) {
+            const isGuardian1 = studentRecord.guardian1Email?.toLowerCase().trim() === normalizedEmail;
+            const isGuardian2 = studentRecord.guardian2Email?.toLowerCase().trim() === normalizedEmail;
+
+            if (isGuardian1 && !studentRecord.guardian1Name && guardianName) {
+                await prisma.student.update({
+                    where: { id: studentId },
+                    data: { guardian1Name: guardianName, guardian1Relation: relation || studentRecord.guardian1Relation }
+                });
+            } else if (isGuardian2 && !studentRecord.guardian2Name && guardianName) {
+                await prisma.student.update({
+                    where: { id: studentId },
+                    data: { guardian2Name: guardianName, guardian2Relation: relation || studentRecord.guardian2Relation }
+                });
+            } else if (!isGuardian1 && !isGuardian2) {
+                // No hay email cargado en ningún slot — asignar al primer slot vacío
+                if (!studentRecord.guardian1Email) {
+                    await prisma.student.update({
+                        where: { id: studentId },
+                        data: {
+                            guardian1Name: guardianName || studentRecord.guardian1Name,
+                            guardian1Email: normalizedEmail,
+                            guardian1Relation: relation || studentRecord.guardian1Relation
+                        }
+                    });
+                } else if (!studentRecord.guardian2Email) {
+                    await prisma.student.update({
+                        where: { id: studentId },
+                        data: {
+                            guardian2Name: guardianName || studentRecord.guardian2Name,
+                            guardian2Email: normalizedEmail,
+                            guardian2Relation: relation || studentRecord.guardian2Relation
+                        }
+                    });
+                }
+            }
+        }
 
         revalidatePath(`/students/${studentId}`);
         return { success: true };

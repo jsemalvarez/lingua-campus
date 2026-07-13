@@ -38,13 +38,44 @@ export async function updateProfileAction(formData: FormData) {
                 });
             }
         } else {
-            await prisma.user.update({
+            const updatedUser = await prisma.user.update({
                 where: { id: (session.user as any).id },
                 data: {
                     name: name.trim(),
                     phone: phone ? phone.trim() : null,
                 },
             });
+
+            // Si el usuario es tutor, sincronizar nombre y teléfono en los Students vinculados
+            if ((updatedUser as any).roles?.includes("GUARDIAN") || role === "GUARDIAN") {
+                const links = await prisma.guardianStudentLink.findMany({
+                    where: { guardianId: updatedUser.id },
+                    include: { student: true }
+                });
+
+                const guardianEmail = updatedUser.email.toLowerCase().trim();
+
+                for (const link of links) {
+                    const student = link.student;
+                    if (student.guardian1Email?.toLowerCase().trim() === guardianEmail) {
+                        await prisma.student.update({
+                            where: { id: student.id },
+                            data: {
+                                guardian1Name: name.trim(),
+                                guardian1Phone: phone ? phone.trim() : student.guardian1Phone
+                            }
+                        });
+                    } else if (student.guardian2Email?.toLowerCase().trim() === guardianEmail) {
+                        await prisma.student.update({
+                            where: { id: student.id },
+                            data: {
+                                guardian2Name: name.trim(),
+                                guardian2Phone: phone ? phone.trim() : student.guardian2Phone
+                            }
+                        });
+                    }
+                }
+            }
         }
 
         revalidatePath("/profile");
