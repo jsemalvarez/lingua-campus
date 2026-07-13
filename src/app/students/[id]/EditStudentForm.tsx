@@ -46,16 +46,16 @@ export function EditStudentForm({
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
 
-    const g1Link = student.guardianLinks?.find((l: any) => 
-        l.relation?.trim().toLowerCase() === student.guardian1Relation?.trim().toLowerCase()
-    ) || student.guardianLinks?.find((l: any) => 
-        l.guardian?.name?.trim().toLowerCase() === student.guardian1Name?.trim().toLowerCase()
+    // Matching siempre por email — es el identificador único de la cuenta.
+    // Igual que en StudentProfileView para garantizar consistencia.
+    const g1Link = student.guardianLinks?.find((l: any) =>
+        student.guardian1Email &&
+        l.guardian?.email?.toLowerCase().trim() === student.guardian1Email.toLowerCase().trim()
     );
 
-    const g2Link = student.guardianLinks?.find((l: any) => 
-        l.relation?.trim().toLowerCase() === student.guardian2Relation?.trim().toLowerCase()
-    ) || student.guardianLinks?.find((l: any) => 
-        l.guardian?.name?.trim().toLowerCase() === student.guardian2Name?.trim().toLowerCase()
+    const g2Link = student.guardianLinks?.find((l: any) =>
+        student.guardian2Email &&
+        l.guardian?.email?.toLowerCase().trim() === student.guardian2Email.toLowerCase().trim()
     );
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -166,7 +166,8 @@ export function EditStudentForm({
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email (Acceso)</label>
-                        <input type="email" name="guardian1Email" defaultValue={student.guardian1Email || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="tutor1@mail.com" />
+                        <input type="email" name="guardian1Email" defaultValue={student.guardian1Email || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" placeholder="tutor1@mail.com" />
+                        {g1Link && <p className="text-[10px] text-amber-600 dark:text-amber-400">El email es la clave de acceso y no puede editarse aquí.</p>}
                     </div>
                 </div>
             </div>
@@ -195,7 +196,8 @@ export function EditStudentForm({
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email (Acceso)</label>
-                        <input type="email" name="guardian2Email" defaultValue={student.guardian2Email || ""} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="tutor2@mail.com" />
+                        <input type="email" name="guardian2Email" defaultValue={student.guardian2Email || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" placeholder="tutor2@mail.com" />
+                        {g2Link && <p className="text-[10px] text-amber-600 dark:text-amber-400">El email es la clave de acceso y no puede editarse aquí.</p>}
                     </div>
                 </div>
             </div>

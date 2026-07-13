@@ -216,6 +216,38 @@ export function StudentProfileView({
                                         )
                                     )}
                                 </>
+                            ) : g1Link ? (
+                                // Sin datos en Student pero existe cuenta vinculada — mostrar datos del User
+                                <>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Nombre</span>
+                                        <span className="font-medium capitalize">{g1Link.guardian.name || "-"}</span>
+                                        {g1Link.relation && <span className="text-muted-foreground ml-1 capitalize">({g1Link.relation})</span>}
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
+                                        <span className="font-medium">
+                                            {g1Link.guardian.phone ? (
+                                                <a href={`https://wa.me/${g1Link.guardian.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{g1Link.guardian.phone}</a>
+                                            ) : "-"}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Email</span>
+                                        <span className="font-medium">{g1Link.guardian.email}</span>
+                                    </div>
+                                    {canManageAccess ? (
+                                        <a href={`/guardians/${g1Link.guardian.id}`} className="text-[10px] hover:underline bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors hover:bg-emerald-200 dark:hover:bg-emerald-900/50">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Ver cuenta del tutor
+                                        </a>
+                                    ) : (
+                                        <div className="text-[10px] bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Cuenta activa
+                                        </div>
+                                    )}
+                                </>
                             ) : (
                                 <p className="text-sm italic text-muted-foreground">Sin datos registrados.</p>
                             )}
@@ -263,6 +295,38 @@ export function StudentProfileView({
                                                 Cuenta: {g2Link.guardian.email}
                                             </div>
                                         )
+                                    )}
+                                </>
+                            ) : g2Link ? (
+                                // Sin datos en Student pero existe cuenta vinculada — mostrar datos del User
+                                <>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Nombre</span>
+                                        <span className="font-medium capitalize">{g2Link.guardian.name || "-"}</span>
+                                        {g2Link.relation && <span className="text-muted-foreground ml-1 capitalize">({g2Link.relation})</span>}
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Celular</span>
+                                        <span className="font-medium">
+                                            {g2Link.guardian.phone ? (
+                                                <a href={`https://wa.me/${g2Link.guardian.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-emerald-600 dark:text-emerald-400">{g2Link.guardian.phone}</a>
+                                            ) : "-"}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground block text-xs uppercase mb-0.5 tracking-wider font-semibold">Email</span>
+                                        <span className="font-medium">{g2Link.guardian.email}</span>
+                                    </div>
+                                    {canManageAccess ? (
+                                        <a href={`/guardians/${g2Link.guardian.id}`} className="text-[10px] hover:underline bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors hover:bg-emerald-200 dark:hover:bg-emerald-900/50">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Ver cuenta del tutor
+                                        </a>
+                                    ) : (
+                                        <div className="text-[10px] bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded inline-flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Cuenta activa
+                                        </div>
                                     )}
                                 </>
                             ) : (

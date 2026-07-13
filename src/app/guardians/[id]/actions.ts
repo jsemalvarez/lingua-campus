@@ -46,8 +46,38 @@ export async function updateGuardianAction(formData: FormData) {
             }
         });
 
+        // Sincronizar los campos del Student con el nuevo nombre/teléfono del tutor.
+        // Buscamos todos los students vinculados y actualizamos el slot que corresponde
+        // comparando el email del User con guardian1Email o guardian2Email del Student.
+        const links = await prisma.guardianStudentLink.findMany({
+            where: { guardianId },
+            include: { guardian: true, student: true }
+        });
+
+        for (const link of links) {
+            const student = link.student;
+            const guardianEmail = link.guardian.email.toLowerCase().trim();
+
+            if (student.guardian1Email?.toLowerCase().trim() === guardianEmail) {
+                await prisma.student.update({
+                    where: { id: student.id },
+                    data: {
+                        guardian1Name: name.trim(),
+                        guardian1Phone: phone ? phone.trim() : student.guardian1Phone
+                    }
+                });
+            } else if (student.guardian2Email?.toLowerCase().trim() === guardianEmail) {
+                await prisma.student.update({
+                    where: { id: student.id },
+                    data: {
+                        guardian2Name: name.trim(),
+                        guardian2Phone: phone ? phone.trim() : student.guardian2Phone
+                    }
+                });
+            }
+        }
+
         revalidatePath(`/guardians/${guardianId}`);
-        // Refrescar perfil del alumno por si estaban navegando desde ahí
         revalidatePath("/students/[id]", "page");
         return { success: true };
     } catch (e: any) {
