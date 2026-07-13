@@ -46,17 +46,17 @@ export function EditStudentForm({
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
 
-    // Matching siempre por email — es el identificador único de la cuenta.
-    // Igual que en StudentProfileView para garantizar consistencia.
+    // Matching siempre por email. Si no hay email en el estudiante, hacemos fallback
+    // a los vínculos físicos de la DB (el primero es Tutor 1, el segundo es Tutor 2).
     const g1Link = student.guardianLinks?.find((l: any) =>
         student.guardian1Email &&
         l.guardian?.email?.toLowerCase().trim() === student.guardian1Email.toLowerCase().trim()
-    );
+    ) || student.guardianLinks?.[0];
 
     const g2Link = student.guardianLinks?.find((l: any) =>
         student.guardian2Email &&
         l.guardian?.email?.toLowerCase().trim() === student.guardian2Email.toLowerCase().trim()
-    );
+    ) || (student.guardianLinks?.[0] && student.guardianLinks?.[0] !== g1Link ? student.guardianLinks?.[0] : student.guardianLinks?.[1]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -154,19 +154,19 @@ export function EditStudentForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre / Apellido</label>
-                        <input type="text" name="guardian1Name" defaultValue={student.guardian1Name || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+                        <input type="text" name="guardian1Name" defaultValue={student.guardian1Name || g1Link?.guardian?.name || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
-                        <input type="text" name="guardian1Relation" defaultValue={student.guardian1Relation || ""} placeholder="Eg: Madre" disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+                        <input type="text" name="guardian1Relation" defaultValue={student.guardian1Relation || g1Link?.relation || ""} placeholder="Eg: Madre" disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular Confirmado</label>
-                        <input type="tel" name="guardian1Phone" defaultValue={student.guardian1Phone || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
+                        <input type="tel" name="guardian1Phone" defaultValue={student.guardian1Phone || g1Link?.guardian?.phone || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email (Acceso)</label>
-                        <input type="email" name="guardian1Email" defaultValue={student.guardian1Email || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" placeholder="tutor1@mail.com" />
+                        <input type="email" name="guardian1Email" defaultValue={student.guardian1Email || g1Link?.guardian?.email || ""} disabled={!!g1Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" placeholder="tutor1@mail.com" />
                         {g1Link && <p className="text-[10px] text-amber-600 dark:text-amber-400">El email es la clave de acceso y no puede editarse aquí.</p>}
                     </div>
                 </div>
@@ -184,19 +184,19 @@ export function EditStudentForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre / Apellido</label>
-                        <input type="text" name="guardian2Name" defaultValue={student.guardian2Name || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
+                        <input type="text" name="guardian2Name" defaultValue={student.guardian2Name || g2Link?.guardian?.name || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
-                        <input type="text" name="guardian2Relation" defaultValue={student.guardian2Relation || ""} placeholder="Eg: Padre" disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
+                        <input type="text" name="guardian2Relation" defaultValue={student.guardian2Relation || g2Link?.relation || ""} placeholder="Eg: Padre" disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular</label>
-                        <input type="tel" name="guardian2Phone" defaultValue={student.guardian2Phone || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
+                        <input type="tel" name="guardian2Phone" defaultValue={student.guardian2Phone || g2Link?.guardian?.phone || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed opacity-80 focus:opacity-100" />
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email (Acceso)</label>
-                        <input type="email" name="guardian2Email" defaultValue={student.guardian2Email || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" placeholder="tutor2@mail.com" />
+                        <input type="email" name="guardian2Email" defaultValue={student.guardian2Email || g2Link?.guardian?.email || ""} disabled={!!g2Link} className="w-full px-4 py-2.5 rounded-xl border border-input/60 outline-none bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed" placeholder="tutor2@mail.com" />
                         {g2Link && <p className="text-[10px] text-amber-600 dark:text-amber-400">El email es la clave de acceso y no puede editarse aquí.</p>}
                     </div>
                 </div>
