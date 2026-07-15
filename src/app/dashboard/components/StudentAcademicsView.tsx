@@ -217,7 +217,7 @@ export function StudentAcademicsView({
              
              <div className="relative z-10">
                 <div className="flex justify-between items-center mb-6">
-                   <h3 className="text-xl font-black tracking-tight italic">Tareas Pendientes</h3>
+                   <h3 className="text-xl font-black tracking-tight italic">Recordatorios</h3>
                    {pendingTasks.length > 0 && (
                      <div className="w-7 h-7 rounded-full bg-rose-500 flex items-center justify-center text-[10px] font-black shadow-lg shadow-rose-500/30 animate-bounce">
                         {pendingTasks.length}
@@ -230,7 +230,9 @@ export function StudentAcademicsView({
                     pendingTasks.slice(0, 2).map((task) => (
                       <div key={task.id} className="p-4 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer">
                          <h4 className="font-bold text-sm truncate">{task.title}</h4>
-                         <p className="text-[10px] font-bold text-rose-400 mt-1 uppercase tracking-widest">{task.dueDate}</p>
+                         {task.dueDate && (
+                           <p className="text-[10px] font-bold text-rose-400 mt-1 uppercase tracking-widest">{task.dueDate}</p>
+                         )}
                       </div>
                     ))
                   ) : (

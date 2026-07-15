@@ -182,36 +182,46 @@ export default async function StudentsPage(props: PageProps) {
 
                 {/* Tabs */}
                 <div className="flex flex-wrap items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit mb-6 border border-border/40">
-                    <Link href="/students?tab=active">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                            <Users size={16} className="mr-2" /> Activos
-                        </Button>
-                    </Link>
-                    {!isTeacher && (
+                    {!isTeacher ? (
                         <>
                             <Link href="/students?tab=pre-enrolled">
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isPreEnrolledTab ? "bg-background shadow-sm border border-border/60 text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isPreEnrolledTab ? "bg-background shadow-sm border border-border/60 text-primary font-bold" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}
                                 >
                                     <UserPlus size={16} className="mr-2" /> Pre-inscriptos
+                                </Button>
+                            </Link>
+                            <Link href="/students?tab=active">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold hover:text-primary" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}
+                                >
+                                    <Users size={16} className="mr-2" /> Activos
                                 </Button>
                             </Link>
                             <Link href="/students?tab=inactive">
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isInactiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                                    className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isInactiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold hover:text-primary" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}
                                 >
-                                    <UserMinus size={16} className="mr-2" /> Papelera
+                                    <UserMinus size={16} className="mr-2" /> Archivados
                                 </Button>
                             </Link>
                         </>
+                    ) : (
+                        <Link href="/students?tab=active">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`px-4 sm:px-6 py-2 rounded-md transition-all ${isActiveTab ? "bg-background shadow-sm border border-border/60 text-foreground font-semibold hover:text-primary" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}
+                            >
+                                <Users size={16} className="mr-2" /> Activos
+                            </Button>
+                        </Link>
                     )}
                 </div>
 
