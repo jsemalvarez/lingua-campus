@@ -272,7 +272,7 @@ export default async function DashboardPage() {
 
         // Tareas pendientes
         const pendingTasks = [
-            ...(pendingFeesCount > 0 ? [{ id: 'fees', title: `Pagar cuotas pendientes (${pendingFeesCount})`, type: 'FINANCE', dueDate: 'Urgente' }] : []),
+            ...(pendingFeesCount > 0 ? [{ id: 'fees', title: `Pagar cuotas pendientes (${pendingFeesCount})`, type: 'FINANCE', dueDate: '' }] : []),
             ...upcomingLessons.filter(l => l.type === 'EXAM').map(l => ({
                 id: l.id,
                 title: `Examen: ${l.topic}`,
