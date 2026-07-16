@@ -637,7 +637,7 @@ export default function LandingPage() {
                 {/* Card Header */}
                 <div className="flex items-center gap-4 mb-8 sm:mb-10">
                   {/* Logo Image */}
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-250 dark:border-slate-800 bg-white flex items-center justify-center shrink-0 p-2.5">
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-250 dark:border-slate-800 bg-white flex items-center justify-center shrink-0">
                     <img
                       src="https://res.cloudinary.com/dwhdla1b4/image/upload/v1784242745/lingua-campus/logo_mes_mjsnim.webp"
                       alt="Modern English School Logo"
