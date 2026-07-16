@@ -606,6 +606,115 @@ export default function LandingPage() {
           </div>
         </section>
 
+
+        {/* ══ SECCIÓN: CLIENTES FUNDADORES ══════════════════════════════════ */}
+        <section className="py-24 sm:py-32 bg-slate-50 dark:bg-slate-950 relative overflow-hidden transition-colors">
+          {/* Subtle background glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] pointer-events-none" />
+
+          <div className="container mx-auto px-6 max-w-5xl relative z-10">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white leading-tight mb-6">
+                El primer instituto en confiar su gestión a <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Lingua Campus</span>
+              </h2>
+              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+                Así fue cómo <a href="https://www.modernenglishschool.com.ar" target="_blank" rel="noopener noreferrer" className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">Modern English School</a> dejó atrás las planillas sueltas y ordenó su día a día académico.
+              </p>
+            </div>
+
+            {/* Testimonial Card Container */}
+            <div className="relative mx-auto max-w-4xl">
+
+              {/* Floating Badge (Fundador Nº 01) */}
+              <div className="absolute -top-6 right-4 sm:right-10 z-20 bg-slate-900 text-white dark:bg-slate-950 border-2 border-amber-500/70 dark:border-amber-500/40 rounded-full w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center shadow-2xl rotate-12 hover:rotate-0 transition-transform duration-300 select-none">
+                <span className="text-[10px] sm:text-xs font-bold tracking-widest text-amber-500 uppercase">Fundador</span>
+                <span className="text-lg sm:text-xl font-black tracking-tight mt-0.5">Nº 01</span>
+              </div>
+
+              {/* Main Card */}
+              <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-8 sm:p-12 shadow-xl backdrop-blur-sm relative">
+
+                {/* Card Header */}
+                <div className="flex items-center gap-4 mb-8 sm:mb-10">
+                  {/* Logo Image */}
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-250 dark:border-slate-800 bg-white flex items-center justify-center shrink-0 p-2.5">
+                    <img
+                      src="https://res.cloudinary.com/dwhdla1b4/image/upload/v1784242745/lingua-campus/logo_mes_mjsnim.webp"
+                      alt="Modern English School Logo"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-tight hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      <a href="https://www.modernenglishschool.com.ar" target="_blank" rel="noopener noreferrer">
+                        Modern English School
+                      </a>
+                    </h3>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                      Mar del Plata, Argentina
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quote Block */}
+                <div className="border-l-4 border-amber-500/80 dark:border-amber-500/60 pl-6 mb-8 sm:mb-10">
+                  <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 italic leading-relaxed mb-4">
+                    "La inteligencia artificial ya es parte del presente, y por eso nos alegra poder sumar herramientas que enriquecen las prácticas, acompañan el proceso de aprendizaje y brindan un valor agregado concreto a nuestros estudiantes."
+                  </p>
+                  <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
+                    — <span className="text-indigo-600 dark:text-indigo-400">Patricia Muñis</span>, Dueña y Directora en <a href="https://www.modernenglishschool.com.ar" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors">Modern English School</a>
+                  </p>
+                </div>
+
+                {/* Stats Row */}
+                <div className="pt-8 border-t border-dashed border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 text-left">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-500">
+                      [200+]
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                      alumnos gestionados
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-500">
+                      [4] módulos
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-snug space-y-0.5">
+                      gestión pedagógica con IA<br />
+                      gestión administrativa<br />
+                      marca personal<br />
+                      app para celulares
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-500">
+                      [100]%
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                      cobros gestionados digitalmente
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Bottom CTA Area */}
+            <div className="text-center mt-16 max-w-2xl mx-auto">
+              <p className="text-slate-600 dark:text-slate-450 mb-6 font-medium text-sm sm:text-base">
+                ¿Tu instituto podría ser el próximo? Quedan pocos lugares en el programa de Clientes Fundadores.
+              </p>
+              <a href="#contacto">
+                <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-8 py-6 rounded-full shadow-lg shadow-amber-500/10 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-95">
+                  QUIERO SER CLIENTE FUNDADOR
+                </Button>
+              </a>
+            </div>
+
+          </div>
+        </section>
+
         {/* ══ SECCIÓN 7: FORMULARIO DE CONTACTO — Full Bleed Split Layout ════ */}
         <section id="contacto" className="relative grid lg:grid-cols-12 lg:h-screen lg:min-h-[750px] min-h-[650px] overflow-hidden bg-white dark:bg-slate-950">
 
