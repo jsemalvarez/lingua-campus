@@ -30,11 +30,13 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
             if (result.success && result.payment && result.institute) {
                 const { payment, institute } = result;
                 
+                const baseAmount = payment.amount + payment.discount - payment.surcharge;
+
                 // Prepare concepts
                 const concepts = [
                     {
                         description: formatFeeLabel(payment.feeType as any, payment.feeMonth, payment.feeYear),
-                        amount: payment.amount
+                        amount: baseAmount
                     }
                 ];
 
