@@ -21,6 +21,7 @@ async function getAuthAndInstitute() {
 /**
  * Genera las cuotas mensuales para todos los alumnos inscriptos en cursos activos.
  * Evita duplicados para el mismo mes/año/inscripción.
+ * Optimizado para ejecuciones en masa de alto rendimiento (1 single SQL bulk insert).
  */
 export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const user = await getAuthAndInstitute();
@@ -45,48 +46,65 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
             }
         });
 
-        let createdCount = 0;
+        if (enrollments.length === 0) {
+            return { success: true, count: 0 };
+        }
 
-        // 2. Por cada inscripción, crear la cuota si no existe
-        for (const enrollment of enrollments) {
-            // Verificar si ya existe la cuota para este mes/año/inscripción
-            const existing = await prisma.fee.findFirst({
-                where: {
-                    enrollmentId: enrollment.id,
-                    month: targetMonth,
-                    year: targetYear,
-                    type: "MONTHLY"
+        // 2. Traer en 1 sola query todas las cuotas ya existentes para este periodo
+        const existingFees = await prisma.fee.findMany({
+            where: {
+                instituteId: user.instituteId as string,
+                month: targetMonth,
+                year: targetYear,
+                type: "MONTHLY",
+                enrollmentId: {
+                    in: enrollments.map(e => e.id)
                 }
-            });
+            },
+            select: { enrollmentId: true }
+        });
 
-            if (!existing) {
+        const existingEnrollmentIds = new Set(
+            existingFees.map(f => f.enrollmentId).filter((id): id is string => id !== null)
+        );
+
+        // 3. Filtrar en memoria las inscripciones que necesitan nueva cuota
+        const feesToCreate = enrollments
+            .filter(enrollment => {
+                if (existingEnrollmentIds.has(enrollment.id)) return false;
                 const finalPrice = enrollment.customMonthlyPrice !== null 
                     ? enrollment.customMonthlyPrice 
                     : enrollment.course.monthlyPrice;
+                return finalPrice > 0;
+            })
+            .map(enrollment => {
+                const finalPrice = enrollment.customMonthlyPrice !== null 
+                    ? enrollment.customMonthlyPrice 
+                    : enrollment.course.monthlyPrice;
+                return {
+                    studentId: enrollment.studentId,
+                    enrollmentId: enrollment.id,
+                    type: "MONTHLY" as const,
+                    originalAmount: finalPrice,
+                    paidAmount: 0,
+                    status: "PENDING" as const,
+                    month: targetMonth,
+                    year: targetYear,
+                    instituteId: user.instituteId as string
+                };
+            });
 
-                if (finalPrice > 0) {
-                    await prisma.fee.create({
-                        data: {
-                            studentId: enrollment.studentId,
-                            enrollmentId: enrollment.id,
-                            type: "MONTHLY",
-                            originalAmount: finalPrice,
-                            paidAmount: 0,
-                            status: "PENDING",
-                            month: targetMonth,
-                            year: targetYear,
-                            instituteId: user.instituteId as string
-                        }
-                    });
-                    createdCount++;
-                }
-            }
+        // 4. Crear masivamente en 1 sola query SQL
+        if (feesToCreate.length > 0) {
+            await prisma.fee.createMany({
+                data: feesToCreate
+            });
         }
 
         revalidatePath("/payments");
-        return { success: true, count: createdCount };
+        return { success: true, count: feesToCreate.length };
     } catch (e: any) {
-        console.error(e);
+        console.error("Error al generar cuotas masivas:", e);
         return { success: false, error: "Error al generar cuotas" };
     }
 }
@@ -94,6 +112,7 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
 /**
  * Genera matrículas anuales standalone para todos los estudiantes activos del instituto
  * que aún no tengan una matrícula registrada para ese año.
+ * Optimizado para ejecuciones en masa de alto rendimiento.
  */
 export async function generateYearlyEnrollmentFeesAction(year: number, amount: number) {
     const user = await getAuthAndInstitute();
@@ -104,7 +123,7 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
     }
 
     try {
-        // Obtenemos a todos los estudiantes activos del instituto
+        // 1. Obtenemos a todos los estudiantes activos del instituto
         const students = await prisma.student.findMany({
             where: {
                 instituteId: user.instituteId as string,
@@ -113,39 +132,51 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
             select: { id: true }
         });
 
-        let createdCount = 0;
+        if (students.length === 0) {
+            return { success: true, count: 0 };
+        }
 
-        for (const student of students) {
-            // Verificamos si ya existe matrícula para este alumno en este año
-            const existing = await prisma.fee.findFirst({
-                where: {
-                    studentId: student.id,
-                    year: year,
-                    type: "ENROLLMENT"
+        // 2. Traemos en 1 sola query los estudiantes que ya tienen matrícula registrada para este año
+        const existingFees = await prisma.fee.findMany({
+            where: {
+                instituteId: user.instituteId as string,
+                year: year,
+                type: "ENROLLMENT",
+                studentId: {
+                    in: students.map(s => s.id)
                 }
-            });
+            },
+            select: { studentId: true }
+        });
 
-            if (!existing) {
-                await prisma.fee.create({
-                    data: {
-                        studentId: student.id,
-                        year: year,
-                        month: new Date().getMonth() + 1, // Administrativo
-                        type: "ENROLLMENT",
-                        originalAmount: amount,
-                        paidAmount: 0,
-                        status: "PENDING",
-                        instituteId: user.instituteId as string
-                    }
-                });
-                createdCount++;
-            }
+        const existingStudentIds = new Set(existingFees.map(f => f.studentId));
+        const currentMonth = new Date().getMonth() + 1;
+
+        // 3. Filtrar en memoria los estudiantes pendientes
+        const feesToCreate = students
+            .filter(student => !existingStudentIds.has(student.id))
+            .map(student => ({
+                studentId: student.id,
+                year: year,
+                month: currentMonth,
+                type: "ENROLLMENT" as const,
+                originalAmount: amount,
+                paidAmount: 0,
+                status: "PENDING" as const,
+                instituteId: user.instituteId as string
+            }));
+
+        // 4. Crear masivamente en 1 sola query SQL
+        if (feesToCreate.length > 0) {
+            await prisma.fee.createMany({
+                data: feesToCreate
+            });
         }
 
         revalidatePath("/payments");
-        return { success: true, count: createdCount };
+        return { success: true, count: feesToCreate.length };
     } catch (e: any) {
-        console.error(e);
+        console.error("Error al generar matrículas masivas:", e);
         return { success: false, error: "Error al generar matrículas masivas" };
     }
 }
