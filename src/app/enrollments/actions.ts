@@ -20,8 +20,6 @@ export async function createEnrollmentAction(formData: FormData) {
 
     const studentId = formData.get("studentId") as string;
     const courseId = formData.get("courseId") as string;
-    const customMonthlyPriceStr = formData.get("customMonthlyPrice") as string;
-    const customEnrollmentPriceStr = formData.get("customEnrollmentPrice") as string;
 
     if (!studentId || !courseId) {
         return { success: false, error: "Debe seleccionar un alumno y un curso" };
@@ -43,8 +41,6 @@ export async function createEnrollmentAction(formData: FormData) {
                 studentId,
                 courseId,
                 status: "ACTIVE",
-                customMonthlyPrice: customMonthlyPriceStr ? parseFloat(customMonthlyPriceStr) : null,
-                customEnrollmentPrice: customEnrollmentPriceStr ? parseFloat(customEnrollmentPriceStr) : null,
             },
             include: {
                 course: true
@@ -54,9 +50,7 @@ export async function createEnrollmentAction(formData: FormData) {
         const currentYear = new Date().getFullYear();
 
         // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
-        const finalEnrollmentPrice = enrollment.customEnrollmentPrice !== null 
-            ? enrollment.customEnrollmentPrice 
-            : enrollment.course.enrollmentPrice;
+        const finalEnrollmentPrice = enrollment.course.enrollmentPrice;
 
         if (finalEnrollmentPrice > 0) {
             // Buscamos si ya existe una matrícula sin vincular (anticipada) para este alumno y año
