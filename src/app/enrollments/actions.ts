@@ -51,8 +51,9 @@ export async function createEnrollmentAction(formData: FormData) {
             }
         });
 
-        // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
         const currentYear = new Date().getFullYear();
+
+        // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
         const finalEnrollmentPrice = enrollment.customEnrollmentPrice !== null 
             ? enrollment.customEnrollmentPrice 
             : enrollment.course.enrollmentPrice;
@@ -96,6 +97,7 @@ export async function createEnrollmentAction(formData: FormData) {
         revalidatePath(`/courses/${courseId}`);
         revalidatePath("/courses");
         revalidatePath("/students");
+        revalidatePath("/payments");
         return { success: true };
     } catch (e: any) {
         // Error de Prisma si falla la constraint única u otro

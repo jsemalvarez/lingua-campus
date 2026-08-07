@@ -223,10 +223,15 @@ export default async function StudentDetailPage({
                                                         <p className="text-sm text-muted-foreground mt-0.5">Nivel: {e.course.level}</p>
                                                     </div>
                                                 </Link>
-                                                <div className="flex flex-col items-end gap-2">
+                                                <div className="flex flex-col items-end gap-1.5">
                                                     <span className={`px-2 py-1 text-xs font-bold rounded-lg ${e.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-orange-500/10 text-orange-600'}`}>
                                                         {e.status}
                                                     </span>
+                                                    {(e as any).billingMode === "FULL_COURSE" && (
+                                                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 shadow-xs">
+                                                            💎 Pago Único 100%
+                                                        </span>
+                                                    )}
                                                     {isAdmin && (
                                                         <ChangeCourseModal
                                                             enrollmentId={e.id}

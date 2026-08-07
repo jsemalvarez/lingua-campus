@@ -213,6 +213,11 @@ model Course {
   updatedAt   DateTime @updatedAt
 }
 
+enum BillingMode {
+  MONTHLY
+  FULL_COURSE
+}
+
 model Enrollment {
   id          String   @id @default(cuid())
   studentId   String
@@ -223,10 +228,12 @@ model Enrollment {
   enrolledAt  DateTime @default(now())
   status      String   @default("ACTIVE") // ACTIVE, FINISHED, INCOMPLETE
 
-  // Custom Pricing (Scholarships)
-  customMonthlyPrice   Float?
+  // Billing & Custom Pricing (Scholarships / Upfront)
+  billingMode           BillingMode @default(MONTHLY)
+  customMonthlyPrice    Float?
   customEnrollmentPrice Float?
-  customExamPrice      Float?
+  customExamPrice       Float?
+  customFullCoursePrice Float?
 
   takesExam   Boolean  @default(false)
 
@@ -475,6 +482,7 @@ enum FeeType {
   MONTHLY
   ENROLLMENT
   EXAM
+  FULL_COURSE
 }
 
 model Fee {

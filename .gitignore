@@ -45,6 +45,7 @@ next-env.d.ts
 
 # AI workspaces
 /artifacts
+/scratch
 
 # PWA
 public/sw.js
