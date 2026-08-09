@@ -74,10 +74,12 @@ una solución provisoria en el día.
 El bloque más importante. Los cuatro son la misma deuda y **hay que hacerlos en este orden**: cada
 uno prepara el terreno para el siguiente, y así cada paso queda reversible.
 
-1. [SEC-02](#sec-02) — crear el helper `requireRole()`. No rompe nada, solo agrega.
-2. [SEC-01](#sec-01) — migrar los ~40 llamadores a `roles[]` y recién entonces borrar la columna `role`.
-3. [BUG-04](#bug-04) + [SEC-08](#sec-08) — caen casi solos una vez unificados los roles.
-4. [SEC-03](#sec-03) + [SEC-04](#sec-04) — aplicar el helper a finanzas y tapar los dos chequeos de instituto faltantes.
+1. [ARQ-07](#arq-07) — completar los tipos de sesión. Va primero porque convierte al compilador en
+   red de seguridad para los pasos siguientes: ahorra trabajo, no lo agrega.
+2. [SEC-02](#sec-02) — crear el helper `requireRole()`. No rompe nada, solo agrega.
+3. [SEC-01](#sec-01) — migrar los ~40 llamadores a `roles[]` y recién entonces borrar la columna `role`.
+4. [BUG-04](#bug-04) + [SEC-08](#sec-08) — caen casi solos una vez unificados los roles.
+5. [SEC-03](#sec-03) + [SEC-04](#sec-04) — aplicar el helper a finanzas y tapar los dos chequeos de instituto faltantes.
 
 Al terminar esta tanda, los tutores dejan de tener acceso de administrador y la secretaria deja de
 convertirse en profesora.
@@ -157,7 +159,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [ ] |
-| [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [ ] |
+| [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [~] |
+| [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
@@ -165,6 +168,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
 | [ARQ-04](#arq-04) | P3 | Tests automatizados | [ ] |
 | [ARQ-05](#arq-05) | P1 | Política de borrado lógico en todo el sistema | [ ] |
+| [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
+| [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [ ] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -752,10 +757,49 @@ El admin no es participante del hilo, así que `getThread` devuelve `null` y
    un admin que no participa no hay fila que actualizar — el `updateMany` no falla, simplemente no
    afecta nada. Verificar que no rompa el contador de no leídos.
 
-**Decisión de producto pendiente.** ¿El admin entra como **observador** (solo lectura) o puede
-responder? Si puede responder, hay que agregarlo como participante al enviar, y conviene que la
-profesora y el tutor vean que se sumó. Es una conversación con un tutor sobre un alumno: la
-transparencia importa.
+**Decisión tomada (2026-08-09).** El admin **puede responder y se suma al hilo** como participante,
+de modo que la profesora y el tutor vean que se incorporó.
+
+**Estado: corregido en `72fbdca`, pendiente de verificación en stage.**
+
+El arreglo no pudo hacerse pasando un parámetro `isAdmin` a `getThread`: todas las funciones de
+[`actions/messages.ts`](../src/app/actions/messages.ts) son server actions —endpoints POST que el
+navegador invoca con los argumentos que quiera— y el módulo **no tenía ninguna verificación de
+sesión**. Cualquiera habría mandado `isAdmin: true`. En el mismo pase se cerraron dos agujeros
+preexistentes de la misma raíz: `sendMessage` confiaba en el `senderUserId` recibido (permitía
+enviar mensajes en nombre de otra persona, incluso apareciendo como "Administración"), y `getThread`
+confiaba en `currentUserId` (permitía leer hilos ajenos conociendo el id de un participante).
+
+Las seis funciones derivan ahora identidad, rol activo e instituto de la sesión mediante
+`getMessagingContext()`. Ver [BUG-06](#bug-06) y [ARQ-06](#arq-06) para lo que quedó fuera.
+
+---
+
+<a id="bug-06"></a>
+## BUG-06 · El admin ve todos los hilos del instituto como no leídos · **P2**
+
+**Problema.** El admin ve todos los hilos del instituto en la bandeja, pero no es participante de
+casi ninguno. El contador de no leídos se calcula comparando el último mensaje contra el `lastReadAt`
+**del participante** ([`actions/messages.ts`](../src/app/actions/messages.ts), en
+`getThreadsForUser`), y para un no participante ese valor es `null`, así que cuenta como no leído
+siempre. Nada lo cambia al abrir el hilo: `getThread` sólo actualiza `lastReadAt` si el usuario
+participa.
+
+Resultado: el badge del sobrecito muestra permanentemente el total de hilos del instituto, y nunca
+baja. Es previo a [BUG-05](#bug-05), pero se nota más ahora que el admin puede abrirlos.
+
+**Cambio — opciones.**
+1. **Marcar como leído al abrir**, creando la fila de `ThreadParticipant` para el admin. Simple, pero
+   lo convierte en participante por el sólo hecho de mirar, que contradice la decisión de BUG-05
+   (sumarse es una acción explícita: responder).
+2. **Tabla aparte de lecturas** (`ThreadRead`) desacoplada de la participación. Más prolijo y
+   habilita "marcar como leído" para cualquier rol observador.
+3. **No contar los hilos donde no participa.** El badge pasa a reflejar sólo lo que le compete
+   directamente, y los hilos del instituto quedan visibles en la bandeja sin inflar el contador. Es
+   la opción más barata y probablemente la que mejor refleja la expectativa del usuario.
+
+Recomiendo la 3, y revisar con el cliente si el admin espera enterarse de mensajes nuevos en hilos
+que no son suyos.
 
 ---
 
@@ -948,6 +992,57 @@ que confirmar en stage cuál de los dos caminos se toma hoy **(sin verificar en 
 **Nota sobre alcance.** Es un cambio transversal y no debería hacerse de una sola vez. Sugerencia de
 orden: primero alumno y clase (los de mayor impacto y los que motivaron la decisión), después cursos
 e inscripciones, y por último catálogos (aulas, niveles) e informes.
+
+---
+
+<a id="arq-06"></a>
+## ARQ-06 · Limpiar props de identidad sin uso en `MessagesBell` · **P3**
+
+**Origen.** Quedó pendiente al resolver [BUG-05](#bug-05) (`72fbdca`), para no ensanchar ese cambio.
+
+[`MessagesBell.tsx`](../src/components/layout/MessagesBell.tsx) sigue recibiendo `userId`,
+`isStudent`, `instituteId` e `isAdmin` desde [`Navbar.tsx`](../src/components/layout/Navbar.tsx),
+pero ya no los usa: `getUnreadThreadCount()` deriva todo de la sesión. Sólo sobreviven en el array de
+dependencias del `useEffect`, que por eso no dispara aviso de variable sin uso.
+
+No rompe nada. Se anota porque dejar props de identidad en un componente cliente sugiere justamente
+lo que se acaba de eliminar —que el cliente maneja identidad— y es lo primero que confunde a quien
+lea el código después.
+
+**Cambio.** Quitar las cuatro props de `MessagesBell`, ajustar el `useEffect` para depender sólo del
+intervalo, y dejar de pasarlas desde `Navbar`. Revisar si `Navbar` las sigue necesitando para otra
+cosa antes de borrarlas de ahí.
+
+---
+
+<a id="arq-07"></a>
+## ARQ-07 · Completar los tipos de sesión en `next-auth.d.ts` · **P2**
+
+**Problema.** [`src/app/types/next-auth.d.ts`](../src/app/types/next-auth.d.ts) declara sólo `role` e
+`instituteId` en `Session["user"]`:
+
+```ts
+interface Session {
+  user: { role?: string; instituteId?: string } & DefaultSession["user"];
+}
+```
+
+Faltan `id`, `roles` y `birthDate`, que [`auth.ts:83-87`](../src/lib/auth.ts) **sí** escribe en la
+sesión. Por eso todo el código hace `const sessionUser = session.user as any` — el patrón aparece en
+decenas de páginas y es responsable de buena parte de los errores de ESLint
+(`@typescript-eslint/no-explicit-any`).
+
+Consecuencia real, más allá del ruido: al perder el tipado, TypeScript no puede avisar cuando se lee
+una propiedad que no existe o se confunde `role` con `roles` — que es exactamente el origen de
+[SEC-01](#sec-01).
+
+**Cambio.** Declarar `id`, `roles: string[]` y `birthDate` en `Session["user"]` y en `JWT`, y
+reemplazar los `as any` por acceso tipado. Al resolver [SEC-01](#sec-01) hay que quitar `role` de
+este archivo también.
+
+**Dependencia.** Conviene hacerlo **junto con [SEC-01](#sec-01)**: el tipado correcto convierte el
+compilador en una red de seguridad para esa migración, que es grande y toca ~40 lugares. Hacerlo
+antes ahorra trabajo, no lo agrega.
 
 ---
 
