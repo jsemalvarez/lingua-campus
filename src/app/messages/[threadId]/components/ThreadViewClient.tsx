@@ -45,9 +45,6 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 interface Props {
     thread: ThreadDetail;
-    currentUserId: string;
-    isStudent: boolean;
-    activeRole: string;
 }
 
 interface AttachmentPreview {
@@ -452,7 +449,7 @@ function ComposerLinkPreview({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole }: Props) {
+export function ThreadViewClient({ thread }: Props) {
     const [messages, setMessages] = useState(thread.messages);
     const [body, setBody] = useState("");
     const [sending, setSending] = useState(false);
@@ -480,7 +477,7 @@ export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole 
     useEffect(() => {
         const poll = async () => {
             try {
-                const updated = await getThread({ threadId: thread.id, currentUserId, isStudent });
+                const updated = await getThread({ threadId: thread.id });
                 if (!updated) return;
                 setMessages((prev) => {
                     if (updated.messages.length === prev.length) return prev;
@@ -490,7 +487,7 @@ export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole 
         };
         const timer = setInterval(poll, POLL_INTERVAL_MS);
         return () => clearInterval(timer);
-    }, [thread.id, currentUserId, isStudent]);
+    }, [thread.id]);
 
     // ── File selection ──
     function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -609,9 +606,6 @@ export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole 
             await sendMessage({
                 threadId: thread.id,
                 body,
-                senderUserId: isStudent ? undefined : currentUserId,
-                senderStudentId: isStudent ? currentUserId : undefined,
-                senderRole: activeRole,
                 attachmentPath,
                 attachmentName,
                 attachmentMime,
@@ -628,7 +622,7 @@ export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole 
             removeLink();
 
             // 4. Refresh messages
-            const updated = await getThread({ threadId: thread.id, currentUserId, isStudent });
+            const updated = await getThread({ threadId: thread.id });
             if (updated) setMessages(updated.messages);
         } catch (err: any) {
             setError(err.message ?? "Error al enviar el mensaje.");
@@ -783,6 +777,14 @@ export function ThreadViewClient({ thread, currentUserId, isStudent, activeRole 
                     onSubmit={handleSend}
                     className="bg-card border border-border/60 rounded-2xl p-4 shadow-lg space-y-3"
                 >
+                    {/* Aviso para el admin que abrió un hilo del que no participa */}
+                    {!thread.viewerIsParticipant && (
+                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2 leading-relaxed">
+                            Estás viendo esta conversación como administración. Si respondés, vas a
+                            sumarte al hilo y el resto de los participantes lo va a ver.
+                        </p>
+                    )}
+
                     {/* Errors */}
                     {(error || attachmentError) && (
                         <p className="text-sm text-red-500 px-1">{error ?? attachmentError}</p>

@@ -32,15 +32,8 @@ export default async function MessagesPage() {
     const instituteId = sessionUser.instituteId as string;
     if (!instituteId && !isStudent) redirect("/dashboard");
 
-    // Para estudiantes, el instituteId viene de la sesión también
-    const resolvedInstituteId = instituteId ?? "";
-
-    const threads = await getThreadsForUser({
-        userId: sessionUser.id,
-        isStudent,
-        instituteId: resolvedInstituteId,
-        isAdmin,
-    });
+    // La identidad y el rol se derivan de la sesión dentro del server action
+    const threads = await getThreadsForUser();
 
     const unreadCount = threads.filter((t) => t.unreadCount > 0).length;
 

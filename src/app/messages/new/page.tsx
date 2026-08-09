@@ -28,11 +28,7 @@ export default async function NewMessagePage() {
 
     if (!canCompose) redirect("/messages");
 
-    const { courses, allTeachers } = await getCoursesWithRecipientsForUser({
-        userId: sessionUser.id,
-        roles: userRoles,
-        instituteId: sessionUser.instituteId,
-    });
+    const { courses, allTeachers } = await getCoursesWithRecipientsForUser();
 
     const isAdmin =
         activeRole === "ADMIN" ||
@@ -56,12 +52,9 @@ export default async function NewMessagePage() {
                 </div>
 
                 <ComposeClient
-                    senderUserId={sessionUser.id}
-                    instituteId={sessionUser.instituteId}
                     courses={courses}
                     allTeachers={allTeachers}
                     isAdmin={isAdmin}
-                    activeRole={activeRole}
                 />
             </main>
         </div>

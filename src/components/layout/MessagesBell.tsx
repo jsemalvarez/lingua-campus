@@ -33,7 +33,7 @@ export function MessagesBell({
 
     async function refresh() {
         try {
-            const count = await getUnreadThreadCount({ userId, isStudent, instituteId, isAdmin });
+            const count = await getUnreadThreadCount();
             setUnreadCount(count);
         } catch {
             // silent — badge stays at last known value
