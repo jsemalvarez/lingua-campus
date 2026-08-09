@@ -32,10 +32,11 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const targetYear = year ?? now.getFullYear();
 
     try {
-        // 1. Obtener todas las inscripciones activas del instituto
+        // 1. Obtener todas las inscripciones activas del instituto (solo modalidad cuotas mensuales)
         const enrollments = await prisma.enrollment.findMany({
             where: {
                 status: "ACTIVE",
+                billingMode: "MONTHLY",
                 course: {
                     instituteId: user.instituteId as string,
                     status: "ACTIVE"

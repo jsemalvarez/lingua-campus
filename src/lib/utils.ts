@@ -20,5 +20,6 @@ export const getMonthName = (month: number): string => {
 export const formatFeeLabel = (type: string, month: number, year: number) => {
   if (type === "ENROLLMENT") return `Matrícula ${year}`;
   if (type === "EXAM") return `Derecho de Examen ${year}`;
+  if (type === "FULL_COURSE") return `Pago Único (Curso Completo) ${year}`;
   return `Cuota ${getMonthName(month)} ${year}`;
 };

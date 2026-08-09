@@ -153,6 +153,149 @@ export async function getStudentPendingFeesAction(studentId: string) {
     }
 }
 
+export async function getStudentActiveEnrollmentsAction(studentId: string) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    try {
+        const enrollments = await prisma.enrollment.findMany({
+            where: {
+                studentId,
+                status: "ACTIVE",
+                course: { instituteId: user.instituteId as string }
+            },
+            include: {
+                course: {
+                    select: { id: true, name: true, monthlyPrice: true }
+                }
+            }
+        });
+        return { success: true, enrollments };
+    } catch (e: any) {
+        return { success: false, error: "Error al obtener inscripciones" };
+    }
+}
+
+export async function registerFullCoursePaymentAction(formData: FormData) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    const studentId = formData.get("studentId") as string;
+    const enrollmentId = formData.get("enrollmentId") as string;
+    const amountStr = formData.get("amount") as string;
+    const discountStr = formData.get("discount") as string;
+    const method = formData.get("method") as string;
+    const notes = formData.get("notes") as string;
+
+    const originalAmount = parseFloat(amountStr);
+    const discount = parseFloat(discountStr) || 0;
+    const paidCapital = Math.max(0, originalAmount - discount);
+
+    if (!studentId || !enrollmentId || isNaN(originalAmount) || originalAmount <= 0) {
+        return { success: false, error: "Datos del pago inválidos" };
+    }
+
+    try {
+        const enrollment = await prisma.enrollment.findUnique({
+            where: { id: enrollmentId },
+            include: { course: true }
+        });
+
+        if (!enrollment || enrollment.course.instituteId !== user.instituteId) {
+            return { success: false, error: "Inscripción no encontrada" };
+        }
+
+        const currentYear = new Date().getFullYear();
+
+        // Buscar cuota FULL_COURSE existente fuera de la transacción para optimizar tiempos
+        const existingFee = await prisma.fee.findFirst({
+            where: {
+                enrollmentId,
+                type: "FULL_COURSE"
+            }
+        });
+
+        await prisma.$transaction(async (tx) => {
+            // Update enrollment to FULL_COURSE
+            await tx.enrollment.update({
+                where: { id: enrollmentId },
+                data: {
+                    billingMode: "FULL_COURSE",
+                    customFullCoursePrice: originalAmount
+                }
+            });
+
+            let feeId = existingFee?.id;
+
+            if (!feeId) {
+                const createdFee = await tx.fee.create({
+                    data: {
+                        studentId,
+                        enrollmentId,
+                        type: "FULL_COURSE",
+                        originalAmount,
+                        paidAmount: originalAmount,
+                        status: "PAID",
+                        month: new Date().getMonth() + 1,
+                        year: currentYear,
+                        datePaid: new Date(),
+                        instituteId: user.instituteId as string
+                    }
+                });
+                feeId = createdFee.id;
+            } else {
+                await tx.fee.update({
+                    where: { id: feeId },
+                    data: {
+                        originalAmount,
+                        paidAmount: originalAmount,
+                        status: "PAID",
+                        datePaid: new Date()
+                    }
+                });
+            }
+
+            // Create Payment
+            const payment = await tx.payment.create({
+                data: {
+                    feeId,
+                    amount: paidCapital,
+                    discount,
+                    surcharge: 0,
+                    method,
+                    notes: notes || "Pago Único Completo de Curso",
+                    date: new Date()
+                }
+            });
+
+            // Create Transaction in Ledger
+            await tx.transaction.create({
+                data: {
+                    instituteId: user.instituteId as string,
+                    amount: paidCapital,
+                    type: "PAYMENT",
+                    method,
+                    date: new Date(),
+                    description: `Pago Único Curso Completo (${enrollment.course.name}) - Estudiante ID: ${studentId}`,
+                    paymentId: payment.id,
+                    operatorId: user.id
+                }
+            });
+        }, {
+            maxWait: 10000,
+            timeout: 20000
+        });
+
+        revalidatePath("/payments");
+        revalidatePath("/payments/debtors");
+        revalidatePath(`/students/${studentId}`);
+        return { success: true };
+    } catch (e: any) {
+        console.error("Error al registrar pago único:", e);
+        return { success: false, error: "Error al registrar el pago único" };
+    }
+}
+
 export async function createExpenseAction(formData: FormData) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };

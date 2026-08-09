@@ -5,7 +5,8 @@ import { RegisterFeeForm } from "./RegisterFeeForm";
 import { RegisterIncomeForm } from "./RegisterIncomeForm";
 import { RegisterEnrollmentFeeForm } from "./RegisterEnrollmentFeeForm";
 import { RegisterAdvanceForm } from "./RegisterAdvanceForm";
-import { Wallet, ShoppingBag, GraduationCap, PlusCircle } from "lucide-react";
+import { RegisterFullCourseFeeForm } from "./RegisterFullCourseFeeForm";
+import { Wallet, ShoppingBag, GraduationCap, PlusCircle, Sparkles } from "lucide-react";
 
 interface StudentListOption {
     id: string;
@@ -17,7 +18,7 @@ interface RegisterIncomesFormProps {
 }
 
 export function RegisterIncomesForm({ students }: RegisterIncomesFormProps) {
-    const [activeTab, setActiveTab] = useState<"fees" | "misc" | "enrollment" | "advance">("fees");
+    const [activeTab, setActiveTab] = useState<"fees" | "full_course" | "misc" | "enrollment" | "advance">("fees");
 
     return (
         <div className="space-y-6">
@@ -35,8 +36,8 @@ export function RegisterIncomesForm({ students }: RegisterIncomesFormProps) {
                     <Wallet size={18} /> Pago de Cuotas Mensuales
                 </button>
 
-                {/* Sub-options: 3 columns row */}
-                <div className="grid grid-cols-3 gap-2">
+                {/* Sub-options: 4 columns row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <button
                         onClick={() => setActiveTab("enrollment")}
                         className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all border ${
@@ -46,6 +47,16 @@ export function RegisterIncomesForm({ students }: RegisterIncomesFormProps) {
                         }`}
                     >
                         <GraduationCap size={16} /> Matrícula
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("full_course")}
+                        className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all border ${
+                            activeTab === "full_course"
+                                ? "bg-white dark:bg-zinc-900 text-emerald-600 shadow-sm ring-1 ring-black/5 border-transparent"
+                                : "bg-zinc-100/30 dark:bg-zinc-800/30 text-muted-foreground hover:bg-white/50 dark:hover:bg-zinc-800 border-border/40"
+                        }`}
+                    >
+                        <Sparkles size={16} /> Pago Único
                     </button>
                     <button
                         onClick={() => setActiveTab("misc")}
@@ -74,6 +85,9 @@ export function RegisterIncomesForm({ students }: RegisterIncomesFormProps) {
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === "fees" && (
                     <RegisterFeeForm students={students} />
+                )}
+                {activeTab === "full_course" && (
+                    <RegisterFullCourseFeeForm students={students} />
                 )}
                 {activeTab === "enrollment" && (
                     <RegisterEnrollmentFeeForm students={students} />
