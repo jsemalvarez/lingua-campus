@@ -29,5 +29,11 @@ declare module "next-auth" {
 }
 
 declare module "next-auth/jwt" {
-  interface JWT extends LinguaSessionFields {}
+  interface JWT extends LinguaSessionFields {
+    /**
+     * Cuándo se releyeron los roles de la base por última vez (epoch ms).
+     * Sólo vive en el token; la sesión no lo expone. Ver SEC-08.
+     */
+    rolesSyncedAt?: number;
+  }
 }

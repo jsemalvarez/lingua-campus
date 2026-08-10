@@ -3,6 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+/**
+ * Cada cuánto se releen los roles de la base hacia el JWT. Acota cuánto puede
+ * tardar en verse un cambio de roles sin pagar una query por request.
+ */
+const ROLES_REFRESH_MS = 5 * 60 * 1000;
+
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -68,11 +74,49 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.id          = user.id;
-                token.roles       = user.roles;
-                token.instituteId = user.instituteId;
-                token.birthDate   = user.birthDate;
+                token.id            = user.id;
+                token.roles         = user.roles;
+                token.instituteId   = user.instituteId;
+                token.birthDate     = user.birthDate;
+                token.rolesSyncedAt = Date.now();
+                return token;
             }
+
+            // El token dura 30 días. Sin esto, a quien le agregan un rol lo
+            // conserva viejo hasta cerrar sesión: la cookie de rol activo se
+            // descarta por "inválida" y el selector de rol ni aparece (BUG-04).
+            //
+            // La autorización no depende de esto — `getAuthContext` lee los roles
+            // de la base en cada acción —, pero la interfaz sí, y es lo que ve
+            // el usuario.
+            //
+            // Los alumnos viven en otra tabla y su rol no cambia nunca: no hay
+            // nada que refrescar.
+            if (!token.id || token.roles?.includes("STUDENT")) return token;
+
+            const syncedAt = token.rolesSyncedAt ?? 0;
+            if (Date.now() - syncedAt < ROLES_REFRESH_MS) return token;
+
+            // Se marca antes de decidir qué hacer: pase lo que pase, no se
+            // vuelve a consultar hasta que expire el intervalo.
+            token.rolesSyncedAt = Date.now();
+
+            const fresh = await prisma.user.findUnique({
+                where: { id: token.id },
+                select: { roles: true, instituteId: true, status: true },
+            });
+
+            // Si no aparece en `User` no se toca nada: un token viejo, de antes
+            // de que existiera `roles`, no dice de qué tabla salió, y puede ser
+            // un alumno. Blanquearlo lo dejaría afuera. Quien decide de verdad es
+            // `getAuthContext`, que sí distingue las dos tablas.
+            if (!fresh) return token;
+
+            // Cuenta dada de baja: se vacían los roles. Sin roles no pasa ningún
+            // chequeo, y la interfaz deja de ofrecer lo que ya no puede hacer.
+            token.roles       = fresh.status === "ACTIVE" ? fresh.roles : [];
+            token.instituteId = fresh.instituteId;
+
             return token;
         },
         async session({ session, token }) {
