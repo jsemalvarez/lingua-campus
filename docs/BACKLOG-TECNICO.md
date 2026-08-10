@@ -832,7 +832,7 @@ el precio total del curso? Del código surge que el monto es libre
 ([`actions.ts:190`](../src/app/payments/actions.ts)), así que hoy depende del criterio de quien
 carga. Definirlo evita cobrar dos veces los mismos meses.
 
-### Resuelto — 2026-08-10 · pendiente de verificar en stage
+### Resuelto — 2026-08-10 en `5e1130e` · pendiente de verificar en stage
 
 **Decisión de producto (2026-08-10): el caso mixto no se soporta.** Si la inscripción ya tiene alguna
 cuota con pagos, el curso completo **no se puede cobrar**. Es una limitación deliberada y elegida
