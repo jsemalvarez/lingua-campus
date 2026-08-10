@@ -170,6 +170,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-05](#arq-05) | P1 | Política de borrado lógico en todo el sistema | [ ] |
 | [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
 | [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [ ] |
+| [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [ ] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -828,8 +829,9 @@ opción de adjuntar.
   sin su adjunto: si la subida falla, el destinatario ya recibió un mensaje incompleto.
 - **B) Área de staging (más prolijo, recomendada).** Subir a
   `{instituteId}/_pending/{userId}/{uuid}.{ext}` validando contra el instituto del usuario en lugar
-  de contra el hilo, y mover el archivo a su ruta definitiva al crear el hilo. Requiere una tarea de
-  limpieza para los archivos que quedan huérfanos.
+  de contra el hilo, y mover el archivo a su ruta definitiva al crear el hilo. **Requiere resolver
+  antes [ARQ-08](#arq-08):** hoy nada limpia el Storage, y este enfoque genera archivos huérfanos por
+  diseño cada vez que alguien adjunta y se arrepiente.
 
 En ambos casos hay que agregar los campos de adjunto a `createThread` y la UI de archivo a
 `ComposeClient`, reutilizando el componente que ya existe en `ThreadViewClient`.
@@ -1043,6 +1045,40 @@ este archivo también.
 **Dependencia.** Conviene hacerlo **junto con [SEC-01](#sec-01)**: el tipado correcto convierte el
 compilador en una red de seguridad para esa migración, que es grande y toca ~40 lugares. Hacerlo
 antes ahorra trabajo, no lo agrega.
+
+---
+
+<a id="arq-08"></a>
+## ARQ-08 · Los archivos del Storage no se borran nunca · **P3**
+
+**Lo que está bien.** La subida de adjuntos es sólida y no hace falta tocarla: la ruta se arma como
+`{instituteId}/{threadId}/{timestamp}-{8 bytes aleatorios}.{ext}`
+([`api/upload/message-attachment/route.ts:83`](../src/app/api/upload/message-attachment/route.ts)),
+sin usar el nombre original del archivo, y `uploadToStorage` va con `upsert: false`
+([`lib/supabase-server.ts:34`](../src/lib/supabase-server.ts)). Subir dos veces la misma imagen crea
+dos archivos independientes; una colisión de nombres daría error en lugar de pisar contenido ajeno.
+
+**El problema.** `deleteFromStorage` está definida en
+[`lib/supabase-server.ts:63`](../src/lib/supabase-server.ts) y **no se invoca desde ningún lado**.
+Los mensajes tampoco se borran. Todo lo que entra al bucket `message-attachments` queda ahí para
+siempre, y no hay deduplicación por contenido: el mismo PDF enviado diez veces ocupa diez veces el
+espacio.
+
+Con el tope de 5 MB por archivo hacen falta muchos adjuntos para que duela, y hoy hay un solo
+instituto. Se anota porque crece en silencio y porque dos ítems planificados lo empeoran:
+
+- **[ARQ-05](#arq-05) (borrado lógico):** al no borrar filas, los archivos de lo "eliminado" tampoco
+  se limpiarán nunca. Hay que decidir explícitamente si el archivo sobrevive al mensaje.
+- **[FEAT-01](#feat-01) (adjunto en el primer mensaje):** la opción B (área de staging) **genera
+  huérfanos por diseño** — todo el que adjunte un archivo al redactar y después se arrepienta deja
+  basura en `_pending`. Si se elige ese camino, resolver este ítem **antes**.
+
+**Cambios.**
+1. Decidir la política de retención: ¿el adjunto sobrevive al borrado (lógico) del mensaje?
+2. Usarla o eliminarla: si los archivos nunca se borran, `deleteFromStorage` es código muerto y
+   conviene sacarla para que nadie asuma que existe una limpieza que no ocurre.
+3. Si se adopta el staging de FEAT-01, tarea de limpieza de `_pending` por antigüedad.
+4. Opcional: deduplicar por hash del contenido, guardando el archivo una sola vez por instituto.
 
 ---
 
