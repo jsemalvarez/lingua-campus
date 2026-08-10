@@ -54,6 +54,21 @@ function lockEnrollment(tx: Prisma.TransactionClient, enrollmentId: string) {
     return tx.$queryRaw`SELECT id FROM "Enrollment" WHERE id = ${enrollmentId} FOR UPDATE`;
 }
 
+/**
+ * Margen de las transacciones que toman locks.
+ *
+ * Los valores por defecto de Prisma (2s esperando conexión, 5s de transacción)
+ * quedan justos ahora que una operación puede tener que esperar turno. Pero
+ * agrandarlos sin techo no sirve: la función de Vercel tiene su propio límite de
+ * duración y muere antes, así que un `timeout` más largo que ese límite no se
+ * cumple nunca — sólo cambia quién corta.
+ *
+ * Con Vercel y Supabase en la misma región la transacción en sí tarda
+ * milisegundos; estos segundos son margen para la espera del lock, y la suma de
+ * los dos entra dentro del presupuesto de la función.
+ */
+const COLLECTION_TX_OPTIONS = { maxWait: 3000, timeout: 6000 };
+
 export async function createPaymentAction(formData: FormData) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
@@ -153,13 +168,7 @@ export async function createPaymentAction(formData: FormData) {
             }
 
             return { success: true } as const;
-        }, {
-            // Los valores por defecto de Prisma (2s para conseguir conexión, 5s de
-            // transacción) quedaron cortos ahora que las operaciones esperan turno:
-            // en frío, sólo levantar la conexión contra Supabase puede tardar ~2s.
-            maxWait: 10000,
-            timeout: 20000
-        });
+        }, COLLECTION_TX_OPTIONS);
 
         if (!result.success) return result;
 
@@ -346,10 +355,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
             });
 
             return { success: true } as const;
-        }, {
-            maxWait: 10000,
-            timeout: 20000
-        });
+        }, COLLECTION_TX_OPTIONS);
 
         if (!result.success) return result;
 
@@ -726,11 +732,7 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                     datePaid: newStatus === "PAID" ? fee.datePaid : null
                 }
             });
-        }, {
-            // Mismo margen que los cobros: ahora esta transacción espera turno.
-            maxWait: 10000,
-            timeout: 20000
-        });
+        }, COLLECTION_TX_OPTIONS);
 
         revalidatePath("/payments");
         revalidatePath("/payments/debtors");
@@ -949,11 +951,7 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
             });
 
             return { success: true } as const;
-        }, {
-            // Mismo margen que los cobros: ahora esta transacción espera turno.
-            maxWait: 10000,
-            timeout: 20000
-        });
+        }, COLLECTION_TX_OPTIONS);
 
         if (!result.success) return result;
 

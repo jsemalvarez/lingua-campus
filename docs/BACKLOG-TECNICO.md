@@ -717,14 +717,28 @@ tocan las mismas filas en distinto orden queden esperándose entre sí.
   recalcula desde los pagos vivos ([FIN-01](#fin-01) a [FIN-03](#fin-03)): sin el lock del pago, dos
   anulaciones simultáneas leen `VALID` las dos y generan dos contra-asientos.
 
-**Verificado contra la base de stage**, porque `tsc` no valida SQL crudo: los nombres de tabla
-existen tal cual (`"Payment"`, `"Fee"`, `"Enrollment"`) y **los locks sobreviven al pooler de
-Supabase** (`pgbouncer=true`, modo transacción). En la prueba, una segunda transacción pidió el mismo
-lock a los 316 ms y recién lo obtuvo a los 3605 ms, cuando la primera commiteó.
+**Verificado contra la base**, porque `tsc` no valida SQL crudo: los nombres de tabla existen tal cual
+(`"Payment"`, `"Fee"`, `"Enrollment"`) y **los locks sobreviven al pooler de Supabase**
+(`pgbouncer=true`, modo transacción) — que es la premisa de todo esto: si el pooler repartiera las
+sentencias de una transacción entre conexiones distintas, el lock no serviría de nada. En la prueba,
+una segunda transacción pidió el mismo lock a los 316 ms y recién lo obtuvo a los 3605 ms, cuando la
+primera commiteó. Lo que prueba el test es el **orden**, no los tiempos: se corrió desde una máquina
+de desarrollo contra `us-east-1`, así que los milisegundos absolutos son latencia de esa conexión y
+no representan lo que pasa entre Vercel y Supabase, que están en la misma región.
 
-**Efecto colateral:** ahora las transacciones esperan turno, así que los cobros llevan
-`maxWait: 10s` / `timeout: 20s` explícitos — los 2s/5s por defecto de Prisma quedaban cortos, sobre
-todo en frío, donde sólo levantar la conexión contra Supabase tardó ~2s en la medición.
+**Efecto colateral: el margen de las transacciones.** Ahora una operación puede tener que esperar
+turno, así que los 2s/5s por defecto de Prisma quedan justos. Pero agrandarlos sin techo no sirve:
+las funciones de Vercel tienen su propio límite de duración —el del plan gratuito, porque no hay
+`vercel.json` ni `maxDuration` que lo cambien— y la función muere antes, así que un `timeout` más
+largo que ese límite no se cumple nunca, sólo cambia quién corta. Quedó
+`COLLECTION_TX_OPTIONS = { maxWait: 3s, timeout: 6s }`
+([`actions.ts:70`](../src/app/payments/actions.ts)), compartido por las cuatro operaciones: la suma
+entra en el presupuesto de la función y sigue siendo dos órdenes de magnitud más que lo que tarda la
+transacción dentro de la región.
+
+Eso **bajó** el margen que `registerFullCoursePaymentAction` ya tenía puesto de antes (10s/20s), que
+por lo mismo no era alcanzable. Si en algún momento aparecen `P2028` en los logs de Vercel, el
+problema no se arregla subiendo este número: hay que mirar por qué la transacción tarda.
 
 ---
 
