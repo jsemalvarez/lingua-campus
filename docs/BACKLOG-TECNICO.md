@@ -164,6 +164,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
+| [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -914,6 +915,51 @@ está.
 
 **Alternativa más barata:** un aviso al confirmar ("La clase se creó en septiembre") con un enlace a
 ese mes. Menos fluido, pero elimina la sensación de que no se guardó, que es el problema real.
+
+---
+
+<a id="feat-04"></a>
+## FEAT-04 · Saber quiénes entraron a la plataforma · **P2** · 🗣️ Pedido del cliente
+
+**Reporte.** El cliente quiere saber quiénes entraron a la plataforma, **en especial los tutores**.
+
+**Estado actual.** No se registra nada. Ni `User` ni `Student` tienen un campo de último acceso, y
+no hay tabla de auditoría. `createdAt` / `updatedAt` no sirven: `updatedAt` cambia con cualquier
+edición del perfil, no con el ingreso.
+
+**Decisión pendiente — qué se quiere medir realmente.** El pedido admite dos lecturas con costos muy
+distintos:
+
+1. **Último acceso** (recomendado para empezar): un campo `lastLoginAt` en `User` y en `Student`.
+   Responde la pregunta de fondo —"¿los tutores están usando el portal o no?"— con una migración
+   trivial y sin costo de almacenamiento.
+2. **Registro de accesos**: tabla `LoginEvent` con una fila por ingreso. Permite ver frecuencia y
+   evolución en el tiempo, a cambio de una tabla que crece sin techo y de una decisión de retención.
+
+El énfasis en los tutores sugiere que lo que se busca es **medir adopción**, no auditar. Si es así,
+la opción 1 alcanza. Confirmar con el cliente antes de construir.
+
+**Trampa importante.** El JWT dura 30 días y `authorize()` sólo corre al validar credenciales. Un
+tutor que entra una vez y no cierra sesión va a figurar con **un solo ingreso en un mes**, aunque
+haya usado la plataforma todos los días. Es decir: `lastLoginAt` mide *inicios de sesión*, no *uso*.
+Si el cliente quiere saber quién está activo, hace falta otra cosa (registrar última actividad en el
+middleware de [SEC-09](#sec-09), por ejemplo). **Aclarar esto antes de mostrar el número**, o el
+cliente va a concluir que los tutores no entran cuando en realidad sí lo hacen.
+
+**Cambios (opción 1).**
+1. `lastLoginAt DateTime?` en `User` y en `Student`.
+2. Actualizarlo en `authorize()` de [`src/lib/auth.ts`](../src/lib/auth.ts), que es el único punto de
+   entrada de credenciales para ambas tablas.
+3. Mostrarlo en el listado de tutores y en el de alumnos, con un estado claro para "nunca ingresó"
+   —que probablemente sea el dato más accionable para el instituto.
+4. Filtrar por instituto, como todo lo demás.
+
+**Privacidad.** Guardar sólo fecha y hora. No registrar IP ni user-agent salvo que exista una
+necesidad concreta: son datos personales, hay menores involucrados, y suman obligaciones sin aportar
+a la pregunta que se quiere responder.
+
+**Relacionado.** Encaja con el pendiente de mostrar uso real del instituto en el dashboard, anotado
+en [TODO.md](./TODO.md). Si se hace la opción 2, conviene resolverlo junto con ese ítem.
 
 ---
 
