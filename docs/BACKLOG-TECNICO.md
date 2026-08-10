@@ -77,12 +77,12 @@ uno prepara el terreno para el siguiente, y así cada paso queda reversible.
 1. ~~[ARQ-07](#arq-07) — completar los tipos de sesión.~~ Hecho en `b781d4b` (falta el barrido de `as any`).
 2. ~~[SEC-02](#sec-02) — crear el helper `requireRole()`.~~ Hecho en `0dcf991`.
 3. ~~[SEC-01](#sec-01) — migrar los llamadores a `roles[]` y borrar la columna `role`.~~ Hecho el 2026-08-10; **falta verificar en stage**.
-4. [SEC-08](#sec-08) — lo que falta de [BUG-04](#bug-04): el `Navbar` sigue leyendo los roles del JWT.
-5. [SEC-04](#sec-04) — los chequeos de instituto que faltan. [SEC-03](#sec-03) quedó cubierto salvo
-   la decisión de producto sobre qué puede anular una secretaria.
+4. ~~[SEC-08](#sec-08) + [BUG-04](#bug-04) — el `Navbar` leía los roles del JWT viejo.~~ Hecho el 2026-08-10.
+5. ~~[SEC-04](#sec-04) — los chequeos de instituto que faltaban.~~ Hecho el 2026-08-10.
+   [SEC-03](#sec-03) quedó cubierto salvo la decisión de producto sobre qué puede anular una secretaria.
 
-Al terminar esta tanda, los tutores dejan de tener acceso de administrador y la secretaria deja de
-convertirse en profesora.
+**Tanda cerrada el 2026-08-10, a falta de verificar en stage.** Los tutores dejan de tener acceso de
+administrador y la secretaria deja de convertirse en profesora. Sigue la tanda 3.
 
 ### Tanda 3 · Bugs de plata
 
@@ -138,11 +138,11 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-01](#sec-01) | P0 | Eliminar `User.role` y unificar en `roles[]` | [x] |
 | [SEC-02](#sec-02) | P0 | Helper único de autorización (`requireRole`) | [x] |
 | [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [~] |
-| [SEC-04](#sec-04) | P0 | Validación de instituto faltante en 2 acciones de cobro | [ ] |
+| [SEC-04](#sec-04) | P0 | Validación de instituto faltante en 2 acciones de cobro | [x] |
 | [SEC-05](#sec-05) | P1 | Login sin alcance de instituto | [ ] |
 | [SEC-06](#sec-06) | P1 | Contraseñas por defecto hardcodeadas | [ ] |
 | [SEC-07](#sec-07) | P1 | Endpoints de IA abiertos y sin límite de uso | [ ] |
-| [SEC-08](#sec-08) | P2 | Permisos rancios en el JWT | [ ] |
+| [SEC-08](#sec-08) | P2 | Permisos rancios en el JWT | [x] |
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [ ] |
@@ -158,7 +158,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
-| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [~] |
+| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
@@ -178,7 +178,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
 | [PED-04](#ped-04) | P1 | Persistir y moderar las conversaciones del chatbot | [ ] |
 | [PED-05](#ped-05) | P2 | Fallas silenciosas en los providers de IA | [ ] |
-| [PED-06](#ped-06) | P3 | `isCorrect` debe derivarse de `score` | [ ] |
+| [PED-06](#ped-06) | P3 | `isCorrect` debe derivarse de `score` | [x] |
 | [PED-07](#ped-07) | P2 | Límites de consumo de IA por plan | [ ] |
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
 
@@ -396,6 +396,27 @@ los informes publicados de un alumno del instituto B mandando su ID. No se tocó
 mezclar un arreglo de aislamiento con la migración de roles, pero es el mismo olvido y conviene
 hacerlo acá: la ruta ya tiene el `instituteId` del actor a mano en el `AuthContext`.
 
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**El instituto va en el `where`, no en un `if` posterior.** Las dos acciones del enunciado pasaron de
+`findUnique({ where: { id } })` + chequeo olvidable a `findFirst({ where: { id, instituteId } })`.
+Una cuota de otro instituto simplemente no existe para ese usuario, y no hay forma de perder el
+chequeo al editar la función más adelante.
+
+**Aparecieron dos casos más de la misma clase**, ambos en el mismo archivo:
+
+- `registerAdvanceAction` — buscaba el alumno por ID sin instituto, y **acredita saldo a favor**: un
+  admin podía cargarle plata a un alumno de otro instituto mandando su ID.
+- `getStudentPendingFeesAction` — las cuotas ya filtraban por instituto, pero el `creditBalance` que
+  se devuelve al lado salía de un `findUnique` sin filtrar. Con el alumno sin cuotas, filtraba el
+  saldo de un alumno ajeno.
+
+Más el tercer caso de arriba, en la API de informes del alumno.
+
+**Verificado que las hermanas sí validaban**, como decía el relevamiento: `voidPaymentAction`,
+`getReceiptDataAction`, `deleteFeeAction` y `editFeeAmountAction` comparan el instituto. Se dejaron
+con su `if` posterior para no ampliar el diff; funcionan.
+
 ---
 
 <a id="sec-05"></a>
@@ -479,6 +500,31 @@ sesión.
 
 **Cambio.** Definir `maxAge`, o releer los roles desde la base en el callback `session`
 (cuesta una query por request; evaluar). Como mínimo, invalidar la sesión al cambiar roles.
+
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**Se releen los roles en el callback `jwt`, con un intervalo de 5 minutos**
+([`auth.ts`](../src/lib/auth.ts)). El `token.rolesSyncedAt` acota cuánto puede tardar en verse un
+cambio de roles sin pagar una query por request, que era el reparo del enunciado.
+
+**Por qué en `jwt` y no en `session`.** El callback `session` corre en cada lectura de sesión; el
+`jwt` puede guardar la marca de tiempo *dentro del token* y saltear la consulta hasta que expire.
+
+**Después de [SEC-01](#sec-01) esto ya no es lo que decide permisos.** La autorización lee los roles
+de la base en cada acción, vía `getAuthContext`. Lo que arregla este ítem es la **interfaz**: el
+`Navbar` y el `RoleSwitcher` son componentes cliente y leen del token, que es exactamente lo que
+dejaba a la secretaria sin selector de rol ([BUG-04](#bug-04)).
+
+**Dos decisiones a tener presentes:**
+
+- **Si el usuario no aparece en `User`, el token no se toca.** Un token viejo, de antes de que
+  existiera `roles`, no dice de qué tabla salió y puede ser de un alumno; blanquearlo lo dejaría
+  afuera. Quien distingue las dos tablas es `getAuthContext`.
+- **Si la cuenta no está `ACTIVE`, se vacían los roles.** Sin roles no pasa ningún chequeo y la
+  interfaz deja de ofrecer lo que ya no se puede hacer.
+
+**`maxAge` sigue en el default de 30 días.** Acortarlo obliga a todos a volver a entrar más seguido:
+es una decisión de producto, no de permisos, y con los roles frescos ya no hace falta para esto.
 
 ---
 
@@ -804,7 +850,7 @@ tenga efecto sin requerir reinicio de sesión.
 **Dependencia.** Se resuelve junto con [SEC-01](#sec-01) y [SEC-08](#sec-08): los tres son la misma
 deuda de la migración a multi-rol.
 
-### Causa 2 resuelta con [SEC-01](#sec-01); la causa 1 sigue abierta — 2026-08-10
+### Resuelto — 2026-08-10 · pendiente de verificar con la usuaria
 
 **El fallback hardcodeado ya no existe.** Se eliminó `|| "TEACHER"` de las 8 páginas: donde había
 `sessionUser.roles || [user?.role || "TEACHER"]` ahora hay `sessionUser.roles ?? []`. Sin roles no
@@ -814,10 +860,14 @@ hay rol por defecto.
 `role = 'TEACHER'` y `roles = ['TEACHER', 'SECRETARY']`: `roles[]` la tiene bien cargada como
 secretaria. Confirma la causa 1 — el token es lo que está viejo.
 
-**Por qué todavía no alcanza.** La autorización ya lee los roles de la base, pero `Navbar` y
-`RoleSwitcher` son componentes cliente y siguen leyendo `session.user.roles` del JWT. Con un solo rol
-en el token, el selector de rol se sigue ocultando. Cerrar sesión y volver a entrar lo arregla en el
-día; la solución de fondo es [SEC-08](#sec-08).
+**La causa 1 se cerró con [SEC-08](#sec-08).** El token ahora relee los roles de la base cada 5
+minutos, así que el `RoleSwitcher` recupera la opción de secretaria sola, sin que la usuaria tenga
+que cerrar sesión. La cookie `lingua_current_role` que ya tenía guardada deja de descartarse por
+inválida y `getActiveRole` devuelve `SECRETARY`.
+
+**Qué confirmar con ella.** Que al entrar aparezca el selector de rol y que quede en modo Secretaría
+entre sesiones. Si sigue pasando, la causa no era ninguna de las dos y hay que mirar la cookie en el
+navegador.
 
 ---
 
