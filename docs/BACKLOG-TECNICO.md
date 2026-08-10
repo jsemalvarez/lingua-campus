@@ -88,9 +88,15 @@ administrador y la secretaria deja de convertirse en profesora. Sigue la tanda 3
 
 Corren sobre dinero real de un cliente real y son silenciosos: nadie los reporta porque nadie los ve.
 
-[FIN-01](#fin-01), [FIN-02](#fin-02) y [FIN-03](#fin-03) tocan **la misma función**
-(`voidPaymentAction`): hacerlos en un solo pase. Después [FIN-04](#fin-04) (condiciones de carrera) y
-[FIN-07](#fin-07) (curso completo).
+~~[FIN-01](#fin-01), [FIN-02](#fin-02) y [FIN-03](#fin-03) tocan **la misma función**
+(`voidPaymentAction`): hacerlos en un solo pase.~~ Los tres hechos el 2026-08-10 en un solo pase;
+**falta verificar en stage**. `voidPaymentAction` ahora deriva todo —cuota, estado, libro mayor y
+saldo a favor— de los pagos `VALID` que siguen en pie, en vez de restarle el pago a un snapshot.
+
+Quedó una cola: [FIN-11](#fin-11) — la política de bloqueo de FIN-01 manda a anular la aplicación de
+saldo y no hay UI que lo permita. Necesita una definición de producto antes de tocar código.
+
+Después [FIN-04](#fin-04) (condiciones de carrera) y [FIN-07](#fin-07) (curso completo).
 
 ### Tanda 4 · Migraciones, mientras sean baratas
 
@@ -145,9 +151,9 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-08](#sec-08) | P2 | Permisos rancios en el JWT | [x] |
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
-| [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [ ] |
-| [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [ ] |
-| [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [ ] |
+| [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
+| [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
+| [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
 | [FIN-04](#fin-04) | P0 | Condición de carrera al registrar cobros | [ ] |
 | [FIN-05](#fin-05) | P1 | Montos en `Float` en lugar de `Decimal` | [ ] |
 | [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [ ] |
@@ -155,6 +161,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
+| [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
@@ -573,6 +580,29 @@ definir la política — bloquear la anulación, o permitir balance negativo com
 
 **Nota.** Conviene resolverlo junto con [FIN-02](#fin-02): ambos tocan la misma función.
 
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**El excedente es de la cuota, no del pago.** El saldo que generó una cuota es
+`max(0, capital cobrado − importe de la cuota)`; lo que aportó un pago suelto es cuánto baja ese
+excedente al sacarlo del medio. `voidPaymentAction` recalcula ambos lados desde los pagos `VALID`
+restantes y descuenta la diferencia del `creditBalance`. Se descartó guardar el excedente en una
+columna nueva de `Payment` porque los pagos ya registrados no la tendrían: el recálculo vale también
+para el historial.
+
+Esto importa cuando la cuota tiene varios pagos: si se pagan $5.000 y $5.000 sobre una cuota de
+$8.000, el excedente de $2.000 se revierte se anule el pago que se anule. Atribuírselo al último
+habría dejado plata duplicada.
+
+**Política ante saldo ya consumido: se bloquea la anulación.** Si devolver el excedente dejaría el
+`creditBalance` negativo, la acción falla con el monto que falta y el que hay. La alternativa
+—permitir balance negativo como deuda— quedaba invisible: ninguna pantalla muestra hoy un saldo
+negativo. La comparación lleva media tolerancia de centavo por el ruido binario de los `Float`
+([FIN-05](#fin-05)).
+
+**Hueco conocido de esa política:** el mensaje de error pide anular primero los pagos hechos con ese
+saldo, y **hoy no hay UI para hacerlo**. Queda anotado como [FIN-11](#fin-11), que depende de una
+decisión de producto sobre qué muestra la tabla del libro mayor.
+
 ---
 
 <a id="fin-02"></a>
@@ -589,6 +619,18 @@ devuelve el crédito al alumno.
 
 **Cambio.** El contra-asiento debe reflejar el monto del asiento original, no el del pago. Los pagos
 con `method: "SALDO"` necesitan tratamiento propio: revertir contra `creditBalance`, no contra caja.
+
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+El contra-asiento ya no se calcula desde el pago sino **desde los asientos `VALID` que ese pago
+generó**: se suman antes de marcarlos anulados y el ajuste va por `-suma`. Para una aplicación de
+saldo eso da $0 y el tipo pasa a `ADJUSTMENT` en lugar de `REFUND` (un `REFUND` de $0 sería mentira:
+no hubo devolución). Se leen los asientos en vez de mirar `method === "SALDO"` porque así el ajuste
+espeja lo que efectivamente se asentó, sin depender de una constante de texto.
+
+En paralelo, anular un pago con método `SALDO` devuelve el crédito al alumno. Las dos mecánicas
+componen bien: si la aplicación de saldo estaba sobre una cuota sobrepagada, el crédito vuelve y el
+excedente que ese crédito ayudó a formar se descuenta ([FIN-01](#fin-01)), y el neto es correcto.
 
 ---
 
@@ -609,6 +651,25 @@ queda en `null` siempre. Además, si una cuota tenía dos pagos y se anula uno, 
 el resto la cubra por completo.
 
 **Cambio.** Recalcular el estado sumando los pagos `VALID` restantes, contemplando `PAID`.
+
+**No era sólo cosmético.** El `paidAmount` se calculaba restando del snapshot ya topeado, y el
+snapshot puede haber recortado un excedente. Cuota de $8.000 con dos pagos de $5.000: `paidAmount`
+quedó topeado en $8.000 aunque el capital cobrado fue $10.000. Al anular uno, `8.000 − 5.000 = 3.000`,
+cuando el pago que sigue vivo aporta $5.000. **El alumno quedaba debiendo $2.000 de más.** Detectado
+el 2026-08-10 al resolver [FIN-01](#fin-01).
+
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+La cuota se recalcula desde los pagos `VALID` que siguen en pie
+(`Math.min(capitalAfter, originalAmount)`, el mismo `capitalAfter` que ya necesitaba
+[FIN-01](#fin-01)) en lugar de restarle el pago al snapshot. De ahí se deriva el estado, ahora con la
+rama `PAID` viva: una cuota con dos pagos que sigue cubierta después de anular uno vuelve a quedar
+`PAID` y conserva su `datePaid`.
+
+Las comparaciones llevan media tolerancia de centavo por [FIN-05](#fin-05) — sin eso, `0,10 × 3`
+sobre una cuota de `0,30` da `0.30000000000000004` y la cuota saldada quedaba `PARTIAL` para siempre.
+Es un parche de convivencia, no reemplaza migrar a `Decimal`: en ese mismo caso el `creditBalance`
+queda con un residuo de `5.55e-17` que ninguna tolerancia limpia.
 
 ---
 
@@ -740,6 +801,42 @@ seguir viendo la deuda histórica de un alumno dado de baja — puede que sí.
 servidor (Vercel, `en-US`), y guarda `"2,000"` en lugar de `"2.000"` en la nota del recibo.
 
 **Cambio.** `toLocaleString("es-AR")` explícito, o formatear en el cliente.
+
+**Segundo caso (2026-08-10).** El mensaje de error de `voidPaymentAction`
+([`actions.ts:576`](../src/app/payments/actions.ts)) usa el mismo `toLocaleString()` pelado, y es
+texto que ve el operador. Arreglar los dos juntos.
+
+---
+
+<a id="fin-11"></a>
+## FIN-11 · No hay forma de anular una aplicación de saldo a favor · **P1**
+
+`applyCreditToFeeAction` crea un `Payment` con `method: "SALDO"` y un asiento `ADJUSTMENT` de $0.
+Ese movimiento **no es alcanzable desde ninguna pantalla**:
+
+- la tabla del libro mayor descarta los asientos en $0
+  ([`page.tsx:322`](../src/app/payments/page.tsx), `.filter(t => t.amount > 0)`);
+- y aunque apareciera, el menú de acciones se oculta para los `ADJUSTMENT` y `REFUND`
+  ([`TransactionActions.tsx:71`](../src/app/payments/components/TransactionActions.tsx)), pensado
+  para que no se anulen los contra-asientos.
+
+`voidPaymentAction` ya sabe revertirlo bien desde [FIN-02](#fin-02): lo que falta es el acceso.
+
+**Por qué es P1 y no cosmético.** La política de [FIN-01](#fin-01) bloquea la anulación de un pago
+cuyo excedente ya se consumió, y el mensaje de error dice *"anulá primero los pagos hechos con ese
+saldo"*. Hoy eso es imposible: el operador queda trabado sin salida por la UI ante un error de carga
+con plata real.
+
+**Decisión de producto pendiente.** Qué es la tabla de `/payments`: ¿la caja (sólo movimientos de
+dinero) o el libro de todos los movimientos, incluidos los internos de $0? De eso depende el cambio:
+
+1. Si es la caja → dejar el filtro y dar acceso a la aplicación de saldo desde otro lado (la ficha
+   del alumno o el detalle de la cuota, que es donde el operador la está mirando).
+2. Si es el libro completo → levantar el filtro de $0, distinguir en la UI el `ADJUSTMENT` de
+   aplicación de saldo del `ADJUSTMENT` de anulación (hoy comparten tipo), y habilitar el botón sólo
+   para el primero.
+
+La opción 1 es menos invasiva y no cambia lo que ve quien concilia caja.
 
 ---
 

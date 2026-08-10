@@ -513,6 +513,15 @@ export async function generateStandaloneEnrollmentFeeAction(formData: FormData) 
     }
 }
 
+/**
+ * Capital que un pago le descuenta a la deuda: lo que entró, más lo que se perdonó,
+ * menos el recargo (que es interés, no capital). Misma cuenta que hace
+ * `createPaymentAction` con los datos del formulario.
+ */
+function capitalOf(payment: { amount: number; surcharge: number; discount: number }) {
+    return payment.amount + payment.discount - payment.surcharge;
+}
+
 export async function voidPaymentAction(paymentId: string, reason?: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
@@ -528,11 +537,63 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
             if (payment.status === "VOIDED") throw new Error("El pago ya fue anulado");
             if (payment.fee.instituteId !== user.instituteId) throw new Error("Acceso denegado");
 
+            // El excedente es una propiedad de la cuota entera, no de un pago suelto:
+            // `max(0, capital cobrado - importe de la cuota)`. Lo que este pago aportó al
+            // saldo a favor es, entonces, cuánto baja ese excedente al sacarlo del medio.
+            // Se recalcula desde los pagos VALID en vez de guardarlo en el Payment porque
+            // así también sirve para los pagos ya registrados, que no tendrían el dato.
+            const remainingPayments = await tx.payment.findMany({
+                where: { feeId: payment.feeId, status: "VALID", id: { not: payment.id } },
+                select: { amount: true, surcharge: true, discount: true }
+            });
+
+            const capitalAfter = remainingPayments.reduce((total, p) => total + capitalOf(p), 0);
+            const capitalBefore = capitalAfter + capitalOf(payment);
+            const surplusAfter = Math.max(0, capitalAfter - payment.fee.originalAmount);
+            const surplusBefore = Math.max(0, capitalBefore - payment.fee.originalAmount);
+
+            // Un pago con método SALDO no fue plata que entró: fue crédito que salió.
+            // Anularlo se lo devuelve al alumno.
+            const creditReturned = payment.method === "SALDO" ? payment.amount : 0;
+            const creditDelta = creditReturned - (surplusBefore - surplusAfter);
+
+            if (creditDelta < 0) {
+                const student = await tx.student.findUnique({
+                    where: { id: payment.fee.studentId },
+                    select: { creditBalance: true }
+                });
+
+                if (!student) throw new Error("Alumno no encontrado");
+
+                // El saldo no puede quedar negativo: sería una deuda que la UI no muestra
+                // en ningún lado. Si ya se consumió, la anulación se traba hasta que se
+                // anulen los pagos que lo gastaron.
+                // La tolerancia de medio centavo es por los montos en Float, que arrastran
+                // ruido binario (FIN-05): sin ella un 1e-13 traba una anulación legítima.
+                if (student.creditBalance + creditDelta < -0.005) {
+                    throw new Error(
+                        `No se puede anular: hay que devolver $${(-creditDelta).toLocaleString()} de saldo a favor ` +
+                        `y el alumno sólo tiene $${student.creditBalance.toLocaleString()}. ` +
+                        `Anulá primero los pagos hechos con ese saldo.`
+                    );
+                }
+            }
+
             // Marcar el pago como anulado
             await tx.payment.update({
                 where: { id: payment.id },
                 data: { status: "VOIDED" }
             });
+
+            // El contra-asiento tiene que espejar lo que se asentó, no lo que dice el pago:
+            // una aplicación de saldo se asienta en 0 porque la plata ya había entrado como
+            // adelanto. Con `-payment.amount` el libro mayor registraba una salida de caja
+            // que nunca ocurrió.
+            const originalEntries = await tx.transaction.findMany({
+                where: { paymentId: payment.id, status: "VALID" },
+                select: { amount: true }
+            });
+            const reversalAmount = originalEntries.reduce((total, t) => total + t.amount, 0);
 
             // Marcar transacción original como anulada
             await tx.transaction.updateMany({
@@ -544,12 +605,13 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
             const adjustmentDescription = reason
                 ? `Anulación de Pago de Cuota #${payment.id.slice(-6)} - Motivo: ${reason}`
                 : `Anulación de Pago de Cuota #${payment.id.slice(-6)}`;
-                
+
             await tx.transaction.create({
                 data: {
                     instituteId: user.instituteId as string,
-                    amount: -payment.amount, // Salida de dinero para revertir el ingreso
-                    type: "REFUND",
+                    amount: -reversalAmount,
+                    // Un REFUND de $0 sería mentira: no hubo devolución de plata.
+                    type: reversalAmount === 0 ? "ADJUSTMENT" : "REFUND",
                     method: payment.method,
                     date: new Date(),
                     description: adjustmentDescription,
@@ -558,12 +620,18 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                 }
             });
 
-            // Recalcular balance de la cuenta
-            const capitalContribution = payment.amount + payment.discount - payment.surcharge;
-            const newPaidAmount = Math.max(0, payment.fee.paidAmount - capitalContribution);
+            // Recalcular la cuota desde los pagos que siguen en pie, no restándole el pago
+            // al snapshot: el snapshot está topeado en el importe de la cuota, así que si
+            // hubo excedente le restaba de más y el alumno quedaba debiendo plata que ya
+            // había pagado.
+            const newPaidAmount = Math.min(capitalAfter, payment.fee.originalAmount);
 
+            // Mismo medio centavo de tolerancia que arriba, y por lo mismo (FIN-05): con
+            // comparaciones exactas una cuota saldada queda `PARTIAL` por un 1e-13 y el
+            // alumno figura como deudor de una fracción de centavo, sin forma de saldarla.
             let newStatus: any = "PARTIAL";
-            if (newPaidAmount === 0) newStatus = "PENDING";
+            if (newPaidAmount >= payment.fee.originalAmount - 0.005) newStatus = "PAID";
+            else if (newPaidAmount <= 0.005) newStatus = "PENDING";
 
             await tx.fee.update({
                 where: { id: payment.feeId },
@@ -573,10 +641,18 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                     datePaid: newStatus === "PAID" ? payment.fee.datePaid : null
                 }
             });
+
+            if (creditDelta !== 0) {
+                await tx.student.update({
+                    where: { id: payment.fee.studentId },
+                    data: { creditBalance: { increment: creditDelta } }
+                });
+            }
         });
 
         revalidatePath("/payments");
         revalidatePath("/payments/debtors");
+        revalidatePath("/students");
         return { success: true };
     } catch (e: any) {
         return { success: false, error: e.message || "Error al anular pago" };
