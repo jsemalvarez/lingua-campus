@@ -2,9 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { getActiveRole } from "@/lib/roles";
+import { getAuthContext } from "@/lib/authz";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXTO DE SESIÓN
@@ -20,7 +18,7 @@ type MessagingContext = {
 };
 
 /**
- * Deriva la identidad y el rol activo desde la sesión del servidor.
+ * Identidad y rol activo de quien llama, más el atajo `isAdmin` que usa este módulo.
  *
  * IMPORTANTE: estas funciones son server actions, es decir endpoints POST que el
  * navegador puede invocar con los argumentos que quiera. La identidad NUNCA debe
@@ -28,27 +26,18 @@ type MessagingContext = {
  * hilos ajenos o enviar mensajes en nombre de otra persona.
  */
 async function getMessagingContext(): Promise<MessagingContext> {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
-
-    if (!user?.id) {
-        throw new Error("No autorizado.");
-    }
-
-    const roles: string[] = user.roles?.length
-        ? user.roles
-        : [user.role].filter((r): r is string => !!r);
-    const activeRole = await getActiveRole(roles);
+    const ctx = await getAuthContext();
+    if (!ctx) throw new Error("No autorizado.");
 
     return {
-        userId: user.id,
-        isStudent: activeRole === "STUDENT",
-        activeRole,
-        instituteId: user.instituteId ?? "",
+        userId: ctx.userId,
+        isStudent: ctx.isStudent,
+        activeRole: ctx.activeRole,
+        instituteId: ctx.instituteId ?? "",
         isAdmin:
-            activeRole === "ADMIN" ||
-            activeRole === "SECRETARY" ||
-            activeRole === "SUPERADMIN",
+            ctx.activeRole === "ADMIN" ||
+            ctx.activeRole === "SECRETARY" ||
+            ctx.activeRole === "SUPERADMIN",
     };
 }
 
