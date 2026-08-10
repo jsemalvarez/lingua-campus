@@ -162,7 +162,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [~] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
-| [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [ ] |
+| [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [~] |
+| [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -870,10 +871,44 @@ solución y la recomiendo, con dos agregados:
 3. Navegador de meses que muestre solo los meses con clases, con la cantidad de cada uno.
 4. Contemplar el caso de un curso sin clases en el mes seleccionado.
 
-**Ojo.** [`courses/[id]/page.tsx:100`](../src/app/courses/[id]/page.tsx) calcula las métricas de
-práctica a partir de `course.lessons`. Si se filtra la query por mes, las métricas pasan a ser del
-mes en lugar del curso completo. Hay que decidir si es lo deseado; si no, necesitan su propia
-consulta.
+**Estado: implementado en `1df5def`, pendiente de verificación en stage.**
+
+Resuelto según lo propuesto, con los dos agregados sugeridos (mes por defecto = el de la clase más
+cercana a hoy, y atajo "Hoy"). Las métricas de práctica **conservan alcance de curso completo**
+mediante una consulta propia: el panel reporta promedios generales y "la clase más difícil", que
+cambiarían de significado acotados a un mes. Los meses se calculan en UTC para coincidir con las
+columnas `@db.Date`, y el navegador se oculta si todas las clases entran en un solo mes.
+
+Queda pendiente [FEAT-03](#feat-03), consecuencia directa de paginar.
+
+---
+
+<a id="feat-03"></a>
+## FEAT-03 · Saltar al mes de la clase recién creada o movida · **P3**
+
+**Origen.** Consecuencia de [FEAT-02](#feat-02) (`1df5def`).
+
+**Problema.** Si el profesor está viendo agosto y crea una clase para septiembre, la clase se crea
+bien pero **no aparece en pantalla**. Parece que no se guardó.
+
+**Recargar no lo soluciona**, que es la reacción natural:
+
+- [`CreateLessonModal.tsx:64`](../src/app/courses/[id]/lessons/components/CreateLessonModal.tsx)
+  hace `router.refresh()`, que vuelve a renderizar con **la misma URL**, incluido el `?mes=` actual.
+- Una recarga del navegador tampoco cambia la URL.
+- Única excepción: si la URL no tiene `?mes=` **y** la clase nueva resulta ser la más cercana a hoy,
+  el mes por defecto la agarra. En el caso típico —cargar las clases del mes siguiente— no ocurre.
+
+**Alcance.** Aplica también a `EditLessonModal` cuando se mueve una clase a otro mes, y en menor
+medida a `GenerateLessonsModal`, que genera clases en varios meses a la vez.
+
+**Cambio.** Tras crear o mover una clase, navegar a `?mes=` del mes de esa clase en lugar de
+`router.refresh()`. El modal ya conoce la fecha elegida, así que no hace falta que la acción la
+devuelva. Para la generación masiva, evaluar si conviene ir al primer mes generado o quedarse donde
+está.
+
+**Alternativa más barata:** un aviso al confirmar ("La clase se creó en septiembre") con un enlace a
+ese mes. Menos fluido, pero elimina la sensación de que no se guardó, que es el problema real.
 
 ---
 
