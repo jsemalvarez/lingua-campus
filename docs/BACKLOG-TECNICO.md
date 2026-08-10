@@ -771,6 +771,18 @@ producción. Hacerlo **ahora** que el volumen es chico.
 clics rápidos, o dos usuarios generando a la vez, producen cuotas duplicadas. Mismo patrón en
 `generateYearlyEnrollmentFeesAction`.
 
+**No envolver esto en una transacción.** El `createMany` suelto
+([`billingActions.ts:93`](../src/app/payments/billingActions.ts)) es una decisión tomada a partir de
+un problema real en producción: la versión anterior escribía fila por fila dentro de una
+`$transaction` y **se agotaba el tiempo de conexión** con el volumen de alumnos del instituto. Lo
+mismo pasaba generando las notas de los informes. La solución no fue agrandar el `timeout` de Prisma
+—el techo de duración de la función de Vercel corta antes, así que ese número no alcanzaba nunca—
+sino colapsar todo a una sola query. La restricción única de este ítem es compatible con eso:
+`createMany({ skipDuplicates: true })` sigue siendo una query y la base hace cumplir la regla.
+
+Conviene tenerlo presente al leer los bloqueos de fila de [FIN-04](#fin-04): son para las operaciones
+de **un** alumno, que hacen media docena de sentencias. No se aplican ni convienen acá.
+
 **Cambio.**
 1. Agregar al modelo `Fee`: `@@unique([enrollmentId, type, year, month])` para cuotas de inscripción,
    y una restricción equivalente para las de tipo `ENROLLMENT` que no tienen `enrollmentId`
