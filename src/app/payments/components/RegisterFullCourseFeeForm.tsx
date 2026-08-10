@@ -98,6 +98,8 @@ export function RegisterFullCourseFeeForm({ students }: { students: StudentListO
                 <Sparkles className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" size={18} />
                 <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
                     Registra el <strong>Pago Único (Curso Completo)</strong> de un alumno. Congelará la tarifa del curso, saldará la deuda total e impedirá que el sistema genere cuotas en los meses siguientes.
+                    <br /><br />
+                    Sólo se puede usar si el alumno <strong>todavía no pagó ninguna cuota</strong> de esa inscripción.
                 </p>
             </div>
 

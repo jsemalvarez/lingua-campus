@@ -96,9 +96,13 @@ saldo a favor— de los pagos `VALID` que siguen en pie, en vez de restarle el p
 ~~Después [FIN-04](#fin-04) (condiciones de carrera)~~ — hecho el 2026-08-10, en el mismo pase que
 dejó las cuatro operaciones de cobro con bloqueo de fila.
 
-**Falta para cerrar la tanda:** [FIN-07](#fin-07) (curso completo) y [FIN-11](#fin-11) — la política
-de bloqueo de FIN-01 manda a anular la aplicación de saldo y no hay UI que lo permita, así que
-necesita una definición de producto antes de tocar código.
+~~y [FIN-07](#fin-07) (curso completo)~~ — hecho el 2026-08-10, con una decisión de producto que
+recorta el alcance: el caso mixto (pagó algunas cuotas y después quiere el curso entero) queda sin
+soportar a propósito.
+
+**Falta para cerrar la tanda:** sólo [FIN-11](#fin-11) — la política de bloqueo de FIN-01 manda a
+anular la aplicación de saldo y no hay UI que lo permita, así que necesita una definición de producto
+antes de tocar código.
 
 ### Tanda 4 · Migraciones, mientras sean baratas
 
@@ -159,7 +163,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-04](#fin-04) | P0 | Condición de carrera al registrar cobros | [x] |
 | [FIN-05](#fin-05) | P1 | Montos en `Float` en lugar de `Decimal` | [ ] |
 | [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [ ] |
-| [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [ ] |
+| [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
@@ -827,6 +831,42 @@ completo, ¿el monto que carga el administrador en el formulario es **el remanen
 el precio total del curso? Del código surge que el monto es libre
 ([`actions.ts:190`](../src/app/payments/actions.ts)), así que hoy depende del criterio de quien
 carga. Definirlo evita cobrar dos veces los mismos meses.
+
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**Decisión de producto (2026-08-10): el caso mixto no se soporta.** Si la inscripción ya tiene alguna
+cuota con pagos, el curso completo **no se puede cobrar**. Es una limitación deliberada y elegida
+sobre la alternativa: mientras no esté definido si el monto es el remanente o el total, la operación
+a veces cobraría de más, y es preferible que no exista a que funcione mal. Eso deja sin efecto la
+pregunta de arriba hasta que se retome el caso mixto.
+
+Consecuencia útil: **el punto 1 del cambio se cierra por construcción**. `paidAmount: originalAmount`
+sigue escribiéndose, pero ahora sólo puede alcanzar a una cuota `FULL_COURSE` sin pagos, así que ya
+no hay historial que pisar. No hizo falta acumular.
+
+**Las cuotas mensuales previas se borran**, revisando la regla del 2026-08-09 para este caso puntual:
+serían la misma deuda que el pago acaba de cubrir, y dejarlas haría figurar como deudor a alguien que
+terminó de pagar el curso entero. Se borran sólo las que no tienen **ningún** pago asociado —el mismo
+criterio de `deleteFeeAction`, y lo único que la clave foránea de `Payment` permite borrar. El control
+de arriba garantiza que ninguna tenga pagos válidos; una cuota con un pago ya anulado sobrevive con su
+historia y sigue figurando como deuda. La regla del 2026-08-09 sigue valiendo para lo que era: los
+meses que quedan impagos al terminar el curso.
+
+**El punto 2 quedó verificado de paso:**
+
+- `generateMonthlyFeesAction` filtra `billingMode: "MONTHLY"`
+  ([`billingActions.ts:32`](../src/app/payments/billingActions.ts)), así que después del cambio **no
+  se generan cuotas mensuales nuevas**. El problema estaba acotado a las ya existentes.
+- `getDebtorsReportAction` **no** filtra por modalidad
+  ([`billingActions.ts:186`](../src/app/payments/billingActions.ts)), así que esas cuotas sí
+  aparecían como deuda. Con el borrado, deja de haber qué mostrar y no hizo falta tocar el reporte.
+- Las matrículas no entran en el control: se crean por alumno y **sin `enrollmentId`**
+  ([`billingActions.ts:152`](../src/app/payments/billingActions.ts)), así que pagar la matrícula no
+  bloquea el curso completo.
+
+El texto de ayuda del formulario anuncia la limitación
+([`RegisterFullCourseFeeForm.tsx:99`](../src/app/payments/components/RegisterFullCourseFeeForm.tsx)),
+para que no se complete todo y el error aparezca al final.
 
 ---
 

@@ -277,6 +277,26 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                 return { success: false, error: "Inscripción no encontrada" } as const;
             }
 
+            // Regla de negocio (2026-08-10): si la inscripción ya tiene algún pago, el
+            // curso completo no se cobra. El caso mixto —pagó tres meses y después quiere
+            // el curso entero— abre la pregunta de si el monto que carga la secretaria es
+            // el remanente o el precio total; hoy el campo es libre, así que la respuesta
+            // depende de quién cargue y el riesgo es cobrar dos veces los mismos meses.
+            // Es preferible una limitación explícita a una operación que a veces cobra de
+            // más. Las matrículas no cuentan: son cuotas del alumno y no llevan
+            // `enrollmentId`, así que quedan fuera de este filtro solas.
+            const paidFee = await tx.fee.findFirst({
+                where: { enrollmentId, payments: { some: { status: "VALID" } } },
+                select: { id: true }
+            });
+
+            if (paidFee) {
+                return {
+                    success: false,
+                    error: "Esta inscripción ya tiene cuotas con pagos registrados. Por ahora el curso completo sólo se puede cobrar si todavía no se pagó ninguna cuota."
+                } as const;
+            }
+
             const currentYear = new Date().getFullYear();
 
             // La búsqueda de la cuota existente va adentro de la transacción: afuera
@@ -295,6 +315,19 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                     billingMode: "FULL_COURSE",
                     customFullCoursePrice: originalAmount
                 }
+            });
+
+            // Las cuotas mensuales que ya se habían generado son la misma deuda que este
+            // pago cubre: dejarlas haría figurar como deudor a alguien que acaba de pagar
+            // el curso entero. Se borran sólo las que no tienen ningún pago asociado —el
+            // mismo criterio de `deleteFeeAction`, y lo único que la clave foránea de
+            // `Payment` deja borrar. El control de arriba garantiza que ninguna tenga
+            // pagos válidos; si alguna tuviera uno anulado, sobrevive con su historia.
+            //
+            // De acá en más no se generan nuevas: `generateMonthlyFeesAction` sólo mira
+            // las inscripciones con `billingMode: "MONTHLY"`.
+            await tx.fee.deleteMany({
+                where: { enrollmentId, type: "MONTHLY", payments: { none: {} } }
             });
 
             let feeId = existingFee?.id;
