@@ -27,7 +27,18 @@ export async function GET(
             isGuardian = !!link;
         }
 
-        const isStaff = INSTITUTE_STAFF.includes(auth.activeRole as typeof INSTITUTE_STAFF[number]);
+        // El personal accede por rol, y el rol por sí solo no aísla institutos:
+        // sin comparar el instituto del alumno, un profesor del instituto A leía
+        // los informes de un alumno del instituto B mandando su ID.
+        let isStaff = false;
+        const isStaffRole = INSTITUTE_STAFF.includes(auth.activeRole as typeof INSTITUTE_STAFF[number]);
+        if (!isStudent && !isGuardian && isStaffRole && auth.instituteId) {
+            const student = await prisma.student.findFirst({
+                where: { id: studentId, instituteId: auth.instituteId },
+                select: { id: true }
+            });
+            isStaff = !!student;
+        }
 
         if (!isStudent && !isGuardian && !isStaff) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -44,8 +44,11 @@ export async function createPaymentAction(formData: FormData) {
 
     try {
         // 1. Obtener la Cuota (Fee)
-        const fee = await prisma.fee.findUnique({
-            where: { id: feeId },
+        // El instituto va en el `where`, no en un `if` posterior: así no hay forma
+        // de olvidarse el chequeo al tocar esto más adelante. Una cuota de otro
+        // instituto simplemente no existe para este usuario.
+        const fee = await prisma.fee.findFirst({
+            where: { id: feeId, instituteId: user.instituteId },
         });
 
         if (!fee) return { success: false, error: "Cuota no encontrada" };
@@ -142,8 +145,10 @@ export async function getStudentPendingFeesAction(studentId: string) {
                     { month: "desc" }
                 ]
             }),
-            prisma.student.findUnique({
-                where: { id: studentId },
+            // Las cuotas ya filtran por instituto; el saldo también tiene que
+            // hacerlo, o se filtra el de un alumno ajeno cuando no hay cuotas.
+            prisma.student.findFirst({
+                where: { id: studentId, instituteId: user.instituteId },
                 select: { creditBalance: true }
             })
         ]);
@@ -648,8 +653,10 @@ export async function registerAdvanceAction(formData: FormData) {
     }
 
     try {
-        const student = await prisma.student.findUnique({
-            where: { id: studentId },
+        // Acredita saldo a favor: sin el instituto, un admin podía cargarle
+        // plata a un alumno de otro instituto mandando su ID.
+        const student = await prisma.student.findFirst({
+            where: { id: studentId, instituteId: user.instituteId },
             select: { name: true }
         });
 
@@ -712,8 +719,8 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
     }
 
     try {
-        const fee = await prisma.fee.findUnique({
-            where: { id: feeId },
+        const fee = await prisma.fee.findFirst({
+            where: { id: feeId, instituteId: user.instituteId },
             include: { student: true }
         });
 
