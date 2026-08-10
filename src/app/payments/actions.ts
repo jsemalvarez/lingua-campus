@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 
@@ -17,6 +18,40 @@ async function getAuthAndInstitute() {
     const auth = await requireRole(["ADMIN", "SECRETARY"]);
     if (!auth) return null;
     return { id: auth.userId, instituteId: auth.instituteId };
+}
+
+/**
+ * Bloqueos de fila para las operaciones de cobro.
+ *
+ * Los importes de una cuota no se pueden calcular con `increment`: `paidAmount`
+ * está topeado en el importe de la cuota y lo que sobra va al saldo del alumno,
+ * así que hay que leer, decidir y recién ahí escribir. Ese "leer y después
+ * escribir" es una condición de carrera: dos cobros simultáneos sobre la misma
+ * cuota leían el mismo `paidAmount` y el segundo pisaba al primero, que
+ * desaparecía sin dejar rastro. Un doble clic alcanza.
+ *
+ * El lock se toma al principio de la transacción y se libera al commit, así que
+ * la segunda operación espera turno y vuelve a leer los valores ya actualizados.
+ * Se prefiere esto a `isolationLevel: "Serializable"` porque Postgres resuelve
+ * los conflictos serializables abortando una de las dos transacciones: sin un
+ * reintento, el cobro perdido se transforma en un error inexplicable para quien
+ * está cobrando.
+ *
+ * **El orden es siempre Payment → Fee → Enrollment.** Respetarlo es lo que evita
+ * que dos acciones que tocan las mismas filas en distinto orden queden trabadas
+ * esperándose entre sí. `Student` no aparece: el saldo a favor se mueve con
+ * `updateMany` condicionales, que son atómicos y no necesitan lock.
+ */
+function lockPayment(tx: Prisma.TransactionClient, paymentId: string) {
+    return tx.$queryRaw`SELECT id FROM "Payment" WHERE id = ${paymentId} FOR UPDATE`;
+}
+
+function lockFee(tx: Prisma.TransactionClient, feeId: string) {
+    return tx.$queryRaw`SELECT id FROM "Fee" WHERE id = ${feeId} FOR UPDATE`;
+}
+
+function lockEnrollment(tx: Prisma.TransactionClient, enrollmentId: string) {
+    return tx.$queryRaw`SELECT id FROM "Enrollment" WHERE id = ${enrollmentId} FOR UPDATE`;
 }
 
 export async function createPaymentAction(formData: FormData) {
@@ -43,22 +78,27 @@ export async function createPaymentAction(formData: FormData) {
     const capitalContribution = amount + discount - surcharge;
 
     try {
-        // 1. Obtener la Cuota (Fee)
-        // El instituto va en el `where`, no en un `if` posterior: así no hay forma
-        // de olvidarse el chequeo al tocar esto más adelante. Una cuota de otro
-        // instituto simplemente no existe para este usuario.
-        const fee = await prisma.fee.findFirst({
-            where: { id: feeId, instituteId: user.instituteId },
-        });
+        // La cuota se lee **dentro** de la transacción y con la fila bloqueada: antes
+        // se leía afuera, se calculaba en memoria y adentro se escribía el valor
+        // absoluto, así que dos cobros simultáneos se pisaban. Ver `lockFee`.
+        const result = await prisma.$transaction(async (tx) => {
+            await lockFee(tx, feeId);
 
-        if (!fee) return { success: false, error: "Cuota no encontrada" };
+            // 1. Obtener la Cuota (Fee)
+            // El instituto va en el `where`, no en un `if` posterior: así no hay forma
+            // de olvidarse el chequeo al tocar esto más adelante. Una cuota de otro
+            // instituto simplemente no existe para este usuario.
+            const fee = await tx.fee.findFirst({
+                where: { id: feeId, instituteId: user.instituteId },
+            });
 
-        const totalPaidAfter = fee.paidAmount + capitalContribution;
-        const surplus = totalPaidAfter > fee.originalAmount ? totalPaidAfter - fee.originalAmount : 0;
-        const finalPaidAmountOnFee = Math.min(totalPaidAfter, fee.originalAmount);
+            if (!fee) return { success: false, error: "Cuota no encontrada" } as const;
 
-        // 2. Transacción para crear el pago, actualizar la cuota y manejar el saldo a favor
-        await prisma.$transaction(async (tx) => {
+            const totalPaidAfter = fee.paidAmount + capitalContribution;
+            const surplus = totalPaidAfter > fee.originalAmount ? totalPaidAfter - fee.originalAmount : 0;
+            const finalPaidAmountOnFee = Math.min(totalPaidAfter, fee.originalAmount);
+
+            // 2. Crear el pago, actualizar la cuota y manejar el saldo a favor
             // Crear el registro de transacción individual con los ajustes
             const payment = await tx.payment.create({
                 data: {
@@ -111,10 +151,21 @@ export async function createPaymentAction(formData: FormData) {
                     }
                 });
             }
+
+            return { success: true } as const;
+        }, {
+            // Los valores por defecto de Prisma (2s para conseguir conexión, 5s de
+            // transacción) quedaron cortos ahora que las operaciones esperan turno:
+            // en frío, sólo levantar la conexión contra Supabase puede tardar ~2s.
+            maxWait: 10000,
+            timeout: 20000
         });
+
+        if (!result.success) return result;
 
         revalidatePath("/payments");
         revalidatePath("/payments/debtors");
+        revalidatePath("/students");
         return { success: true };
     } catch (e: any) {
         console.error(e);
@@ -202,26 +253,32 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
     }
 
     try {
-        const enrollment = await prisma.enrollment.findUnique({
-            where: { id: enrollmentId },
-            include: { course: true }
-        });
+        const result = await prisma.$transaction(async (tx) => {
+            // Se bloquea la inscripción, no la cuota: la cuota `FULL_COURSE` puede
+            // todavía no existir, y es justamente el caso que hay que serializar. Dos
+            // registraciones simultáneas de la misma inscripción creaban dos cuotas.
+            await lockEnrollment(tx, enrollmentId);
 
-        if (!enrollment || enrollment.course.instituteId !== user.instituteId) {
-            return { success: false, error: "Inscripción no encontrada" };
-        }
+            const enrollment = await tx.enrollment.findUnique({
+                where: { id: enrollmentId },
+                include: { course: true }
+            });
 
-        const currentYear = new Date().getFullYear();
-
-        // Buscar cuota FULL_COURSE existente fuera de la transacción para optimizar tiempos
-        const existingFee = await prisma.fee.findFirst({
-            where: {
-                enrollmentId,
-                type: "FULL_COURSE"
+            if (!enrollment || enrollment.course.instituteId !== user.instituteId) {
+                return { success: false, error: "Inscripción no encontrada" } as const;
             }
-        });
 
-        await prisma.$transaction(async (tx) => {
+            const currentYear = new Date().getFullYear();
+
+            // La búsqueda de la cuota existente va adentro de la transacción: afuera
+            // ahorraba unos milisegundos a cambio de decidir sobre datos viejos.
+            const existingFee = await tx.fee.findFirst({
+                where: {
+                    enrollmentId,
+                    type: "FULL_COURSE"
+                }
+            });
+
             // Update enrollment to FULL_COURSE
             await tx.enrollment.update({
                 where: { id: enrollmentId },
@@ -287,10 +344,14 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                     operatorId: user.id
                 }
             });
+
+            return { success: true } as const;
         }, {
             maxWait: 10000,
             timeout: 20000
         });
+
+        if (!result.success) return result;
 
         revalidatePath("/payments");
         revalidatePath("/payments/debtors");
@@ -528,14 +589,25 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
 
     try {
         await prisma.$transaction(async (tx) => {
-            const payment = await tx.payment.findUnique({
-                where: { id: paymentId },
-                include: { fee: true }
-            });
+            // Sin el lock del pago, dos anulaciones simultáneas leen `VALID` las dos y
+            // se cuentan por duplicado: dos contra-asientos y el saldo tocado dos veces.
+            // Sin el de la cuota, un cobro en paralelo deja el `paidAmount` mal.
+            await lockPayment(tx, paymentId);
+
+            const payment = await tx.payment.findUnique({ where: { id: paymentId } });
 
             if (!payment) throw new Error("Pago no encontrado");
             if (payment.status === "VOIDED") throw new Error("El pago ya fue anulado");
-            if (payment.fee.instituteId !== user.instituteId) throw new Error("Acceso denegado");
+
+            // La cuota se lee después de bloquearla, no con un `include` en la consulta
+            // anterior: leerla antes del lock es leer un valor que otra transacción
+            // todavía puede cambiar.
+            await lockFee(tx, payment.feeId);
+
+            const fee = await tx.fee.findUnique({ where: { id: payment.feeId } });
+
+            if (!fee) throw new Error("Cuota no encontrada");
+            if (fee.instituteId !== user.instituteId) throw new Error("Acceso denegado");
 
             // El excedente es una propiedad de la cuota entera, no de un pago suelto:
             // `max(0, capital cobrado - importe de la cuota)`. Lo que este pago aportó al
@@ -549,28 +621,41 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
 
             const capitalAfter = remainingPayments.reduce((total, p) => total + capitalOf(p), 0);
             const capitalBefore = capitalAfter + capitalOf(payment);
-            const surplusAfter = Math.max(0, capitalAfter - payment.fee.originalAmount);
-            const surplusBefore = Math.max(0, capitalBefore - payment.fee.originalAmount);
+            const surplusAfter = Math.max(0, capitalAfter - fee.originalAmount);
+            const surplusBefore = Math.max(0, capitalBefore - fee.originalAmount);
 
             // Un pago con método SALDO no fue plata que entró: fue crédito que salió.
             // Anularlo se lo devuelve al alumno.
             const creditReturned = payment.method === "SALDO" ? payment.amount : 0;
             const creditDelta = creditReturned - (surplusBefore - surplusAfter);
 
-            if (creditDelta < 0) {
-                const student = await tx.student.findUnique({
-                    where: { id: payment.fee.studentId },
-                    select: { creditBalance: true }
-                });
-
-                if (!student) throw new Error("Alumno no encontrado");
-
+            if (creditDelta !== 0) {
                 // El saldo no puede quedar negativo: sería una deuda que la UI no muestra
                 // en ningún lado. Si ya se consumió, la anulación se traba hasta que se
                 // anulen los pagos que lo gastaron.
+                //
+                // La condición viaja en el `where` en lugar de chequearse antes: así el
+                // control y el descuento son una sola operación atómica y dos anulaciones
+                // simultáneas sobre el mismo alumno no pueden pasar las dos.
+                //
                 // La tolerancia de medio centavo es por los montos en Float, que arrastran
                 // ruido binario (FIN-05): sin ella un 1e-13 traba una anulación legítima.
-                if (student.creditBalance + creditDelta < -0.005) {
+                const updated = await tx.student.updateMany({
+                    where: {
+                        id: fee.studentId,
+                        ...(creditDelta < 0 ? { creditBalance: { gte: -creditDelta - 0.005 } } : {})
+                    },
+                    data: { creditBalance: { increment: creditDelta } }
+                });
+
+                if (updated.count === 0) {
+                    const student = await tx.student.findUnique({
+                        where: { id: fee.studentId },
+                        select: { creditBalance: true }
+                    });
+
+                    if (!student) throw new Error("Alumno no encontrado");
+
                     throw new Error(
                         `No se puede anular: hay que devolver $${(-creditDelta).toLocaleString()} de saldo a favor ` +
                         `y el alumno sólo tiene $${student.creditBalance.toLocaleString()}. ` +
@@ -624,13 +709,13 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
             // al snapshot: el snapshot está topeado en el importe de la cuota, así que si
             // hubo excedente le restaba de más y el alumno quedaba debiendo plata que ya
             // había pagado.
-            const newPaidAmount = Math.min(capitalAfter, payment.fee.originalAmount);
+            const newPaidAmount = Math.min(capitalAfter, fee.originalAmount);
 
             // Mismo medio centavo de tolerancia que arriba, y por lo mismo (FIN-05): con
             // comparaciones exactas una cuota saldada queda `PARTIAL` por un 1e-13 y el
             // alumno figura como deudor de una fracción de centavo, sin forma de saldarla.
             let newStatus: any = "PARTIAL";
-            if (newPaidAmount >= payment.fee.originalAmount - 0.005) newStatus = "PAID";
+            if (newPaidAmount >= fee.originalAmount - 0.005) newStatus = "PAID";
             else if (newPaidAmount <= 0.005) newStatus = "PENDING";
 
             await tx.fee.update({
@@ -638,16 +723,13 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                 data: {
                     paidAmount: newPaidAmount,
                     status: newStatus,
-                    datePaid: newStatus === "PAID" ? payment.fee.datePaid : null
+                    datePaid: newStatus === "PAID" ? fee.datePaid : null
                 }
             });
-
-            if (creditDelta !== 0) {
-                await tx.student.update({
-                    where: { id: payment.fee.studentId },
-                    data: { creditBalance: { increment: creditDelta } }
-                });
-            }
+        }, {
+            // Mismo margen que los cobros: ahora esta transacción espera turno.
+            maxWait: 10000,
+            timeout: 20000
         });
 
         revalidatePath("/payments");
@@ -795,22 +877,38 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
     }
 
     try {
-        const fee = await prisma.fee.findFirst({
-            where: { id: feeId, instituteId: user.instituteId },
-            include: { student: true }
-        });
+        const result = await prisma.$transaction(async (tx) => {
+            await lockFee(tx, feeId);
 
-        if (!fee || !fee.student) return { success: false, error: "Cuota o alumno no encontrado" };
+            const fee = await tx.fee.findFirst({
+                where: { id: feeId, instituteId: user.instituteId },
+                include: { student: true }
+            });
 
-        if (fee.student.creditBalance < creditAmount) {
-            return { success: false, error: "Saldo insuficiente" };
-        }
+            if (!fee || !fee.student) return { success: false, error: "Cuota o alumno no encontrado" } as const;
 
-        const remainingDebt = fee.originalAmount - fee.paidAmount;
-        const actualApplication = Math.min(creditAmount, remainingDebt);
+            const remainingDebt = fee.originalAmount - fee.paidAmount;
 
-        await prisma.$transaction(async (tx) => {
-            // 1. Crear registro de pago (virtualmente es un pago con método 'SALDO')
+            // Con la cuota bloqueada este valor ya es confiable, así que se puede
+            // rechazar el caso sin sentido en vez de aplicar un importe negativo.
+            if (remainingDebt <= 0) return { success: false, error: "La cuota no tiene deuda pendiente" } as const;
+
+            const actualApplication = Math.min(creditAmount, remainingDebt);
+
+            // 1. Descontar del saldo del alumno
+            // El saldo se descuenta con la condición en el `where`: antes se leía, se
+            // validaba y después se descontaba, así que dos aplicaciones simultáneas
+            // pasaban las dos el control y el balance quedaba negativo. Se exige el
+            // `creditAmount` pedido, no lo que se termina aplicando, que es lo que
+            // validaba el chequeo original.
+            const debited = await tx.student.updateMany({
+                where: { id: fee.studentId, creditBalance: { gte: creditAmount } },
+                data: { creditBalance: { decrement: actualApplication } }
+            });
+
+            if (debited.count === 0) return { success: false, error: "Saldo insuficiente" } as const;
+
+            // 2. Crear registro de pago (virtualmente es un pago con método 'SALDO')
             const payment = await tx.payment.create({
                 data: {
                     feeId,
@@ -821,7 +919,7 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
                 }
             });
 
-            // 2. Crear transacción en libro mayor (es un ajuste de balance interno, suma 0 neto a la caja real)
+            // 3. Crear transacción en libro mayor (es un ajuste de balance interno, suma 0 neto a la caja real)
             // Pero lo registramos como ADJUSTMENT para trazabilidad
             await tx.transaction.create({
                 data: {
@@ -836,13 +934,8 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
                 }
             });
 
-            // 3. Descontar del saldo del alumno
-            await tx.student.update({
-                where: { id: fee.studentId },
-                data: { creditBalance: { decrement: actualApplication } }
-            });
-
             // 4. Actualizar estado de la cuota
+            // (el saldo del alumno ya se descontó arriba, junto con su control)
             const newTotalPaid = fee.paidAmount + actualApplication;
             const newStatus = newTotalPaid >= fee.originalAmount ? "PAID" : "PARTIAL";
 
@@ -854,9 +947,18 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
                     datePaid: newStatus === "PAID" ? new Date() : fee.datePaid
                 }
             });
+
+            return { success: true } as const;
+        }, {
+            // Mismo margen que los cobros: ahora esta transacción espera turno.
+            maxWait: 10000,
+            timeout: 20000
         });
 
+        if (!result.success) return result;
+
         revalidatePath("/payments");
+        revalidatePath("/payments/debtors");
         revalidatePath("/students");
         return { success: true };
     } catch (e: any) {

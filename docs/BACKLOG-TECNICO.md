@@ -93,10 +93,12 @@ Corren sobre dinero real de un cliente real y son silenciosos: nadie los reporta
 **falta verificar en stage**. `voidPaymentAction` ahora deriva todo —cuota, estado, libro mayor y
 saldo a favor— de los pagos `VALID` que siguen en pie, en vez de restarle el pago a un snapshot.
 
-Quedó una cola: [FIN-11](#fin-11) — la política de bloqueo de FIN-01 manda a anular la aplicación de
-saldo y no hay UI que lo permita. Necesita una definición de producto antes de tocar código.
+~~Después [FIN-04](#fin-04) (condiciones de carrera)~~ — hecho el 2026-08-10, en el mismo pase que
+dejó las cuatro operaciones de cobro con bloqueo de fila.
 
-Después [FIN-04](#fin-04) (condiciones de carrera) y [FIN-07](#fin-07) (curso completo).
+**Falta para cerrar la tanda:** [FIN-07](#fin-07) (curso completo) y [FIN-11](#fin-11) — la política
+de bloqueo de FIN-01 manda a anular la aplicación de saldo y no hay UI que lo permita, así que
+necesita una definición de producto antes de tocar código.
 
 ### Tanda 4 · Migraciones, mientras sean baratas
 
@@ -154,7 +156,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
-| [FIN-04](#fin-04) | P0 | Condición de carrera al registrar cobros | [ ] |
+| [FIN-04](#fin-04) | P0 | Condición de carrera al registrar cobros | [x] |
 | [FIN-05](#fin-05) | P1 | Montos en `Float` en lugar de `Decimal` | [ ] |
 | [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [ ] |
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [ ] |
@@ -688,6 +690,41 @@ Mismo patrón:
 **Cambio.** Mover las lecturas dentro de `$transaction`, usar operaciones atómicas (`increment` /
 `decrement`) donde se pueda, y evaluar `isolationLevel: "Serializable"` en las operaciones de cobro.
 
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**Bloqueos de fila (`SELECT … FOR UPDATE`), no `Serializable`.** Postgres resuelve los conflictos
+serializables **abortando** una de las dos transacciones (error 40001). Sin un reintento, el cobro
+que hoy se pierde en silencio pasaría a fallar con un "Error al registrar el pago" que el operador no
+puede interpretar — cambiábamos un bug callado por uno ruidoso. Con el lock, la segunda operación
+espera turno, vuelve a leer los valores ya actualizados y las dos se registran.
+
+Los helpers `lockPayment` / `lockFee` / `lockEnrollment`
+([`actions.ts:44`](../src/app/payments/actions.ts)) documentan el criterio en un solo lugar. **El
+orden de toma es siempre Payment → Fee → Enrollment**, que es lo que evita que dos acciones que
+tocan las mismas filas en distinto orden queden esperándose entre sí.
+
+**Dónde se aplicó:**
+
+- `createPaymentAction` — la cuota se lee adentro de la transacción y con la fila bloqueada.
+- `registerFullCoursePaymentAction` — se bloquea la **inscripción**, no la cuota: la cuota
+  `FULL_COURSE` puede todavía no existir, y ese es justamente el caso a serializar (dos registros
+  simultáneos creaban dos cuotas).
+- `applyCreditToFeeAction` — bloqueo de la cuota, y el saldo se descuenta con la condición dentro del
+  `where` de un `updateMany`: el control y el descuento pasan a ser una sola operación atómica. De
+  paso se eliminó un `decrement` duplicado que había quedado del paso 3 original.
+- `voidPaymentAction` — no figuraba en el enunciado pero tiene el mismo patrón, y más ahora que
+  recalcula desde los pagos vivos ([FIN-01](#fin-01) a [FIN-03](#fin-03)): sin el lock del pago, dos
+  anulaciones simultáneas leen `VALID` las dos y generan dos contra-asientos.
+
+**Verificado contra la base de stage**, porque `tsc` no valida SQL crudo: los nombres de tabla
+existen tal cual (`"Payment"`, `"Fee"`, `"Enrollment"`) y **los locks sobreviven al pooler de
+Supabase** (`pgbouncer=true`, modo transacción). En la prueba, una segunda transacción pidió el mismo
+lock a los 316 ms y recién lo obtuvo a los 3605 ms, cuando la primera commiteó.
+
+**Efecto colateral:** ahora las transacciones esperan turno, así que los cobros llevan
+`maxWait: 10s` / `timeout: 20s` explícitos — los 2s/5s por defecto de Prisma quedaban cortos, sobre
+todo en frío, donde sólo levantar la conexión contra Supabase tardó ~2s en la medición.
+
 ---
 
 <a id="fin-05"></a>
@@ -725,6 +762,11 @@ clics rápidos, o dos usuarios generando a la vez, producen cuotas duplicadas. M
    (probablemente `@@unique([studentId, type, year])`). **Limpiar duplicados existentes antes de
    aplicar la migración.**
 2. Usar `createMany({ skipDuplicates: true })`.
+
+**Tercer caso del mismo patrón (2026-08-10).** `generateStandaloneEnrollmentFeeAction`
+([`actions.ts:538`](../src/app/payments/actions.ts)) también consulta si ya existe la matrícula y
+después la crea, sin transacción. Quedó **sin tocar a propósito** al resolver [FIN-04](#fin-04): el
+arreglo correcto acá es la restricción única de este ítem, no un lock. Cubrirlo cuando se aplique.
 
 **Otros huecos de la misma función:**
 - No contempla `startDate` / `endDate` del curso: genera cuotas de meses fuera del período lectivo.
