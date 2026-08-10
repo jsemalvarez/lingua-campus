@@ -29,13 +29,15 @@ type MessagingContext = {
  */
 async function getMessagingContext(): Promise<MessagingContext> {
     const session = await getServerSession(authOptions);
-    const user = session?.user as any;
+    const user = session?.user;
 
     if (!user?.id) {
         throw new Error("No autorizado.");
     }
 
-    const roles: string[] = user.roles?.length ? user.roles : [user.role].filter(Boolean);
+    const roles: string[] = user.roles?.length
+        ? user.roles
+        : [user.role].filter((r): r is string => !!r);
     const activeRole = await getActiveRole(roles);
 
     return {
