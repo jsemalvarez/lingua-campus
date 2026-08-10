@@ -710,8 +710,9 @@ tocan las mismas filas en distinto orden queden esperándose entre sí.
   `FULL_COURSE` puede todavía no existir, y ese es justamente el caso a serializar (dos registros
   simultáneos creaban dos cuotas).
 - `applyCreditToFeeAction` — bloqueo de la cuota, y el saldo se descuenta con la condición dentro del
-  `where` de un `updateMany`: el control y el descuento pasan a ser una sola operación atómica. De
-  paso se eliminó un `decrement` duplicado que había quedado del paso 3 original.
+  `where` de un `updateMany`: el control y el descuento pasan a ser una sola operación atómica. El
+  `decrement` suelto que hacía el paso 3 desaparece porque ahora ocurre ahí mismo. También rechaza
+  aplicar saldo a una cuota sin deuda, que con el valor ya confiable es un caso decidible.
 - `voidPaymentAction` — no figuraba en el enunciado pero tiene el mismo patrón, y más ahora que
   recalcula desde los pagos vivos ([FIN-01](#fin-01) a [FIN-03](#fin-03)): sin el lock del pago, dos
   anulaciones simultáneas leen `VALID` las dos y generan dos contra-asientos.
