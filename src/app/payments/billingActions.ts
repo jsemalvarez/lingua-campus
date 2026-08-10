@@ -89,9 +89,16 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
             });
 
         // 4. Crear masivamente en 1 sola query SQL
+        // El filtro en memoria de arriba se queda porque es lo que hace honesto al
+        // contador, pero ya no es lo único que evita duplicados: entre esa consulta y
+        // este insert se puede colar otra generación. `skipDuplicates` se apoya en la
+        // restricción única de `Fee` para que la segunda no explote ni duplique, y
+        // sigue siendo una sola query — que es la razón por la que esto no va dentro
+        // de una transacción (ver FIN-06).
         if (feesToCreate.length > 0) {
             await prisma.fee.createMany({
-                data: feesToCreate
+                data: feesToCreate,
+                skipDuplicates: true
             });
         }
 
@@ -161,9 +168,15 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
             }));
 
         // 4. Crear masivamente en 1 sola query SQL
+        // Ojo: acá `skipDuplicates` todavía no protege nada. Estas matrículas se crean
+        // sin `enrollmentId`, y en Postgres los NULL no chocan entre sí, así que la
+        // restricción única de `Fee` no las alcanza. Queda puesto para cuando exista el
+        // índice parcial de "una matrícula por alumno y año" (ver FIN-06); hasta
+        // entonces, lo único que evita duplicados acá es el filtro en memoria de arriba.
         if (feesToCreate.length > 0) {
             await prisma.fee.createMany({
-                data: feesToCreate
+                data: feesToCreate,
+                skipDuplicates: true
             });
         }
 

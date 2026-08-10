@@ -508,6 +508,15 @@ model Fee {
   updatedAt   DateTime @updatedAt
 
   payments    Payment[]
+
+  // Una cuota por inscripción, tipo y período. Antes la regla vivía sólo en
+  // memoria ("consultar existentes → filtrar → crear"), así que dos clics
+  // seguidos generaban la cuota dos veces. Ver FIN-06.
+  //
+  // No alcanza para las matrículas anticipadas, que se crean sin `enrollmentId`:
+  // en Postgres los NULL no chocan entre sí. Esa regla es "una por alumno y año"
+  // y necesita un índice parcial que Prisma todavía no sabe expresar.
+  @@unique([enrollmentId, type, year, month])
 }
 
 model Payment {

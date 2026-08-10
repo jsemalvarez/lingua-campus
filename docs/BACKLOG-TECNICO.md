@@ -162,12 +162,13 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
 | [FIN-04](#fin-04) | P0 | Condición de carrera al registrar cobros | [x] |
 | [FIN-05](#fin-05) | P1 | Montos en `Float` en lugar de `Decimal` | [ ] |
-| [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [ ] |
+| [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [~] |
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
+| [FIN-12](#fin-12) | P1 | La matrícula se duplica al inscribir en un segundo curso | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
@@ -803,6 +804,36 @@ arreglo correcto acá es la restricción única de este ítem, no un lock. Cubri
 - No contempla `startDate` / `endDate` del curso: genera cuotas de meses fuera del período lectivo.
 - No filtra por `student.status`: un alumno dado de baja con inscripción activa sigue generando cuotas.
 
+### Parcialmente resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**Hecho: la restricción para las cuotas con inscripción.** `@@unique([enrollmentId, type, year, month])`
+en el modelo `Fee`, más `createMany({ skipDuplicates: true })` en los dos generadores. Cubre las
+`MONTHLY` y las `FULL_COURSE`, que son las que reporta el enunciado.
+
+La migración limpia los duplicados antes de crear el índice, pero **sólo borra cuotas sin ningún pago
+asociado**, conservando de cada grupo la que tiene más pagos y, a igualdad, la más antigua. Si en
+algún grupo quedara más de una cuota con pagos, el `CREATE UNIQUE INDEX` falla y el despliegue se
+detiene: es plata cobrada y decidir cuál sobrevive no es algo que pueda hacer una migración a ciegas.
+Ensayada contra stage dentro de una transacción revertida: 0 borrados y el índice entra sin
+conflictos. **En producción no está verificado** — es otra base y no se miró.
+
+**Falta: la restricción de las matrículas.** La regla es "una por alumno y año", y necesita un índice
+**parcial** (`WHERE type = 'ENROLLMENT'`), porque un `@@unique([studentId, type, year])` liso
+prohibiría también que un alumno tenga doce cuotas mensuales en el año. Prisma 5 no sabe expresar
+índices parciales en el schema, así que hay que escribirlo en SQL crudo dentro de la migración — con
+el costo de que Prisma no lo conoce y el próximo `migrate dev` va a querer borrarlo. Antes de
+ponerlo hay que resolver [FIN-12](#fin-12), o inscribir a un alumno en un segundo curso pasaría de
+duplicarle la matrícula en silencio a fallar con un error de base.
+
+**Corrección al enunciado de arriba:** decía que las cuotas de tipo `ENROLLMENT` no tienen
+`enrollmentId`. Es cierto sólo para las anticipadas; las que crea `createEnrollmentAction`
+([`enrollments/actions.ts:67`](../src/app/enrollments/actions.ts)) sí lo llevan, y en stage las 12 lo
+tienen. Esa afirmación ya había hecho fallar el filtro de [FIN-07](#fin-07), corregido en `0b55917`.
+
+**En stage hay 6 matrículas duplicadas** (2026, un par por alumno), una de ellas con dos pagos
+válidos. Son datos de prueba —"estudiante uno", "cursos test"—, así que no dicen nada sobre
+producción: hay que mirarla aparte antes de aplicar el índice parcial.
+
 ---
 
 <a id="fin-07"></a>
@@ -949,6 +980,36 @@ dinero) o el libro de todos los movimientos, incluidos los internos de $0? De es
    para el primero.
 
 La opción 1 es menos invasiva y no cambia lo que ve quien concilia caja.
+
+---
+
+<a id="fin-12"></a>
+## FIN-12 · La matrícula se duplica al inscribir en un segundo curso · **P1**
+
+Al inscribir a un alumno, `createEnrollmentAction`
+([`enrollments/actions.ts:47`](../src/app/enrollments/actions.ts)) busca una matrícula del año para
+vincular, pero **sólo entre las que tienen `enrollmentId: null`**. Si el alumno ya se inscribió antes
+en otro curso, su matrícula de ese año quedó vinculada a esa primera inscripción, así que la
+búsqueda no la encuentra y se le **crea una segunda matrícula**.
+
+El resto del sistema trata la matrícula como una por alumno y año:
+`generateStandaloneEnrollmentFeeAction` rechaza la segunda con *"Ya existe una matrícula registrada
+para este alumno en el año X"* ([`actions.ts:538`](../src/app/payments/actions.ts)), y
+`generateYearlyEnrollmentFeesAction` saltea a los alumnos que ya tienen una. Esta ruta es la
+excepción, y le cobra al alumno la matrícula dos veces.
+
+**Cómo se detectó (2026-08-10).** Por lectura del código, al diseñar la restricción de
+[FIN-06](#fin-06). Las 6 matrículas duplicadas que hay en stage **no lo prueban**: sus dos copias
+apuntan a la misma inscripción, así que salieron de otro lado (datos de prueba cargados a mano o una
+versión anterior). El hueco de esta función es independiente de eso.
+
+**Cambio.** Buscar la matrícula del año **sin filtrar por `enrollmentId`**. Si aparece una y no está
+vinculada, vincularla; si ya está vinculada a otra inscripción, no crear nada. Definir antes con el
+cliente si la matrícula es por alumno y año —que es lo que asume todo el resto— o por curso, porque
+si fuera por curso el bug estaría en las otras dos funciones y no acá.
+
+**Bloquea** el índice parcial que le falta a [FIN-06](#fin-06): con duplicados entrando por esta
+ruta, la restricción convertiría la inscripción a un segundo curso en un error de base.
 
 ---
 
