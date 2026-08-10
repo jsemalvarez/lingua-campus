@@ -449,8 +449,12 @@ function ComposerLinkPreview({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function ThreadViewClient({ thread }: Props) {
-    const [messages, setMessages] = useState(thread.messages);
+export function ThreadViewClient({ thread: initialThread }: Props) {
+    // Guardamos el hilo entero, no sólo los mensajes: al responder pueden cambiar
+    // también los participantes (un admin que no participaba se suma al hilo) y
+    // el aviso que depende de eso.
+    const [thread, setThread] = useState(initialThread);
+    const messages = thread.messages;
     const [body, setBody] = useState("");
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -479,9 +483,11 @@ export function ThreadViewClient({ thread }: Props) {
             try {
                 const updated = await getThread({ threadId: thread.id });
                 if (!updated) return;
-                setMessages((prev) => {
-                    if (updated.messages.length === prev.length) return prev;
-                    return updated.messages;
+                setThread((prev) => {
+                    const sameMessages = updated.messages.length === prev.messages.length;
+                    const sameParticipants = updated.participants.length === prev.participants.length;
+                    if (sameMessages && sameParticipants) return prev;
+                    return updated;
                 });
             } catch { /* silent */ }
         };
@@ -621,9 +627,10 @@ export function ThreadViewClient({ thread }: Props) {
             removeAttachment();
             removeLink();
 
-            // 4. Refresh messages
+            // 4. Refrescar el hilo completo: si quien responde era un admin que no
+            //    participaba, ahora figura entre los participantes.
             const updated = await getThread({ threadId: thread.id });
-            if (updated) setMessages(updated.messages);
+            if (updated) setThread(updated);
         } catch (err: any) {
             setError(err.message ?? "Error al enviar el mensaje.");
         } finally {
