@@ -517,9 +517,12 @@ dejaba a la secretaria sin selector de rol ([BUG-04](#bug-04)).
 
 **Dos decisiones a tener presentes:**
 
-- **Si el usuario no aparece en `User`, el token no se toca.** Un token viejo, de antes de que
-  existiera `roles`, no dice de qué tabla salió y puede ser de un alumno; blanquearlo lo dejaría
-  afuera. Quien distingue las dos tablas es `getAuthContext`.
+- **Si el usuario no aparece en `User`, el token no se toca.** El token guarda el `id` pero no de qué
+  tabla salió, y los alumnos viven en `Student`. Al alumno lo ataja un corte anterior
+  (`roles` incluye `STUDENT`), así que ahí sólo puede caer una fila de `User` borrada físicamente —
+  la app sólo da de baja lógica. Igual no se blanquea: los roles del token sólo alimentan la
+  interfaz, y dejarla sin nada con qué decidir muestra una app vacía en lugar de un error. Quien
+  deniega es `getAuthContext`.
 - **Si la cuenta no está `ACTIVE`, se vacían los roles.** Sin roles no pasa ningún chequeo y la
   interfaz deja de ofrecer lo que ya no se puede hacer.
 

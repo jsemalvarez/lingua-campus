@@ -106,10 +106,16 @@ export const authOptions: NextAuthOptions = {
                 select: { roles: true, instituteId: true, status: true },
             });
 
-            // Si no aparece en `User` no se toca nada: un token viejo, de antes
-            // de que existiera `roles`, no dice de qué tabla salió, y puede ser
-            // un alumno. Blanquearlo lo dejaría afuera. Quien decide de verdad es
-            // `getAuthContext`, que sí distingue las dos tablas.
+            // El token guarda el `id` pero no de qué tabla salió, y los alumnos
+            // viven en `Student`. Al que entra como alumno lo ataja el corte de
+            // arriba, así que acá sólo puede caer una fila de `User` borrada
+            // físicamente — la app sólo da de baja lógica, o sea que eso implica
+            // haber tocado la base a mano.
+            //
+            // Aun así no se blanquea: los roles del token sólo alimentan la
+            // interfaz, y dejarla sin nada con qué decidir muestra una app vacía
+            // en lugar de un error. Quien deniega es `getAuthContext`, que
+            // consulta la base en cada acción.
             if (!fresh) return token;
 
             // Cuenta dada de baja: se vacían los roles. Sin roles no pasa ningún
