@@ -162,7 +162,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
-| [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [~] |
+| [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
@@ -876,7 +876,7 @@ solución y la recomiendo, con dos agregados:
 3. Navegador de meses que muestre solo los meses con clases, con la cantidad de cada uno.
 4. Contemplar el caso de un curso sin clases en el mes seleccionado.
 
-**Estado: implementado en `1df5def`, pendiente de verificación en stage.**
+**Estado: resuelto.** Implementado en `1df5def`, verificado en stage el 2026-08-09.
 
 Resuelto según lo propuesto, con los dos agregados sugeridos (mes por defecto = el de la clase más
 cercana a hoy, y atajo "Hoy"). Las métricas de práctica **conservan alcance de curso completo**
