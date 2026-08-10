@@ -860,9 +860,12 @@ meses que quedan impagos al terminar el curso.
 - `getDebtorsReportAction` **no** filtra por modalidad
   ([`billingActions.ts:186`](../src/app/payments/billingActions.ts)), así que esas cuotas sí
   aparecían como deuda. Con el borrado, deja de haber qué mostrar y no hizo falta tocar el reporte.
-- Las matrículas no entran en el control: se crean por alumno y **sin `enrollmentId`**
-  ([`billingActions.ts:152`](../src/app/payments/billingActions.ts)), así que pagar la matrícula no
-  bloquea el curso completo.
+- Las matrículas no entran en el control **porque el filtro va por tipo** (`MONTHLY` y
+  `FULL_COURSE`): se cobran aparte del precio del curso, así que pagarlas no tiene por qué impedir
+  este pago. La primera versión filtraba sólo por inscripción, dando por buena la afirmación de
+  [FIN-06](#fin-06) de que las matrículas no llevan `enrollmentId`. **Es falso**: las crea así
+  `createEnrollmentAction` ([`enrollments/actions.ts:67`](../src/app/enrollments/actions.ts)), y en
+  la base de stage las 12 lo tienen. Corregido antes de que llegara a stage.
 
 El texto de ayuda del formulario anuncia la limitación
 ([`RegisterFullCourseFeeForm.tsx:99`](../src/app/payments/components/RegisterFullCourseFeeForm.tsx)),

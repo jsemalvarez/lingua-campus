@@ -283,10 +283,19 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
             // el remanente o el precio total; hoy el campo es libre, así que la respuesta
             // depende de quién cargue y el riesgo es cobrar dos veces los mismos meses.
             // Es preferible una limitación explícita a una operación que a veces cobra de
-            // más. Las matrículas no cuentan: son cuotas del alumno y no llevan
-            // `enrollmentId`, así que quedan fuera de este filtro solas.
+            // más.
+            //
+            // El filtro va por tipo y no por inscripción a secas: la matrícula y el
+            // derecho de examen se cobran aparte del precio del curso, así que pagarlos no
+            // tiene por qué impedir este pago. Y **sí llevan `enrollmentId`** cuando las
+            // crea `createEnrollmentAction`, así que sin este filtro una matrícula paga
+            // bloqueaba la operación.
             const paidFee = await tx.fee.findFirst({
-                where: { enrollmentId, payments: { some: { status: "VALID" } } },
+                where: {
+                    enrollmentId,
+                    type: { in: ["MONTHLY", "FULL_COURSE"] },
+                    payments: { some: { status: "VALID" } }
+                },
                 select: { id: true }
             });
 
