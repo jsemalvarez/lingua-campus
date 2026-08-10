@@ -580,7 +580,7 @@ definir la política — bloquear la anulación, o permitir balance negativo com
 
 **Nota.** Conviene resolverlo junto con [FIN-02](#fin-02): ambos tocan la misma función.
 
-### Resuelto — 2026-08-10 · pendiente de verificar en stage
+### Resuelto — 2026-08-10 en `b05b2cc` · pendiente de verificar en stage
 
 **El excedente es de la cuota, no del pago.** El saldo que generó una cuota es
 `max(0, capital cobrado − importe de la cuota)`; lo que aportó un pago suelto es cuánto baja ese
@@ -620,7 +620,7 @@ devuelve el crédito al alumno.
 **Cambio.** El contra-asiento debe reflejar el monto del asiento original, no el del pago. Los pagos
 con `method: "SALDO"` necesitan tratamiento propio: revertir contra `creditBalance`, no contra caja.
 
-### Resuelto — 2026-08-10 · pendiente de verificar en stage
+### Resuelto — 2026-08-10 en `b05b2cc` · pendiente de verificar en stage
 
 El contra-asiento ya no se calcula desde el pago sino **desde los asientos `VALID` que ese pago
 generó**: se suman antes de marcarlos anulados y el ajuste va por `-suma`. Para una aplicación de
@@ -658,7 +658,7 @@ quedó topeado en $8.000 aunque el capital cobrado fue $10.000. Al anular uno, `
 cuando el pago que sigue vivo aporta $5.000. **El alumno quedaba debiendo $2.000 de más.** Detectado
 el 2026-08-10 al resolver [FIN-01](#fin-01).
 
-### Resuelto — 2026-08-10 · pendiente de verificar en stage
+### Resuelto — 2026-08-10 en `b05b2cc` · pendiente de verificar en stage
 
 La cuota se recalcula desde los pagos `VALID` que siguen en pie
 (`Math.min(capitalAfter, originalAmount)`, el mismo `capitalAfter` que ya necesitaba
