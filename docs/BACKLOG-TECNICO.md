@@ -690,7 +690,7 @@ Mismo patrón:
 **Cambio.** Mover las lecturas dentro de `$transaction`, usar operaciones atómicas (`increment` /
 `decrement`) donde se pueda, y evaluar `isolationLevel: "Serializable"` en las operaciones de cobro.
 
-### Resuelto — 2026-08-10 · pendiente de verificar en stage
+### Resuelto — 2026-08-10 en `92c1cd6` · pendiente de verificar en stage
 
 **Bloqueos de fila (`SELECT … FOR UPDATE`), no `Serializable`.** Postgres resuelve los conflictos
 serializables **abortando** una de las dos transacciones (error 40001). Sin un reintento, el cobro
