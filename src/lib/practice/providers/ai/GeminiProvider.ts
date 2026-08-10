@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
 
 /**
  * Provider de IA usando Gemini de Google — implementación con fetch directo.
@@ -82,7 +82,6 @@ The speech recognition transcribed what they said as: "${actual}"
 Evaluate the pronunciation and respond ONLY with a valid JSON object in this exact format:
 {
   "score": <number 0-100>,
-  "isCorrect": <true if score >= 70>,
   "feedback": "<brief encouraging feedback in Spanish, 1-2 sentences>",
   "weakArea": "<specific phoneme or pattern that was wrong, e.g. 'th fricative', 'short i vowel', or null if pronunciation was good>"
 }
@@ -90,7 +89,7 @@ Evaluate the pronunciation and respond ONLY with a valid JSON object in this exa
 Rules:
 - Be lenient with minor transcription differences (contractions, capitalization)
 - Focus on phonetic similarity, not exact word matching
-- If the transcription is close enough to understand, score >= 70
+- If the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}
 - weakArea must be a specific phoneme/pattern or null, never a full sentence
 - feedback must be in Spanish and encouraging even when wrong`;
 
@@ -117,9 +116,10 @@ Rules:
 
         try {
             const parsed = JSON.parse(jsonStr);
+            const score = Math.max(0, Math.min(100, Number(parsed.score) || 0));
             return {
-                score: Math.max(0, Math.min(100, Number(parsed.score) || 0)),
-                isCorrect: Boolean(parsed.isCorrect),
+                score,
+                isCorrect: score >= PRONUNCIATION_PASS_SCORE,
                 feedback: String(parsed.feedback || "¡Bien intento!"),
                 weakArea: parsed.weakArea || undefined,
             };

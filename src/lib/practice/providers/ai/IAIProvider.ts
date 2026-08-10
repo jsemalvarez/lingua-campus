@@ -1,11 +1,22 @@
 // Contrato que deben cumplir todos los providers de IA (evaluación + chat)
 // Para cambiar de proveedor: implementar esta interfaz y actualizar el factory
 
+/**
+ * Puntaje mínimo para dar una pronunciación por aceptable.
+ *
+ * `isCorrect` se deriva de acá y nunca se le pide a la IA: si el modelo devuelve
+ * el booleano por su cuenta, puede contradecir a su propio puntaje (score 85 con
+ * isCorrect false). Ese valor alimenta `phrasesCorrect` y el `accuracyPct` que se
+ * guarda en PracticeSession, así que una contradicción ensucia las métricas del
+ * alumno, no sólo el cartel en pantalla.
+ */
+export const PRONUNCIATION_PASS_SCORE = 70;
+
 export interface EvaluationResult {
     score: number;       // 0-100
     feedback: string;    // Mensaje para el alumno (en español)
     weakArea?: string;   // Área difícil detectada, ej: "th fricative", "short vowels"
-    isCorrect: boolean;  // true si la pronunciación fue aceptable (score >= 70)
+    isCorrect: boolean;  // Derivado: score >= PRONUNCIATION_PASS_SCORE
 }
 
 export interface ChatMessage {

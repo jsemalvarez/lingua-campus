@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
 
 /**
  * Provider de IA usando GPT-4o de OpenAI.
@@ -30,7 +30,7 @@ export class OpenAIProvider implements IAIProvider {
                     },
                     {
                         role: "user",
-                        content: `The student was asked to say: "${expected}"\nThe speech recognition transcribed: "${actual}"\n\nRespond with: {"score": 0-100, "isCorrect": boolean, "feedback": "Spanish feedback", "weakArea": "phoneme or null"}`,
+                        content: `The student was asked to say: "${expected}"\nThe speech recognition transcribed: "${actual}"\n\nIf the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}.\n\nRespond with: {"score": 0-100, "feedback": "Spanish feedback", "weakArea": "phoneme or null"}`,
                     },
                 ],
             }),
@@ -43,9 +43,10 @@ export class OpenAIProvider implements IAIProvider {
         const data = await response.json();
         const parsed = JSON.parse(data.choices[0].message.content);
 
+        const score = Math.max(0, Math.min(100, Number(parsed.score) || 0));
         return {
-            score: Math.max(0, Math.min(100, Number(parsed.score) || 0)),
-            isCorrect: Boolean(parsed.isCorrect),
+            score,
+            isCorrect: score >= PRONUNCIATION_PASS_SCORE,
             feedback: String(parsed.feedback || "¡Bien intento!"),
             weakArea: parsed.weakArea || undefined,
         };
