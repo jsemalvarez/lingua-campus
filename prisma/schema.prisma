@@ -70,7 +70,6 @@ model User {
   id          String   @id @default(cuid())
   email       String   @unique
   password    String
-  role        UserRole @default(ADMIN) // @deprecated - Use roles instead
   roles       UserRole[] @default([ADMIN])
   dni         String?    @unique
   name        String     // Nombre Completo
