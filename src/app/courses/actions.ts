@@ -1,31 +1,14 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-
-import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 // Función auxiliar para obtener el usuario autenticado y su instituto
 async function getAuthAndInstitute() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return null;
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true, roles: true }
-    });
-
-    if (!user || !user.instituteId) return null;
-
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || user.roles || [user.role || "TEACHER"];
-    const activeRole = await getActiveRole(userRoles);
-
-    if (activeRole === "SUPERADMIN") return null;
-
-    return { ...user, activeRole };
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) return null;
+    return { id: auth.userId, instituteId: auth.instituteId, activeRole: auth.activeRole };
 }
 
 export async function createCourseAction(formData: FormData) {
@@ -166,7 +149,7 @@ export async function updateCourseTeacherAction(courseId: string, teacherId: str
         // Verify teacher belongs to the same institute (if not clearing)
         if (teacherId) {
             const teacher = await prisma.user.findUnique({ where: { id: teacherId } });
-            if (!teacher || teacher.instituteId !== user.instituteId || (teacher.role !== "TEACHER" && !teacher.roles.includes("TEACHER" as any))) {
+            if (!teacher || teacher.instituteId !== user.instituteId || !teacher.roles.includes("TEACHER")) {
                 return { success: false, error: "Profesor no válido" };
             }
         }

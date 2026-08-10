@@ -11,7 +11,7 @@ export default async function GuardianAcademicsPage() {
     if (!session || !session.user) redirect("/login");
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const userRoles = sessionUser.roles ?? [];
     const role = await getActiveRole(userRoles);
 
     // Seguridad: Sólo tutores.

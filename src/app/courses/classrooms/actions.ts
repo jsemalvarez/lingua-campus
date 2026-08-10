@@ -1,21 +1,13 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 async function getAuthAndInstitute() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return null;
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) return null;
-    return user;
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) return null;
+    return { id: auth.userId, instituteId: auth.instituteId };
 }
 
 export async function getClassroomsAction() {

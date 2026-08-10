@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
 import dayjs from "dayjs";
 import { Navbar } from "@/components/layout/Navbar";
@@ -12,7 +11,6 @@ import { RegisterOutgoingsForm } from "./components/RegisterOutgoingsForm";
 import { TransactionTable } from "./components/TransactionTable";
 import { GenerateFeesButton } from "./components/GenerateFeesButton";
 import { CollectionChart } from "./components/CollectionChart";
-import { getActiveRole } from "@/lib/roles";
 import { formatFeeLabel } from "@/lib/utils";
 import { DebtChart } from "./components/DebtChart";
 import { Button } from "@/components/ui/Button";
@@ -21,28 +19,12 @@ import { Users, BookOpen } from "lucide-react";
 import { MonthYearSelector } from "./components/MonthYearSelector";
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) redirect("/login");
+    // Solo ADMIN y SECRETARY pueden ver esta página administrativa
+    const user = await requireRole(INSTITUTE_ADMINS);
+    if (!user) redirect("/dashboard");
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
-    const activeRole = await getActiveRole(userRoles);
+    const activeRole = user.activeRole;
     const isSecretary = activeRole === "SECRETARY";
-
-    // Solo ADMIN, SECRETARY y SUPERADMIN (con instituto) pueden ver esta página administrativa
-    const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];
-    if (!allowedRoles.includes(activeRole)) {
-        redirect("/dashboard");
-    }
-
-    const user = await prisma.user.findUnique({
-        where: { id: (session.user as any).id },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
 
     // Pagination Variables
     const ITEMS_PER_PAGE = 20;
@@ -71,15 +53,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     // 3. Traer todos los Usuarios (para mapear Operadores) y Empleados (para sueldos)
     const allUsers = await prisma.user.findMany({
         where: { instituteId: user.instituteId, status: "ACTIVE" },
-        select: { id: true, name: true, role: true, roles: true },
+        select: { id: true, name: true, roles: true },
         orderBy: { name: "asc" }
     });
-    
-    const staffRoles = ["ADMIN", "TEACHER", "SECRETARY"];
-    const employees = allUsers.filter(u => 
-        staffRoles.includes(u.role) || 
-        (u.roles && u.roles.some((r: string) => staffRoles.includes(r)))
-    );
+
+    const staffRoles: string[] = ["ADMIN", "TEACHER", "SECRETARY"];
+    const employees = allUsers.filter(u => u.roles.some(r => staffRoles.includes(r)));
     
     // Mapeo rápido de operador
     const userMap = Object.fromEntries(allUsers.map(u => [u.id, u.name]));

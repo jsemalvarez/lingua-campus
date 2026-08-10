@@ -1,21 +1,22 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/authz";
 
+/**
+ * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
+ * Antes el chequeo era `user.role !== "SUPERADMIN"`: una lista negra de uno solo,
+ * que dejaba pasar a profesores y tutores. Los server actions son endpoints POST
+ * reales, así que ocultar el botón no alcanzaba.
+ *
+ * Devuelve la forma que ya esperaban los llamadores; la decisión vive en
+ * `requireRole`.
+ */
 async function getAuthAndInstitute() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return null;
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) return null;
-    return user;
+    const auth = await requireRole(["ADMIN", "SECRETARY"]);
+    if (!auth) return null;
+    return { id: auth.userId, instituteId: auth.instituteId };
 }
 
 export async function createPaymentAction(formData: FormData) {
@@ -459,15 +460,10 @@ export async function createIncomeAction(formData: FormData) {
 }
 
 export async function generateStandaloneEnrollmentFeeAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true }
-    });
-
-    if (!user || !user.instituteId) return { success: false, error: "Sin permisos" };
+    // Tenía su propia variante inline que sólo pedía estar logueado y tener
+    // instituto: cualquier usuario del instituto podía emitir una matrícula.
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "Sin permisos" };
 
     const studentId = formData.get("studentId") as string;
     const year = parseInt(formData.get("year") as string);

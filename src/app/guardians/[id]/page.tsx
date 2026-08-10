@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 import { redirect, notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -8,19 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import { GuardianProfileView } from "./GuardianProfileView";
 
 export default async function GuardianDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, roles: true, instituteId: true }
-    }) as any;
-
-    const isAdmin = user?.roles?.includes("ADMIN") || user?.roles?.includes("SUPERADMIN") || user?.role === "ADMIN" || user?.role === "SUPERADMIN";
-
-    if (!user || !isAdmin || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const user = await requireRole(["ADMIN"]);
+    if (!user) redirect("/dashboard");
 
     const { id } = await params;
 

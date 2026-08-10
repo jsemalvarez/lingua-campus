@@ -13,7 +13,7 @@ export default async function DebtorsPage() {
     if (!session || !session.user?.email) redirect("/login");
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];

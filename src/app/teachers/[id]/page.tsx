@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { ArrowLeft, BookOpen, Clock, DollarSign, Calendar as CalendarIcon } from "lucide-react";
@@ -10,24 +9,12 @@ import dayjs from "dayjs";
 import { TeacherProfileView } from "./TeacherProfileView";
 import { TeacherDangerZone } from "./TeacherDangerZone";
 import { TeacherPayrollSection } from "./TeacherPayrollSection";
-import { getActiveRole } from "@/lib/roles";
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
-    const activeRole = await getActiveRole(userRoles);
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const activeRole = user.activeRole;
 
     const { id } = await params;
 
@@ -44,7 +31,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         }
     });
 
-    const isTeacher = teacher?.role === "TEACHER" || teacher?.roles?.includes("TEACHER" as any);
+    const isTeacher = teacher?.roles.includes("TEACHER") ?? false;
     if (!teacher || !isTeacher || teacher.instituteId !== user.instituteId) {
         notFound();
     }

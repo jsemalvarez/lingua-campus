@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Home, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -9,17 +8,8 @@ import Link from "next/link";
 import { ClassroomManager } from "./ClassroomManager";
 
 export default async function ClassroomsPage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
     const classrooms = await prisma.classroom.findMany({
         where: { instituteId: user.instituteId },

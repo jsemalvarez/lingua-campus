@@ -1,23 +1,19 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { requireRole } from "@/lib/authz";
+
+/** Ficha del alumno: los tres roles que ven "Estudiantes" en el menú. */
+const STUDENT_EDITORS = ["ADMIN", "SECRETARY", "TEACHER"] as const;
+
+/** Altas, bajas y credenciales: administración y secretaría. */
+const STUDENT_ADMINS = ["ADMIN", "SECRETARY"] as const;
 
 export async function editStudentAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const user = await requireRole(STUDENT_EDITORS);
+    if (!user) return { success: false, error: "Sin permisos" };
 
     const studentId = formData.get("studentId") as string;
     const name = formData.get("name") as string;
@@ -124,15 +120,9 @@ export async function editStudentAction(formData: FormData) {
 }
 
 export async function resetStudentPassword(studentId: string, customPassword?: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
+    if (!user) {
         return { success: false, error: "Sin permisos" };
     }
 
@@ -141,7 +131,7 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
             where: { id: studentId }
         });
 
-        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
+        if (!student || student.instituteId !== user.instituteId) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -160,15 +150,9 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
 }
 
 export async function softDeleteStudent(studentId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
+    if (!user) {
         return { success: false, error: "Sin permisos para eliminar estudiantes" };
     }
 
@@ -182,7 +166,7 @@ export async function softDeleteStudent(studentId: string) {
             }
         });
 
-        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
+        if (!student || student.instituteId !== user.instituteId) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -204,15 +188,9 @@ export async function softDeleteStudent(studentId: string) {
 }
 
 export async function restoreStudentAction(studentId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
+    if (!user) {
         return { success: false, error: "Sin permisos para restaurar estudiantes" };
     }
 
@@ -221,7 +199,7 @@ export async function restoreStudentAction(studentId: string) {
             where: { id: studentId }
         });
 
-        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
+        if (!student || student.instituteId !== user.instituteId) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -238,15 +216,9 @@ export async function restoreStudentAction(studentId: string) {
 }
 
 export async function hardDeleteStudentAction(studentId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "SECRETARY")) {
+    if (!user) {
         return { success: false, error: "Sin permisos para eliminar permanentemente" };
     }
 
@@ -255,7 +227,7 @@ export async function hardDeleteStudentAction(studentId: string) {
             where: { id: studentId }
         });
 
-        if (!student || (["ADMIN", "SECRETARY"].includes(user.role) && student.instituteId !== user.instituteId)) {
+        if (!student || student.instituteId !== user.instituteId) {
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
@@ -276,15 +248,9 @@ export async function hardDeleteStudentAction(studentId: string) {
 }
 
 export async function changeStudentCourseAction(enrollmentId: string, newCourseId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || (user.role !== "ADMIN" && user.role !== "SECRETARY") || !user.instituteId) {
+    if (!user) {
         return { success: false, error: "Solo administradores pueden cambiar el curso" };
     }
 
@@ -324,17 +290,12 @@ export async function changeStudentCourseAction(enrollmentId: string, newCourseI
 }
 
 export async function createGuardianAccount(studentId: string, guardianName: string, relation: string, email: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    // Mezclaba `role` y `roles` con un OR: alcanzaba con que *cualquiera* de las
+    // dos fuentes dijera ADMIN. Como todo tutor tenía `role = ADMIN` por el
+    // default del schema, un tutor podía crear cuentas de tutor.
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true, roles: true }
-    });
-
-    // Validar permisos (solo ADMIN o SUPERADMIN)
-    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN" || user?.role === "SECRETARY" || user?.roles.includes("ADMIN") || user?.roles.includes("SUPERADMIN") || user?.roles.includes("SECRETARY");
-    if (!user || !isAdmin || !user.instituteId) {
+    if (!user) {
         return { success: false, error: "Sin permisos" };
     }
 
@@ -362,7 +323,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
                     where: { id: existingUser.id },
                     data: {
                         roles: {
-                            set: [...existingUser.roles, "GUARDIAN" as any]
+                            set: [...existingUser.roles, "GUARDIAN"]
                         }
                     }
                 });
@@ -374,7 +335,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
                     email: normalizedEmail,
                     name: guardianName,
                     password: hashedPassword,
-                    roles: ["GUARDIAN" as any],
+                    roles: ["GUARDIAN"],
                     instituteId: user.instituteId,
                     status: "ACTIVE"
                 }
@@ -452,15 +413,9 @@ export async function createGuardianAccount(studentId: string, guardianName: str
 
 
 export async function generateDataCompletionToken(studentId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    const user = await requireRole(STUDENT_ADMINS);
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || (user.role !== "ADMIN" && user.role !== "SECRETARY" && user.role !== "SUPERADMIN")) {
+    if (!user) {
         return { success: false, error: "Sin permisos" };
     }
 
@@ -469,7 +424,7 @@ export async function generateDataCompletionToken(studentId: string) {
             where: { id: studentId }
         });
 
-        if (!student || (user.role !== "SUPERADMIN" && student.instituteId !== user.instituteId)) {
+        if (!student || student.instituteId !== user.instituteId) {
             return { success: false, error: "Estudiante no encontrado" };
         }
 

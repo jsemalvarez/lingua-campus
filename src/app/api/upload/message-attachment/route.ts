@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 4. Verify sender is a participant of the thread ──────────────────
-        const isStudent = (sessionUser.roles || [sessionUser.role]).includes("STUDENT");
+        const isStudent = (sessionUser.roles ?? []).includes("STUDENT");
         const participant = await prisma.threadParticipant.findFirst({
             where: isStudent
                 ? { threadId, studentId: sessionUser.id }

@@ -33,7 +33,6 @@ export const authOptions: NextAuthOptions = {
                                 id:          user.id,
                                 name:        user.name,
                                 email:       user.email,
-                                role:        user.roles[0], // Compatibilidad
                                 roles:       user.roles,
                                 instituteId: user.instituteId,
                             };
@@ -55,7 +54,6 @@ export const authOptions: NextAuthOptions = {
                             id:          student.id,
                             name:        student.name,
                             email:       student.email,
-                            role:        "STUDENT",
                             roles:       ["STUDENT"],
                             instituteId: student.instituteId,
                             birthDate:   student.birthDate,
@@ -71,7 +69,6 @@ export const authOptions: NextAuthOptions = {
         async jwt({ token, user }) {
             if (user) {
                 token.id          = user.id;
-                token.role        = user.role;
                 token.roles       = user.roles;
                 token.instituteId = user.instituteId;
                 token.birthDate   = user.birthDate;
@@ -81,7 +78,6 @@ export const authOptions: NextAuthOptions = {
         async session({ session, token }) {
             if (session.user) {
                 session.user.id          = token.id;
-                session.user.role        = token.role;
                 session.user.roles       = token.roles;
                 session.user.instituteId = token.instituteId;
                 session.user.birthDate   = token.birthDate;

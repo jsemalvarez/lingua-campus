@@ -81,10 +81,7 @@ export async function calculateBulkTeacherPayroll(instituteId: string, startDate
         where: { 
             instituteId, 
             status: "ACTIVE",
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            roles: { has: "TEACHER" }
         },
         select: { 
             id: true, 

@@ -24,6 +24,7 @@ import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
 
 import { GuardianDashboardView } from "./components/GuardianDashboardView";
 import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
 
@@ -35,7 +36,7 @@ export default async function DashboardPage() {
     }
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     // ─── GUARDIAN View ───
@@ -339,14 +340,15 @@ export default async function DashboardPage() {
     }
 
     // Flujo normal para Admin/Teacher
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) redirect("/admin/institutes");
+
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email as string },
-        select: { id: true, name: true, role: true, instituteId: true, institute: { select: { name: true } } }
+        where: { id: auth.userId },
+        select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } }
     });
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/admin/institutes");
-    }
+    if (!user?.instituteId) redirect("/admin/institutes");
 
     const isActiveTeacher = activeRole === "TEACHER";
 
@@ -548,10 +550,7 @@ export default async function DashboardPage() {
     const totalTeachers = await prisma.user.count({
         where: {
             instituteId: user.instituteId,
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            roles: { has: "TEACHER" }
         }
     });
 

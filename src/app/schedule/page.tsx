@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
 import { ScheduleFilters } from "./components/ScheduleFilters";
 import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -43,7 +44,7 @@ export default async function SchedulePage(props: PageProps) {
     const isToday = isSameDay(displayDateNoon, new Date());
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const userRoles = sessionUser.roles ?? [];
     const role = await getActiveRole(userRoles);
 
     let instituteId = "";
@@ -80,11 +81,8 @@ export default async function SchedulePage(props: PageProps) {
             });
         });
     } else {
-        const user = await prisma.user.findUnique({
-            where: { id: (session.user as any).id },
-            select: { id: true, role: true, instituteId: true }
-        });
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             redirect("/dashboard");
         }
         instituteId = user.instituteId;
@@ -107,8 +105,8 @@ export default async function SchedulePage(props: PageProps) {
         }),
         prisma.user.findMany({
             where: { 
-                instituteId: instituteId, 
-                role: "TEACHER", 
+                instituteId: instituteId,
+                roles: { has: "TEACHER" },
                 status: "ACTIVE"
             },
             orderBy: { name: "asc" }

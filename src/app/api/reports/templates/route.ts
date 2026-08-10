@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 
 export async function GET(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user?.email) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { instituteId: true, role: true, roles: true }
-        });
-
-        const hasAccess = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
-
-        if (!user || !hasAccess || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_ADMINS);
+        if (!user) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -40,19 +28,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user?.email) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { instituteId: true, role: true, roles: true }
-        });
-
-        const hasAccess = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
-
-        if (!user || !hasAccess || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_ADMINS);
+        if (!user) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

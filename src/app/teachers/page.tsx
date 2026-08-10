@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -9,35 +8,19 @@ import { CreateTeacherModal } from "./components/CreateTeacherModal";
 import { Search, GraduationCap, Filter, Mail, Phone, Calendar as CalendarIcon, Edit3, Eye } from "lucide-react";
 import Link from "next/link";
 import dayjs from "dayjs";
-import { getActiveRole } from "@/lib/roles";
 
 export default async function TeachersPage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-    
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
-    const activeRole = await getActiveRole(userRoles);
+    const activeRole = user.activeRole;
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
-
-    // Buscamos a todo el personal del instituto 
+    // Buscamos a todo el personal del instituto
     const staffMembers = await prisma.user.findMany({
         where: {
             instituteId: user.instituteId,
-            // @ts-ignore
             status: "ACTIVE",
-            OR: [
-                { role: { in: ["TEACHER", "SECRETARY"] } },
-                { roles: { hasSome: ["TEACHER", "SECRETARY"] } }
-            ]
+            roles: { hasSome: ["TEACHER", "SECRETARY"] }
         },
         include: {
             courses: true // Obtenemos las clases activas donde figuran como titulares
@@ -45,8 +28,8 @@ export default async function TeachersPage() {
         orderBy: { createdAt: "desc" }
     });
 
-    const docentes = staffMembers.filter(s => s.roles.includes("TEACHER" as any) || s.role === "TEACHER");
-    const administrativos = staffMembers.filter(s => s.roles.includes("SECRETARY" as any) || s.role === "SECRETARY");
+    const docentes = staffMembers.filter(s => s.roles.includes("TEACHER"));
+    const administrativos = staffMembers.filter(s => s.roles.includes("SECRETARY"));
 
     return (
         <div className="min-h-screen bg-background pb-20">

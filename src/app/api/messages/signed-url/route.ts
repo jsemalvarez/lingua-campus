@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         }
 
         // ── 3. Verify participant ────────────────────────────────────────────
-        const isStudent = (sessionUser.roles || [sessionUser.role]).includes("STUDENT");
+        const isStudent = (sessionUser.roles ?? []).includes("STUDENT");
         const participant = await prisma.threadParticipant.findFirst({
             where: isStudent
                 ? { threadId, studentId: sessionUser.id }

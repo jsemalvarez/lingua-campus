@@ -13,8 +13,6 @@ import { DefaultSession } from "next-auth";
  */
 type LinguaSessionFields = {
     id?: string;
-    /** @deprecated Usar `roles`. Ver SEC-01 en docs/BACKLOG-TECNICO.md */
-    role?: string;
     roles?: string[];
     /** `null` para SUPERADMIN, que no pertenece a ningún instituto. */
     instituteId?: string | null;

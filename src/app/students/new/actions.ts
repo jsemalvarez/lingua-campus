@@ -1,32 +1,19 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 import bcrypt from "bcryptjs";
+import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 
 export async function createStudentAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-
-    // Validamos sesión e instituto del teacher/admin
-    if (!session || !session.user) {
-        return { success: false, error: "No tienes sesión activa" };
-    }
-
-    const instituteId = (session.user as any).instituteId;
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email as string },
-        select: { role: true, roles: true }
-    });
-
-    const userRoles = (user?.roles as string[]) || [user?.role];
-    const isAdmin = userRoles.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r));
-
-    if (!isAdmin || !instituteId) {
+    // El instituto salía del JWT, que dura 30 días; ahora sale de la base junto
+    // con los roles.
+    const auth = await requireRole(INSTITUTE_ADMINS);
+    if (!auth) {
         return { success: false, error: "No tienes permisos para registrar alumnos en este instituto" };
     }
+    const instituteId = auth.instituteId;
 
     try {
         // Datos Personales

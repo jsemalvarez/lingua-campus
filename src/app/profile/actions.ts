@@ -1,14 +1,13 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { getAuthContext } from "@/lib/authz";
 
 export async function updateProfileAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const auth = await getAuthContext();
+    if (!auth) {
         return { success: false, error: "No autenticado" };
     }
 
@@ -19,12 +18,10 @@ export async function updateProfileAction(formData: FormData) {
         return { success: false, error: "El nombre es obligatorio." };
     }
 
-    const role = (session.user as any).role;
-
     try {
-        if (role === "STUDENT") {
+        if (auth.isStudent) {
             const student = await prisma.student.findUnique({
-                where: { id: (session.user as any).id }
+                where: { id: auth.userId }
             });
             if (student) {
                 const address = formData.get("address") as string;
@@ -39,7 +36,7 @@ export async function updateProfileAction(formData: FormData) {
             }
         } else {
             const updatedUser = await prisma.user.update({
-                where: { id: (session.user as any).id },
+                where: { id: auth.userId },
                 data: {
                     name: name.trim(),
                     phone: phone ? phone.trim() : null,
@@ -47,7 +44,7 @@ export async function updateProfileAction(formData: FormData) {
             });
 
             // Si el usuario es tutor, sincronizar nombre y teléfono en los Students vinculados
-            if ((updatedUser as any).roles?.includes("GUARDIAN") || role === "GUARDIAN") {
+            if (updatedUser.roles.includes("GUARDIAN")) {
                 const links = await prisma.guardianStudentLink.findMany({
                     where: { guardianId: updatedUser.id },
                     include: { student: true }
@@ -86,8 +83,8 @@ export async function updateProfileAction(formData: FormData) {
 }
 
 export async function changePasswordAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const auth = await getAuthContext();
+    if (!auth) {
         return { success: false, error: "No autenticado" };
     }
 
@@ -107,23 +104,20 @@ export async function changePasswordAction(formData: FormData) {
         return { success: false, error: "La contraseña debe tener al menos 6 caracteres." };
     }
 
-    const role = (session.user as any).role;
-
     try {
         let dbUserPasswordHash = "";
         let userId = "";
 
-        if (role === "STUDENT") {
+        if (auth.isStudent) {
             const student = await prisma.student.findUnique({
-                where: { id: (session.user as any).id }
+                where: { id: auth.userId }
             });
             if (!student) return { success: false, error: "Estudiante no encontrado." };
-            // @ts-ignore
             dbUserPasswordHash = student.password || "";
             userId = student.id;
         } else {
             const user = await prisma.user.findUnique({
-                where: { id: (session.user as any).id }
+                where: { id: auth.userId }
             });
             if (!user) return { success: false, error: "Usuario no encontrado." };
             dbUserPasswordHash = user.password;
@@ -142,10 +136,9 @@ export async function changePasswordAction(formData: FormData) {
 
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-        if (role === "STUDENT") {
+        if (auth.isStudent) {
             await prisma.student.update({
                 where: { id: userId },
-                // @ts-ignore
                 data: { password: hashedNewPassword }
             });
         } else {

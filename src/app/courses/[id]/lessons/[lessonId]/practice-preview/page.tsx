@@ -12,7 +12,7 @@ export default async function TeacherPracticePreviewPage(props: { params: Promis
     if (!session || !session.user) redirect("/login");
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     // Only allow teachers, admins or secretaries to view this preview

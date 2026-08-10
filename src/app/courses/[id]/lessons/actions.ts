@@ -1,15 +1,10 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 export async function createLessonAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     const courseId = formData.get("courseId") as string;
     const dateStr = formData.get("date") as string;
@@ -29,12 +24,8 @@ export async function createLessonAction(formData: FormData) {
     }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -89,10 +80,6 @@ export async function createLessonAction(formData: FormData) {
 }
 
 export async function editLessonAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     const lessonId = formData.get("lessonId") as string;
     const courseId = formData.get("courseId") as string;
@@ -113,12 +100,8 @@ export async function editLessonAction(formData: FormData) {
     }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -185,18 +168,10 @@ export async function editLessonAction(formData: FormData) {
 
 
 export async function deleteLessonAction(lessonId: string, courseId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -223,18 +198,10 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
 }
 
 export async function generateLessonsAction(courseId: string, startDate: Date, endDate: Date) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 

@@ -1,21 +1,14 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/authz";
 
+/** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return null;
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) return null;
-    return user;
+    const auth = await requireRole(["ADMIN", "SECRETARY"]);
+    if (!auth) return null;
+    return { id: auth.userId, instituteId: auth.instituteId };
 }
 
 /**

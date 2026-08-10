@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
@@ -9,26 +8,14 @@ import { ArrowLeft, BookOpen, Plus } from "lucide-react";
 import { CourseForm } from "./CourseForm";
 
 export default async function NewCoursePage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
     // Buscamos los profesores del instituto para el select
     const teachers = await prisma.user.findMany({
         where: {
             instituteId: user.instituteId,
-            OR: [
-                { role: { in: ["TEACHER", "ADMIN"] } },
-                { roles: { hasSome: ["TEACHER", "ADMIN"] } }
-            ]
+            roles: { hasSome: ["TEACHER", "ADMIN"] }
         },
         select: { id: true, name: true, email: true }
     });

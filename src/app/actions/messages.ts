@@ -126,7 +126,7 @@ export async function getThreadsForUser(): Promise<ThreadPreview[]> {
             course: { select: { name: true } },
             participants: {
                 include: {
-                    user: { select: { id: true, name: true, roles: true, role: true } },
+                    user: { select: { id: true, name: true, roles: true } },
                     student: { select: { id: true, name: true } },
                 },
             },
@@ -142,9 +142,9 @@ export async function getThreadsForUser(): Promise<ThreadPreview[]> {
         const authorParticipant = thread.participants.find((p) => p.isAuthor);
         let authorName = "Sistema";
         if (authorParticipant?.user) {
-            const u = authorParticipant.user as any;
+            const u = authorParticipant.user;
             const actingRole = authorParticipant.actingRole;
-            const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+            const userRoles: string[] = u.roles;
             
             if (actingRole === "ADMIN" || actingRole === "SUPERADMIN" || (!actingRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
                 authorName = "Administración";
@@ -225,14 +225,14 @@ export async function getThread({
             course: { select: { name: true } },
             participants: {
                 include: {
-                    user: { select: { id: true, name: true, roles: true, role: true } },
+                    user: { select: { id: true, name: true, roles: true } },
                     student: { select: { id: true, name: true } },
                 },
             },
             messages: {
                 orderBy: { createdAt: "asc" },
                 include: {
-                    senderUser: { select: { id: true, name: true, roles: true, role: true } },
+                    senderUser: { select: { id: true, name: true, roles: true } },
                     senderStudent: { select: { id: true, name: true } },
                 },
                 // Selects all fields by default — attachment/link fields included automatically
@@ -274,9 +274,9 @@ export async function getThread({
         participants: thread.participants.map((p) => {
             let name = "Desconocido";
             if (p.user) {
-                const u = p.user as any;
+                const u = p.user;
                 const actingRole = p.actingRole;
-                const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+                const userRoles: string[] = u.roles;
                 if (actingRole === "ADMIN" || actingRole === "SUPERADMIN" || (!actingRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
                     name = "Administración";
                 } else if (actingRole === "SECRETARY" || (!actingRole && userRoles.includes("SECRETARY"))) {
@@ -298,9 +298,9 @@ export async function getThread({
         messages: thread.messages.map((msg) => {
             let senderName = "Sistema";
             if (msg.senderUser) {
-                const u = msg.senderUser as any;
+                const u = msg.senderUser;
                 const senderRole = msg.senderRole;
-                const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+                const userRoles: string[] = u.roles;
                 if (senderRole === "ADMIN" || senderRole === "SUPERADMIN" || (!senderRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
                     senderName = "Administración";
                 } else if (senderRole === "SECRETARY" || (!senderRole && userRoles.includes("SECRETARY"))) {
@@ -611,7 +611,7 @@ export async function getCoursesWithRecipientsForUser() {
             where: {
                 instituteId,
                 status: "ACTIVE",
-                OR: [{ role: "TEACHER" }, { roles: { has: "TEACHER" } }],
+                roles: { has: "TEACHER" },
             },
             select: { id: true, name: true },
             orderBy: { name: "asc" },

@@ -26,6 +26,18 @@ import prisma from "@/lib/prisma";
  *    con lo que ya muestra la interfaz.
  */
 
+/**
+ * Personal del instituto: todo el que trabaja adentro, sin tutores ni alumnos.
+ * Es el conjunto que el menú deja entrar a Cursos, Calendario y Estudiantes.
+ *
+ * Reemplaza al chequeo `role !== "SUPERADMIN"` que repetían las acciones: una
+ * lista negra de un solo elemento, por la que pasaba cualquier tutor.
+ */
+export const INSTITUTE_STAFF = ["ADMIN", "SECRETARY", "TEACHER"] as const;
+
+/** Administración: finanzas, altas de personal y configuración del instituto. */
+export const INSTITUTE_ADMINS = ["ADMIN", "SECRETARY"] as const;
+
 export type AuthContext = {
     userId: string;
     /** `null` para SUPERADMIN, que no pertenece a ningún instituto. */
@@ -97,6 +109,16 @@ export async function getAuthContext(): Promise<AuthContext | null> {
         activeRole: await getActiveRole(roles),
         isStudent: false,
     };
+}
+
+/**
+ * SUPERADMIN no pasa por `requireRole` porque no tiene instituto: opera sobre el
+ * panel de institutos, que es lo que protege este chequeo.
+ */
+export async function requireSuperadmin(): Promise<AuthContext | null> {
+    const ctx = await getAuthContext();
+    if (!ctx || !ctx.roles.includes("SUPERADMIN")) return null;
+    return ctx;
 }
 
 /**

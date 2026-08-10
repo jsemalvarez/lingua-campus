@@ -16,7 +16,7 @@ export default async function ThreadPage({ params }: Props) {
     if (!session?.user) redirect("/login");
 
     const sessionUser = session.user as any;
-    const userRoles: string[] = sessionUser.roles || [sessionUser.role];
+    const userRoles: string[] = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     const thread = await getThread({ threadId });

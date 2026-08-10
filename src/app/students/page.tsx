@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +8,6 @@ import Link from "next/link";
 import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users, AlertTriangle } from "lucide-react";
 import dayjs from "dayjs";
 import { StudentListActions } from "./components/StudentListActions";
-import { getActiveRole } from "@/lib/roles";
 import { StudentSearchBar } from "./components/StudentSearchBar";
 
 interface PageProps {
@@ -19,26 +17,11 @@ interface PageProps {
 export default async function StudentsPage(props: PageProps) {
     const searchParams = await props.searchParams;
 
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    // INSTITUTE_STAFF ya deja afuera al modo Tutor.
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
-
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user.role];
-    const activeRole = await getActiveRole(userRoles);
-
-    // Si está en modo Tutor, no puede ver la lista completa de alumnos
-    if (activeRole === "GUARDIAN") {
-        redirect("/dashboard");
-    }
+    const activeRole = user.activeRole;
 
     // Pagination setup
     const PAGE_SIZE = 50;
@@ -70,7 +53,7 @@ export default async function StudentsPage(props: PageProps) {
         whereClause.enrollments = {
             some: {
                 course: {
-                    teacherId: user.id,
+                    teacherId: user.userId,
                     status: "ACTIVE"
                 }
             }
@@ -95,7 +78,7 @@ export default async function StudentsPage(props: PageProps) {
                 enrollments: {
                     where: { 
                         status: "ACTIVE",
-                        ...(isTeacher ? { course: { teacherId: user.id } } : {})
+                        ...(isTeacher ? { course: { teacherId: user.userId } } : {})
                     },
                     select: {
                         course: {

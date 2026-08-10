@@ -11,7 +11,7 @@ export default async function HelpCenterPage() {
     if (!session || !session.user) redirect("/login");
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     return (

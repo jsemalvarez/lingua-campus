@@ -1,27 +1,20 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/authz";
 
 export async function updateInstituteByAdminAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-        return { success: false, error: "No autorizado" };
-    }
-
-    const user = session.user as any;
-    const isAuthorized = user.role === "ADMIN" || user.role === "SUPERADMIN";
-
-    if (!isAuthorized) {
+    // El rol salía del JWT, no de la base: quien tuviera un token viejo de
+    // cuando era administrador seguía pasando.
+    const user = await requireRole(["ADMIN"]);
+    if (!user) {
         return { success: false, error: "No tienes permisos para realizar esta acción" };
     }
 
     const instituteId = formData.get("id") as string;
 
-    // Si es ADMIN, solo puede editar su propio instituto
-    if (user.role === "ADMIN" && user.instituteId !== instituteId) {
+    if (user.instituteId !== instituteId) {
         return { success: false, error: "No puedes editar este instituto" };
     }
 

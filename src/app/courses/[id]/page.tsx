@@ -68,11 +68,11 @@ export default async function CourseDetailPage({
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, roles: true, instituteId: true }
+        select: { id: true, roles: true, instituteId: true }
     });
 
     const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
@@ -103,11 +103,8 @@ export default async function CourseDetailPage({
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
     const instituteTeachers = (activeRole === "ADMIN" || activeRole === "SECRETARY") ? await prisma.user.findMany({
         where: { 
-            instituteId: user.instituteId, 
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            instituteId: user.instituteId,
+            roles: { has: "TEACHER" }
         },
         select: { id: true, name: true, email: true },
         orderBy: { name: 'asc' }

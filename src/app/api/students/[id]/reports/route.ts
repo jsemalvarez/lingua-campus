@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, getAuthContext } from "@/lib/authz";
 
 export async function GET(
     req: NextRequest,
@@ -9,36 +8,26 @@ export async function GET(
 ) {
     try {
         const { id: studentId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user) {
+        const auth = await getAuthContext();
+        if (!auth) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        const sessionUser = session.user as any;
 
         // ── Authorization ─────────────────────────────────────────────────────
         // 1. The student themselves
         // 2. A guardian linked to this student
         // 3. Institute staff (ADMIN, SECRETARY, TEACHER)
-        const isStudent = sessionUser.id === studentId;
+        const isStudent = auth.userId === studentId;
 
         let isGuardian = false;
-        if (!isStudent && sessionUser.role === "GUARDIAN") {
+        if (!isStudent && auth.activeRole === "GUARDIAN") {
             const link = await prisma.guardianStudentLink.findFirst({
-                where: { guardianId: sessionUser.id, studentId }
+                where: { guardianId: auth.userId, studentId }
             });
             isGuardian = !!link;
         }
 
-        let isStaff = false;
-        if (!isStudent && !isGuardian) {
-            const user = await prisma.user.findUnique({
-                where: { email: sessionUser.email },
-                select: { role: true, instituteId: true, roles: true }
-            });
-            isStaff = ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"].includes(user?.role || "") ||
-                (user?.roles || []).some((r: string) => ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"].includes(r));
-        }
+        const isStaff = INSTITUTE_STAFF.includes(auth.activeRole as typeof INSTITUTE_STAFF[number]);
 
         if (!isStudent && !isGuardian && !isStaff) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });

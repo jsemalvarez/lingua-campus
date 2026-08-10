@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 export async function PATCH(
     req: NextRequest,
@@ -9,17 +8,8 @@ export async function PATCH(
 ) {
     try {
         const { id: courseId, templateId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user?.email) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true, roles: true }
-        });
-
-        if (!user || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -32,9 +22,9 @@ export async function PATCH(
             return NextResponse.json({ error: "Course not found" }, { status: 404 });
         }
 
-        // Both ADMIN/SECRETARY/SUPERADMIN AND the teacher of the course can publish reports (user request)
-        const hasAccessRoles = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
-        const isAuthorized = hasAccessRoles || user.id === course.teacherId;
+        // Both ADMIN/SECRETARY AND the teacher of the course can publish reports (user request)
+        const isAdminOrSecretary = user.activeRole === "ADMIN" || user.activeRole === "SECRETARY";
+        const isAuthorized = isAdminOrSecretary || user.userId === course.teacherId;
 
         if (!isAuthorized) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });

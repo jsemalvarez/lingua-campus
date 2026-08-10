@@ -9,7 +9,7 @@ import { EntitySearch } from "./EntitySearch";
 interface UserInfo {
     id: string;
     name: string;
-    role: string;
+    roles: string[];
 }
 
 interface RegisterSalaryFormProps {
