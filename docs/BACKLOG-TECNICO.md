@@ -159,7 +159,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [ ] |
-| [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [~] |
+| [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [~] |
@@ -762,7 +762,12 @@ El admin no es participante del hilo, así que `getThread` devuelve `null` y
 **Decisión tomada (2026-08-09).** El admin **puede responder y se suma al hilo** como participante,
 de modo que la profesora y el tutor vean que se incorporó.
 
-**Estado: corregido en `72fbdca`, pendiente de verificación en stage.**
+**Estado: resuelto.** Corregido en `72fbdca` y `7782037`, verificado en stage el 2026-08-09: el
+admin abre el hilo, responde, y queda listado entre los participantes.
+
+`7782037` cerró un hueco detectado durante esa prueba: la vista guardaba en estado sólo los
+mensajes, así que tras responder el contador de participantes y el aviso de "estás viendo como
+administración" seguían mostrando el estado previo hasta recargar la página.
 
 El arreglo no pudo hacerse pasando un parámetro `isAdmin` a `getThread`: todas las funciones de
 [`actions/messages.ts`](../src/app/actions/messages.ts) son server actions —endpoints POST que el
