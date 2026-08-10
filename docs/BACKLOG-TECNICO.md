@@ -37,8 +37,8 @@ varios ítems y conviene tenerlo presente al priorizar:
   [ARQ-05](#arq-05) (borrado lógico) tocan datos existentes. Con un instituto y pocos meses de
   historia, el riesgo es mínimo. Con diez clientes, cada una es un proyecto.
 - **El radio de daño de los agujeros de seguridad es acotado**, pero no nulo: los tutores de ese
-  instituto tienen hoy acceso efectivo de administrador ([SEC-01](#sec-01)). Sigue siendo lo primero,
-  aunque más por lo barato de arreglarlo ahora que por el volumen expuesto.
+  instituto tenían acceso efectivo de administrador ([SEC-01](#sec-01), resuelto el 2026-08-10 —
+  eran 7 cuentas). Era lo primero, más por lo barato de arreglarlo ahora que por el volumen expuesto.
 - **Se puede postergar sin culpa** lo que escala con la cantidad de clientes: [PED-07](#ped-07)
   (límites de consumo de IA), [SEC-09](#sec-09) (middleware) y [ARQ-02](#arq-02) (pooling) no
   aprietan con un solo instituto.
@@ -74,12 +74,12 @@ una solución provisoria en el día.
 El bloque más importante. Los cuatro son la misma deuda y **hay que hacerlos en este orden**: cada
 uno prepara el terreno para el siguiente, y así cada paso queda reversible.
 
-1. [ARQ-07](#arq-07) — completar los tipos de sesión. Va primero porque convierte al compilador en
-   red de seguridad para los pasos siguientes: ahorra trabajo, no lo agrega.
-2. [SEC-02](#sec-02) — crear el helper `requireRole()`. No rompe nada, solo agrega.
-3. [SEC-01](#sec-01) — migrar los ~40 llamadores a `roles[]` y recién entonces borrar la columna `role`.
-4. [BUG-04](#bug-04) + [SEC-08](#sec-08) — caen casi solos una vez unificados los roles.
-5. [SEC-03](#sec-03) + [SEC-04](#sec-04) — aplicar el helper a finanzas y tapar los dos chequeos de instituto faltantes.
+1. ~~[ARQ-07](#arq-07) — completar los tipos de sesión.~~ Hecho en `b781d4b` (falta el barrido de `as any`).
+2. ~~[SEC-02](#sec-02) — crear el helper `requireRole()`.~~ Hecho en `0dcf991`.
+3. ~~[SEC-01](#sec-01) — migrar los llamadores a `roles[]` y borrar la columna `role`.~~ Hecho el 2026-08-10; **falta verificar en stage**.
+4. [SEC-08](#sec-08) — lo que falta de [BUG-04](#bug-04): el `Navbar` sigue leyendo los roles del JWT.
+5. [SEC-04](#sec-04) — los chequeos de instituto que faltan. [SEC-03](#sec-03) quedó cubierto salvo
+   la decisión de producto sobre qué puede anular una secretaria.
 
 Al terminar esta tanda, los tutores dejan de tener acceso de administrador y la secretaria deja de
 convertirse en profesora.
@@ -135,9 +135,9 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 
 | ID | Prioridad | Título | Estado |
 |---|---|---|---|
-| [SEC-01](#sec-01) | P0 | Eliminar `User.role` y unificar en `roles[]` | [ ] |
-| [SEC-02](#sec-02) | P0 | Helper único de autorización (`requireRole`) | [ ] |
-| [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [ ] |
+| [SEC-01](#sec-01) | P0 | Eliminar `User.role` y unificar en `roles[]` | [x] |
+| [SEC-02](#sec-02) | P0 | Helper único de autorización (`requireRole`) | [x] |
+| [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [~] |
 | [SEC-04](#sec-04) | P0 | Validación de instituto faltante en 2 acciones de cobro | [ ] |
 | [SEC-05](#sec-05) | P1 | Login sin alcance de instituto | [ ] |
 | [SEC-06](#sec-06) | P1 | Contraseñas por defecto hardcodeadas | [ ] |
@@ -158,7 +158,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
-| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [ ] |
+| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [~] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
@@ -171,7 +171,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-04](#arq-04) | P3 | Tests automatizados | [ ] |
 | [ARQ-05](#arq-05) | P1 | Política de borrado lógico en todo el sistema | [ ] |
 | [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
-| [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [ ] |
+| [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [~] |
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [ ] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
@@ -233,6 +233,66 @@ entonces borrar la columna. Así cada paso es reversible.
 usuario con `roles: ["GUARDIAN"]` recibe 403 en toda acción administrativa, verificado entrando con
 una cuenta de tutor real en stage.
 
+### Resuelto — 2026-08-10 · pendiente de verificar en stage
+
+**Auditoría previa (stage, 17 usuarios).** Confirmó el agujero: **7 tutores** tenían
+`role = 'ADMIN'` con `roles = ['GUARDIAN']`. Ningún usuario tenía `roles[]` vacío, así que el
+backfill no toca filas en stage; se dejó escrito igual porque producción es otra base.
+
+| `role` | `roles[]` | usuarios |
+|---|---|---|
+| ADMIN | GUARDIAN | 7 |
+| ADMIN | ADMIN | 4 |
+| TEACHER | TEACHER | 2 |
+| SECRETARY | SECRETARY, GUARDIAN | 2 |
+| TEACHER | TEACHER, SECRETARY | 1 |
+| SUPERADMIN | SUPERADMIN | 1 |
+
+**Lo que se hizo.** Toda decisión de autorización pasa ahora por `requireRole()` / `getAuthContext()`
+([`src/lib/authz.ts`](../src/lib/authz.ts)), que leen `roles[]` **de la base** y evalúan el **rol
+activo**. Se eliminó `role` del modelo, del token, de los tipos de sesión y de las ~60 queries que lo
+seleccionaban. Dos migraciones separadas para que cada paso sea reversible:
+`20260810120000_backfill_user_roles` y `20260810120100_drop_user_role`.
+
+**El chequeo que había no era el que parecía.** El patrón repetido era
+`user.role === "SUPERADMIN" → denegar`: una lista negra de un solo elemento. Traducirlo tal cual a
+`roles[]` habría dejado el agujero abierto — un tutor tampoco es SUPERADMIN. Se reemplazó por listas
+blancas por módulo, tomadas de lo que el menú ya decide
+([`Navbar.tsx:62-75`](../src/components/layout/Navbar.tsx)):
+
+| Constante | Roles | Módulos |
+|---|---|---|
+| `INSTITUTE_STAFF` | ADMIN, SECRETARY, TEACHER | cursos, clases, calendario, aulas, niveles, inscripciones, ficha del alumno |
+| `INSTITUTE_ADMINS` | ADMIN, SECRETARY | finanzas, altas y bajas de alumnos, plantillas de informes |
+| `["ADMIN"]` | ADMIN | personal, tutores, liquidación de sueldos, configuración del instituto |
+
+**Agujeros concretos que esto cierra, además del principal:**
+
+- `createGuardianAccount` mezclaba `role` y `roles` con un `OR`, así que **un tutor podía crear
+  cuentas de tutor**.
+- `createTeacherAction` sólo excluía a SUPERADMIN: cualquiera del instituto podía darse de alta como
+  profesor.
+- `generateStandaloneEnrollmentFeeAction` sólo pedía estar logueado y tener instituto — cualquier
+  usuario del instituto podía emitir una matrícula.
+- `deleteScheduleAction` sólo comprobaba el instituto, sin mirar el rol.
+- `updateInstituteByAdminAction` leía el rol **del JWT**, no de la base.
+- `schedule/page.tsx` filtraba profesores con `role: "TEACHER"` únicamente: quien hubiera recibido el
+  rol por `roles[]` (el camino que usa el alta cuando el email ya existe) no aparecía en el
+  calendario.
+
+**Cambios de comportamiento a tener presentes al probar.**
+
+1. **SUPERADMIN pierde el acceso a las acciones de instituto.** Antes podía resetear contraseñas y
+   dar de baja profesores de cualquier instituto. `requireRole` lo excluye por diseño (no tiene
+   `instituteId`); opera desde `/admin/institutes`, que tiene su propio control
+   (`requireSuperadmin`). En stage hay un solo SUPERADMIN y es una cuenta de desarrollo.
+2. **Se autoriza por rol activo, no por "algún rol".** Quien tenga dos roles y esté operando como
+   profesor no puede ejecutar acciones administrativas sin cambiar de modo con el selector.
+3. **Las cuentas con `status != "ACTIVE"` quedan fuera.** Antes varios chequeos no miraban el estado.
+
+**Qué falta verificar en stage.** Entrar con una cuenta de tutor real y confirmar el 403; entrar con
+la usuaria de doble rol (secretaria + profesora) y confirmar que puede operar en ambos modos.
+
 ---
 
 <a id="sec-02"></a>
@@ -257,6 +317,14 @@ Reemplazar todas las variantes locales.
 
 **Criterio de aceptación.** Un único punto en el código decide autorización. Los ~40 chequeos
 dispersos pasan por él.
+
+### Resuelto — el helper en `0dcf991`, su aplicación transversal junto con [SEC-01](#sec-01)
+
+`src/lib/authz.ts` expone `getAuthContext()`, `requireRole()`, `requireSuperadmin()` y las listas
+`INSTITUTE_STAFF` / `INSTITUTE_ADMINS`. Las tres variantes de `getAuthAndInstitute()` que había
+sobreviven como envoltorios de dos líneas que delegan en `requireRole` y adaptan la forma del
+retorno: se dejaron así a propósito para no meter ~40 renombres incidentales en el medio del código
+financiero. La decisión de autorización vive en un solo lugar.
 
 ---
 
@@ -287,6 +355,18 @@ SECRETARY puede anular y borrar cuotas o solo registrar cobros — hoy no hay di
 **Alcance.** Hacer el mismo barrido sobre los módulos de alumnos, profesores, cursos, informes y
 mensajería. Este ítem cubre finanzas; el resto se resuelve con SEC-02 aplicado transversalmente.
 
+### Parcialmente resuelto con [SEC-01](#sec-01) — 2026-08-10
+
+Las 16 acciones listadas arriba pasan ahora por `requireRole(["ADMIN", "SECRETARY"])`, y el barrido
+transversal sobre alumnos, profesores, cursos e informes también se hizo. **Un profesor ya no pasa el
+filtro de finanzas.**
+
+**Queda abierta la decisión de producto** que este ítem plantea y que no corresponde tomar sin el
+cliente: si SECRETARY puede **anular pagos y borrar cuotas** o sólo registrar cobros. Hoy, como
+antes, no hay distinción — ambos roles pueden todo. Restringir `voidPaymentAction`,
+`voidExpenseAction`, `voidIncomeAction` y `deleteFeeAction` a `["ADMIN"]` es un cambio de una línea
+por acción cuando se defina.
+
 ---
 
 <a id="sec-04"></a>
@@ -308,6 +388,13 @@ entre funciones hermanas indica olvido, no decisión de diseño.
 
 **Cambio.** Agregar `if (fee.instituteId !== user.instituteId) return { success: false, error: "..." }`
 en ambas, dentro de la transacción. Idealmente, incluir `instituteId` en el `where` de la query.
+
+**Un tercer caso, encontrado al migrar [SEC-01](#sec-01).**
+[`api/students/[id]/reports/route.ts`](../src/app/api/students/[id]/reports/route.ts) autoriza al
+personal por rol y **nunca compara el instituto del alumno**: un profesor del instituto A puede leer
+los informes publicados de un alumno del instituto B mandando su ID. No se tocó en ese pase para no
+mezclar un arreglo de aislamiento con la migración de roles, pero es el mismo olvido y conviene
+hacerlo acá: la ruta ya tiene el `instituteId` del actor a mano en el `AuthContext`.
 
 ---
 
@@ -716,6 +803,21 @@ tenga efecto sin requerir reinicio de sesión.
 
 **Dependencia.** Se resuelve junto con [SEC-01](#sec-01) y [SEC-08](#sec-08): los tres son la misma
 deuda de la migración a multi-rol.
+
+### Causa 2 resuelta con [SEC-01](#sec-01); la causa 1 sigue abierta — 2026-08-10
+
+**El fallback hardcodeado ya no existe.** Se eliminó `|| "TEACHER"` de las 8 páginas: donde había
+`sessionUser.roles || [user?.role || "TEACHER"]` ahora hay `sessionUser.roles ?? []`. Sin roles no
+hay rol por defecto.
+
+**La auditoría de la base descarta un problema de datos.** La usuaria del reporte es la única con
+`role = 'TEACHER'` y `roles = ['TEACHER', 'SECRETARY']`: `roles[]` la tiene bien cargada como
+secretaria. Confirma la causa 1 — el token es lo que está viejo.
+
+**Por qué todavía no alcanza.** La autorización ya lee los roles de la base, pero `Navbar` y
+`RoleSwitcher` son componentes cliente y siguen leyendo `session.user.roles` del JWT. Con un solo rol
+en el token, el selector de rol se sigue ocultando. Cerrar sesión y volver a entrar lo arregla en el
+día; la solución de fondo es [SEC-08](#sec-08).
 
 ---
 
@@ -1131,6 +1233,16 @@ este archivo también.
 **Dependencia.** Conviene hacerlo **junto con [SEC-01](#sec-01)**: el tipado correcto convierte el
 compilador en una red de seguridad para esa migración, que es grande y toca ~40 lugares. Hacerlo
 antes ahorra trabajo, no lo agrega.
+
+### Tipos declarados en `b781d4b`; falta el barrido de `as any`
+
+`LinguaSessionFields` ya declara `id`, `roles`, `instituteId` y `birthDate` en `Session["user"]`, en
+`User` y en `JWT`, y [SEC-01](#sec-01) sacó `role` de ahí. Sirvió para lo que se esperaba: el
+compilador encontró los llamadores durante la migración.
+
+**Lo que falta** son los ~60 `session.user as any` que siguen dispersos por las páginas. Cada uno se
+puede borrar sin más — los campos ya están tipados —, pero es un cambio mecánico y ruidoso que
+conviene hacer en su propio commit, no mezclado con una migración de permisos.
 
 ---
 
