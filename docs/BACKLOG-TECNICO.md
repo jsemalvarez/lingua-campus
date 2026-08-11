@@ -124,9 +124,10 @@ para reactivar lo borrado, que conviene definir de una sola forma para todo el s
 Acá está el diferencial del producto. Se empieza por cerrar el agujero de costos, porque es el único
 con urgencia real.
 
-[SEC-07](#sec-07) (cerrar los endpoints de IA) → [PED-01](#ped-01) (generar la práctica con un botón)
-→ [PED-02](#ped-02) (devolver el `weakArea` al docente) → [PED-04](#ped-04) (persistir las
-conversaciones).
+~~[SEC-07](#sec-07) (cerrar los endpoints de IA)~~ — hecho el 2026-08-11; **falta verificar en
+stage**, y hay una migración nueva que corre sola en el deploy. Sigue [PED-01](#ped-01) (generar la
+práctica con un botón) → [PED-02](#ped-02) (devolver el `weakArea` al docente) →
+[PED-04](#ped-04) (persistir las conversaciones).
 
 [PED-03](#ped-03) etapa 1 (reencuadrar la promesa) es solo texto y se puede hacer en cualquier
 momento.
@@ -135,6 +136,12 @@ momento.
 
 [SEC-05](#sec-05), [SEC-06](#sec-06), [SEC-09](#sec-09), [SEC-10](#sec-10), [FIN-09](#fin-09),
 [FIN-10](#fin-10), [ARQ-02](#arq-02), [ARQ-03](#arq-03), [PED-05](#ped-05) a [PED-08](#ped-08).
+
+[ARQ-09](#arq-09) (registro de errores) y [ARQ-10](#arq-10) (auditoría) entran acá, pero conviene
+decidirlos juntos: comparten las tres preguntas caras —dónde se guarda, cuánto tiempo y quién lo ve—
+y contestarlas dos veces sale peor que una. [ARQ-09](#arq-09) tiene además una urgencia que los
+otros ítems de la tanda no tienen: hasta que exista, un deploy roto se descubre porque avisa el
+cliente.
 
 [ARQ-04](#arq-04) (tests) queda fuera del orden por decisión explícita.
 
@@ -175,7 +182,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-04](#sec-04) | P0 | Validación de instituto faltante en 2 acciones de cobro | [x] |
 | [SEC-05](#sec-05) | P1 | Login sin alcance de instituto | [ ] |
 | [SEC-06](#sec-06) | P1 | Contraseñas por defecto hardcodeadas | [ ] |
-| [SEC-07](#sec-07) | P1 | Endpoints de IA abiertos y sin límite de uso | [ ] |
+| [SEC-07](#sec-07) | P1 | Endpoints de IA abiertos y sin límite de uso | [x] |
 | [SEC-08](#sec-08) | P2 | Permisos rancios en el JWT | [x] |
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
@@ -216,6 +223,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
 | [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [~] |
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
+| [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
+| [ARQ-10](#arq-10) | P2 | No hay auditoría de las acciones del panel | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [ ] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -531,6 +540,70 @@ No hay rate limiting en ninguno.
    práctica esté publicada. Hoy `session/route.ts` valida `isPublished` pero no la inscripción.
 3. Rate limiting por usuario y por instituto.
 4. Restringir `generate-*` al rol docente si son herramientas de preparación de clase.
+
+### Resuelto — 2026-08-11 · pendiente de verificar en stage
+
+**Los seis endpoints entran por una sola puerta**
+([`src/lib/practice/guard.ts`](../src/lib/practice/guard.ts)). `guardPracticeAi` recibe un
+`lessonPracticeId`, decide si esa persona puede usar esa práctica, descuenta cuota y devuelve el
+contenido leído de la base. Cada ruta quedó en tres líneas de control y el resto es su propia lógica.
+
+**El prompt ya no viaja en el body.** El `scenario` de `/chat` sale de
+`LessonPractice.chatScenario`, las `seedPhrases` de `speakingPhrases` y el `seedText` de
+`listeningText`. `AIChatbot` sigue recibiendo el escenario por props, pero **sólo para mostrarlo en
+pantalla**.
+
+**`/generate-listening-quiz` también se lee entero del servidor**, que no era obvio: el cliente le
+mandaba el texto. Se puede porque ese endpoint arma el cuestionario del texto **original**
+únicamente — cuando el alumno genera un texto nuevo, `/generate-listening` ya le devuelve el texto y
+sus preguntas juntos, y `ListeningLab` no vuelve a pasar por ahí.
+
+**El `language` era otra vía para escribir el prompt.** Venía del body y se interpolaba
+(`You are a ${language} teacher`). Ahora es `PRACTICE_LANGUAGE`, constante del servidor. En `/tts`,
+donde sí elige la voz, quedó una lista blanca de tres variantes de inglés.
+
+**La inscripción se verifica, no sólo la publicación.** El alumno llega a una práctica publicada, de
+una clase activa, de un curso de su instituto **en el que esté inscripto con `status = "ACTIVE"`**.
+Faltaba en todos lados, incluido `/session`, que era el único que miraba `isPublished` y que quedó
+arreglado en el mismo pase aunque no sea un endpoint de IA (no comparte el helper: es sólo para
+alumnos y no descuenta cuota). El personal
+entra por el mismo helper sin exigir `isPublished`, porque la vista previa del profesor existe
+justamente para probar antes de publicar. Los tutores, que antes pasaban por tener sesión, ya no
+pasan.
+
+**El límite de uso va a la base** ([`AiUsage`](../prisma/schema.prisma), migración
+`20260811183000_add_ai_usage`) y no a memoria del proceso: en Vercel cada instancia serverless
+tendría su propio contador, el tope se multiplicaría por la cantidad de instancias y se reiniciaría
+en cada arranque en frío.
+
+**Dos escalas, no una** ([`src/lib/practice/quota.ts`](../src/lib/practice/quota.ts)):
+
+- **150 por usuario por hora.** Una sesión de speaking gasta dos llamadas por frase; un alumno
+  aplicado ronda las 60 en una hora. El tope corta el loop automatizado sin molestar a nadie.
+- **1200 por instituto por día.** Este es el que mira la factura. El free tier de Gemini son 1500
+  requests diarias para *todo* el proyecto, así que un tope horario por instituto no serviría: con
+  seis horas de uso normal ya se pasaría. Ambos se pueden mover con `AI_LIMIT_USER_HOURLY` y
+  `AI_LIMIT_INSTITUTE_DAILY`.
+
+**El TTS del navegador no descuenta cuota.** Con `TTS_PROVIDER=browser` —el default de hoy— el
+servidor contesta 204 y sintetiza el cliente: no hay nada que facturar, y cobrárselo al alumno le
+comería el tope repitiendo el audio, que es la operación más frecuente del módulo.
+
+**El punto 4 del enunciado no se aplicó, a propósito.** `generate-phrases` y `generate-listening` no
+son herramientas de preparación de clase: son los botones "generar más frases" y "generar otro texto"
+que el **alumno** toca dentro de su práctica (`SpeakingHub`, `ListeningLab`). Restringirlos al rol
+docente rompía la funcionalidad sin cerrar nada — el acceso ya lo decide la inscripción.
+
+**Riesgo residual, anotado a conciencia.** Quedan dos campos de texto libre en `/evaluate`
+(`expected` y `actual`) y uno en `/tts` (`text`), porque pueden ser frases que generó la IA en esa
+misma sesión y no están en ninguna tabla. No son system prompts —van adentro de una plantilla fija—
+pero llegan al modelo, así que se recortan a 300 y 3000 caracteres. Lo que queda expuesto es una
+completion corta por unidad de cuota. Cerrarlo del todo requiere persistir lo generado, que es
+[PED-04](#ped-04).
+
+**[PED-07](#ped-07) (topes por plan) ya tiene dónde apoyarse.** `AiUsage` guarda el inicio de la
+ventana en vez del tipo de período, así que el mismo contador sirve para cualquier escala; lo que
+falta ahí es la decisión comercial, no el mecanismo.
 
 ---
 
@@ -2016,6 +2089,107 @@ instituto. Se anota porque crece en silencio y porque dos ítems planificados lo
    conviene sacarla para que nadie asuma que existe una limpieza que no ocurre.
 3. Si se adopta el staging de FEAT-01, tarea de limpieza de `_pending` por antigüedad.
 4. Opcional: deduplicar por hash del contenido, guardando el archivo una sola vez por instituto.
+
+---
+
+<a id="arq-09"></a>
+## ARQ-09 · Los errores no se registran en ningún lado · **P2**
+
+**Estado actual.** Hay **80 `console.error`** repartidos por `src` y ninguna librería de logging en
+`package.json`. La aplicación atrapa sus errores —hay nueve `error.tsx` más el global, y las server
+actions devuelven `{ success: false, error }`— pero no los **reporta**: el usuario ve un cartel, el
+error se imprime en la consola de Vercel y ahí muere.
+
+Lo que eso significa en la práctica:
+
+- **No se puede saber si un deploy rompió algo** hasta que el cliente avisa. Hoy hay un solo
+  instituto y el cliente escribe; con tres, no.
+- **No se puede consultar nada.** Los logs de Vercel no se filtran por instituto ni por usuario, no
+  se agregan y se van con la retención del plan.
+- **Los mensajes no tienen contexto.** `console.error("[CHAT] Error:", error.message)` no dice qué
+  instituto, qué usuario ni qué práctica. Con un cliente se deduce; con varios, no.
+- **El caso extremo ya está anotado en [PED-05](#ped-05):** los providers de IA degradan en silencio,
+  así que ni siquiera llega a haber un error que registrar.
+
+**Decisión pendiente — dónde se guardan.** Son dos caminos con costos distintos:
+
+1. **Servicio externo** (Sentry y equivalentes). Trae agrupación, alertas y stack traces sin
+   construir nada. Cuesta plata a partir de cierto volumen y suma un proveedor más al que mandarle
+   datos — y acá hay datos de menores, así que hay que mirar qué se envía.
+2. **Tabla propia** (`ErrorLog`), en la línea de lo que ya se hizo con `AiUsage` en
+   [SEC-07](#sec-07). Cero proveedores nuevos, los datos no salen de la base, y el panel del
+   superadmin ya existe como lugar donde mostrarlo. A cambio hay que construir el agrupado, la
+   retención y la vista, y una tabla de errores crece rápido justo cuando algo se rompe en loop.
+
+**Las métricas son un ítem aparte del registro, y conviene no mezclarlos.** "Cuántos errores hubo"
+sale del registro; "cuánto se usa la plataforma" no, y es otra pregunta —la del cliente— que ya
+aparece en [FEAT-04](#feat-04) y en [TODO.md](./TODO.md). Definir cuáles son las tres o cuatro
+preguntas que se quieren contestar antes de elegir qué se guarda: es lo que decide el modelo.
+
+**Cambios.**
+1. Un helper único de registro en lugar de 80 `console.error` sueltos, que reciba el error más el
+   contexto (instituto, usuario, acción). El patrón es el mismo de `getAuthContext` y
+   `guardPracticeAi`: un solo lugar donde cambiar de destino después.
+2. Elegir destino con el criterio de arriba.
+3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
+   cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
+   —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
+4. Retención: los errores viejos no sirven y ocupan.
+5. Recién después, las métricas y dónde se ven.
+
+**Relacionado.** [ARQ-10](#arq-10) es el otro registro que falta y comparte casi todas estas
+decisiones (dónde, cuánto tiempo, quién lo ve); si se hacen juntos, se decide una sola vez. Pero son
+cosas distintas: acá se registra **lo que falló**, allá **lo que alguien hizo a propósito**.
+
+---
+
+<a id="arq-10"></a>
+## ARQ-10 · No hay auditoría de las acciones del panel · **P2**
+
+**Lo que pide el negocio.** Que el administrador del instituto pueda ver **quién hizo qué**: quién
+modificó una nota, quién cambió un monto, quién dio de baja a un alumno.
+
+**Estado actual.** No hay tabla de auditoría. Lo único que se parece es
+`Transaction.operatorId` ([`schema.prisma:492`](../prisma/schema.prisma)), que es **opcional** y sólo
+existe en el asiento del libro mayor: si una operación no generó asiento, no queda rastro de quién la
+hizo. Todo lo demás —académico, alumnos, cursos, configuración— no registra autor.
+
+**Por qué importa más de lo que parece acá:**
+
+- **Los roles conviven.** Admin, secretaria y profesor operan sobre las mismas pantallas, y desde
+  [SEC-01](#sec-01) una misma persona puede tener varios roles. "Se cambió la nota" no dice quién.
+- **El borrado es lógico** ([ARQ-05](#arq-05)). El dato sobrevive, pero *quién lo borró y cuándo* no
+  se guarda en ningún lado — que es justamente lo que hace falta para decidir si se restaura. La
+  interfaz de deshacer que queda pendiente en el panel del superadmin no tiene hoy con qué mostrar
+  el "quién".
+- **Ya hay un pedido concreto que es un caso particular de esto:** [FIN-13](#fin-13) quiere ver quién
+  aplicó un descuento o recargo y por qué. Si se construye la auditoría primero, FIN-13 sale casi
+  gratis; si se construye FIN-13 sola, queda una solución de un solo uso.
+- **[FEAT-04](#feat-04) es la otra mitad de la misma pregunta.** Ahí se registra quién *entró*; acá,
+  quién *hizo*. Comparten tabla o no según qué se decida, pero conviene mirarlas juntas.
+
+**Decisión pendiente — el alcance, que es lo que define el costo.** Auditar todo es una tabla que
+crece más rápido que los datos del negocio y ruido en el que no se encuentra nada. Lo razonable es
+empezar por lo que alguien podría querer discutir después: plata (pagos, descuentos, anulaciones),
+académico (notas, asistencia), altas y bajas de personas, y cambios de rol o de permisos. Lo que se
+lee no se audita.
+
+**Cambios.**
+1. Definir la lista de acciones auditables con el criterio de arriba, y confirmarla con el cliente:
+   es una decisión de negocio, no técnica.
+2. Modelo `AuditLog` polimórfico —actor, rol activo con el que operó, instituto, entidad, id,
+   acción, fecha y el diff o los campos tocados—. `Notification` ya usa un enfoque polimórfico en
+   este esquema, conviene seguir esa forma.
+3. Escribirlo donde ya se decide la autorización. `getAuthContext` es el punto por el que pasa toda
+   acción y sabe quién es y con qué rol activo opera: es el lugar natural para que registrar no
+   dependa de que cada acción se acuerde.
+4. Vista para el administrador, filtrada por instituto. Empezar por la ficha de cada entidad
+   ("últimos cambios de este alumno"), que es más útil que un listado global.
+5. Retención, y qué pasa con el registro cuando se da de baja a quien lo generó.
+
+**Cuidado con lo obvio.** Un registro de auditoría es, por definición, un lugar donde se acumulan
+datos personales de menores y de sus tutores. Guardar qué cambió, no copiar el dato entero cuando no
+hace falta, y decidir la retención **antes** de empezar a escribir filas.
 
 ---
 
