@@ -168,7 +168,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
-| [FIN-12](#fin-12) | P1 | La matrícula se duplica al inscribir en un segundo curso | [ ] |
+| [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [ ] |
+| [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
@@ -817,13 +818,11 @@ detiene: es plata cobrada y decidir cuál sobrevive no es algo que pueda hacer u
 Ensayada contra stage dentro de una transacción revertida: 0 borrados y el índice entra sin
 conflictos. **En producción no está verificado** — es otra base y no se miró.
 
-**Falta: la restricción de las matrículas.** La regla es "una por alumno y año", y necesita un índice
-**parcial** (`WHERE type = 'ENROLLMENT'`), porque un `@@unique([studentId, type, year])` liso
-prohibiría también que un alumno tenga doce cuotas mensuales en el año. Prisma 5 no sabe expresar
-índices parciales en el schema, así que hay que escribirlo en SQL crudo dentro de la migración — con
-el costo de que Prisma no lo conoce y el próximo `migrate dev` va a querer borrarlo. Antes de
-ponerlo hay que resolver [FIN-12](#fin-12), o inscribir a un alumno en un segundo curso pasaría de
-duplicarle la matrícula en silencio a fallar con un error de base.
+**Falta: la restricción de las matrículas**, y la resuelve [FIN-12](#fin-12). Con la regla definida
+el 2026-08-10 —la matrícula es **por curso**— la unidad pasa a ser la inscripción, así que alcanza
+con normalizar el `month` de las matrículas para que la restricción que ya está puesta signifique
+"una por inscripción y año". **Se evita el índice parcial**, que era lo único que obligaba a SQL
+crudo fuera del radar de Prisma.
 
 **Corrección al enunciado de arriba:** decía que las cuotas de tipo `ENROLLMENT` no tienen
 `enrollmentId`. Es cierto sólo para las anticipadas; las que crea `createEnrollmentAction`
@@ -984,32 +983,70 @@ La opción 1 es menos invasiva y no cambia lo que ve quien concilia caja.
 ---
 
 <a id="fin-12"></a>
-## FIN-12 · La matrícula se duplica al inscribir en un segundo curso · **P1**
+## FIN-12 · Los generadores de matrícula asumen una por alumno y año · **P1**
 
-Al inscribir a un alumno, `createEnrollmentAction`
-([`enrollments/actions.ts:47`](../src/app/enrollments/actions.ts)) busca una matrícula del año para
-vincular, pero **sólo entre las que tienen `enrollmentId: null`**. Si el alumno ya se inscribió antes
-en otro curso, su matrícula de ese año quedó vinculada a esa primera inscripción, así que la
-búsqueda no la encuentra y se le **crea una segunda matrícula**.
+**🗣️ Regla de negocio definida (2026-08-10): la matrícula es por curso.** Si un alumno hace dos
+cursos, paga dos matrículas. Si el instituto quiere bonificar, reparte descuentos al cobrar (por
+ejemplo 50% en cada una), y esa política la decide cada instituto desde el panel — no se codifica.
 
-El resto del sistema trata la matrícula como una por alumno y año:
-`generateStandaloneEnrollmentFeeAction` rechaza la segunda con *"Ya existe una matrícula registrada
-para este alumno en el año X"* ([`actions.ts:538`](../src/app/payments/actions.ts)), y
-`generateYearlyEnrollmentFeesAction` saltea a los alumnos que ya tienen una. Esta ruta es la
-excepción, y le cobra al alumno la matrícula dos veces.
+Con esa regla, `createEnrollmentAction`
+([`enrollments/actions.ts:47`](../src/app/enrollments/actions.ts)), que genera una matrícula por
+inscripción, es **la que está bien**. Las que asumen lo contrario son las otras dos:
 
-**Cómo se detectó (2026-08-10).** Por lectura del código, al diseñar la restricción de
-[FIN-06](#fin-06). Las 6 matrículas duplicadas que hay en stage **no lo prueban**: sus dos copias
-apuntan a la misma inscripción, así que salieron de otro lado (datos de prueba cargados a mano o una
-versión anterior). El hueco de esta función es independiente de eso.
+- `generateStandaloneEnrollmentFeeAction` ([`actions.ts:538`](../src/app/payments/actions.ts))
+  rechaza la segunda matrícula del año con *"Ya existe una matrícula registrada para este alumno en
+  el año X"*. Debería mirar sólo las **sin vincular**: la anticipada, que la primera inscripción
+  consume.
+- `generateYearlyEnrollmentFeesAction` ([`billingActions.ts:134`](../src/app/payments/billingActions.ts))
+  saltea a los alumnos que ya tienen una matrícula ese año, cuando debería generar una **por
+  inscripción activa** sin matrícula.
 
-**Cambio.** Buscar la matrícula del año **sin filtrar por `enrollmentId`**. Si aparece una y no está
-vinculada, vincularla; si ya está vinculada a otra inscripción, no crear nada. Definir antes con el
-cliente si la matrícula es por alumno y año —que es lo que asume todo el resto— o por curso, porque
-si fuera por curso el bug estaría en las otras dos funciones y no acá.
+**Cambio.**
+1. Corregir las dos funciones para que la unidad sea la inscripción y no el alumno.
+2. Normalizar el `month` de las matrículas a un valor fijo. Con eso la restricción única que ya
+   existe —`[enrollmentId, type, year, month]`, ver [FIN-06](#fin-06)— pasa a significar "una
+   matrícula por inscripción y año" **sin necesidad de un índice parcial**, que es lo que Prisma 5 no
+   sabe expresar y habría quedado fuera de su radar. Encaja con [FIN-08](#fin-08): para la matrícula
+   el `month` es un valor administrativo, no un vencimiento. Requiere migrar las filas existentes.
 
-**Bloquea** el índice parcial que le falta a [FIN-06](#fin-06): con duplicados entrando por esta
-ruta, la restricción convertiría la inscripción a un segundo curso en un error de base.
+**Cierra la mitad que le falta a [FIN-06](#fin-06).**
+
+**Nota sobre los datos.** En stage hay 6 matrículas duplicadas, pero sus dos copias apuntan a la
+**misma** inscripción, así que no son el caso que describe este ítem ni salieron de estas funciones:
+son datos de prueba cargados a mano o de una versión anterior. En producción no se miró.
+
+---
+
+<a id="fin-13"></a>
+## FIN-13 · 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué · **P2**
+
+Los descuentos y recargos se cargan al cobrar (`RegisterFeeForm`, campos "Descuento (-)" y
+"Recargo") y quedan bien guardados en `Payment.discount` / `Payment.surcharge`, separados del monto
+cobrado. El problema es que **después no se ven en ningún lado salvo el recibo de ese pago**
+([`TransactionActions.tsx:47`](../src/app/payments/components/TransactionActions.tsx)): la tabla del
+libro mayor muestra la plata que entró, no lo que se bonificó, y no hay ninguna vista que sume
+cuánto se bonificó en el período.
+
+**Lo que ya está y lo que falta en el modelo:**
+
+- **Importes:** están. `Payment.discount` y `Payment.surcharge`, por pago.
+- **Quién:** no está en el pago. `Payment` no tiene `operatorId`; sí lo tiene el asiento del libro
+  mayor (`Transaction.operatorId`), vinculado por `paymentId`, así que hoy el operador se puede
+  deducir por ahí — pero es indirecto y se rompe si un pago no generó asiento.
+- **Por qué:** no está. Sólo `Payment.notes`, texto libre, que además `createPaymentAction`
+  sobrescribe con el aviso de excedente cuando hay saldo a favor
+  ([`actions.ts:110`](../src/app/payments/actions.ts)).
+
+**Cambio.** Definir si el motivo es texto libre o una lista de conceptos (beca, segundo curso,
+pago adelantado…), agregar el operador al pago o resolverlo por el asiento, y mostrarlo: en el
+detalle del pago y en alguna vista agregada por período.
+
+**Decisión relacionada (2026-08-10): los montos en cero se siguen rechazando.**
+`createPaymentAction` y `editFeeAmountAction` exigen importes mayores a cero, y eso **se conserva a
+propósito** — evita toda una familia de estados raros (pagos fantasma, cuotas de $0 que no se sabe si
+son gratis o un error). La contrapartida es que no se puede bonificar el 100% por esta vía; para eso
+hay que borrar la cuota. La política de repartir los descuentos entre los cursos existe justamente
+para no necesitar el cero.
 
 ---
 
