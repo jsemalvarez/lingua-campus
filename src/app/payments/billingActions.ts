@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
+import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -111,9 +112,15 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
 }
 
 /**
- * Genera matrículas anuales standalone para todos los estudiantes activos del instituto
- * que aún no tengan una matrícula registrada para ese año.
- * Optimizado para ejecuciones en masa de alto rendimiento.
+ * Genera las matrículas anuales del instituto: **una por inscripción activa** que
+ * todavía no tenga la suya. La matrícula es por curso, así que el alumno que hace
+ * dos cursos paga dos (FIN-12); si el instituto quiere bonificar la segunda,
+ * reparte el descuento al cobrar.
+ *
+ * El `amount` es el valor base y se aplica a todas, salvo que la inscripción
+ * tenga precio propio (`customEnrollmentPrice`), que es como se cargan las becas.
+ *
+ * Optimizado para ejecuciones en masa de alto rendimiento (1 single SQL bulk insert).
  */
 export async function generateYearlyEnrollmentFeesAction(year: number, amount: number) {
     const user = await getAuthAndInstitute();
@@ -124,55 +131,88 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
     }
 
     try {
-        // 1. Obtenemos a todos los estudiantes activos del instituto
-        const students = await prisma.student.findMany({
+        // 1. Inscripciones activas de alumnos activos, en cursos activos del instituto
+        const enrollments = await prisma.enrollment.findMany({
             where: {
-                instituteId: user.instituteId as string,
-                status: "ACTIVE"
+                status: "ACTIVE",
+                student: { status: "ACTIVE" },
+                course: {
+                    instituteId: user.instituteId as string,
+                    status: "ACTIVE"
+                }
             },
-            select: { id: true }
+            select: { id: true, studentId: true, customEnrollmentPrice: true },
+            orderBy: { enrolledAt: "asc" }
         });
 
-        if (students.length === 0) {
+        if (enrollments.length === 0) {
             return { success: true, count: 0 };
         }
 
-        // 2. Traemos en 1 sola query los estudiantes que ya tienen matrícula registrada para este año
+        // 2. Traer en 1 sola query las matrículas que ya existen ese año para esos alumnos
         const existingFees = await prisma.fee.findMany({
             where: {
                 instituteId: user.instituteId as string,
                 year: year,
                 type: "ENROLLMENT",
                 studentId: {
-                    in: students.map(s => s.id)
+                    in: [...new Set(enrollments.map(e => e.studentId))]
                 }
             },
-            select: { studentId: true }
+            select: { studentId: true, enrollmentId: true }
         });
 
-        const existingStudentIds = new Set(existingFees.map(f => f.studentId));
-        const currentMonth = new Date().getMonth() + 1;
+        const coveredEnrollmentIds = new Set(
+            existingFees.map(f => f.enrollmentId).filter((id): id is string => id !== null)
+        );
 
-        // 3. Filtrar en memoria los estudiantes pendientes
-        const feesToCreate = students
-            .filter(student => !existingStudentIds.has(student.id))
-            .map(student => ({
-                studentId: student.id,
+        // Las matrículas anticipadas (sin `enrollmentId`) no dicen a qué curso van,
+        // pero ya son plata facturada: cada una cubre una inscripción del alumno.
+        // Sin esto, al alumno con una anticipada sin consumir se le cobraría dos veces.
+        const pendingStandaloneByStudent = new Map<string, number>();
+        for (const fee of existingFees) {
+            if (fee.enrollmentId === null) {
+                pendingStandaloneByStudent.set(
+                    fee.studentId,
+                    (pendingStandaloneByStudent.get(fee.studentId) ?? 0) + 1
+                );
+            }
+        }
+
+        // 3. Filtrar en memoria las inscripciones que necesitan matrícula
+        const feesToCreate = [];
+        for (const enrollment of enrollments) {
+            if (coveredEnrollmentIds.has(enrollment.id)) continue;
+
+            const standalone = pendingStandaloneByStudent.get(enrollment.studentId) ?? 0;
+            if (standalone > 0) {
+                pendingStandaloneByStudent.set(enrollment.studentId, standalone - 1);
+                continue;
+            }
+
+            const finalPrice = enrollment.customEnrollmentPrice !== null
+                ? enrollment.customEnrollmentPrice
+                : amount;
+            if (finalPrice <= 0) continue;
+
+            feesToCreate.push({
+                studentId: enrollment.studentId,
+                enrollmentId: enrollment.id,
                 year: year,
-                month: currentMonth,
+                month: ENROLLMENT_FEE_MONTH,
                 type: "ENROLLMENT" as const,
-                originalAmount: amount,
+                originalAmount: finalPrice,
                 paidAmount: 0,
                 status: "PENDING" as const,
                 instituteId: user.instituteId as string
-            }));
+            });
+        }
 
         // 4. Crear masivamente en 1 sola query SQL
-        // Ojo: acá `skipDuplicates` todavía no protege nada. Estas matrículas se crean
-        // sin `enrollmentId`, y en Postgres los NULL no chocan entre sí, así que la
-        // restricción única de `Fee` no las alcanza. Queda puesto para cuando exista el
-        // índice parcial de "una matrícula por alumno y año" (ver FIN-06); hasta
-        // entonces, lo único que evita duplicados acá es el filtro en memoria de arriba.
+        // Desde que la matrícula va vinculada a la inscripción y con el mes fijo, la
+        // restricción única de `Fee` sí la alcanza: `skipDuplicates` deja que dos
+        // generaciones simultáneas convivan sin duplicar ni explotar, y sigue siendo
+        // una sola query — la razón por la que esto no va en una transacción (FIN-06).
         if (feesToCreate.length > 0) {
             await prisma.fee.createMany({
                 data: feesToCreate,

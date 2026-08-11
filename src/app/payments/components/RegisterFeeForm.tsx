@@ -162,7 +162,10 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                 {pendingFees.map(f => {
                                     let label = "";
                                     if (f.type === "ENROLLMENT") {
-                                        label = `Matrícula ${f.year}`;
+                                        // Con el curso al lado: la matrícula es por curso, así
+                                        // que un alumno con dos cursos tiene dos matrículas del
+                                        // mismo año y sin esto son indistinguibles al cobrar.
+                                        label = `Matrícula ${f.year}${f.enrollment?.course?.name ? ` - ${f.enrollment.course.name}` : ""}`;
                                     } else if (f.type === "EXAM") {
                                         label = `Derecho de Examen ${f.year}`;
                                     } else {

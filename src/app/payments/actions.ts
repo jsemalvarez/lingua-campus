@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
+import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -588,25 +589,37 @@ export async function generateStandaloneEnrollmentFeeAction(formData: FormData) 
     }
 
     try {
-        // Verificar si ya existe una matrícula de este tipo para este año (para evitar duplicados accidentales)
+        // Esto emite una matrícula **anticipada**: sin curso asignado todavía, que
+        // la primera inscripción del alumno consume (ver `createEnrollmentAction`).
+        //
+        // Antes rechazaba cualquier matrícula del año, lo que hacía imposible el
+        // caso normal desde que la matrícula es por curso: el alumno que hace dos
+        // cursos paga dos (FIN-12). Lo único que no tiene sentido duplicar es la
+        // anticipada, porque una sola alcanza hasta que se sepa el curso.
+        //
+        // Ojo: acá el chequeo sigue siendo "consultar y después crear", sin
+        // protección de la base. Estas matrículas se crean sin `enrollmentId` y en
+        // Postgres los NULL no chocan entre sí, así que la restricción única de
+        // `Fee` no las alcanza (FIN-06). Dos clics simultáneos todavía pasan.
         const existing = await prisma.fee.findFirst({
             where: {
                 studentId,
                 year,
                 type: "ENROLLMENT",
+                enrollmentId: null,
                 instituteId: user.instituteId
             }
         });
 
         if (existing) {
-            return { success: false, error: `Ya existe una matrícula registrada para este alumno en el año ${year}` };
+            return { success: false, error: `Este alumno ya tiene una matrícula anticipada sin curso asignado para el año ${year}` };
         }
 
         await prisma.fee.create({
             data: {
                 studentId,
                 year,
-                month: new Date().getMonth() + 1, // Mes administrativo de creación
+                month: ENROLLMENT_FEE_MONTH,
                 type: "ENROLLMENT",
                 originalAmount: amount,
                 paidAmount: 0,
@@ -972,7 +985,10 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
                     type: "ADJUSTMENT",
                     method: "SALDO",
                     date: new Date(),
-                    description: `Aplicación de Saldo a Favor - Cuota ${fee.month}/${fee.year}`,
+                    // `formatFeeLabel` y no `${fee.month}/${fee.year}`: el mes de una
+                    // matrícula es fijo y no significa nada (FIN-12), así que armado
+                    // a mano el asiento decía "Cuota 0/2026".
+                    description: `Aplicación de Saldo a Favor - ${formatFeeLabel(fee.type, fee.month, fee.year)}`,
                     paymentId: payment.id,
                     operatorId: user.id
                 }

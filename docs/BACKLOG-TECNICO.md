@@ -168,7 +168,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
-| [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [ ] |
+| [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
@@ -833,6 +833,23 @@ tienen. Esa afirmación ya había hecho fallar el filtro de [FIN-07](#fin-07), c
 válidos. Son datos de prueba —"estudiante uno", "cursos test"—, así que no dicen nada sobre
 producción: hay que mirarla aparte antes de aplicar el índice parcial.
 
+### Al día 2026-08-11
+
+**La mitad que faltaba la cerró [FIN-12](#fin-12)**, y sin índice parcial: con el mes de las
+matrículas fijo, la restricción que ya estaba puesta significa "una matrícula por inscripción y año".
+Al normalizar, la migración borró los 6 duplicados de stage —ninguno tenía pagos; en los dos grupos
+donde hay un pago es una sola copia la que lo tiene, así que la afirmación de arriba sobre "dos pagos
+válidos" era incorrecta—.
+
+**Este ítem queda abierto por lo que no era la restricción:**
+
+- La matrícula **anticipada** (sin `enrollmentId`) sigue sin protección de la base: los NULL no chocan
+  entre sí. Es el tercer caso del patrón que anota este ítem, y hoy lo cubre sólo el chequeo en
+  memoria de `generateStandaloneEnrollmentFeeAction`.
+- Los **otros huecos de `generateMonthlyFeesAction`** anotados arriba: no contempla `startDate` /
+  `endDate` del curso y no filtra por `student.status`. `generateYearlyEnrollmentFeesAction` sí filtra
+  alumnos activos desde [FIN-12](#fin-12); el generador mensual no.
+
 ---
 
 <a id="fin-07"></a>
@@ -1014,6 +1031,115 @@ inscripción, es **la que está bien**. Las que asumen lo contrario son las otra
 **Nota sobre los datos.** En stage hay 6 matrículas duplicadas, pero sus dos copias apuntan a la
 **misma** inscripción, así que no son el caso que describe este ítem ni salieron de estas funciones:
 son datos de prueba cargados a mano o de una versión anterior. En producción no se miró.
+
+### Resuelto — 2026-08-11 · pendiente de verificar en stage
+
+**El mes de la matrícula es fijo: `ENROLLMENT_FEE_MONTH = 0`**
+([`utils.ts`](../src/lib/utils.ts)). No es un mes ni un vencimiento —la matrícula es anual—, y con
+todas compartiendo el valor, la restricción única que ya existía —`[enrollmentId, type, year, month]`—
+significa **"una matrícula por curso y año"**. **No hizo falta el índice parcial.** Ninguna pantalla lo
+muestra: `formatFeeLabel` ya ignoraba el mes de las matrículas.
+
+Dicho en los términos de la base la regla es "una por **inscripción** y año", que suena a que se
+contradice con "un alumno puede tener dos matrículas el mismo año" pero es lo mismo: la inscripción es
+la dupla alumno+curso, así que dos cursos son dos inscripciones y dos matrículas del mismo año, las dos
+permitidas. Lo único que la restricción bloquea es la segunda copia del **mismo curso y año**, que es
+el duplicado por doble clic de [FIN-06](#fin-06). Un curso que sigue dos años lleva dos matrículas
+sobre la misma inscripción, una por año, también permitidas.
+
+**Los dos generadores, corregidos:**
+
+- `generateStandaloneEnrollmentFeeAction` ([`actions.ts`](../src/app/payments/actions.ts)) ahora sólo
+  rechaza si ya hay una matrícula **anticipada sin vincular** del mismo año. La segunda matrícula del
+  año, que es el caso normal desde que la matrícula es por curso, ya no se bloquea.
+- `generateYearlyEnrollmentFeesAction` ([`billingActions.ts`](../src/app/payments/billingActions.ts))
+  recorre **inscripciones activas** (de alumnos activos, en cursos activos) en vez de alumnos, y crea
+  la matrícula con `enrollmentId`. Al quedar vinculada, `skipDuplicates` se apoya en la restricción y
+  la generación masiva pasa a estar protegida de verdad; sigue siendo **una sola query** (ver la nota
+  de [FIN-06](#fin-06) sobre por qué esto no va en una transacción).
+
+**Dos decisiones que aparecieron al generar por inscripción:**
+
+1. **Las anticipadas cuentan como cubiertas.** La matrícula sin `enrollmentId` no dice a qué curso va,
+   pero ya es plata facturada: cada una descuenta una inscripción del alumno en la generación masiva.
+   Sin eso, al alumno con una anticipada sin consumir se le cobraba dos veces. Queda sin vincular —
+   se la lleva la próxima inscripción que se cargue, como siempre.
+2. **Se respeta `customEnrollmentPrice`.** Es el precio propio de la inscripción, o sea las becas;
+   antes era inalcanzable porque la generación iba por alumno. El monto del formulario pasó a ser el
+   valor base, que es lo que la UI ya decía.
+
+### 🗣️ La matrícula anticipada y el año lectivo — 2026-08-11
+
+**Cómo funciona el negocio (definido en esta conversación).** El instituto cobra la matrícula del año
+siguiente antes de tener armados los cursos: le guarda el lugar al alumno y le congela el precio del
+año en curso, que es el descuento por pagar adelantado. **La anticipada no tiene curso porque el curso
+todavía no existe**, y eso es exactamente para lo que `Fee.enrollmentId` es opcional. El año no sale de
+ningún lado del sistema: lo elige quien cobra, en el selector "Año Académico — Actual / Próximo" de
+[`RegisterEnrollmentFeeForm`](../src/app/payments/components/RegisterEnrollmentFeeForm.tsx).
+
+**Por qué no va como saldo a favor**, que sería la alternativa obvia y el sistema ya lo tiene: el saldo
+es plata, no precio. Emitida la matrícula del año siguiente a valor nuevo, aplicarle el saldo deja al
+alumno debiendo la diferencia y el descuento se evapora. Como cuota anticipada, el precio queda
+congelado en `originalAmount` —que es un snapshot— y la deuda cierra en cero.
+
+**Lo que estaba roto.** `createEnrollmentAction` buscaba la anticipada por **año de calendario**. Con
+el flujo real del instituto —cobrar la seña de 2027 en diciembre y armar los cursos de 2027 también en
+diciembre— la seña de 2027 no aparecía: la inscripción emitía una matrícula 2026 nueva, a precio de
+lista, y el alumno quedaba con la seña pagada más una deuda que no existe. No es un caso de borde: es
+el flujo normal, todos los diciembres. La protección que este ítem agregó no lo cubría, porque alcanza
+sólo a la generación masiva y no a la matrícula que se emite sola al inscribir.
+
+**La regla que quedó**, en [`enrollments/actions.ts`](../src/app/enrollments/actions.ts):
+
+1. El año lectivo sale de `course.startDate` cuando está cargado — es el único lugar del sistema que ya
+   dice a qué ciclo pertenece un curso. Se lee con `getUTCFullYear`: las fechas se guardan a medianoche
+   UTC y un curso que arranca el 1 de enero, leído en hora local, cae en diciembre del año anterior.
+2. Si el curso no trae fecha, no sabemos de qué ciclo es, así que se acepta también la anticipada del
+   año siguiente, prefiriendo siempre la más vieja. Así diciembre funciona carguen o no la fecha.
+3. Al vincular se conserva **el año de la seña**, no el calculado acá: el de la seña es el dato bueno.
+
+**El caso que queda torcido**, a sabiendas: inscribir en diciembre a un curso **del año en curso**, sin
+fecha de inicio cargada, teniendo el alumno una seña del año siguiente sin usar. Ahí la seña se aplica
+a la matrícula del año en curso. No se pierde plata —se cobra una vez— pero queda imputada al año
+equivocado. Es preferible al doble cobro garantizado que había antes, y se evita cargando la fecha de
+inicio de los cursos.
+
+**Si el alumno sigue en el mismo curso** no hay inscripción nueva (la fila `Enrollment` es alumno+curso
+y no lleva año), así que su anticipada nunca se vincula: queda cobrada y sin curso. No se le cobra dos
+veces porque la generación masiva la descuenta, pero la matrícula no dice de qué curso es. Si eso
+molesta, el formulario de anticipada tendría que dejar elegir el curso de forma opcional.
+
+**Lo que sigue sin protección de la base:** la matrícula anticipada. Se crea sin `enrollmentId` y en
+Postgres los NULL no chocan entre sí, así que ahí la regla la sigue haciendo cumplir el
+"consultar y después crear" de la función. Es el caso de a un alumno por vez y con confirmación de
+por medio; cubrirlo pediría el índice parcial que este ítem justamente evitó.
+
+**Migración** (`20260810170000_normalize_enrollment_fee_month`): borra las matrículas que hoy conviven
+en meses distintos para la misma inscripción y año —sólo las que **no tienen ningún pago**, con el
+criterio de [FIN-06](#fin-06): sobrevive la que tiene más pagos y, a igualdad, la más antigua— y
+después normaliza el mes. Si en algún grupo quedara más de una con pagos, el `UPDATE` viola el índice
+único y el despliegue se detiene, que es lo que se quiere: es plata cobrada.
+
+Ensayada contra stage dentro de una transacción revertida: **6 filas borradas** (los 6 duplicados de
+datos de prueba, ninguna con pagos: en los dos grupos donde hay un pago, es una sola copia la que lo
+tiene) y **6 matrículas normalizadas**, sin choques. **En producción no está verificado** — es otra
+base y no se miró.
+
+**Consecuencia a mirar en stage: las matrículas salen de los KPI "del mes".** Dos consultas agregan
+cuotas por mes exacto —el "Total a cobrar / cobrado" del período en
+[`payments/page.tsx`](../src/app/payments/page.tsx) y el ingreso mensual del
+[`dashboard`](../src/app/dashboard/page.tsx)— y con el mes en 0 las matrículas ya no caen en ningún
+mes. Antes caían en el mes en que se las había creado, que era arbitrario: la matrícula emitida en
+marzo y cobrada en junio figuraba en marzo. **La plata real no se pierde de vista**: la caja se
+calcula desde el libro mayor por fecha de asiento, y la deuda usa comparaciones `<=`, así que las
+matrículas siguen contando como deuda (desde el arranque del año, no desde el mes de creación). Lo
+que cambia es que el "a cobrar del mes" pasa a ser sólo cuotas. Es la misma carencia que anota
+[FIN-08](#fin-08): mientras no haya `dueDate`, no hay dónde poner el vencimiento de una matrícula.
+
+**De paso:** el asiento de aplicación de saldo a favor armaba su descripción con
+`` `Cuota ${fee.month}/${fee.year}` `` y con el mes fijo habría escrito "Cuota 0/2026"; ahora usa
+`formatFeeLabel`. Y el selector de cuota al cobrar muestra el curso al lado de la matrícula: dos
+matrículas del mismo año eran indistinguibles.
 
 ---
 

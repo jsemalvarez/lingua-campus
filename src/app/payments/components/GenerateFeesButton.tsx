@@ -40,7 +40,7 @@ export function GenerateFeesButton() {
                 toast.error("Debes ingresar un monto base válido para las matrículas.");
                 return;
             }
-            if (!confirm(`¿Generar masivamente las Matrículas Anuales ${year} para TODOS los alumnos activos por un valor de $${enrollmentAmount}?`)) return;
+            if (!confirm(`¿Generar masivamente las Matrículas Anuales ${year} para TODAS las inscripciones activas por un valor de $${enrollmentAmount}? El alumno inscripto en dos cursos recibirá dos matrículas.`)) return;
 
             startTransition(async () => {
                 const res = await generateYearlyEnrollmentFeesAction(year, enrollmentAmount);
@@ -146,7 +146,7 @@ export function GenerateFeesButton() {
                                 className="w-full bg-background border border-border/40 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 shadow-sm"
                             />
                             <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight">
-                                Se generará automáticamente una deuda por este monto para <b>todos</b> los estudiantes activos que aún no tengan matrícula en el año seleccionado.
+                                Se generará una matrícula por <b>cada inscripción activa</b> que aún no tenga la suya en el año seleccionado. El alumno que cursa dos materias recibe dos matrículas; si tiene precio propio de matrícula, se usa ese en lugar de este monto.
                             </p>
                         </div>
                     )}

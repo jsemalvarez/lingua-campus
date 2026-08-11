@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -37,27 +38,55 @@ export async function createEnrollmentAction(formData: FormData) {
             }
         });
 
-        const currentYear = new Date().getFullYear();
+        // Año lectivo de la inscripción. La matrícula es anual y por curso, así que
+        // el año lo tiene que dar el curso; el de calendario es sólo el recambio de
+        // cuando el curso no dice cuándo empieza.
+        //
+        // `getUTCFullYear` porque las fechas se guardan a medianoche UTC: un curso
+        // que arranca el 1 de enero, leído en hora local, cae en diciembre del año
+        // anterior.
+        const calendarYear = new Date().getFullYear();
+        const academicYear = enrollment.course.startDate
+            ? enrollment.course.startDate.getUTCFullYear()
+            : calendarYear;
 
         // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
         const finalEnrollmentPrice = enrollment.course.enrollmentPrice;
 
         if (finalEnrollmentPrice > 0) {
-            // Buscamos si ya existe una matrícula sin vincular (anticipada) para este alumno y año
+            // La matrícula es por curso (FIN-12): esta inscripción lleva la suya.
+            // Antes de emitirla buscamos una matrícula anticipada sin vincular —la
+            // seña que se cobró antes de saber a qué curso iba— y la consumimos.
+            // Sólo la primera inscripción del alumno la aprovecha; la segunda paga
+            // su propia matrícula.
+            //
+            // Si el curso no tiene fecha de inicio no sabemos de qué ciclo es, así
+            // que aceptamos también la del año siguiente, prefiriendo siempre la más
+            // vieja. Es el caso normal del instituto: cobrar la seña de 2027 en
+            // diciembre y armar los cursos de 2027 también en diciembre. Buscando
+            // sólo por año de calendario esa seña no aparecía y el alumno terminaba
+            // con la seña pagada más una matrícula del año en curso a precio de lista.
+            const candidateYears = enrollment.course.startDate
+                ? [academicYear]
+                : [academicYear, academicYear + 1];
+
             const existingStandaloneFee = await prisma.fee.findFirst({
                 where: {
                     studentId,
                     type: "ENROLLMENT",
-                    year: currentYear,
+                    year: { in: candidateYears },
                     enrollmentId: null
-                }
+                },
+                orderBy: { year: "asc" }
             });
 
             if (existingStandaloneFee) {
-                // Vincular la existente
+                // Vincular la existente, conservando **su** año: el de la seña es el
+                // dato bueno, el `academicYear` de acá es el que puede ser una
+                // suposición cuando el curso no trae fecha.
                 await prisma.fee.update({
                     where: { id: existingStandaloneFee.id },
-                    data: { enrollmentId: enrollment.id }
+                    data: { enrollmentId: enrollment.id, month: ENROLLMENT_FEE_MONTH }
                 });
             } else {
                 // Crear una nueva
@@ -69,8 +98,8 @@ export async function createEnrollmentAction(formData: FormData) {
                         originalAmount: finalEnrollmentPrice,
                         paidAmount: 0,
                         status: "PENDING",
-                        month: new Date().getMonth() + 1,
-                        year: currentYear,
+                        month: ENROLLMENT_FEE_MONTH,
+                        year: academicYear,
                         instituteId: user.instituteId as string
                     }
                 });
