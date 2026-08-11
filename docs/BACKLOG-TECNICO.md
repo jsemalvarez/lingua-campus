@@ -196,7 +196,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [ ] |
 | [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
-| [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
+| [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
@@ -1362,6 +1362,11 @@ if (!session || !session.user?.email) return new Response("No autorizado", { sta
 ([`auth.ts:48`](../src/lib/auth.ts)). **Todo alumno sin email recibe 401 al terminar de practicar**,
 y pierde la sesión completa sin explicación.
 
+**Por qué el email es opcional (contexto del cliente).** El instituto tiene alumnos de 6, 7 y 8 años
+que no tienen correo electrónico. El dato obligatorio para todo estudiante es el **DNI**, y es con el
+DNI que esos chicos entran al sistema. No es un campo opcional por descuido: identificar al alumno
+por email deja afuera a toda una franja de usuarios reales.
+
 Además, en la línea 53 busca `student.findFirst({ where: { email } })` **sin filtrar por instituto**,
 y el email de alumno es único solo por instituto: dos homónimos en institutos distintos y la sesión
 se guarda en el legajo equivocado.
@@ -1370,6 +1375,39 @@ se guarda en el legajo equivocado.
 [`practice/page.tsx:21`](../src/app/practice/page.tsx). Elimina las dos fallas de una vez.
 
 **Nota.** Verificar si hay más endpoints que identifiquen al alumno por email en lugar de por id.
+
+**Estado: resuelto en el código, pendiente de verificar en stage.**
+
+La ruta ya no toca `session.user.email` ni busca al alumno por email: usa
+[`getAuthContext()`](../src/lib/authz.ts), que devuelve el id de la sesión y de paso comprueba contra
+la base que la cuenta siga activa. Un `auth.isStudent` falso responde 403, el mismo código que antes
+daba el "no tiene perfil de alumno" — la vista previa del profesor no se ve afectada porque
+`SpeakingHub`, `ListeningLab` y `AIChatbot` sólo hacen el POST cuando `!isPreview`.
+
+En el mismo pase se acotó al instituto la búsqueda de la práctica. El `lessonPracticeId` viaja en el
+body y el `findUnique` no miraba de quién era la clase: un alumno podía dejar una `PracticeSession`
+colgada de una clase de otro instituto y ensuciar sus métricas. Ahora la consulta exige
+`lesson.course.instituteId === auth.instituteId`. Es un caso más de los que enumera
+[ARQ-01](#arq-01).
+
+**Un hueco más, encontrado al verificar el arreglo.** El DNI es obligatorio para el negocio pero
+opcional en el código, y eso es deliberado: el cliente arrastraba desorden administrativo y la
+normalización se delegó a él, de forma progresiva (de ahí el link de completado de datos para
+tutores). El mecanismo funciona porque el administrador se entera de qué falta cuando el alumno
+quiere usar la plataforma. **Salvo en un caso:** sin email y sin DNI el alumno no puede iniciar
+sesión, y el login le devuelve el mismo "credenciales inválidas" que si erró la contraseña. Ni él ni
+el administrador se enteran de qué falta. Es el único dato incompleto que no se anuncia solo.
+
+Se agregó la etiqueta **"No puede entrar"** al listado de alumnos
+([`students/page.tsx`](../src/app/students/page.tsx)), junto a las que ya existían. Reemplaza a
+`sin_dni` cuando aplica: la vieja etiqueta salía también en alumnos que entran por email, así que se
+leía como ruido. No se tocó ningún camino de alta ni se endureció el schema — sería ir contra la
+decisión ya tomada, y con los datos aún sin normalizar trabaría altas legítimas.
+
+**Sobre la nota.** Se revisaron todas las búsquedas de `Student` del código: ésta era la única que
+identificaba al alumno por email. La de [`auth.ts:50`](../src/lib/auth.ts) es el login y ahí el email
+es el dato de entrada — su problema de instituto es [SEC-05](#sec-05), no éste. El resto ya resuelve
+por id.
 
 ---
 
