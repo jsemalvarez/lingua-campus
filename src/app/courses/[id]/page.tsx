@@ -126,7 +126,7 @@ export default async function CourseDetailPage({
     // ── Navegación por mes del libro de temas ────────────────────────────────
     // Traemos sólo las fechas (payload mínimo) para armar el navegador de meses.
     const allLessonDates = await prisma.lesson.findMany({
-        where: { courseId: course.id },
+        where: { courseId: course.id, status: "ACTIVE" },
         select: { date: true },
         orderBy: { date: 'asc' }
     });
@@ -151,7 +151,7 @@ export default async function CourseDetailPage({
 
     // Sólo las clases del mes seleccionado: es lo que evita traer un curso anual entero
     const lessons = await prisma.lesson.findMany({
-        where: { courseId: course.id, date: { gte: monthStart, lt: monthEnd } },
+        where: { courseId: course.id, status: "ACTIVE", date: { gte: monthStart, lt: monthEnd } },
         orderBy: { date: 'asc' },
         include: {
             practice: {
@@ -170,7 +170,7 @@ export default async function CourseDetailPage({
     // y "la clase más difícil", que perderían sentido acotados a un mes.
     const publishedLessons = isTeacherOrAdmin
         ? await prisma.lesson.findMany({
-            where: { courseId: course.id, practice: { is: { isPublished: true } } },
+            where: { courseId: course.id, status: "ACTIVE", practice: { is: { isPublished: true } } },
             select: { id: true, topic: true, date: true },
             orderBy: { date: 'asc' }
         })

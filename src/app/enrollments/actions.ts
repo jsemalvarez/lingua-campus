@@ -181,7 +181,8 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
                 const existingExamLesson = await tx.lesson.findFirst({
                     where: {
                         courseId: enrollment.courseId,
-                        type: "EXAM"
+                        type: "EXAM",
+                        status: "ACTIVE"
                     }
                 });
 

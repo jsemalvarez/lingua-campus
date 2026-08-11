@@ -29,7 +29,7 @@ export default async function StudentPracticePage() {
         ? await prisma.lessonPractice.findMany({
             where: {
                 isPublished: true,
-                lesson: { courseId: { in: courseIds } }
+                lesson: { courseId: { in: courseIds }, status: "ACTIVE" }
             },
             include: {
                 lesson: {

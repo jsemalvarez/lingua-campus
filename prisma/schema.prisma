@@ -308,7 +308,8 @@ model Lesson {
   courseId    String
   course      Course   @relation(fields: [courseId], references: [id])
   type        LessonType @default(CLASS)
-  
+  status      String   @default("ACTIVE") // ACTIVE, DELETED
+
   date        DateTime @db.Date
   topic       String
   content     String?  @db.Text
@@ -326,6 +327,8 @@ model Lesson {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([courseId, status])
 }
 
 // -----------------------------------------------------------------------------

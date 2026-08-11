@@ -21,8 +21,8 @@ export default async function TeacherPracticePreviewPage(props: { params: Promis
     }
 
     // Get the specific practice for this lesson
-    const practiceItem = await prisma.lessonPractice.findUnique({
-        where: { lessonId: params.lessonId },
+    const practiceItem = await prisma.lessonPractice.findFirst({
+        where: { lessonId: params.lessonId, lesson: { status: "ACTIVE" } },
         include: {
             lesson: {
                 include: {

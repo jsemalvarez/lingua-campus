@@ -66,7 +66,7 @@ export async function POST(req: Request) {
                 id: lessonPracticeId,
                 lessonId,
                 isPublished: true,
-                lesson: { course: { instituteId: auth.instituteId } },
+                lesson: { status: "ACTIVE", course: { instituteId: auth.instituteId } },
             },
             select: { id: true }
         });

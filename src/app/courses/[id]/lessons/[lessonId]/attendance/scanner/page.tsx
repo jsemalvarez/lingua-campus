@@ -42,8 +42,8 @@ export default async function QRScannerKioskPage({
         redirect(`/courses/${courseId}`);
     }
 
-    const lesson = await prisma.lesson.findUnique({
-        where: { id: lessonId }
+    const lesson = await prisma.lesson.findFirst({
+        where: { id: lessonId, status: "ACTIVE" }
     });
 
     if (!lesson || course.status === "FINISHED") {

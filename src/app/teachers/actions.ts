@@ -250,10 +250,13 @@ export async function processTeacherPayment(
             });
 
             // MARCAR CLASES COMO PAGADAS
+            // Sólo las activas: `calculateTeacherPayroll` no cuenta las borradas,
+            // así que marcarlas pagadas las ataría a un gasto que no las incluye.
             if (lessonIds && lessonIds.length > 0) {
                 await tx.lesson.updateMany({
                     where: {
                         id: { in: lessonIds },
+                        status: "ACTIVE",
                         expenseId: null
                     },
                     data: {
@@ -264,6 +267,7 @@ export async function processTeacherPayment(
                 await tx.lesson.updateMany({
                     where: {
                         course: { teacherId },
+                        status: "ACTIVE",
                         date: {
                             gte: new Date(startDate),
                             lte: new Date(endDate)
@@ -338,11 +342,13 @@ export async function processBulkPayrollAction(
                     }
                 });
 
-                // MARCAR CLASES COMO PAGADAS
+                // MARCAR CLASES COMO PAGADAS (mismo criterio que la liquidación
+                // individual: las borradas no entran en el cálculo ni se marcan)
                 if (p.lessonIds && p.lessonIds.length > 0) {
                     await tx.lesson.updateMany({
                         where: {
                             id: { in: p.lessonIds },
+                            status: "ACTIVE",
                             expenseId: null
                         },
                         data: {
@@ -353,6 +359,7 @@ export async function processBulkPayrollAction(
                     await tx.lesson.updateMany({
                         where: {
                             course: { teacherId: p.teacherId },
+                            status: "ACTIVE",
                             date: {
                                 gte: new Date(p.startDate),
                                 lte: new Date(p.endDate)

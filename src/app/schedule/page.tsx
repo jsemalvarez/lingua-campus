@@ -135,9 +135,9 @@ export default async function SchedulePage(props: PageProps) {
     const dayEndUTC = new Date(displayDateNoon);
     dayEndUTC.setUTCHours(23, 59, 59, 999);
 
-    const lessonsWhere = view === "day" 
-        ? { date: { gte: dayStartUTC, lte: dayEndUTC } }
-        : { date: { gte: weekStartUTC, lte: weekEndUTC } };
+    const lessonsWhere = view === "day"
+        ? { status: "ACTIVE", date: { gte: dayStartUTC, lte: dayEndUTC } }
+        : { status: "ACTIVE", date: { gte: weekStartUTC, lte: weekEndUTC } };
 
     const allSchedules = await prisma.schedule.findMany({
         where: {

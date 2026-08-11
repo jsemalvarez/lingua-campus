@@ -11,6 +11,10 @@ export async function PlaygroundChartServer({ instituteId }: PlaygroundChartServ
     thirtyDaysAgo.setDate(now.getDate() - 30);
 
     // ── 1. Sesiones por día (últimos 30 días, agrupadas por fecha y tipo) ──
+    //
+    // A propósito sin filtrar por estado de la clase: acá se mide actividad, y
+    // que el docente después borre la clase no hace que el alumno no haya
+    // practicado. Se filtran los **listados** de clases, no las sesiones.
     const recentSessions = await prisma.practiceSession.findMany({
         where: {
             lesson: { course: { instituteId } },

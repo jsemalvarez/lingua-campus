@@ -45,7 +45,7 @@ export default async function GuardianAcademicsPage() {
                                         select: { name: true }
                                     },
                                     lessons: {
-                                        where: { date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
+                                        where: { status: "ACTIVE", date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
                                         orderBy: { date: 'asc' },
                                         take: 10,
                                         select: { 
@@ -59,7 +59,9 @@ export default async function GuardianAcademicsPage() {
                             }
                         }
                     },
+                    // Sin las clases borradas: ver el comentario en academics/page.tsx
                     attendances: {
+                        where: { lesson: { status: "ACTIVE" } },
                         orderBy: { lesson: { date: 'desc' } },
                         take: 30, // Mostramos un historial un poco más largo
                         include: {
@@ -67,6 +69,7 @@ export default async function GuardianAcademicsPage() {
                         }
                     },
                     grades: {
+                        where: { lesson: { status: "ACTIVE" } },
                         orderBy: { createdAt: 'desc' },
                         include: {
                             lesson: { select: { topic: true, course: { select: { color: true, name: true, level: true, teacher: { select: { name: true } } } } } }

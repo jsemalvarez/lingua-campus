@@ -58,8 +58,8 @@ export default async function GradesPage({
     const isReadOnly = course.status === "FINISHED";
     const students = course.enrollments.map((e: any) => e.student);
 
-    const lesson = await prisma.lesson.findUnique({
-        where: { id: lessonId }
+    const lesson = await prisma.lesson.findFirst({
+        where: { id: lessonId, status: "ACTIVE" }
     });
 
     if (!lesson) {
