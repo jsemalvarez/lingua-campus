@@ -109,8 +109,10 @@ antes de tocar código.
 Tocan datos existentes. Con un instituto y pocos meses de historia esto es un rato; con diez clientes
 es un proyecto. **La ventana se cierra sola.**
 
-[FIN-06](#fin-06) (restricciones únicas) → [FIN-05](#fin-05) (`Decimal`) → [ARQ-01](#arq-01)
-(foreign keys e índices) → [FIN-08](#fin-08) (`dueDate`).
+~~[FIN-06](#fin-06) (restricciones únicas)~~ — hecha en dos pasos, el 2026-08-10 (cuotas de
+inscripción) y el 2026-08-11 con [FIN-12](#fin-12) (matrículas); **falta verificar en stage**. Sigue
+[FIN-05](#fin-05) (`Decimal`) → [ARQ-01](#arq-01) (foreign keys e índices) → [FIN-08](#fin-08)
+(`dueDate`).
 
 [ARQ-05](#arq-05) (borrado lógico) entra acá también, pero es transversal y conviene partirlo:
 primero alumno y clase — que resuelven [BUG-02](#bug-02) y [BUG-03](#bug-03) —, el resto después.
@@ -133,6 +135,24 @@ momento.
 [FIN-10](#fin-10), [ARQ-02](#arq-02), [ARQ-03](#arq-03), [PED-05](#ped-05) a [PED-08](#ped-08).
 
 [ARQ-04](#arq-04) (tests) queda fuera del orden por decisión explícita.
+
+### 🗣️ Tanda 7 · Las matrículas del año que viene, antes de diciembre
+
+**Decisión del cliente (2026-08-11): esto se retoma después de los temas del día a día del
+instituto.** Salieron todos de resolver [FIN-12](#fin-12) y ninguno molesta hoy — se disparan cuando
+se empiecen a cobrar las matrículas del año siguiente, que es en diciembre. Postergarlos es correcto;
+olvidarlos, no.
+
+[FIN-14](#fin-14) (la generación masiva ignora el año lectivo) → [FIN-18](#fin-18) (la seña del que
+sigue en el mismo curso queda sin curso).
+
+**El tope es antes de tomar las matrículas de diciembre de 2026.** [FIN-14](#fin-14) es el que
+importa: es una regresión introducida el 2026-08-11 y termina en doble cobro. Hasta entonces sólo se
+dispara si alguien elige el año próximo en el desplegable de generación masiva, que arranca en el año
+en curso.
+
+El resto de la familia no depende de la fecha y puede entrar cuando haya lugar:
+[FIN-15](#fin-15), [FIN-16](#fin-16), [FIN-17](#fin-17) y [FIN-19](#fin-19).
 
 ### Sobre intercalar features del cliente
 
@@ -162,7 +182,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
 | [FIN-04](#fin-04) | P0 | Condición de carrera al registrar cobros | [x] |
 | [FIN-05](#fin-05) | P1 | Montos en `Float` en lugar de `Decimal` | [ ] |
-| [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [~] |
+| [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [x] |
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
@@ -170,6 +190,12 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
+| [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [ ] |
+| [FIN-15](#fin-15) | P2 | La matrícula anticipada no tiene restricción única en la base | [ ] |
+| [FIN-16](#fin-16) | P2 | El generador mensual ignora el período lectivo y a los alumnos de baja | [ ] |
+| [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [ ] |
+| [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
+| [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [ ] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
@@ -841,14 +867,15 @@ Al normalizar, la migración borró los 6 duplicados de stage —ninguno tenía 
 donde hay un pago es una sola copia la que lo tiene, así que la afirmación de arriba sobre "dos pagos
 válidos" era incorrecta—.
 
-**Este ítem queda abierto por lo que no era la restricción:**
+**Este ítem se cierra acá.** Lo que quedaba abierto no era la restricción única y salió a ítems
+propios, para no dejar un `[~]` eterno colgando de un enunciado ya resuelto:
 
-- La matrícula **anticipada** (sin `enrollmentId`) sigue sin protección de la base: los NULL no chocan
-  entre sí. Es el tercer caso del patrón que anota este ítem, y hoy lo cubre sólo el chequeo en
-  memoria de `generateStandaloneEnrollmentFeeAction`.
-- Los **otros huecos de `generateMonthlyFeesAction`** anotados arriba: no contempla `startDate` /
-  `endDate` del curso y no filtra por `student.status`. `generateYearlyEnrollmentFeesAction` sí filtra
-  alumnos activos desde [FIN-12](#fin-12); el generador mensual no.
+- La matrícula **anticipada**, que sigue sin protección de la base porque los NULL no chocan entre sí
+  → [FIN-15](#fin-15).
+- Los **otros huecos de `generateMonthlyFeesAction`** anotados arriba —período lectivo y alumnos de
+  baja— → [FIN-16](#fin-16).
+- Las **cuotas de examen**, que arrastran el mismo mes administrativo que tenían las matrículas y por
+  eso tampoco quedan cubiertas por la restricción → [FIN-17](#fin-17).
 
 ---
 
@@ -935,6 +962,21 @@ cálculo de deuda funciona por coincidencia.
 **Cambio.** Agregar `dueDate DateTime` al modelo `Fee` y usarlo como criterio único de vencimiento.
 Decidir si `OVERDUE` se materializa (job programado) o se calcula al vuelo; si se calcula, quitar el
 valor del enum para no dejar estados muertos.
+
+### Lo que agregó FIN-12 — 2026-08-11
+
+El mes de las matrículas pasó a ser fijo (`0`), así que **ya no hay ni siquiera coincidencia**: dos
+consultas suman cuotas por mes exacto —el "Total a cobrar / cobrado" del período en
+[`payments/page.tsx`](../src/app/payments/page.tsx) y el ingreso mensual del
+[`dashboard`](../src/app/dashboard/page.tsx)— y las matrículas no caen en ningún mes. Antes caían en
+el mes en que se las creó, que era arbitrario: la emitida en marzo y cobrada en junio figuraba en
+marzo.
+
+La plata no se pierde de vista —la caja sale del libro mayor por fecha de asiento, y la deuda usa
+comparaciones `<=`, así que las matrículas cuentan como deuda desde el arranque del año— pero el "a
+cobrar del mes" pasó a ser sólo cuotas. **Este ítem es lo que lo arregla de verdad**: con `dueDate`,
+la matrícula tiene dónde decir cuándo vence y los agregados por período pueden usarlo. Hasta
+entonces, no hay dónde poner el vencimiento de algo anual.
 
 ---
 
@@ -1173,6 +1215,135 @@ propósito** — evita toda una familia de estados raros (pagos fantasma, cuotas
 son gratis o un error). La contrapartida es que no se puede bonificar el 100% por esta vía; para eso
 hay que borrar la cuota. La política de repartir los descuentos entre los cursos existe justamente
 para no necesitar el cero.
+
+---
+
+<a id="fin-14"></a>
+## FIN-14 · La generación masiva de matrículas ignora el año lectivo · **P1**
+
+**Regresión introducida por [FIN-12](#fin-12) en `96daf04`.** No estaba antes.
+
+`generateYearlyEnrollmentFeesAction`
+([`billingActions.ts`](../src/app/payments/billingActions.ts)) recorre las inscripciones **activas
+hoy** y no filtra por año lectivo, pero el formulario deja elegir el año —incluido el próximo—
+([`GenerateFeesButton.tsx`](../src/app/payments/components/GenerateFeesButton.tsx)). Corrida en
+diciembre de 2026 con año 2027, crea matrículas 2027 **atadas a las inscripciones de 2026**.
+
+Ahí se rompe la cadena: cuando después se arman los cursos de 2027 y se inscribe al alumno,
+`createEnrollmentAction` busca una matrícula anticipada **sin vincular** y estas ya están vinculadas,
+así que no las encuentra y emite otra. **Doble cobro.**
+
+Antes de [FIN-12](#fin-12) el mismo botón creaba matrículas sueltas sin inscripción, que la
+inscripción nueva sí consumía. Al pasar la generación a por-inscripción, ese caso se rompió.
+
+**Cambio.** Que la corrida de un año tome sólo las inscripciones de cursos **de ese año lectivo**,
+con el criterio que ya usa `createEnrollmentAction`: el año sale de `course.startDate`. Los cursos sin
+fecha entran únicamente cuando el año pedido es el año en curso — si no, pedir 2027 volvería a
+alcanzar a las inscripciones viejas. Con eso, pedir el año próximo antes de que existan sus cursos no
+genera nada, que es lo correcto.
+
+**Tope: antes de tomar las matrículas de diciembre de 2026.** Hasta entonces el daño requiere que
+alguien elija el año próximo en el desplegable, que arranca en el año en curso.
+
+---
+
+<a id="fin-15"></a>
+## FIN-15 · La matrícula anticipada no tiene restricción única en la base · **P2**
+
+Sale de [FIN-06](#fin-06), que la dejó afuera, y de [FIN-12](#fin-12), que decidió no resolverla con
+un índice parcial.
+
+`generateStandaloneEnrollmentFeeAction` ([`actions.ts`](../src/app/payments/actions.ts)) consulta si
+ya existe una anticipada del año y después la crea, sin protección de la base: estas matrículas van
+sin `enrollmentId` y en Postgres los NULL no chocan entre sí, así que la restricción
+`[enrollmentId, type, year, month]` no las alcanza. **Dos envíos simultáneos crean dos.**
+
+Es el tercer caso del patrón "consultar y después crear" que anota [FIN-06](#fin-06), y el único que
+quedó sin cubrir. Atenuantes: es de a un alumno por vez, desde un formulario, y el duplicado se ve.
+
+**Cambio.** Un índice parcial —`CREATE UNIQUE INDEX ... WHERE "enrollmentId" IS NULL AND type =
+'ENROLLMENT'`—, que Prisma 5 no sabe expresar en el schema y hay que escribir a mano en la migración,
+con el costo de quedar fuera de su radar. Evaluar si vale la pena o si alcanza con la ventana chica
+que queda.
+
+---
+
+<a id="fin-16"></a>
+## FIN-16 · El generador mensual ignora el período lectivo y a los alumnos de baja · **P2**
+
+Sale de [FIN-06](#fin-06), donde estaban anotados como "otros huecos de la misma función" y no tenían
+que ver con la restricción única que ese ítem resolvió.
+
+`generateMonthlyFeesAction` ([`billingActions.ts`](../src/app/payments/billingActions.ts)):
+
+- **No contempla `startDate` / `endDate` del curso**: genera cuotas de meses fuera del período
+  lectivo.
+- **No filtra por `student.status`**: un alumno dado de baja con la inscripción activa sigue
+  generando cuotas. `generateYearlyEnrollmentFeesAction` sí lo filtra desde [FIN-12](#fin-12); este
+  no.
+
+**Cambio.** Agregar `student: { status: "ACTIVE" }` al filtro y acotar el mes al período del curso
+cuando las fechas estén cargadas. Confirmar antes qué se espera de un curso sin fechas.
+
+---
+
+<a id="fin-17"></a>
+## FIN-17 · Las cuotas de examen quedaron fuera de la normalización del mes · **P2**
+
+`toggleExamRegistrationAction` ([`enrollments/actions.ts`](../src/app/enrollments/actions.ts)) crea
+las cuotas `EXAM` con el mes en que se tocó el interruptor, que es el mismo valor administrativo sin
+significado que [FIN-12](#fin-12) le sacó a las matrículas. `formatFeeLabel` tampoco lo muestra:
+dice "Derecho de Examen 2026" y nada más.
+
+Consecuencia: la restricción `[enrollmentId, type, year, month]` **no las protege**, porque dos
+cuotas de examen de la misma inscripción y año en meses distintos no chocan. Hoy no se duplican
+porque el chequeo previo de la función busca por inscripción y año ignorando el mes, pero es
+exactamente el "consultar y después crear" de [FIN-06](#fin-06), sin red debajo.
+
+**Cambio.** Mismo tratamiento que la matrícula: un mes fijo para las `EXAM` —conviene una constante
+al lado de `ENROLLMENT_FEE_MONTH` ([`utils.ts`](../src/lib/utils.ts))— y una migración que normalice
+las existentes con el criterio de [FIN-12](#fin-12). Es chico y cierra el patrón entero.
+
+---
+
+<a id="fin-18"></a>
+## FIN-18 · La matrícula anticipada del que sigue en el mismo curso queda sin curso · **P3**
+
+La fila `Enrollment` es la dupla alumno+curso y **no lleva año**, así que el alumno que continúa en el
+mismo curso al año siguiente no genera una inscripción nueva. Como el vínculo de la seña ocurre en
+`createEnrollmentAction`, esa matrícula anticipada **no se vincula nunca**: queda cobrada, sin curso,
+para siempre.
+
+No se le cobra dos veces —la generación masiva descuenta las anticipadas sin vincular, ver
+[FIN-12](#fin-12)—, pero la matrícula no dice de qué curso es, y eso se ve en el libro mayor y en la
+ficha del alumno.
+
+**Cambio, a decidir entre dos.** Dejar elegir el curso de forma opcional al emitir la anticipada
+([`RegisterEnrollmentFeeForm`](../src/app/payments/components/RegisterEnrollmentFeeForm.tsx)), lo que
+sólo sirve si el curso del año próximo ya existe — y por definición no existe cuando se cobra la
+seña. O vincularla más tarde, desde la ficha del alumno, cuando el curso aparezca. La segunda es la
+que sirve para el caso real.
+
+**Relacionado con [FIN-14](#fin-14):** los dos salen de que la inscripción no tiene año lectivo
+propio. Si alguna vez se le agrega uno, los dos se simplifican.
+
+---
+
+<a id="fin-19"></a>
+## FIN-19 · Dos matrículas del mismo año se ven idénticas fuera del cobro · **P3**
+
+Desde que la matrícula es por curso, un alumno con dos cursos tiene dos matrículas del mismo año.
+`formatFeeLabel` ([`utils.ts`](../src/lib/utils.ts)) devuelve "Matrícula 2026" para las dos, sin el
+curso, porque no recibe la inscripción.
+
+Dónde se ve: la ficha del alumno ([`students/[id]/page.tsx`](../src/app/students/[id]/page.tsx)), los
+últimos pagos del [`dashboard`](../src/app/dashboard/page.tsx) y los recibos
+([`ReceiptDownloadButton`](../src/components/financials/ReceiptDownloadButton.tsx)). Ya resueltos: el
+selector de cobro ([`RegisterFeeForm`](../src/app/payments/components/RegisterFeeForm.tsx), en
+[FIN-12](#fin-12)) y el reporte de deudores, que arma la etiqueta aparte.
+
+**Cambio.** Que `formatFeeLabel` acepte el nombre del curso como parámetro opcional y lo agregue
+cuando esté. Es el único lugar donde se decide; los llamadores le pasan lo que ya tienen a mano.
 
 ---
 
