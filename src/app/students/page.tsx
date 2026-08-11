@@ -104,7 +104,7 @@ export default async function StudentsPage(props: PageProps) {
     // -------------------------------------------------------------------------
     // Helper: detecta qué datos obligatorios faltan en el perfil del estudiante
     // -------------------------------------------------------------------------
-    type MissingDataFlag = 'sin_tutor' | 'sin_fecha' | 'sin_contacto' | 'sin_dni';
+    type MissingDataFlag = 'sin_tutor' | 'sin_fecha' | 'sin_contacto' | 'sin_dni' | 'sin_acceso';
 
     function getMissingDataFlags(student: {
         birthDate: Date | null;
@@ -116,8 +116,18 @@ export default async function StudentsPage(props: PageProps) {
     }): MissingDataFlag[] {
         const flags: MissingDataFlag[] = [];
 
-        // Sin DNI (aplica a todos)
-        if (!student.dni) flags.push('sin_dni');
+        // Se entra al sistema con email o con DNI. Sin ninguno de los dos, el
+        // alumno no puede iniciar sesión y el login sólo le dice "credenciales
+        // inválidas": no hay forma de que él ni el administrador se enteren de
+        // qué falta. Es el único dato incompleto que no se anuncia solo cuando
+        // el alumno intenta usar la plataforma, así que se avisa acá.
+        if (!student.email && !student.dni) {
+            flags.push('sin_acceso');
+        } else if (!student.dni) {
+            // El que entra por email también debería tener DNI, pero es un
+            // pendiente administrativo, no algo que lo deje afuera.
+            flags.push('sin_dni');
+        }
 
         // Sin ninguna vía de contacto directo
         if (!student.phone && !student.email) flags.push('sin_contacto');
@@ -296,6 +306,11 @@ export default async function StudentsPage(props: PageProps) {
                                                                 if (flags.length === 0) return null;
                                                                 return (
                                                                     <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {flags.includes('sin_acceso') && (
+                                                                            <span title="No puede iniciar sesión: no tiene email ni DNI, que son las dos formas de entrar" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-red-500/10 text-red-500 border-red-500/30 cursor-default">
+                                                                                <AlertTriangle size={8} /> No puede entrar
+                                                                            </span>
+                                                                        )}
                                                                         {flags.includes('sin_tutor') && (
                                                                             <span title="Menor de 18 años sin tutor registrado" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-red-500/10 text-red-500 border-red-500/30 cursor-default">
                                                                                 <AlertTriangle size={8} /> Sin tutor
