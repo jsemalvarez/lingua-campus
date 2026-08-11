@@ -1468,7 +1468,11 @@ filtraron los seis listados y los cuatro contadores de asistencia. Las filas sig
 justamente lo que permite recuperarlas.
 
 **Queda para [ARQ-05](#arq-05):** no hay forma de reactivar una clase borrada desde la interfaz. Hoy
-se hace en la base. Conviene definirlo junto con el resto del borrado lógico, no acá.
+se hace en la base.
+
+**Decisión (2026-08-11).** No se hace ahora. El lugar natural es el panel del **superadministrador**,
+no el del instituto: recuperar lo que alguien borró es una herramienta de soporte, no una función del
+día a día. Se define junto con el resto del borrado lógico cuando se retome [ARQ-05](#arq-05).
 
 ---
 
