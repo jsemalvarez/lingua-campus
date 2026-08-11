@@ -116,6 +116,8 @@ inscripción) y el 2026-08-11 con [FIN-12](#fin-12) (matrículas); **falta verif
 
 [ARQ-05](#arq-05) (borrado lógico) entra acá también, pero es transversal y conviene partirlo:
 primero alumno y clase — que resuelven [BUG-02](#bug-02) y [BUG-03](#bug-03) —, el resto después.
+~~La parte de clase~~ hecha el 2026-08-11; **falta verificar en stage**. Queda pendiente la interfaz
+para reactivar lo borrado, que conviene definir de una sola forma para todo el sistema.
 
 ### Tanda 5 · El módulo pedagógico
 
@@ -197,8 +199,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
-| [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [ ] |
-| [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [ ] |
+| [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
+| [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
@@ -1437,6 +1439,37 @@ del instituto toca lo que no debe, los datos siguen estando y se pueden recupera
 **Alcance mayor.** Este ítem es un caso particular de [ARQ-05](#arq-05), que audita todos los
 borrados físicos del sistema. Conviene resolverlos juntos y de una sola forma.
 
+**Estado: resuelto en el código, pendiente de verificar en stage.**
+
+`Lesson` tiene `status` (migración `20260811150000_add_lesson_status`, con índice
+`("courseId", "status")` porque toda consulta de clases filtra por esos dos campos), `deleteLessonAction`
+hace `update` en vez de `delete`, y editar o borrar una clase ya borrada devuelve error.
+
+**Lo que llevó el trabajo fue el punto 3.** Quedaron con filtro de estado: el listado y el navegador
+de meses del curso, las métricas de práctica del curso, el calendario, los próximos eventos de los
+cuatro tableros (alumno, docente, administración y tutor), las estadísticas académicas, el listado de
+prácticas del alumno, la vista previa del docente, las pantallas de asistencia, escáner y notas —que
+ahora redirigen al curso si la clase está borrada—, el alta del examen final y **la liquidación de
+sueldos**, que era el que salía en plata: `lib/payroll.ts` contaba clases dictadas sin mirar el
+estado. Por lo mismo, marcar clases como pagadas en `teachers/actions.ts` sólo alcanza a las activas.
+
+**Dos lugares donde a propósito no se filtra**, ambos comentados en el código:
+
+- El chequeo de "esta clase ya existe" de `generateLessonsAction`. Una clase borrada sigue ocupando su
+  lugar: si se filtrara, regenerar el período reviviría lo que alguien borró, y encima duplicado.
+  Para recuperar una clase hay que reactivarla, no volver a generarla.
+- Las métricas de práctica del instituto (`PlaygroundChartServer`). Ahí se mide actividad, y que el
+  docente borre la clase después no hace que el alumno no haya practicado.
+
+**Un efecto que el ítem no anticipaba.** `Attendance` y `Grade` **sí** tenían cascade, así que hasta
+acá desaparecían junto con la clase. Con borrado lógico la fila sobrevive, y sin filtrar quedaría un
+"presente" de una clase que ya no existe en el legajo del alumno y en el portal del tutor. Se
+filtraron los seis listados y los cuatro contadores de asistencia. Las filas siguen en la base: es
+justamente lo que permite recuperarlas.
+
+**Queda para [ARQ-05](#arq-05):** no hay forma de reactivar una clase borrada desde la interfaz. Hoy
+se hace en la base. Conviene definirlo junto con el resto del borrado lógico, no acá.
+
 ---
 
 <a id="bug-03"></a>
@@ -1449,6 +1482,13 @@ Mismo origen que [BUG-02](#bug-02).
 
 **Cambio.** Se resuelve junto con BUG-02. Alternativa razonable: en vez de borrar el
 `LessonPractice`, marcarlo `isPublished: false` y conservar el registro.
+
+**Estado: resuelto en el código, pendiente de verificar en stage.** Se tomó esa alternativa, con un
+agregado: además de despublicar se vacía el contenido (`speakingPhrases`, `listeningText`,
+`chatScenario`), porque si no, volver a poner frases más adelante arrastraría el texto viejo de
+listening y el escenario de chat sin que el docente los haya vuelto a escribir. Para él el efecto es
+el mismo que antes —la práctica desaparece del curso—, y las sesiones que los alumnos ya hicieron
+siguen en pie.
 
 ---
 
