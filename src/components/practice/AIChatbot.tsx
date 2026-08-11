@@ -5,6 +5,7 @@ import {
     MessageSquare, Send, Loader2, LogOut, CheckCircle2, Bot, User
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
+import { practiceApiError } from "./apiError";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,11 @@ interface Message {
 interface AIChatbotProps {
     lessonId: string;
     lessonPracticeId: string;
+    /**
+     * Sólo para mostrarlo en pantalla. El escenario que usa la IA lo lee el
+     * servidor de la base a partir del `lessonPracticeId`: mandarlo en el body
+     * era dejar que el cliente escribiera el system prompt (SEC-07).
+     */
     scenario: string;
     onComplete: (summary: SessionSummary) => void;
     onExit: () => void;
@@ -62,10 +68,16 @@ export function AIChatbot({
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    lessonPracticeId,
                     messages: [],
-                    scenario,
                 }),
             });
+
+            if (!res.ok) {
+                const message = await practiceApiError(res, "No pudimos iniciar la conversación. Probá de nuevo.");
+                setMessages([{ role: "assistant", content: message }]);
+                return;
+            }
 
             const data = await res.json();
             if (data.message) {
@@ -95,10 +107,16 @@ export function AIChatbot({
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    lessonPracticeId,
                     messages: updatedMessages,
-                    scenario,
                 }),
             });
+
+            if (!res.ok) {
+                const message = await practiceApiError(res, "Sorry, I couldn't respond. Please try again.");
+                setMessages((prev) => [...prev, { role: "assistant", content: message }]);
+                return;
+            }
 
             const data = await res.json();
             if (data.message) {

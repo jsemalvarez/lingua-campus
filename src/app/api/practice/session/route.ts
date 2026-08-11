@@ -61,12 +61,26 @@ export async function POST(req: Request) {
         // Verificar que la práctica existe, está publicada y es del instituto
         // del alumno: el id viaja en el body, y sin acotar el instituto una
         // sesión podía quedar colgada de la clase de otro instituto.
+        //
+        // La inscripción se agregó con SEC-07: el instituto solo no alcanza,
+        // porque deja a cualquier alumno guardar progreso en la clase de un
+        // curso que no cursa. Es la misma condición que aplica
+        // `guardPracticeAi` a los endpoints de IA; acá no se reutiliza el helper
+        // porque este endpoint es sólo para alumnos —el `studentId` sale de la
+        // sesión— y el de allá también deja pasar al personal para la vista
+        // previa.
         const practice = await prisma.lessonPractice.findFirst({
             where: {
                 id: lessonPracticeId,
                 lessonId,
                 isPublished: true,
-                lesson: { status: "ACTIVE", course: { instituteId: auth.instituteId } },
+                lesson: {
+                    status: "ACTIVE",
+                    course: {
+                        instituteId: auth.instituteId,
+                        enrollments: { some: { studentId: auth.userId, status: "ACTIVE" } },
+                    },
+                },
             },
             select: { id: true }
         });

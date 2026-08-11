@@ -12,6 +12,15 @@
  */
 export const PRONUNCIATION_PASS_SCORE = 70;
 
+/**
+ * Idioma de todas las prácticas. Es una constante del servidor y no un campo del
+ * body: se interpola en los prompts (`You are a ${language} teacher`), así que
+ * dejarlo en manos del cliente era una vía más para escribir el prompt (SEC-07).
+ * El día que haya institutos con otro idioma, esto sale de la base junto con el
+ * curso, no de la request.
+ */
+export const PRACTICE_LANGUAGE = "English";
+
 export interface EvaluationResult {
     score: number;       // 0-100
     feedback: string;    // Mensaje para el alumno (en español)

@@ -393,6 +393,29 @@ model PracticeSession {
   @@index([studentId, lessonId])
 }
 
+// Consumo de los proveedores de IA, para el límite de uso de SEC-07.
+//
+// No hay relación con `User`/`Student`/`Institute` a propósito: la fila es un
+// contador, no un dato del negocio, y borrar el sujeto no tiene por qué fallar
+// ni arrastrar historial. Por eso `subjectId` es un id suelto.
+//
+// El período no es fijo: el usuario se cuenta por hora y el instituto por día
+// (ver `src/lib/practice/quota.ts`). Guardar el inicio de la ventana en vez del
+// tipo de período deja el mismo contador para las dos escalas, y es lo que va a
+// necesitar PED-07 cuando el tope dependa del plan.
+model AiUsage {
+  id          String   @id @default(cuid())
+
+  subjectType String   // "USER" | "INSTITUTE"
+  subjectId   String
+  windowStart DateTime // Inicio de la ventana, en UTC
+
+  count       Int      @default(0)
+
+  @@unique([subjectType, subjectId, windowStart])
+  @@index([windowStart])
+}
+
 model Attendance {
   id          String   @id @default(cuid())
   studentId   String

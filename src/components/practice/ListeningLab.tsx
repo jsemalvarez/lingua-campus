@@ -6,6 +6,7 @@ import {
     ChevronRight, CheckCircle2, Sparkles, AlertCircle, XCircle, Lock
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
+import { practiceApiError } from "./apiError";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,12 +70,15 @@ export function ListeningLab({
 
     const loadOriginalQuiz = async () => {
         if (questions !== null) return; // Already loaded or loading
-        
+
         try {
+            // El servidor arma el cuestionario sobre el texto original de la
+            // práctica, que lee de la base. Sólo se lo llama cuando el texto es
+            // el original: el generado ya viene con sus preguntas.
             const res = await fetch("/api/practice/generate-listening-quiz", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: listeningText })
+                body: JSON.stringify({ lessonPracticeId })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -95,10 +99,13 @@ export function ListeningLab({
             const res = await fetch("/api/practice/generate-listening", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ seedText: listeningText })
+                body: JSON.stringify({ lessonPracticeId })
             });
 
-            if (!res.ok) throw new Error("Error de API");
+            if (!res.ok) {
+                setError(await practiceApiError(res, "No pudimos generar un texto nuevo. Probá con el original."));
+                return;
+            }
 
             const data = await res.json();
             if (data.text) {
@@ -124,6 +131,7 @@ export function ListeningLab({
     const playText = async () => {
         if (phase === "playing") return;
         setPhase("playing");
+        setError(null);
 
         // Start loading questions if they haven't been loaded
         if (listenCount === 0 && !isDynamic) {
@@ -134,7 +142,7 @@ export function ListeningLab({
             const res = await fetch("/api/practice/tts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: currentText, language: "en-US", speed: 0.9 }),
+                body: JSON.stringify({ lessonPracticeId, text: currentText, language: "en-US", speed: 0.9 }),
             });
 
             const onFinish = () => {
@@ -160,6 +168,7 @@ export function ListeningLab({
                 source.onended = () => { onFinish(); ctx.close(); };
                 source.start();
             } else {
+                setError(await practiceApiError(res, "No se pudo reproducir el audio."));
                 setPhase("done_listening");
             }
         } catch {
