@@ -60,11 +60,10 @@ los sufre alguien todos los días y los dos tienen la causa ya identificada:
 
 | | Estado del diagnóstico |
 |---|---|
-| [BUG-07](#bug-07) | No se guardan las asistencias. Causa probable: la transacción se agota haciendo una consulta por alumno. Antes de tocar código conviene pedir el mensaje exacto que ve la profesora — decide entre las dos causas candidatas en un minuto. |
+| [BUG-07](#bug-07) | ~~No se guardan las asistencias.~~ Resuelto el 2026-08-13 sin necesidad de la captura: el parte pasó de 78 sentencias a 4, medido. **Falta verificar en stage.** |
 | [BUG-04](#bug-04) | Reabierto. La secretaria pasa a profesora en 11 pantallas. **Causa confirmada**: la cookie de rol es `httpOnly` y el `Navbar` la lee desde JavaScript, cosa que nunca puede funcionar. No requiere diagnóstico adicional. |
 
-BUG-04 se puede cerrar sin depender de nadie. BUG-07 conviene confirmarlo con una captura de
-pantalla, porque el arreglo es distinto según la causa.
+BUG-04 se puede cerrar sin depender de nadie.
 
 ### Tanda 1 · Pedidos del cliente que no dependen de nada
 
@@ -221,13 +220,14 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
 | [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
+| [FIN-21](#fin-21) | P2 | No se puede registrar un pago con fecha pasada | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [~] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
-| [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [ ] |
+| [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -247,6 +247,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
 | [ARQ-10](#arq-10) | P2 | No hay auditoría de las acciones del panel | [ ] |
+| [ARQ-11](#arq-11) | P2 | Guardar las notas de un informe cuesta 250 sentencias | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -1497,6 +1498,58 @@ de baja) toca la misma función y conviene mirarlos juntos.
 
 ---
 
+<a id="fin-21"></a>
+## FIN-21 · No se puede registrar un pago con fecha pasada · **P2**
+
+**Estado actual.** Los tres lugares que crean un `Payment` escriben la fecha a mano con
+`date: new Date()`: el cobro normal
+([`payments/actions.ts:119`](../src/app/payments/actions.ts)), el pago único de curso completo
+([`:374`](../src/app/payments/actions.ts)) y la aplicación de saldo a favor
+([`:969`](../src/app/payments/actions.ts)). Los asientos del libro mayor que los acompañan hacen lo
+mismo.
+
+El modelo **sí lo permite**: `Payment.date` es un campo propio con `@default(now())`, distinto de
+`createdAt`, y existe justamente para poder guardar la fecha del cobro. Lo que falta es exponerlo:
+ningún formulario de cobro tiene campo de fecha, y el código pisa el default con el momento de la
+carga. Hoy `date` y `createdAt` son siempre el mismo valor.
+
+**Dos consecuencias, ninguna cosmética.**
+
+1. **El recibo lleva la fecha de carga, no la del cobro.** El PDF imprime `data.date`, que sale de
+   `payment.date` ([`ReceiptDownloadButton.tsx:52`](../src/components/financials/ReceiptDownloadButton.tsx)).
+   Un pago recibido el viernes y cargado el lunes le llega al padre fechado el lunes.
+2. **La caja del período se corre.** El KPI "Cobrado" y la rentabilidad filtran el libro mayor por
+   fecha de asiento ([`payments/page.tsx:87`](../src/app/payments/page.tsx)), y el asiento se crea
+   con la misma fecha del sistema. Cargar con demora mueve plata de un mes al siguiente. Es la
+   explicación más probable de un futuro "los números del mes no me cierran".
+
+**Cómo apareció (2026-08-13).** Salió al revisar qué efecto tuvo [FIN-12](#fin-12) sobre los
+recibos. Las matrículas se habían cargado en febrero para que los padres vieran una fecha coherente,
+y la duda era si normalizar el mes a `ENROLLMENT_FEE_MONTH` los había roto. **No los rompió**: el
+recibo nunca miró el mes de la cuota — el concepto sale de `formatFeeLabel`, que para `ENROLLMENT`
+devuelve `Matrícula {año}` e ignora el mes, y la fecha sale del pago. Al confirmar eso quedó a la
+vista que la fecha del pago tampoco es elegible.
+
+**Cambio.** Agregar un campo de fecha opcional a los formularios de cobro y propagarlo a las tres
+creaciones **y al asiento del libro mayor**: si el pago y el asiento no llevan la misma fecha, el
+recibo y la caja dejan de coincidir, que es peor que el problema actual.
+
+Tres decisiones antes de tocar código:
+
+- **Rango admitido.** No futura. Probablemente tampoco anterior al inicio del año lectivo, para que
+  un error de tipeo no mande un cobro a 2019.
+- **Quién puede retrofechar.** Una fecha de cobro editable es una forma de maquillar la caja de un
+  período. Si la secretaria puede, conviene que quede registrado quién lo hizo — se cruza con
+  [SEC-03](#sec-03) (qué puede hacer una secretaria en lo financiero) y con
+  [ARQ-10](#arq-10) (auditoría de las acciones del panel).
+- **Qué pasa con lo ya cargado.** Los pagos existentes tienen la fecha de carga y no hay forma de
+  saber la real. No hay migración posible acá: se arregla de acá en adelante.
+
+**Relacionado.** [FIN-08](#fin-08) es el otro lado de la misma carencia de fechas: aquel es *cuándo
+vence* una cuota, este es *cuándo se cobró*. Conviene decidirlos juntos.
+
+---
+
 # Bugs funcionales
 
 <a id="bug-01"></a>
@@ -1899,6 +1952,90 @@ decide entre las dos en un minuto y evita adivinar.
 Que haga falta pedir una captura para saber qué se rompió es, en sí, [ARQ-09](#arq-09): los errores
 no se registran en ningún lado.
 
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**La captura terminó siendo innecesaria.** El cambio cubre las dos causas candidatas a la vez, así
+que no hacía falta distinguirlas para arreglarlo. El bucle de un `findMany` más un `update` o
+`create` por alumno dentro de una `$transaction` interactiva pasó a **dos sentencias masivas**: un
+`UPDATE ... FROM (VALUES ...)` para los alumnos que ya tenían fila y un
+`createMany({ skipDuplicates: true })` para los que no.
+
+**Medido, no estimado.** Contra Postgres local, con 25 alumnos —el curso más grande del cliente—,
+contando las sentencias que Prisma manda de verdad:
+
+| Forma de guardar | Alta | Regrabado |
+|---|---|---|
+| Bucle en `$transaction` interactiva (código viejo) | 53 | **78** |
+| Un `upsert` por alumno en `$transaction([...])` | 27 | 27 |
+| `UPDATE ... FROM (VALUES)` + `createMany` (lo que quedó) | **4** | **4** |
+
+**El regrabado es el caso común y era el peor**: el profesor corrige y vuelve a guardar. Daba 78
+sentencias porque el `update` de Prisma hace un `SELECT` antes de cada `UPDATE`. Con la base en otra
+región (~65 ms de ida y vuelta) eso son ~5 segundos, que es **exactamente** el tope por defecto de la
+transacción interactiva. El reporte no necesitaba más explicación que esa aritmética.
+
+**Un `$transaction([...])` de upserts no alcanzaba, y conviene que quede escrito por qué.** La forma
+de arreglo no colapsa a una sola query: manda el lote al motor de Prisma en una llamada, pero el
+motor sigue emitiendo una sentencia por alumno. Son 27 en vez de 78 —suficiente para que deje de
+fallar— pero mantienen la conexión tomada ~27 viajes. Con un pool de 5, mientras un profesor guarda
+los demás esperan, y el final de hora es justo cuando guardan todos juntos. Es la misma razón por la
+que se sacaron las transacciones de las notas de los informes — que quedaron con su propio costo,
+medido de paso y anotado en [ARQ-11](#arq-11).
+
+**La transacción que quedó no es la que se sacó en los informes.** Aquella mantenía la conexión a lo
+largo de N viajes con el control volviendo a JS en el medio; ésta son dos sentencias en un solo lote.
+Y **sale gratis**: medido, `createMany` abre su propio `BEGIN`/`COMMIT` igual, así que envolver las
+dos no agrega ni una sentencia y a cambio el parte queda atómico.
+
+**Por qué no `updateMany`, y por qué SQL crudo.** Cada alumno lleva su propio estado y su propia
+nota, y `updateMany` aplica **un** valor a todas las filas que matchean. El `VALUES` es la forma de
+mandar 25 valores distintos en una sentencia; va parametrizado con `Prisma.sql`. Es la única
+sentencia cruda de este módulo, y el módulo de pagos ya tenía precedente.
+
+**Se descartó `INSERT ... ON CONFLICT` en una sola sentencia** (medido: 1 sentencia, contra 4).
+Obliga a generar `id` y `updatedAt` a mano, porque no hay defaults en la base para ninguno de los
+dos, y no hay librería de cuid entre las dependencias: los ids quedarían con otro formato que el
+resto de la tabla. Ahorra ~3 viajes; no paga el precio.
+
+**Verificado contra la base local**, 15 comprobaciones: escribe las 25 filas con sus estados y notas,
+el regrabado no duplica ni pierde `id` ni `createdAt`, limpia la nota que se vació, pisa las filas
+que había dejado el kiosco de QR sin chocar contra la restricción única, no toca las filas de otra
+clase, y funciona con un solo alumno. **Falta la verificación en stage**, que es donde se ve la
+latencia real.
+
+**Si aparece lentitud, el lugar a mirar no es esta acción** sino la región de la base contra la de
+Vercel. Sin `vercel.json` las funciones corren en `iad1` (us-east-1) y de las dos bases configuradas
+una está en us-east-1 y la otra en us-west-2. Esa diferencia la paga **cada** consulta de la
+aplicación, no sólo el parte de asistencia.
+
+**El error crudo dejó de viajar al cliente.** Antes se devolvía `error.message` de Prisma tal cual y
+la profesora leía un `P2028` en pantalla. Ahora el detalle va a `console.error` con `lessonId` y
+`courseId`, y a la pantalla va un mensaje en castellano. No resuelve [ARQ-09](#arq-09) —sigue sin
+haber registro centralizado— pero deja el rastro en el log de Vercel, que es donde hay que mirar si
+esto reaparece.
+
+**El hueco de permisos, cerrado con la política que ya aplicaban las pantallas.** Las dos acciones
+del archivo pasan por un helper común, `authorizeLessonAttendance`: `requireRole(INSTITUTE_STAFF)`,
+la clase tiene que ser del `courseId` recibido y de un curso del instituto propio, y **un docente
+sólo entra al curso que dicta** —los roles administrativos siguen pasando a cualquier curso—. Con
+eso queda cubierto el punto 3 de [FEAT-07](#feat-07) para asistencia; **notas y práctica siguen
+pendientes**, que es donde vive el resto de ese alcance.
+
+Tres cosas más que salieron del mismo pase, todas por el mismo criterio de que el servidor sostenga
+lo que la pantalla ya muestra:
+
+- **`scanAttendanceQRAction` tenía el hueco idéntico** treinta líneas más abajo y quedaba abierto si
+  se arreglaba sólo la acción del enunciado. Usa el mismo helper. Su lógica de escaneo no se tocó.
+- **El curso finalizado es de lectura también del lado del servidor.** La pantalla ya lo mostraba en
+  modo lectura y el kiosco redirigía; la acción lo aceptaba igual.
+- **Sólo se escribe asistencia de alumnos matriculados** (`ACTIVE` o `FINISHED`, lo mismo que lista
+  la pantalla). Se **filtra** en vez de rechazar el parte entero: si a alguien le dieron de baja la
+  matrícula con la pantalla abierta, el profesor no pierde la clase por eso. Lo descartado queda en
+  el log.
+
+**Qué falta verificar en stage:** guardar un parte en el curso más numeroso que haya, y guardar con
+el escáner de QR corriendo en paralelo sobre la misma clase.
+
 ---
 
 <a id="feat-01"></a>
@@ -2192,11 +2329,9 @@ permitido. Lo razonable es que no vea pares, pero hay que decirlo.
 
 **"Sólo ver" es un requisito, no una preferencia visual (confirmado 2026-08-13).** El docente ajeno
 tiene que poder ver por dónde va su par y **no poder editar nada**. Eso saca el problema del color de
-la tarjeta y lo lleva al servidor, porque hoy las pantallas de destino no distinguen al docente
-propio del ajeno: [`attendance/page.tsx`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx)
-autoriza por **instituto**, no por curso. Un docente del instituto ya puede abrir —y guardar— la
-asistencia de la clase de otro escribiendo la URL. Esta ficha no lo empeora, pero lo pone a un clic
-de distancia, así que hay que cerrarlo en el mismo pase.
+la tarjeta y lo lleva al servidor, porque las pantallas de destino no siempre distinguen al docente
+propio del ajeno. Esta ficha no lo empeora, pero lo pone a un clic de distancia, así que hay que
+cerrarlo en el mismo pase.
 
 Alcance del cierre, para no quedarse a mitad de camino:
 
@@ -2206,7 +2341,15 @@ Alcance del cierre, para no quedarse a mitad de camino:
    docentes, no contra la conducción.
 3. `saveLessonAttendanceAction` y las acciones equivalentes chequean lo mismo del lado del servidor.
    Es donde de verdad se decide: esconder el botón no protege un server action, que es un POST como
-   cualquier otro. Ver [BUG-07](#bug-07), que ya arrastra este hueco.
+   cualquier otro.
+
+**Asistencia ya está hecha (2026-08-13, en [BUG-07](#bug-07)).** Corrección de lo que decía esta
+ficha: [`attendance/page.tsx`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx) **sí**
+exigía ser el docente del curso — quien no lo era no podía abrir la pantalla. Lo que no lo exigía era
+el server action, así que el docente ajeno no podía abrirla pero sí guardar mandando los ids. Ese
+lado quedó cerrado, para asistencia y para el kiosco de QR. **Queda pendiente el punto 1 (las
+tarjetas del calendario) y las pantallas y acciones de notas y práctica**, que hay que revisar una
+por una: la de asistencia no prueba nada sobre las otras.
 
 `AttendanceForm` ya tiene una prop `readOnly` que hoy nadie usa para esto: es el lugar natural para
 la vista del par.
@@ -2663,6 +2806,63 @@ lee no se audita.
 **Cuidado con lo obvio.** Un registro de auditoría es, por definición, un lugar donde se acumulan
 datos personales de menores y de sus tutores. Guardar qué cambió, no copiar el dato entero cuando no
 hace falta, y decidir la retención **antes** de empezar a escribir filas.
+
+---
+
+<a id="arq-11"></a>
+## ARQ-11 · Guardar las notas de un informe cuesta 250 sentencias · **P2**
+
+**De dónde sale.** Al resolver [BUG-07](#bug-07) el 2026-08-13 se midió, de paso, la carga de notas
+de los informes. No hay una falla abierta: se reportaron fallas en su momento y el lote de 5 de
+[`entries/route.ts`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts) las hizo
+desaparecer. Esto es el costo que quedó abajo.
+
+**Medido** contra Postgres local, 25 alumnos × 4 categorías, contando las sentencias que Prisma manda
+de verdad:
+
+| | Sentencias | Resultado |
+|---|---|---|
+| Actual, en lotes de 5 | **250** | 25 informes, 75 entradas |
+| Colapsada en sentencias masivas | **13** | 25 informes, 75 entradas |
+
+Mismo resultado, 19× menos sentencias. Escala con alumnos **por** categorías, así que una plantilla
+de 8 categorías duplica el número.
+
+**El lote de 5 no alivia el pool: lo consume entero.** El comentario del código explica que procesa
+de a 5 para que la cola de Prisma no llegue al timeout buscando conexiones libres, y como remedio del
+síntoma funcionó. Pero el pool **es** de 5: un profesor guardando notas se lleva todas las conexiones
+que hay, y lo que pase en simultáneo —otro profesor, una pantalla cargando— espera. Es un techo, no
+un alivio. Relacionado con [ARQ-02](#arq-02).
+
+**Por qué no se colapsó en su momento, que es una razón buena.** No es el caso de
+[BUG-07](#bug-07): las `ReportEntry` cuelgan del `id` del `StudentReport` padre, que no existe hasta
+crearlo, así que la operación *parece* inherentemente secuencial — hay que crear el padre de cada
+alumno antes de poder tocar sus entradas.
+
+**Cambio propuesto.** Resolver todos los ids de una sola vez, con una lectura en el medio:
+
+1. `createMany({ skipDuplicates: true })` de los `StudentReport` que falten, más un `UPDATE ... FROM
+   (VALUES ...)` masivo para los comentarios del docente.
+2. **Un** `findMany` que traiga los 25 pares `id`/`studentId`. Es la sentencia que rompe la
+   secuencialidad aparente.
+3. Las entradas en tres sentencias masivas: `UPDATE ... FROM (VALUES ...)` para las que ya existían,
+   `createMany({ skipDuplicates: true })` para las nuevas, y un `deleteMany` con los pares
+   `reportId`/`categoryId` de las que el docente vació.
+4. Una lectura final para devolver el resultado, en vez de un `findUnique` por alumno.
+
+Con eso desaparece el lote de 5 y la operación pasa a retener una conexión, no cinco.
+
+**El caso borde que hay que preservar, y es el que más fácil se rompe.** Hoy
+`teacherComments: undefined` significa **"no toques el comentario"**, distinto de `null`, que
+significa "borralo". Un `createMany` que mande `teacherComments || null` a ciegas pisa con `null` lo
+que había. La versión medida filtra esos casos del `UPDATE`, pero la medición comprobó el resultado
+agregado —25 informes, 75 entradas—, **no cada caso borde**. Antes de dar esto por bueno hay que
+verificarlo como se verificó [BUG-07](#bug-07): payloads parciales, comentario ausente, entrada
+vaciada, y alumno sin informe previo.
+
+**Por qué P2 y no más.** No está roto y el cliente no lo está sufriendo. Es deuda de la misma familia
+que [FIN-06](#fin-06) y [BUG-07](#bug-07) —el tercer y ahora cuarto lugar con el mismo patrón— y
+conviene hacerlo cuando se toque ese módulo por otra razón, no como interrupción.
 
 ---
 
