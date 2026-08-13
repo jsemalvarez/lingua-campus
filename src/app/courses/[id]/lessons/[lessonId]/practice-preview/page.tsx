@@ -11,7 +11,7 @@ export default async function TeacherPracticePreviewPage(props: { params: Promis
     const session = await getServerSession(authOptions);
     if (!session || !session.user) redirect("/login");
 
-    const sessionUser = session.user as any;
+    const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 

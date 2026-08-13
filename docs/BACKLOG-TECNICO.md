@@ -74,7 +74,8 @@ una solución provisoria en el día.
 El bloque más importante. Los cuatro son la misma deuda y **hay que hacerlos en este orden**: cada
 uno prepara el terreno para el siguiente, y así cada paso queda reversible.
 
-1. ~~[ARQ-07](#arq-07) — completar los tipos de sesión.~~ Hecho en `b781d4b` (falta el barrido de `as any`).
+1. ~~[ARQ-07](#arq-07) — completar los tipos de sesión.~~ Hecho en `b781d4b`; el barrido de `as any`
+   se completó el 2026-08-13.
 2. ~~[SEC-02](#sec-02) — crear el helper `requireRole()`.~~ Hecho en `0dcf991`.
 3. ~~[SEC-01](#sec-01) — migrar los llamadores a `roles[]` y borrar la columna `role`.~~ Hecho el 2026-08-10; **falta verificar en stage**.
 4. ~~[SEC-08](#sec-08) + [BUG-04](#bug-04) — el `Navbar` leía los roles del JWT viejo.~~ Hecho el 2026-08-10.
@@ -222,7 +223,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-04](#arq-04) | P3 | Tests automatizados | [ ] |
 | [ARQ-05](#arq-05) | P1 | Política de borrado lógico en todo el sistema | [ ] |
 | [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
-| [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [~] |
+| [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [x] |
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
 | [ARQ-10](#arq-10) | P2 | No hay auditoría de las acciones del panel | [ ] |
@@ -2053,9 +2054,35 @@ antes ahorra trabajo, no lo agrega.
 `User` y en `JWT`, y [SEC-01](#sec-01) sacó `role` de ahí. Sirvió para lo que se esperaba: el
 compilador encontró los llamadores durante la migración.
 
-**Lo que falta** son los ~60 `session.user as any` que siguen dispersos por las páginas. Cada uno se
-puede borrar sin más — los campos ya están tipados —, pero es un cambio mecánico y ruidoso que
-conviene hacer en su propio commit, no mezclado con una migración de permisos.
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**El barrido se hizo:** 30 `session.user as any` en 22 archivos, más un `instituteId as string` en la
+bandeja de mensajes. En esos archivos los errores de `no-explicit-any` bajaron de 47 a 17, y los 17
+que quedan no son de sesión — son internos de jsPDF (`doc as any`), formas de payload de Prisma y
+APIs del navegador, que pertenecen a otras fichas.
+
+**Lo que el tipado destapó, que era el punto del ítem.** Con `id?: string` a la vista, aparecen cinco
+páginas que le pasaban ese campo a una consulta sin garantizar que existiera. No es cosmético:
+
+- [`guardian/dashboard`](../src/app/guardian/dashboard/page.tsx) filtraba un `findMany` por
+  `guardianId`. En Prisma **un filtro en `undefined` no falla: se ignora**, así que un token sin `id`
+  no daba error — devolvía los vínculos de *todos* los tutores del sistema.
+- [`schedule`](../src/app/schedule/page.tsx) tenía el mismo patrón con `teacherId` sobre los cursos.
+- [`academics`](../src/app/academics/page.tsx),
+  [`administration`](../src/app/administration/page.tsx) y
+  [`dashboard`](../src/app/dashboard/page.tsx) lo usan en un `findUnique`, que sí revienta: un 500 en
+  vez de una fuga.
+- [`messages`](../src/app/messages/page.tsx) le pasaba el `id` a la bandeja para marcar los hilos
+  propios; con `undefined` no coincidía ninguno.
+
+Las cinco exigen ahora `session?.user?.id` antes de seguir, redirigiendo al login si falta. El
+cambio de comportamiento es acotado —un token sin `id` es un token roto— pero hay que mirarlo en
+stage junto con el resto de la tanda 2.
+
+**Por qué el compilador no lo había marcado:** los tipos de Prisma declaran esos campos como
+opcionales (`id?: string` en un `WhereUniqueInput`), así que pasarle `undefined` es legal para
+TypeScript. El tipado de la sesión no encuentra este bug solo; lo que hace es dejarlo a la vista para
+quien lee el código, que es como apareció.
 
 ---
 

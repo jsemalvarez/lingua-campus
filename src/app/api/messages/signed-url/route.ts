@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
         if (!session?.user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-        const sessionUser = session.user as any;
+        const sessionUser = session.user;
 
         // ── 2. Params ────────────────────────────────────────────────────────
         const { searchParams } = new URL(req.url);

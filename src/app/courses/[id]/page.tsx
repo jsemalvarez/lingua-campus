@@ -71,7 +71,7 @@ export default async function CourseDetailPage({
         select: { id: true, roles: true, instituteId: true }
     });
 
-    const sessionUser = session.user as any;
+    const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 

@@ -31,11 +31,13 @@ import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    // El `id` alimenta la búsqueda del alumno en la vista de estudiante; sin él
+    // la consulta ni siquiera es válida para Prisma.
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const sessionUser = session.user as any;
+    const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
@@ -182,7 +184,7 @@ export default async function DashboardPage() {
     // ─── STUDENT View ───
     if (activeRole === "STUDENT") {
         const student = await prisma.student.findUnique({
-            where: { id: (session.user as any).id },
+            where: { id: session.user.id },
             include: {
                 institute: { select: { name: true } },
                 enrollments: {

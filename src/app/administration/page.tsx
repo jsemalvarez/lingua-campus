@@ -8,9 +8,11 @@ import { StudentAdministrationView } from "../dashboard/components/StudentAdmini
 
 export default async function StudentAdministrationPage() {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) redirect("/login");
+    // El `id` alimenta la búsqueda del alumno; sin él la consulta ni siquiera es
+    // válida para Prisma.
+    if (!session?.user?.id) redirect("/login");
 
-    const sessionUser = session.user as any;
+    const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
@@ -19,7 +21,7 @@ export default async function StudentAdministrationPage() {
     }
 
     const student = await prisma.student.findUnique({
-        where: { id: (session.user as any).id },
+        where: { id: session.user.id },
         include: {
             fees: {
                 orderBy: [{ year: 'desc' }, { month: 'desc' }],

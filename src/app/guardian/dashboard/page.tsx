@@ -9,19 +9,23 @@ import dayjs from "dayjs";
 
 export default async function GuardianDashboard() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
+  // Se exige el `id`, no sólo la sesión: abajo filtra un `findMany` por
+  // `guardianId`, y en Prisma un filtro en `undefined` no falla — se ignora, y
+  // la consulta devuelve los vínculos de todos los tutores. Mientras el campo
+  // entraba como `any`, nada obligaba a mirar esto.
+  if (!session?.user?.id) {
     redirect("/login");
   }
 
   // Verificar que sea Tutor (o Admin)
-  const roles = (session.user as any).roles || [];
+  const roles = session.user.roles || [];
   if (!roles.includes("GUARDIAN") && !roles.includes("ADMIN") && !roles.includes("SUPERADMIN")) {
     notFound();
   }
 
   // Buscar todos los alumnos vinculados a este tutor
   const guardianLinks = await prisma.guardianStudentLink.findMany({
-    where: { guardianId: (session.user as any).id },
+    where: { guardianId: session.user.id },
     include: {
       student: {
         include: {

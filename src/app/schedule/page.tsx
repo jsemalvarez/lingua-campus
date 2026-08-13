@@ -23,7 +23,10 @@ interface PageProps {
 
 export default async function SchedulePage(props: PageProps) {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) redirect("/login");
+    // El `id` se usa para filtrar los cursos del profesor y los vínculos del
+    // tutor. En Prisma un filtro en `undefined` se ignora en vez de fallar, así
+    // que sin identidad la agenda mostraría de más.
+    if (!session?.user?.id) redirect("/login");
 
     const params = await props.searchParams;
     const view = (params.view as string) || "week";
@@ -43,7 +46,7 @@ export default async function SchedulePage(props: PageProps) {
     const dateStr = format(displayDateNoon, "yyyy-MM-dd");
     const isToday = isSameDay(displayDateNoon, new Date());
 
-    const sessionUser = session.user as any;
+    const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
     const role = await getActiveRole(userRoles);
 
@@ -52,14 +55,14 @@ export default async function SchedulePage(props: PageProps) {
 
     if (role === "STUDENT") {
         const student = await prisma.student.findUnique({
-            where: { id: (session.user as any).id },
+            where: { id: session.user.id },
             include: { enrollments: { select: { courseId: true } } }
         });
         if (!student) redirect("/login");
         instituteId = student.instituteId;
         studentEnrollments = student.enrollments.map(e => e.courseId);
     } else if (role === "GUARDIAN") {
-        const guardianId = (session.user as any).id;
+        const guardianId = session.user.id;
         const guardianLinks = await prisma.guardianStudentLink.findMany({
             where: { guardianId },
             include: {
@@ -90,7 +93,7 @@ export default async function SchedulePage(props: PageProps) {
 
     const isTeacher = role === "TEACHER";
     const isStudentOrGuardian = role === "STUDENT" || role === "GUARDIAN";
-    const effectiveTeacherId = isTeacher ? (session.user as any).id : (params.teacherId as string);
+    const effectiveTeacherId = isTeacher ? session.user.id : (params.teacherId as string);
 
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
@@ -98,7 +101,7 @@ export default async function SchedulePage(props: PageProps) {
             where: { 
                 instituteId: instituteId, 
                 status: "ACTIVE",
-                ...(isTeacher ? { teacherId: (session.user as any).id } : {}),
+                ...(isTeacher ? { teacherId: session.user.id } : {}),
                 ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             },
             orderBy: { name: "asc" }

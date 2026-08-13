@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         if (!session?.user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-        const sessionUser = session.user as any;
+        const sessionUser = session.user;
 
         // ── 2. Parse multipart form ──────────────────────────────────────────
         const formData = await req.formData();

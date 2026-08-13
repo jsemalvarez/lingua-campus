@@ -16,9 +16,11 @@ export const metadata = {
 
 export default async function MessagesPage() {
     const session = await getServerSession(authOptions);
-    if (!session?.user) redirect("/login");
-
-    const sessionUser = session.user as any;
+    const sessionUser = session?.user;
+    // Se exige el `id` y no sólo el usuario: la bandeja marca los hilos propios
+    // comparando contra `currentUserId`, así que sin identidad no hay nada que
+    // mostrar bien. Antes el campo entraba como `any` y llegaba `undefined`.
+    if (!sessionUser?.id) redirect("/login");
     const userRoles: string[] = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
     const isStudent = activeRole === "STUDENT";
@@ -29,8 +31,7 @@ export default async function MessagesPage() {
     const canCompose =
         isAdmin || activeRole === "TEACHER";
 
-    const instituteId = sessionUser.instituteId as string;
-    if (!instituteId && !isStudent) redirect("/dashboard");
+    if (!sessionUser.instituteId && !isStudent) redirect("/dashboard");
 
     // La identidad y el rol se derivan de la sesión dentro del server action
     const threads = await getThreadsForUser();
