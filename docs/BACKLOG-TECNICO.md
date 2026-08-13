@@ -233,6 +233,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
 | [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
+| [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
+| [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -2101,6 +2103,102 @@ al instituto y un reset manual. Y desbloquea SEC-06, que es P1 de seguridad.
 **Relacionado.** [SEC-06](#sec-06) (contraseñas por defecto) y [FEAT-04](#feat-04) (saber quién entró
 alguna vez) tocan lo mismo desde otro ángulo: hoy nadie sabe cuántos tutores nunca pudieron entrar,
 que es probablemente donde está el problema real.
+
+---
+
+<a id="feat-06"></a>
+## FEAT-06 · Que tutores y docentes puedan escribirle al docente del curso · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que los tutores y los docentes puedan **iniciar** conversaciones con el
+docente del curso del alumno.
+
+**Hoy no pueden, y es una decisión explícita del código, no un olvido.**
+[`createThread`](../src/app/actions/messages.ts) corta así:
+
+```ts
+// Fase 1: sólo ADMIN, SECRETARY y TEACHER pueden iniciar hilos
+if (isStudent || (!isAdmin && senderRole !== "TEACHER")) throw new Error(...)
+```
+
+El tutor puede **responder** un hilo donde lo metieron, pero no abrir uno. Levantar ese corte es la
+mitad del trabajo; la otra mitad es que hoy no existe la lista de a quién podría escribirle.
+
+**Son dos permisos distintos, con dificultad distinta:**
+
+1. **El tutor.** Es el caso nuevo de verdad. Hay que construirle una lista de destinatarios que hoy
+   no existe: sus alumnos vinculados → inscripciones activas → docente de cada curso. Y hay que
+   **hacerla cumplir en el servidor**, no sólo dibujarla: si el destinatario llega en el body, un
+   tutor podría escribirle a cualquiera del instituto.
+2. **El docente.** Ya puede iniciar hilos, pero
+   [`getCoursesWithRecipientsForUser`](../src/app/actions/messages.ts) sólo le arma como
+   destinatarios a los alumnos y tutores **de sus propios cursos**: la lista de profesores
+   (`allTeachers`) se completa **únicamente para administradores**. Alcanza con extendérsela, acotada
+   al alcance que se decida.
+
+**Lo que hay que definir con el cliente antes de codificar:**
+
+- **¿De qué alumno se está hablando?** `MessageThread` guarda `courseId` pero **no** `studentId`
+  ([`schema.prisma`](../prisma/schema.prisma)). Un tutor con dos hijos escribe sobre uno; el docente
+  necesita saber cuál. Sin ese campo, el asunto queda como único contexto — que es exactamente cómo
+  se pierden las conversaciones.
+- **¿Hasta dónde llega el alcance del docente?** ¿Sólo los docentes de los otros cursos de sus
+  alumnos, o cualquier docente del instituto? Lo segundo es más simple y probablemente lo que
+  esperan; lo primero es más prolijo y más código.
+- **¿El tutor puede escribirle a la administración también, o sólo al docente?** Si sólo al docente,
+  la secretaría se entera de nada y va a terminar pidiéndolo después.
+
+**Relacionado.** [BUG-06](#bug-06) (el contador de no leídos del admin) y [FEAT-01](#feat-01)
+(adjuntos en el primer mensaje) tocan la misma pantalla; si se va a abrir el módulo, conviene
+mirarlos juntos. Y abrir el canal a los tutores multiplica el volumen de hilos, así que BUG-06 pasa
+de molestia a problema.
+
+---
+
+<a id="feat-07"></a>
+## FEAT-07 · Ver en el calendario las clases de los pares del mismo nivel · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que un docente pueda ver —**y sólo ver**, en gris— las clases de otros
+docentes en el calendario, limitado a los cursos **del mismo nivel** que los suyos. El objetivo es
+concreto: saber en qué tema van sus pares que dan el mismo nivel.
+
+**La mitad ya está hecha.** El calendario **ya muestra el tema de la clase**:
+[`schedule/page.tsx:338`](../src/app/schedule/page.tsx) renderiza `schedule.lessons[0].topic`, y las
+tarjetas ya distinguen visualmente la clase cargada de la que no lo está (gris y borde punteado
+cuando no hay `Lesson`). No hay que traer datos nuevos ni inventar una vista: hay que **ensanchar un
+filtro**.
+
+Hoy el filtro es:
+
+```ts
+...(isTeacher ? { teacherId: session.user.id } : {})
+```
+
+El cambio es incluir además los cursos cuyo `level` coincida con el de alguno de los suyos, y
+marcarlos como ajenos para pintarlos distinto.
+
+**El problema está en cómo se guarda el nivel.** `Course.level` es un `String?`
+([`schema.prisma:182`](../prisma/schema.prisma)), y `Level` es una tabla aparte
+([`schema.prisma:280`](../prisma/schema.prisma)) **sin clave foránea que las una**. El formulario de
+curso elige de la lista de niveles, así que en general el texto va a coincidir, pero nada lo
+garantiza: renombrar un nivel no actualiza los cursos, y un curso viejo puede tener un nombre que ya
+no existe. "Mismo nivel" comparando strings funciona hasta que alguien renombra algo. Es la misma
+deuda de [ARQ-01](#arq-01) (claves foráneas faltantes) y conviene decidir si se arregla acá o se
+asume.
+
+**Definir también:** qué ve un docente cuyo curso tiene `level` en `null` — hoy es un valor
+permitido. Lo razonable es que no vea pares, pero hay que decirlo.
+
+**Lo importante del "sólo ver".** Las tarjetas del calendario son clicables y llevan a la clase. Hay
+que asegurarse de que las ajenas **no naveguen**, porque hoy las pantallas de destino no distinguen
+al docente propio del ajeno: [`attendance/page.tsx`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx)
+autoriza por **instituto**, no por curso. O sea que un docente del instituto ya puede abrir la
+asistencia de la clase de otro escribiendo la URL — esto no lo empeora, pero lo pone a un clic. Si
+"sólo ver" es un requisito real y no una preferencia visual, hay que cerrarlo en las páginas de
+destino y no en el color de la tarjeta.
+
+**Por qué está bueno el pedido.** Es coordinación pedagógica real entre docentes que dan el mismo
+nivel, y sale casi gratis sobre lo que ya existe. Es de las pocas cosas del backlog donde el valor
+es alto y el trabajo chico.
 
 ---
 
