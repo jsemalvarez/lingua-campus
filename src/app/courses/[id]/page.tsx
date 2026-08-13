@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange, AlertTriangle } from "lucide-react";
 import { ScheduleList } from "./ScheduleList";
 import { LessonList } from "./lessons/components/LessonList";
+import { LessonMonthNav } from "./lessons/components/LessonMonthNav";
 import { CoursePracticeMetrics } from "./lessons/components/CoursePracticeMetrics";
 import { EditCourseModal } from "../components/EditCourseModal";
 import { RemoveStudentButton } from "../components/RemoveStudentButton";
@@ -18,18 +19,60 @@ import { getActiveRole } from "@/lib/roles";
 import { CourseReportsPanel } from "@/features/courses/CourseReportsPanel";
 
 
+/**
+ * Las fechas de las clases son `@db.Date`, así que Prisma las devuelve a medianoche UTC.
+ * Todo el manejo de meses se hace en UTC para no correrse un día por zona horaria.
+ */
+type MonthKey = string; // "YYYY-MM"
+
+function monthKeyOf(date: Date): MonthKey {
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthRange(key: MonthKey): { start: Date; end: Date } {
+    const [year, month] = key.split("-").map(Number);
+    return {
+        start: new Date(Date.UTC(year, month - 1, 1)),
+        end: new Date(Date.UTC(year, month, 1)),
+    };
+}
+
+/**
+ * Mes a mostrar por defecto: el de la clase más cercana a hoy.
+ *
+ * No alcanza con el mes calendario actual: si el curso terminó en noviembre y
+ * estamos en enero, ese mes está vacío y el profesor entra a una pantalla en blanco.
+ */
+function defaultMonthKey(dates: Date[]): MonthKey {
+    const now = new Date();
+    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    if (dates.length === 0) return monthKeyOf(new Date(today));
+
+    const closest = dates.reduce((best, d) =>
+        Math.abs(d.getTime() - today) < Math.abs(best.getTime() - today) ? d : best
+    );
+    return monthKeyOf(closest);
+}
+
 // TODO: Create StudentList component to handle enrollments. For now we will create an empty block
-export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CourseDetailPage({
+    params,
+    searchParams,
+}: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ mes?: string }>;
+}) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, roles: true, instituteId: true }
+        select: { id: true, roles: true, instituteId: true }
     });
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
@@ -44,19 +87,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             teacher: { select: { id: true, name: true, email: true } },
             classroom: { select: { id: true, name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
-            lessons: {
-                orderBy: { date: 'asc' },
-                include: {
-                    practice: {
-                        select: {
-                            speakingPhrases: true,
-                            listeningText: true,
-                            chatScenario: true,
-                            isPublished: true,
-                        }
-                    }
-                }
-            },
             enrollments: {
                 select: { id: true, status: true, student: { select: { id: true, name: true, phone: true } } },
                 orderBy: { student: { name: 'asc' } }
@@ -73,11 +103,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
     const instituteTeachers = (activeRole === "ADMIN" || activeRole === "SECRETARY") ? await prisma.user.findMany({
         where: { 
-            instituteId: user.instituteId, 
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            instituteId: user.instituteId,
+            roles: { has: "TEACHER" }
         },
         select: { id: true, name: true, email: true },
         orderBy: { name: 'asc' }
@@ -96,8 +123,58 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     const isTeacherOrAdmin = activeRole === "ADMIN" || activeRole === "SECRETARY" || user.id === course.teacher?.id;
     const isFinished = course.status === "FINISHED";
 
+    // ── Navegación por mes del libro de temas ────────────────────────────────
+    // Traemos sólo las fechas (payload mínimo) para armar el navegador de meses.
+    const allLessonDates = await prisma.lesson.findMany({
+        where: { courseId: course.id, status: "ACTIVE" },
+        select: { date: true },
+        orderBy: { date: 'asc' }
+    });
+
+    const monthCounts = new Map<MonthKey, number>();
+    for (const { date } of allLessonDates) {
+        const key = monthKeyOf(date);
+        monthCounts.set(key, (monthCounts.get(key) ?? 0) + 1);
+    }
+    const availableMonths = [...monthCounts.entries()]
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+
+    const { mes } = await searchParams;
+    const requestedMonth = mes && monthCounts.has(mes) ? mes : null;
+    const selectedMonth = requestedMonth ?? defaultMonthKey(allLessonDates.map(l => l.date));
+    const { start: monthStart, end: monthEnd } = monthRange(selectedMonth);
+
+    // El atajo "Hoy" sólo tiene sentido si el mes actual tiene clases cargadas
+    const currentMonthKey = monthKeyOf(new Date());
+    const todayMonth = monthCounts.has(currentMonthKey) ? currentMonthKey : null;
+
+    // Sólo las clases del mes seleccionado: es lo que evita traer un curso anual entero
+    const lessons = await prisma.lesson.findMany({
+        where: { courseId: course.id, status: "ACTIVE", date: { gte: monthStart, lt: monthEnd } },
+        orderBy: { date: 'asc' },
+        include: {
+            practice: {
+                select: {
+                    speakingPhrases: true,
+                    listeningText: true,
+                    chatScenario: true,
+                    isPublished: true,
+                }
+            }
+        }
+    });
+
     // ── Practice metrics (only for teacher/admin view) ───────────────────────
-    const publishedLessons = course.lessons.filter(l => l.practice?.isPublished);
+    // Alcance de curso completo a propósito: el panel muestra promedios generales
+    // y "la clase más difícil", que perderían sentido acotados a un mes.
+    const publishedLessons = isTeacherOrAdmin
+        ? await prisma.lesson.findMany({
+            where: { courseId: course.id, status: "ACTIVE", practice: { is: { isPublished: true } } },
+            select: { id: true, topic: true, date: true },
+            orderBy: { date: 'asc' }
+        })
+        : [];
     const publishedLessonIds = publishedLessons.map(l => l.id);
 
     const practiceSessions = isTeacherOrAdmin && publishedLessonIds.length > 0
@@ -230,14 +307,25 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                                 </p>
                             </div>
                             <div className="flex-1 min-h-0">
+                                <LessonMonthNav
+                                    courseId={course.id}
+                                    months={availableMonths}
+                                    selectedMonth={selectedMonth}
+                                    todayMonth={todayMonth}
+                                />
                                 <LessonList
                                     courseId={course.id}
-                                    lessons={course.lessons}
+                                    lessons={lessons}
                                     schedules={course.schedules}
                                     isTeacherOrAdmin={isTeacherOrAdmin && !isFinished}
                                     courseStatus={course.status}
                                     startDate={course.startDate || undefined}
                                     endDate={course.endDate || undefined}
+                                    emptyMessage={
+                                        allLessonDates.length > 0
+                                            ? "No hay clases cargadas en este mes."
+                                            : undefined
+                                    }
                                 />
                             </div>
                         </Card>

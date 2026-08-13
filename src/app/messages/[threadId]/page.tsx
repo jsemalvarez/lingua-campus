@@ -15,16 +15,11 @@ export default async function ThreadPage({ params }: Props) {
     const session = await getServerSession(authOptions);
     if (!session?.user) redirect("/login");
 
-    const sessionUser = session.user as any;
-    const userRoles: string[] = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles: string[] = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
-    const isStudent = activeRole === "STUDENT";
 
-    const thread = await getThread({
-        threadId,
-        currentUserId: sessionUser.id,
-        isStudent,
-    });
+    const thread = await getThread({ threadId });
 
     if (!thread) notFound();
 
@@ -32,12 +27,7 @@ export default async function ThreadPage({ params }: Props) {
         <div className="min-h-screen bg-background pb-20">
             <Navbar currentActiveRole={activeRole} />
             <main className="container mx-auto px-4 sm:px-6 py-8 max-w-3xl">
-                <ThreadViewClient
-                    thread={thread}
-                    currentUserId={sessionUser.id}
-                    isStudent={isStudent}
-                    activeRole={activeRole}
-                />
+                <ThreadViewClient thread={thread} />
             </main>
         </div>
     );

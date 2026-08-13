@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_ADMINS, INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 export async function GET(
     req: NextRequest,
@@ -9,17 +8,9 @@ export async function GET(
 ) {
     try {
         const { id: courseId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user?.email) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true, roles: true }
-        });
-
-        if (!user || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -32,8 +23,8 @@ export async function GET(
             return NextResponse.json({ error: "Course not found" }, { status: 404 });
         }
 
-        const hasAccessRoles = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
-        const isAuthorizedGet = hasAccessRoles || user.id === course.teacherId;
+        const isAdminOrSecretary = user.activeRole === "ADMIN" || user.activeRole === "SECRETARY";
+        const isAuthorizedGet = isAdminOrSecretary || user.userId === course.teacherId;
 
         if (!isAuthorizedGet) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -142,24 +133,10 @@ export async function POST(
 ) {
     try {
         const { id: courseId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user?.email) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true, roles: true }
-        });
-
-        if (!user || !user.instituteId) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-        // Only ADMIN, SECRETARY or SUPERADMIN can link templates to course
-        const isAuthorizedPost = user?.roles?.some(r => ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(r)) || ["ADMIN", "SUPERADMIN", "SECRETARY"].includes(user?.role || "");
-
-        if (!isAuthorizedPost) {
+        // Only ADMIN or SECRETARY can link templates to course
+        const user = await requireRole(INSTITUTE_ADMINS);
+        if (!user) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

@@ -1,13 +1,11 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Plus, BookOpen, Layers, MapPin, Archive, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { CourseListClientRenderer } from "./components/CourseListClientRenderer";
-import { getActiveRole } from "@/lib/roles";
 
 const DAYS_OF_WEEK = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -17,22 +15,19 @@ interface PageProps {
 
 export default async function CoursesPage(props: PageProps) {
     const searchParams = await props.searchParams;
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
 
     // Validar Rol (Solo Admin y Profesores pueden ver esto, NO usar en panel SuperAdmin)
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) redirect("/dashboard"); // Si sos superadmin andá a tu panel
+
+    const activeRole = auth.activeRole;
+
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true, preferences: true }
+        where: { id: auth.userId },
+        select: { id: true, instituteId: true, preferences: true }
     });
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
-    const activeRole = await getActiveRole(userRoles);
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard"); // Si sos superadmin andá a tu panel
-    }
+    if (!user?.instituteId) redirect("/dashboard");
 
     const tab = typeof searchParams.tab === 'string' ? searchParams.tab : 'active';
     const isActiveTab = tab === 'active';
@@ -178,7 +173,7 @@ export default async function CoursesPage(props: PageProps) {
                 ) : (
                     <CourseListClientRenderer
                         initialCourses={sortedCourses}
-                        userRole={user.role}
+                        userRole={activeRole}
                         DAYS_OF_WEEK={DAYS_OF_WEEK}
                         isDraggable={isActiveTab}
                     />

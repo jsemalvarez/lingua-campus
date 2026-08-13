@@ -1,5 +1,8 @@
 # Lingua Campus - Pendientes (TODO)
 
+> ⚠️ Este documento está desactualizado (al 2026-08-09). Para deuda técnica, bugs y mejoras
+> priorizadas, ver [BACKLOG-TECNICO.md](./BACKLOG-TECNICO.md).
+
 ## General
 - [ ] Múltiples entornos (Local, Stage, Prod) verificados usando variables de entorno
 - [x] Configurar esquema de migraciones seguras (Prisma Migrate) // Reflejado en docs/DATABASE_SETUP.md

@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
 import { ScheduleFilters } from "./components/ScheduleFilters";
 import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -22,7 +23,10 @@ interface PageProps {
 
 export default async function SchedulePage(props: PageProps) {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) redirect("/login");
+    // El `id` se usa para filtrar los cursos del profesor y los vínculos del
+    // tutor. En Prisma un filtro en `undefined` se ignora en vez de fallar, así
+    // que sin identidad la agenda mostraría de más.
+    if (!session?.user?.id) redirect("/login");
 
     const params = await props.searchParams;
     const view = (params.view as string) || "week";
@@ -42,8 +46,8 @@ export default async function SchedulePage(props: PageProps) {
     const dateStr = format(displayDateNoon, "yyyy-MM-dd");
     const isToday = isSameDay(displayDateNoon, new Date());
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const role = await getActiveRole(userRoles);
 
     let instituteId = "";
@@ -51,14 +55,14 @@ export default async function SchedulePage(props: PageProps) {
 
     if (role === "STUDENT") {
         const student = await prisma.student.findUnique({
-            where: { id: (session.user as any).id },
+            where: { id: session.user.id },
             include: { enrollments: { select: { courseId: true } } }
         });
         if (!student) redirect("/login");
         instituteId = student.instituteId;
         studentEnrollments = student.enrollments.map(e => e.courseId);
     } else if (role === "GUARDIAN") {
-        const guardianId = (session.user as any).id;
+        const guardianId = session.user.id;
         const guardianLinks = await prisma.guardianStudentLink.findMany({
             where: { guardianId },
             include: {
@@ -80,11 +84,8 @@ export default async function SchedulePage(props: PageProps) {
             });
         });
     } else {
-        const user = await prisma.user.findUnique({
-            where: { id: (session.user as any).id },
-            select: { id: true, role: true, instituteId: true }
-        });
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             redirect("/dashboard");
         }
         instituteId = user.instituteId;
@@ -92,7 +93,7 @@ export default async function SchedulePage(props: PageProps) {
 
     const isTeacher = role === "TEACHER";
     const isStudentOrGuardian = role === "STUDENT" || role === "GUARDIAN";
-    const effectiveTeacherId = isTeacher ? (session.user as any).id : (params.teacherId as string);
+    const effectiveTeacherId = isTeacher ? session.user.id : (params.teacherId as string);
 
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
@@ -100,15 +101,15 @@ export default async function SchedulePage(props: PageProps) {
             where: { 
                 instituteId: instituteId, 
                 status: "ACTIVE",
-                ...(isTeacher ? { teacherId: (session.user as any).id } : {}),
+                ...(isTeacher ? { teacherId: session.user.id } : {}),
                 ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             },
             orderBy: { name: "asc" }
         }),
         prisma.user.findMany({
             where: { 
-                instituteId: instituteId, 
-                role: "TEACHER", 
+                instituteId: instituteId,
+                roles: { has: "TEACHER" },
                 status: "ACTIVE"
             },
             orderBy: { name: "asc" }
@@ -137,9 +138,9 @@ export default async function SchedulePage(props: PageProps) {
     const dayEndUTC = new Date(displayDateNoon);
     dayEndUTC.setUTCHours(23, 59, 59, 999);
 
-    const lessonsWhere = view === "day" 
-        ? { date: { gte: dayStartUTC, lte: dayEndUTC } }
-        : { date: { gte: weekStartUTC, lte: weekEndUTC } };
+    const lessonsWhere = view === "day"
+        ? { status: "ACTIVE", date: { gte: dayStartUTC, lte: dayEndUTC } }
+        : { status: "ACTIVE", date: { gte: weekStartUTC, lte: weekEndUTC } };
 
     const allSchedules = await prisma.schedule.findMany({
         where: {

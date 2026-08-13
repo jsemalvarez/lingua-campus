@@ -1,23 +1,13 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { requireRole } from "@/lib/authz";
 
 export async function updateGuardianAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const adminUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true, roles: true }
-    }) as any;
-
-    const isAdmin = adminUser?.roles?.includes("ADMIN") || adminUser?.roles?.includes("SUPERADMIN") || adminUser?.role === "ADMIN" || adminUser?.role === "SUPERADMIN";
-
-    if (!adminUser || !isAdmin || !adminUser.instituteId) {
+    const adminUser = await requireRole(["ADMIN"]);
+    if (!adminUser) {
         return { success: false, error: "Sin permisos" };
     }
 
@@ -87,17 +77,8 @@ export async function updateGuardianAction(formData: FormData) {
 }
 
 export async function resetGuardianPassword(guardianId: string, customPassword?: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const adminUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true, roles: true }
-    }) as any;
-
-    const isAdmin = adminUser?.roles?.includes("ADMIN") || adminUser?.roles?.includes("SUPERADMIN") || adminUser?.role === "ADMIN" || adminUser?.role === "SUPERADMIN";
-
-    if (!adminUser || !isAdmin || !adminUser.instituteId) {
+    const adminUser = await requireRole(["ADMIN"]);
+    if (!adminUser) {
         return { success: false, error: "Sin permisos" };
     }
 

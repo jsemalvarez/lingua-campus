@@ -20,11 +20,11 @@ export default async function AttendancePage({
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
+        select: { id: true, instituteId: true }
     });
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
@@ -58,8 +58,8 @@ export default async function AttendancePage({
     const isReadOnly = course.status === "FINISHED";
     const students = course.enrollments.map((e: any) => e.student);
 
-    const lesson = await prisma.lesson.findUnique({
-        where: { id: lessonId }
+    const lesson = await prisma.lesson.findFirst({
+        where: { id: lessonId, status: "ACTIVE" }
     });
 
     if (!lesson) {

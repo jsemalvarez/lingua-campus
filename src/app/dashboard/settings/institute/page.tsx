@@ -1,38 +1,17 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import prisma from "@/lib/prisma";
 import { InstituteSettingsForm } from "@/features/institutes/InstituteSettingsForm";
 import { Building2, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { getActiveRole } from "@/lib/roles";
+import { requireRole } from "@/lib/authz";
 
 export default async function InstituteSettingsPage() {
-    const session = await getServerSession(authOptions);
+    const auth = await requireRole(["ADMIN"]);
+    if (!auth) redirect("/dashboard");
 
-    if (!session || !session.user) {
-        redirect("/login");
-    }
-
-    const user = session.user as any;
-
-    const userRoles = user.roles || [user.role];
-    const activeRole = await getActiveRole(userRoles);
-
-    if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") {
-        redirect("/dashboard");
-    }
-
-    const instituteId = user.instituteId;
-
-    if (!instituteId) {
-        return (
-            <div className="p-8 text-center bg-card rounded-2xl border border-border">
-                <p className="text-muted-foreground text-sm">No perteneces a ningún instituto.</p>
-            </div>
-        );
-    }
+    const activeRole = auth.activeRole;
+    const instituteId = auth.instituteId;
 
     const institute = await prisma.institute.findUnique({
         where: { id: instituteId }

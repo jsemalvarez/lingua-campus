@@ -2,6 +2,44 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getAuthContext } from "@/lib/authz";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTEXTO DE SESIÓN
+// ─────────────────────────────────────────────────────────────────────────────
+
+type MessagingContext = {
+    userId: string;
+    isStudent: boolean;
+    activeRole: string;
+    instituteId: string;
+    /** ADMIN / SECRETARY / SUPERADMIN: ven todos los hilos del instituto */
+    isAdmin: boolean;
+};
+
+/**
+ * Identidad y rol activo de quien llama, más el atajo `isAdmin` que usa este módulo.
+ *
+ * IMPORTANTE: estas funciones son server actions, es decir endpoints POST que el
+ * navegador puede invocar con los argumentos que quiera. La identidad NUNCA debe
+ * llegar por parámetro: si lo hiciera, cualquier usuario autenticado podría leer
+ * hilos ajenos o enviar mensajes en nombre de otra persona.
+ */
+async function getMessagingContext(): Promise<MessagingContext> {
+    const ctx = await getAuthContext();
+    if (!ctx) throw new Error("No autorizado.");
+
+    return {
+        userId: ctx.userId,
+        isStudent: ctx.isStudent,
+        activeRole: ctx.activeRole,
+        instituteId: ctx.instituteId ?? "",
+        isAdmin:
+            ctx.activeRole === "ADMIN" ||
+            ctx.activeRole === "SECRETARY" ||
+            ctx.activeRole === "SUPERADMIN",
+    };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -55,6 +93,11 @@ export type ThreadDetail = {
         sharedUrlDesc: string | null;
         sharedUrlImage: string | null;
     }[];
+    /**
+     * false cuando un admin del instituto abre un hilo del que no participa.
+     * Si responde, se suma como participante.
+     */
+    viewerIsParticipant: boolean;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,17 +109,9 @@ export type ThreadDetail = {
  * - Admin/Secretary: todos los hilos del instituto
  * - Teacher/Guardian/Student: solo sus hilos como participante
  */
-export async function getThreadsForUser({
-    userId,
-    isStudent,
-    instituteId,
-    isAdmin,
-}: {
-    userId: string;
-    isStudent: boolean;
-    instituteId: string;
-    isAdmin: boolean;
-}): Promise<ThreadPreview[]> {
+export async function getThreadsForUser(): Promise<ThreadPreview[]> {
+    const { userId, isStudent, instituteId, isAdmin } = await getMessagingContext();
+
     // Admin ve todos los hilos del instituto
     const whereClause = isAdmin
         ? { instituteId }
@@ -91,7 +126,7 @@ export async function getThreadsForUser({
             course: { select: { name: true } },
             participants: {
                 include: {
-                    user: { select: { id: true, name: true, roles: true, role: true } },
+                    user: { select: { id: true, name: true, roles: true } },
                     student: { select: { id: true, name: true } },
                 },
             },
@@ -107,9 +142,9 @@ export async function getThreadsForUser({
         const authorParticipant = thread.participants.find((p) => p.isAuthor);
         let authorName = "Sistema";
         if (authorParticipant?.user) {
-            const u = authorParticipant.user as any;
+            const u = authorParticipant.user;
             const actingRole = authorParticipant.actingRole;
-            const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+            const userRoles: string[] = u.roles;
             
             if (actingRole === "ADMIN" || actingRole === "SUPERADMIN" || (!actingRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
                 authorName = "Administración";
@@ -174,27 +209,30 @@ export async function getThreadsForUser({
  */
 export async function getThread({
     threadId,
-    currentUserId,
-    isStudent,
 }: {
     threadId: string;
-    currentUserId: string;
-    isStudent: boolean;
 }): Promise<ThreadDetail | null> {
+    const {
+        userId: currentUserId,
+        isStudent,
+        instituteId,
+        isAdmin,
+    } = await getMessagingContext();
+
     const thread = await prisma.messageThread.findUnique({
         where: { id: threadId },
         include: {
             course: { select: { name: true } },
             participants: {
                 include: {
-                    user: { select: { id: true, name: true, roles: true, role: true } },
+                    user: { select: { id: true, name: true, roles: true } },
                     student: { select: { id: true, name: true } },
                 },
             },
             messages: {
                 orderBy: { createdAt: "asc" },
                 include: {
-                    senderUser: { select: { id: true, name: true, roles: true, role: true } },
+                    senderUser: { select: { id: true, name: true, roles: true } },
                     senderStudent: { select: { id: true, name: true } },
                 },
                 // Selects all fields by default — attachment/link fields included automatically
@@ -204,19 +242,27 @@ export async function getThread({
 
     if (!thread) return null;
 
-    // Verificar que el usuario sea participante
     const isParticipant = thread.participants.some((p) =>
         isStudent ? p.studentId === currentUserId : p.userId === currentUserId
     );
-    if (!isParticipant) return null;
 
-    // Marcar como leído
-    await prisma.threadParticipant.updateMany({
-        where: isStudent
-            ? { threadId, studentId: currentUserId }
-            : { threadId, userId: currentUserId },
-        data: { lastReadAt: new Date() },
-    });
+    // Los admins del instituto pueden abrir cualquier hilo, aunque no participen.
+    // El chequeo de instituto es imprescindible acá: para un participante la
+    // pertenencia al hilo ya garantizaba el aislamiento entre institutos, pero
+    // el acceso por rol no, y sin esta línea un admin leería hilos de otro instituto.
+    const isInstituteAdmin = isAdmin && !!instituteId && thread.instituteId === instituteId;
+
+    if (!isParticipant && !isInstituteAdmin) return null;
+
+    // Marcar como leído (sólo si participa: un admin observador no tiene fila que actualizar)
+    if (isParticipant) {
+        await prisma.threadParticipant.updateMany({
+            where: isStudent
+                ? { threadId, studentId: currentUserId }
+                : { threadId, userId: currentUserId },
+            data: { lastReadAt: new Date() },
+        });
+    }
 
     return {
         id: thread.id,
@@ -228,9 +274,9 @@ export async function getThread({
         participants: thread.participants.map((p) => {
             let name = "Desconocido";
             if (p.user) {
-                const u = p.user as any;
+                const u = p.user;
                 const actingRole = p.actingRole;
-                const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+                const userRoles: string[] = u.roles;
                 if (actingRole === "ADMIN" || actingRole === "SUPERADMIN" || (!actingRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
                     name = "Administración";
                 } else if (actingRole === "SECRETARY" || (!actingRole && userRoles.includes("SECRETARY"))) {
@@ -252,9 +298,9 @@ export async function getThread({
         messages: thread.messages.map((msg) => {
             let senderName = "Sistema";
             if (msg.senderUser) {
-                const u = msg.senderUser as any;
+                const u = msg.senderUser;
                 const senderRole = msg.senderRole;
-                const userRoles: string[] = u.roles?.length ? u.roles : [u.role];
+                const userRoles: string[] = u.roles;
                 if (senderRole === "ADMIN" || senderRole === "SUPERADMIN" || (!senderRole && (userRoles.includes("SUPERADMIN") || userRoles.includes("ADMIN")))) {
                     senderName = "Administración";
                 } else if (senderRole === "SECRETARY" || (!senderRole && userRoles.includes("SECRETARY"))) {
@@ -287,29 +333,15 @@ export async function getThread({
                 sharedUrlImage: (msg as any).sharedUrlImage ?? null,
             };
         }),
+        viewerIsParticipant: isParticipant,
     };
 }
 
 /**
  * Cuenta cuántos hilos tienen mensajes no leídos para el badge de la Navbar.
  */
-export async function getUnreadThreadCount({
-    userId,
-    isStudent,
-    instituteId,
-    isAdmin,
-}: {
-    userId: string;
-    isStudent: boolean;
-    instituteId: string;
-    isAdmin: boolean;
-}): Promise<number> {
-    const threads = await getThreadsForUser({
-        userId,
-        isStudent,
-        instituteId,
-        isAdmin,
-    });
+export async function getUnreadThreadCount(): Promise<number> {
+    const threads = await getThreadsForUser();
     return threads.filter((t) => t.unreadCount > 0).length;
 }
 
@@ -323,28 +355,39 @@ export async function getUnreadThreadCount({
  * En Fase 1, STUDENT y GUARDIAN no pueden iniciar (solo responder).
  */
 export async function createThread({
-    instituteId,
     subject,
     body,
     type = "DIRECT",
     courseId,
-    senderUserId,
-    senderRole,
     recipientUserIds = [],
     recipientStudentIds = [],
     includeGuardians = false,
 }: {
-    instituteId: string;
     subject: string;
     body: string;
     type?: "DIRECT" | "COURSE_BLAST";
     courseId?: string;
-    senderUserId: string; // Solo Users pueden iniciar en Fase 1
-    senderRole?: string;
     recipientUserIds?: string[];
     recipientStudentIds?: string[];
     includeGuardians?: boolean; // Si true, agrega tutores de los alumnos seleccionados
 }): Promise<{ threadId: string }> {
+    const {
+        userId: senderUserId,
+        activeRole: senderRole,
+        instituteId,
+        isAdmin,
+        isStudent,
+    } = await getMessagingContext();
+
+    // Fase 1: sólo ADMIN, SECRETARY y TEACHER pueden iniciar hilos
+    if (isStudent || (!isAdmin && senderRole !== "TEACHER")) {
+        throw new Error("No tenés permiso para iniciar conversaciones.");
+    }
+
+    if (!instituteId) {
+        throw new Error("Tu usuario no está asociado a un instituto.");
+    }
+
     if (!subject.trim() || !body.trim()) {
         throw new Error("El asunto y el mensaje son obligatorios.");
     }
@@ -414,9 +457,6 @@ export async function createThread({
 export async function sendMessage({
     threadId,
     body,
-    senderUserId,
-    senderStudentId,
-    senderRole,
     // File attachment
     attachmentPath,
     attachmentName,
@@ -430,9 +470,6 @@ export async function sendMessage({
 }: {
     threadId: string;
     body: string;
-    senderUserId?: string;
-    senderStudentId?: string;
-    senderRole?: string;
     attachmentPath?: string;
     attachmentName?: string;
     attachmentMime?: string;
@@ -448,17 +485,48 @@ export async function sendMessage({
         throw new Error("El mensaje no puede estar vacío.");
     }
 
-    const currentUserId = senderUserId ?? senderStudentId;
-    const isStudent = !!senderStudentId;
+    const {
+        userId: currentUserId,
+        isStudent,
+        activeRole: senderRole,
+        instituteId,
+        isAdmin,
+    } = await getMessagingContext();
+
+    const senderUserId = isStudent ? undefined : currentUserId;
+    const senderStudentId = isStudent ? currentUserId : undefined;
 
     // Verificar que el sender sea participante del hilo
-    const participant = await prisma.threadParticipant.findFirst({
+    let participant = await prisma.threadParticipant.findFirst({
         where: isStudent
             ? { threadId, studentId: currentUserId }
             : { threadId, userId: currentUserId },
     });
 
-    if (!participant) throw new Error("No tenés acceso a este hilo.");
+    if (!participant) {
+        // Un admin del instituto puede responder un hilo del que no participaba.
+        // Al hacerlo se suma como participante, de modo que el resto vea que
+        // se incorporó a la conversación en lugar de recibir un mensaje suelto.
+        const thread = await prisma.messageThread.findUnique({
+            where: { id: threadId },
+            select: { instituteId: true },
+        });
+
+        const canJoin =
+            isAdmin && !!instituteId && thread?.instituteId === instituteId;
+
+        if (!canJoin) throw new Error("No tenés acceso a este hilo.");
+
+        participant = await prisma.threadParticipant.create({
+            data: {
+                threadId,
+                userId: currentUserId,
+                isAuthor: false,
+                actingRole: senderRole,
+                lastReadAt: new Date(),
+            },
+        });
+    }
 
     await prisma.$transaction([
         prisma.message.create({
@@ -502,19 +570,8 @@ export async function sendMessage({
  * Devuelve los cursos de un profesor con sus alumnos y tutores.
  * Usado por el composer para seleccionar destinatarios.
  */
-export async function getCoursesWithRecipientsForUser({
-    userId,
-    roles,
-    instituteId,
-}: {
-    userId: string;
-    roles: string[];
-    instituteId: string;
-}) {
-    const isAdmin =
-        roles.includes("ADMIN") ||
-        roles.includes("SECRETARY") ||
-        roles.includes("SUPERADMIN");
+export async function getCoursesWithRecipientsForUser() {
+    const { userId, instituteId, isAdmin } = await getMessagingContext();
 
     // Admin/Secretary ven todos los cursos activos del instituto
     const courseFilter = isAdmin
@@ -554,7 +611,7 @@ export async function getCoursesWithRecipientsForUser({
             where: {
                 instituteId,
                 status: "ACTIVE",
-                OR: [{ role: "TEACHER" }, { roles: { has: "TEACHER" } }],
+                roles: { has: "TEACHER" },
             },
             select: { id: true, name: true },
             orderBy: { name: "asc" },

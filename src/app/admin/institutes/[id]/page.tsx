@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSuperadmin } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { AdminNavbar } from "../AdminNavbar";
@@ -11,9 +10,7 @@ import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
 
 export default async function EditInstitutePage({ params }: { params: Promise<{ id: string }> }) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || (session.user as any).role !== "SUPERADMIN") {
+    if (!await requireSuperadmin()) {
         redirect("/login");
     }
 
@@ -23,7 +20,7 @@ export default async function EditInstitutePage({ params }: { params: Promise<{ 
         where: { id },
         include: {
             users: {
-                where: { role: "ADMIN" }
+                where: { roles: { has: "ADMIN" } }
             }
         }
     });

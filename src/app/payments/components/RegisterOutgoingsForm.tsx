@@ -8,7 +8,7 @@ import { UserCircle, Receipt } from "lucide-react";
 interface UserInfo {
     id: string;
     name: string;
-    role: string;
+    roles: string[];
 }
 
 interface RegisterOutgoingsFormProps {

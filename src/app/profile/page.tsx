@@ -15,16 +15,15 @@ export default async function ProfilePage() {
         redirect("/login");
     }
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
-    const role = (session.user as any).role;
     let userData: any = null;
 
-    if (role === "STUDENT") {
+    if (userRoles.includes("STUDENT")) {
         const student = await prisma.student.findUnique({
-            where: { id: (session.user as any).id },
+            where: { id: sessionUser.id },
         });
         if (student) {
             let registeredLevelName = student.registeredLevel || undefined;
@@ -38,28 +37,27 @@ export default async function ProfilePage() {
             userData = {
                 ...student,
                 registeredLevelName,
-                role: "STUDENT",
+                isStudent: true,
             };
         }
     } else {
         const user = await prisma.user.findUnique({
-            where: { id: (session.user as any).id },
+            where: { id: sessionUser.id },
             select: {
                 name: true,
                 phone: true,
                 email: true,
-                role: true,
             },
         });
         if (user) {
-            userData = user;
+            userData = { ...user, isStudent: false };
         }
     }
 
     if (!userData) redirect("/login");
 
     // Para un SuperAdmin mostramos la barra de navegación del panel maestro
-    const isSuperAdmin = role === "SUPERADMIN";
+    const isSuperAdmin = userRoles.includes("SUPERADMIN");
 
     return (
         <div className="min-h-screen bg-background text-foreground">

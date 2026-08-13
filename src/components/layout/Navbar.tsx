@@ -35,9 +35,8 @@ export function Navbar({
     const brandName = tenant ? tenant.name : "Lingua Campus";
     const primaryColor = "#4F46E5";
 
-    const sessionUser = session?.user as any;
-    const userRoleLegacy = sessionUser?.role || "TEACHER";
-    const userRoles = sessionUser?.roles || [userRoleLegacy];
+    const sessionUser = session?.user;
+    const userRoles: string[] = sessionUser?.roles ?? [];
     
     // Si no viene el rol activo por prop, buscamos en cookies (Client side) o por defecto
     const [activeRole, setActiveRole] = React.useState(currentActiveRole || userRoles[0]);

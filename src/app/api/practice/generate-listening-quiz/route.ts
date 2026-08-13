@@ -1,31 +1,32 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { getAIProvider } from "@/lib/practice/providers/ai";
+import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
+import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
 
 /**
  * POST /api/practice/generate-listening-quiz
- * 
- * Body: { text: string, language?: string }
+ *
+ * Body: { lessonPracticeId: string }
+ *
+ * El texto sale de `LessonPractice.listeningText` y no del body (SEC-07).
+ *
+ * Se puede leer entero del servidor porque este endpoint sólo arma el
+ * cuestionario del texto **original**: cuando el alumno genera un texto nuevo,
+ * `/generate-listening` ya devuelve el texto y sus preguntas en la misma
+ * respuesta, y `ListeningLab` no vuelve a pasar por acá.
  */
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return new Response("No autorizado", { status: 401 });
+    const body = await readJsonBody(req);
+    const guard = await guardPracticeAi(body.lessonPracticeId);
+    if (!guard.ok) return guard.response;
+
+    const text = guard.practice.listeningText?.trim();
+    if (!text) {
+        return new Response("La práctica no tiene texto de listening", { status: 409 });
     }
 
     try {
-        const body = await req.json();
-        const { text, language } = body;
-
-        if (!text || typeof text !== 'string') {
-            return new Response("'text' es requerido", { status: 400 });
-        }
-
         const provider = getAIProvider();
-        const questions = await provider.generateListeningQuiz(
-            text,
-            language ?? "English"
-        );
+        const questions = await provider.generateListeningQuiz(text, PRACTICE_LANGUAGE);
 
         return Response.json({ questions });
     } catch (error: any) {

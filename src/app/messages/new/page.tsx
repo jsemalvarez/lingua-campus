@@ -15,8 +15,8 @@ export default async function NewMessagePage() {
     const session = await getServerSession(authOptions);
     if (!session?.user) redirect("/login");
 
-    const sessionUser = session.user as any;
-    const userRoles: string[] = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles: string[] = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     // Solo Staff puede redactar
@@ -28,11 +28,7 @@ export default async function NewMessagePage() {
 
     if (!canCompose) redirect("/messages");
 
-    const { courses, allTeachers } = await getCoursesWithRecipientsForUser({
-        userId: sessionUser.id,
-        roles: userRoles,
-        instituteId: sessionUser.instituteId,
-    });
+    const { courses, allTeachers } = await getCoursesWithRecipientsForUser();
 
     const isAdmin =
         activeRole === "ADMIN" ||
@@ -56,12 +52,9 @@ export default async function NewMessagePage() {
                 </div>
 
                 <ComposeClient
-                    senderUserId={sessionUser.id}
-                    instituteId={sessionUser.instituteId}
                     courses={courses}
                     allTeachers={allTeachers}
                     isAdmin={isAdmin}
-                    activeRole={activeRole}
                 />
             </main>
         </div>

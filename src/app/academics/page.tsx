@@ -8,16 +8,18 @@ import { StudentAcademicsView } from "../dashboard/components/StudentAcademicsVi
 
 export default async function StudentAcademicsPage() {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) redirect("/login");
+    // El `id` alimenta la búsqueda del alumno; sin él la consulta ni siquiera es
+    // válida para Prisma.
+    if (!session?.user?.id) redirect("/login");
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (activeRole !== "STUDENT") redirect("/dashboard");
 
     const student = await prisma.student.findUnique({
-        where: { id: (session.user as any).id },
+        where: { id: session.user.id },
         include: {
             institute: { select: { name: true } },
             enrollments: {
@@ -30,7 +32,13 @@ export default async function StudentAcademicsPage() {
                     }
                 }
             },
+            // La asistencia y las notas de una clase borrada no se muestran.
+            // Antes desaparecían solas: la clase se borraba físicamente y ambas
+            // tenían cascade. Con borrado lógico la fila queda —se puede
+            // recuperar—, pero en el legajo del alumno figuraría un "presente"
+            // de una clase que ya no existe.
             attendances: {
+                where: { lesson: { status: "ACTIVE" } },
                 orderBy: { lesson: { date: "desc" } },
                 take: 50,
                 include: {
@@ -40,6 +48,7 @@ export default async function StudentAcademicsPage() {
                 }
             },
             grades: {
+                where: { lesson: { status: "ACTIVE" } },
                 orderBy: { createdAt: "desc" },
                 take: 20,
                 include: {
@@ -72,7 +81,7 @@ export default async function StudentAcademicsPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const upcomingLessons = await prisma.lesson.findMany({
-        where: { courseId: { in: courseIds }, date: { gte: today } },
+        where: { courseId: { in: courseIds }, status: "ACTIVE", date: { gte: today } },
         orderBy: { date: "asc" },
         take: 5,
         include: {
@@ -99,10 +108,10 @@ export default async function StudentAcademicsPage() {
 
     if (student.enrollments.length > 0) {
         const mainCourseId = student.enrollments[0].courseId;
-        academicStats.totalLessons = await prisma.lesson.count({ where: { courseId: mainCourseId } });
-        academicStats.passedLessons = await prisma.lesson.count({ where: { courseId: mainCourseId, date: { lt: new Date() } } });
-        academicStats.presentsCount = await prisma.attendance.count({ where: { studentId: student.id, status: { in: ["PRESENT", "LATE"] } } });
-        academicStats.absentsCount = await prisma.attendance.count({ where: { studentId: student.id, status: "ABSENT" } });
+        academicStats.totalLessons = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE" } });
+        academicStats.passedLessons = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: new Date() } } });
+        academicStats.presentsCount = await prisma.attendance.count({ where: { studentId: student.id, lesson: { status: "ACTIVE" }, status: { in: ["PRESENT", "LATE"] } } });
+        academicStats.absentsCount = await prisma.attendance.count({ where: { studentId: student.id, lesson: { status: "ACTIVE" }, status: "ABSENT" } });
     }
 
     // ── Métricas de práctica ──────────────────────────────────────────────────

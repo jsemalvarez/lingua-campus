@@ -1,26 +1,20 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { SpreadsheetView } from "./SpreadsheetView";
 
 export default async function SpreadsheetPage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) redirect("/dashboard");
+
+    const activeRole = auth.activeRole;
 
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true, institute: { select: { name: true } } }
+        where: { id: auth.userId },
+        select: { id: true, instituteId: true, institute: { select: { name: true } } }
     });
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
-    const activeRole = await getActiveRole(userRoles);
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    if (!user?.instituteId) redirect("/dashboard");
 
     const isAdmin = activeRole === "ADMIN" || activeRole === "SECRETARY";
     const isTeacher = activeRole === "TEACHER";

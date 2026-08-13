@@ -1,24 +1,20 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
+import { requireRole } from "@/lib/authz";
 
+/**
+ * "Personal" es un módulo de administración: es lo que ya decide el menú y lo
+ * que ya exigía la mayoría de estas acciones. `createTeacherAction` era la
+ * excepción — sólo excluía a SUPERADMIN —, así que cualquiera del instituto
+ * podía darse de alta a sí mismo como profesor.
+ */
 export async function createTeacherAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const user = await requireRole(["ADMIN"]);
+    if (!user) return { success: false, error: "Sin permisos" };
 
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
@@ -42,7 +38,7 @@ export async function createTeacherAction(formData: FormData) {
             }
 
             // Verificar si ya tiene el rol asignado
-            if (existingEmail.roles.includes(role as any) || existingEmail.role === role) {
+            if (existingEmail.roles.includes(role as UserRole)) {
                 return { success: false, error: `Este usuario ya cuenta con el rol.` };
             }
 
@@ -51,7 +47,7 @@ export async function createTeacherAction(formData: FormData) {
                 where: { email },
                 data: {
                     roles: {
-                        set: [...existingEmail.roles, role as any]
+                        set: [...existingEmail.roles, role as UserRole]
                     }
                 }
             });
@@ -70,7 +66,6 @@ export async function createTeacherAction(formData: FormData) {
                 email,
                 password: hashedPassword,
                 phone: phone || null,
-                role: role as UserRole,
                 roles: [role as UserRole],
                 instituteId: user.instituteId,
                 hourlyRate: formData.get("hourlyRate") ? parseFloat(formData.get("hourlyRate") as string) : 0
@@ -88,17 +83,8 @@ export async function createTeacherAction(formData: FormData) {
 }
 
 export async function updateTeacherAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const admin = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPERADMIN") || !admin.instituteId) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const admin = await requireRole(["ADMIN"]);
+    if (!admin) return { success: false, error: "Sin permisos" };
 
     const teacherId = formData.get("teacherId") as string;
     const name = formData.get("name") as string;
@@ -145,24 +131,15 @@ export async function updateTeacherAction(formData: FormData) {
 }
 
 export async function resetTeacherPassword(teacherId: string, customPassword?: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const admin = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPERADMIN")) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const admin = await requireRole(["ADMIN"]);
+    if (!admin) return { success: false, error: "Sin permisos" };
 
     try {
         const teacher = await prisma.user.findUnique({
             where: { id: teacherId }
         });
 
-        if (!teacher || (teacher.role !== "TEACHER" && !teacher.roles.includes("TEACHER" as any)) || (admin.role === "ADMIN" && teacher.instituteId !== admin.instituteId)) {
+        if (!teacher || !teacher.roles.includes("TEACHER") || teacher.instituteId !== admin.instituteId) {
             return { success: false, error: "Profesor no encontrado o sin permisos" };
         }
 
@@ -182,24 +159,15 @@ export async function resetTeacherPassword(teacherId: string, customPassword?: s
 }
 
 export async function softDeleteTeacher(teacherId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const admin = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPERADMIN")) {
-        return { success: false, error: "Sin permisos para eliminar profesores" };
-    }
+    const admin = await requireRole(["ADMIN"]);
+    if (!admin) return { success: false, error: "Sin permisos para eliminar profesores" };
 
     try {
         const teacher = await prisma.user.findUnique({
             where: { id: teacherId }
         });
 
-        if (!teacher || (!teacher.roles.includes("TEACHER" as any) && teacher.role !== "TEACHER") || (admin.role === "ADMIN" && teacher.instituteId !== admin.instituteId)) {
+        if (!teacher || !teacher.roles.includes("TEACHER") || teacher.instituteId !== admin.instituteId) {
             return { success: false, error: "Profesor no encontrado o sin permisos" };
         }
 
@@ -213,7 +181,7 @@ export async function softDeleteTeacher(teacherId: string) {
                 where: { id: teacherId },
                 data: {
                     roles: {
-                        set: remainingRoles as any[]
+                        set: remainingRoles
                     }
                 }
             });
@@ -222,7 +190,7 @@ export async function softDeleteTeacher(teacherId: string) {
             // We can safely soft-delete the entire account.
             await prisma.user.update({
                 where: { id: teacherId },
-                data: { status: "DELETED" as any, roles: { set: [] } }
+                data: { status: "DELETED", roles: { set: [] } }
             });
         }
 
@@ -247,17 +215,8 @@ export async function processTeacherPayment(
     endDate?: string,
     lessonIds?: string[]
 ) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const admin = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPERADMIN") || !admin.instituteId) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const admin = await requireRole(["ADMIN"]);
+    if (!admin) return { success: false, error: "Sin permisos" };
 
     try {
         const totalAmount = amount + bonus - deduction;
@@ -271,7 +230,7 @@ export async function processTeacherPayment(
                     date: new Date(date),
                     category: "Payroll",
                     recipientId: teacherId,
-                    instituteId: admin.instituteId!,
+                    instituteId: admin.instituteId,
                     status: "VALID"
                 }
             });
@@ -285,16 +244,19 @@ export async function processTeacherPayment(
                     date: new Date(date),
                     description: finalDescription,
                     expenseId: expense.id,
-                    instituteId: admin.instituteId!,
-                    operatorId: admin.id
+                    instituteId: admin.instituteId,
+                    operatorId: admin.userId
                 }
             });
 
             // MARCAR CLASES COMO PAGADAS
+            // Sólo las activas: `calculateTeacherPayroll` no cuenta las borradas,
+            // así que marcarlas pagadas las ataría a un gasto que no las incluye.
             if (lessonIds && lessonIds.length > 0) {
                 await tx.lesson.updateMany({
                     where: {
                         id: { in: lessonIds },
+                        status: "ACTIVE",
                         expenseId: null
                     },
                     data: {
@@ -305,6 +267,7 @@ export async function processTeacherPayment(
                 await tx.lesson.updateMany({
                     where: {
                         course: { teacherId },
+                        status: "ACTIVE",
                         date: {
                             gte: new Date(startDate),
                             lte: new Date(endDate)
@@ -343,17 +306,8 @@ export async function processBulkPayrollAction(
         lessonIds?: string[];
     }[]
 ) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const admin = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPERADMIN") || !admin.instituteId) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const admin = await requireRole(["ADMIN"]);
+    if (!admin) return { success: false, error: "Sin permisos" };
 
     try {
         await prisma.$transaction(async (tx) => {
@@ -370,7 +324,7 @@ export async function processBulkPayrollAction(
                         date: new Date(p.date),
                         category: "Payroll",
                         recipientId: p.teacherId,
-                        instituteId: admin.instituteId!,
+                        instituteId: admin.instituteId,
                         status: "VALID"
                     }
                 });
@@ -383,16 +337,18 @@ export async function processBulkPayrollAction(
                         date: new Date(p.date),
                         description: finalDescription,
                         expenseId: expense.id,
-                        instituteId: admin.instituteId!,
-                        operatorId: admin.id
+                        instituteId: admin.instituteId,
+                        operatorId: admin.userId
                     }
                 });
 
-                // MARCAR CLASES COMO PAGADAS
+                // MARCAR CLASES COMO PAGADAS (mismo criterio que la liquidación
+                // individual: las borradas no entran en el cálculo ni se marcan)
                 if (p.lessonIds && p.lessonIds.length > 0) {
                     await tx.lesson.updateMany({
                         where: {
                             id: { in: p.lessonIds },
+                            status: "ACTIVE",
                             expenseId: null
                         },
                         data: {
@@ -403,6 +359,7 @@ export async function processBulkPayrollAction(
                     await tx.lesson.updateMany({
                         where: {
                             course: { teacherId: p.teacherId },
+                            status: "ACTIVE",
                             date: {
                                 gte: new Date(p.startDate),
                                 lte: new Date(p.endDate)

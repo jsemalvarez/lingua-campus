@@ -10,8 +10,8 @@ export default async function StudentPracticePage() {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) redirect("/login");
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (activeRole !== "STUDENT") redirect("/dashboard");
@@ -29,7 +29,7 @@ export default async function StudentPracticePage() {
         ? await prisma.lessonPractice.findMany({
             where: {
                 isPublished: true,
-                lesson: { courseId: { in: courseIds } }
+                lesson: { courseId: { in: courseIds }, status: "ACTIVE" }
             },
             include: {
                 lesson: {

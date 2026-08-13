@@ -18,11 +18,11 @@ export default async function ReportGradeSheetPage({
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
+        select: { id: true, instituteId: true }
     });
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [user?.role || "TEACHER"];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
@@ -109,7 +109,7 @@ export default async function ReportGradeSheetPage({
                     <ReportGradeSheet 
                         courseId={course.id}
                         template={template}
-                        userRole={user.role}
+                        userRole={activeRole}
                     />
                 </div>
             </main>

@@ -24,18 +24,21 @@ import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
 
 import { GuardianDashboardView } from "./components/GuardianDashboardView";
 import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    // El `id` alimenta la búsqueda del alumno en la vista de estudiante; sin él
+    // la consulta ni siquiera es válida para Prisma.
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     // ─── GUARDIAN View ───
@@ -60,7 +63,7 @@ export default async function DashboardPage() {
                                         level: true,
                                         color: true,
                                         lessons: {
-                                            where: { date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+                                            where: { status: "ACTIVE", date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
                                             orderBy: { date: 'asc' },
                                             take: 5,
                                             select: { id: true, date: true, topic: true }
@@ -181,7 +184,7 @@ export default async function DashboardPage() {
     // ─── STUDENT View ───
     if (activeRole === "STUDENT") {
         const student = await prisma.student.findUnique({
-            where: { id: (session.user as any).id },
+            where: { id: session.user.id },
             include: {
                 institute: { select: { name: true } },
                 enrollments: {
@@ -195,7 +198,9 @@ export default async function DashboardPage() {
                         }
                     }
                 },
+                // Sin las clases borradas: ver el comentario en academics/page.tsx
                 attendances: {
+                    where: { lesson: { status: "ACTIVE" } },
                     orderBy: { lesson: { date: 'desc' } },
                     take: 20,
                     include: {
@@ -207,6 +212,7 @@ export default async function DashboardPage() {
                     }
                 },
                 grades: {
+                    where: { lesson: { status: "ACTIVE" } },
                     orderBy: { createdAt: 'desc' },
                     take: 10,
                     include: {
@@ -226,6 +232,7 @@ export default async function DashboardPage() {
         const upcomingLessons = await prisma.lesson.findMany({
             where: {
                 courseId: { in: courseIds },
+                status: "ACTIVE",
                 date: { gte: today }
             },
             orderBy: { date: 'asc' },
@@ -242,10 +249,10 @@ export default async function DashboardPage() {
 
         // Estadísticas de asistencia
         const totalAttendances = await prisma.attendance.count({
-            where: { studentId: student.id }
+            where: { studentId: student.id, lesson: { status: "ACTIVE" } }
         });
         const presentCount = await prisma.attendance.count({
-            where: { studentId: student.id, status: { in: ["PRESENT", "LATE"] } }
+            where: { studentId: student.id, lesson: { status: "ACTIVE" }, status: { in: ["PRESENT", "LATE"] } }
         });
         const attendanceRate = totalAttendances > 0 ? Math.round((presentCount / totalAttendances) * 100) : 0;
 
@@ -300,8 +307,8 @@ export default async function DashboardPage() {
         let lessonStats = { current: 0, total: 0 };
         if (student.enrollments.length > 0) {
             const mainCourseId = student.enrollments[0].courseId;
-            const total = await prisma.lesson.count({ where: { courseId: mainCourseId } });
-            const passed = await prisma.lesson.count({ where: { courseId: mainCourseId, date: { lt: new Date() } } });
+            const total = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE" } });
+            const passed = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: new Date() } } });
             courseProgress = total > 0 ? Math.round((passed / total) * 100) : 0;
             lessonStats = { current: passed, total };
         }
@@ -339,14 +346,15 @@ export default async function DashboardPage() {
     }
 
     // Flujo normal para Admin/Teacher
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) redirect("/admin/institutes");
+
     const user = await prisma.user.findUnique({
-        where: { email: session.user.email as string },
-        select: { id: true, name: true, role: true, instituteId: true, institute: { select: { name: true } } }
+        where: { id: auth.userId },
+        select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } }
     });
 
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/admin/institutes");
-    }
+    if (!user?.instituteId) redirect("/admin/institutes");
 
     const isActiveTeacher = activeRole === "TEACHER";
 
@@ -380,6 +388,7 @@ export default async function DashboardPage() {
         const myUpcomingLessons = await prisma.lesson.findMany({
             where: {
                 courseId: { in: teacherCourseIds },
+                status: "ACTIVE",
                 date: { gte: today }
             },
             orderBy: { date: 'asc' },
@@ -548,10 +557,7 @@ export default async function DashboardPage() {
     const totalTeachers = await prisma.user.count({
         where: {
             instituteId: user.instituteId,
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            roles: { has: "TEACHER" }
         }
     });
 
@@ -602,6 +608,7 @@ export default async function DashboardPage() {
     const upcomingLessons = await prisma.lesson.findMany({
         where: {
             course: { instituteId: user.instituteId },
+            status: "ACTIVE",
             date: { gte: today }
         },
         orderBy: { date: 'asc' },

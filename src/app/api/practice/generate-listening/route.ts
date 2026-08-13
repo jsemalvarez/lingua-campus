@@ -1,31 +1,28 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { getAIProvider } from "@/lib/practice/providers/ai";
+import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
+import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
 
 /**
  * POST /api/practice/generate-listening
- * 
- * Body: { seedText: string, language?: string }
+ *
+ * Body: { lessonPracticeId: string }
+ *
+ * El `seedText` sale de `LessonPractice.listeningText`, no del body (SEC-07).
+ * Igual que generate-phrases, lo usa el alumno desde `ListeningLab`.
  */
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return new Response("No autorizado", { status: 401 });
+    const body = await readJsonBody(req);
+    const guard = await guardPracticeAi(body.lessonPracticeId);
+    if (!guard.ok) return guard.response;
+
+    const seedText = guard.practice.listeningText?.trim();
+    if (!seedText) {
+        return new Response("La práctica no tiene texto de listening", { status: 409 });
     }
 
     try {
-        const body = await req.json();
-        const { seedText, language } = body;
-
-        if (!seedText || typeof seedText !== 'string') {
-            return new Response("'seedText' es requerido", { status: 400 });
-        }
-
         const provider = getAIProvider();
-        const result = await provider.generateListeningText(
-            seedText,
-            language ?? "English"
-        );
+        const result = await provider.generateListeningText(seedText, PRACTICE_LANGUAGE);
 
         return Response.json(result);
     } catch (error: any) {

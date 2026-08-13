@@ -43,9 +43,12 @@ interface LessonListProps {
     courseStatus?: string;
     startDate?: Date;
     endDate?: Date;
+    /** Texto del estado vacío. Con el listado paginado por mes, "no hay clases en
+     *  este mes" no es lo mismo que "el curso no tiene clases". */
+    emptyMessage?: string;
 }
 
-export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, courseStatus, startDate, endDate }: LessonListProps) {
+export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, courseStatus, startDate, endDate, emptyMessage }: LessonListProps) {
     const isFinished = courseStatus === "FINISHED";
 
     return (
@@ -66,7 +69,7 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
             {lessons.length === 0 ? (
                 <div className="text-center p-6 border border-dashed rounded-xl border-border/50 text-muted-foreground text-sm flex flex-col items-center">
                     <BookOpen size={24} className="mb-2 opacity-50" />
-                    El libro de temas está vacío para este curso.
+                    {emptyMessage ?? "El libro de temas está vacío para este curso."}
                 </div>
             ) : (
                 <div className="space-y-4">

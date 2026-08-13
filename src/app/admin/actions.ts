@@ -1,7 +1,6 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSuperadmin } from "@/lib/authz";
 import { CreateInstituteWithAdmin } from "@/features/superadmin/application/use-cases/CreateInstituteWithAdmin";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
@@ -9,8 +8,7 @@ import bcrypt from "bcryptjs";
 
 export async function createInstituteAction(formData: FormData) {
     // Protección: solo SUPERADMIN puede ejecutar esta acción
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== "SUPERADMIN") {
+    if (!await requireSuperadmin()) {
         return { success: false, error: "No autorizado" };
     }
 
@@ -49,8 +47,7 @@ export async function createInstituteAction(formData: FormData) {
 }
 
 export async function editInstituteAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== "SUPERADMIN") {
+    if (!await requireSuperadmin()) {
         return { success: false, error: "No autorizado" };
     }
 
@@ -99,8 +96,7 @@ export async function editInstituteAction(formData: FormData) {
 }
 
 export async function addInstituteAdminAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== "SUPERADMIN") return { success: false, error: "No autorizado" };
+    if (!await requireSuperadmin()) return { success: false, error: "No autorizado" };
 
     const instituteId = formData.get("instituteId") as string;
     const name = formData.get("name") as string;
@@ -118,7 +114,7 @@ export async function addInstituteAdminAction(formData: FormData) {
                 name: name.trim(),
                 email: email.trim().toLowerCase(),
                 password: hashedPassword,
-                role: "ADMIN",
+                roles: ["ADMIN"],
                 instituteId: instituteId
             }
         });
@@ -131,8 +127,7 @@ export async function addInstituteAdminAction(formData: FormData) {
 }
 
 export async function removeInstituteAdminAction(adminId: string, instituteId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== "SUPERADMIN") return { success: false, error: "No autorizado" };
+    if (!await requireSuperadmin()) return { success: false, error: "No autorizado" };
 
     try {
         await prisma.user.delete({

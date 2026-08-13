@@ -1,27 +1,15 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 import { ReportTemplateManager } from "@/features/reports/ReportTemplateManager";
 import { ClipboardList, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 export default async function ReportTemplatesPage() {
-    const session = await getServerSession(authOptions);
+    const auth = await requireRole(INSTITUTE_ADMINS);
+    if (!auth) redirect("/dashboard");
 
-    if (!session || !session.user) {
-        redirect("/login");
-    }
-
-    const user = session.user as any;
-    const userRoles = user.roles || [user.role];
-    const activeRole = await getActiveRole(userRoles);
-
-    const allowedRoles = ["ADMIN", "SUPERADMIN", "SECRETARY"];
-    if (!allowedRoles.includes(activeRole)) {
-        redirect("/dashboard");
-    }
+    const activeRole = auth.activeRole;
 
     return (
         <div className="min-h-screen bg-background">

@@ -1,22 +1,12 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 export async function createScheduleAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, instituteId: true, role: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        return { success: false, error: "Sin permisos" };
-    }
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) return { success: false, error: "Sin permisos" };
 
     const courseId = formData.get("courseId") as string;
     const dayOfWeek = parseInt(formData.get("dayOfWeek") as string, 10);
@@ -60,8 +50,10 @@ export async function createScheduleAction(formData: FormData) {
 }
 
 export async function deleteScheduleAction(scheduleId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) return { success: false, error: "No autorizado" };
+    // Sólo comprobaba el instituto: cualquier usuario logueado del instituto,
+    // tutores incluidos, podía borrar un horario.
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) return { success: false, error: "Sin permisos para eliminar" };
 
     try {
         const schedule = await prisma.schedule.findUnique({
@@ -71,11 +63,7 @@ export async function deleteScheduleAction(scheduleId: string) {
 
         if (!schedule) return { success: false, error: "Horario no encontrado" };
 
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email }
-        });
-
-        if (!user || schedule.course.instituteId !== user.instituteId) {
+        if (schedule.course.instituteId !== user.instituteId) {
             return { success: false, error: "Sin permisos para eliminar" };
         }
 

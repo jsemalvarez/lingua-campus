@@ -1,45 +1,24 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { PayrollClient } from "./PayrollClient";
-import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function PayrollPage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    // Solo ADMIN y SECRETARY pueden ver esta página
+    const user = await requireRole(INSTITUTE_ADMINS);
+    if (!user) redirect("/dashboard");
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
-    const activeRole = await getActiveRole(userRoles);
-
-    // Solo ADMIN, SECRETARY y SUPERADMIN (con instituto) pueden ver esta página
-    const allowedRoles = ["ADMIN", "SECRETARY", "SUPERADMIN"];
-    if (!allowedRoles.includes(activeRole)) {
-        redirect("/dashboard");
-    }
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const activeRole = user.activeRole;
 
     // Buscamos a los profesores activos del instituto
     const teachers = await prisma.user.findMany({
         where: {
             instituteId: user.instituteId,
-            status: "ACTIVE" as any,
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            status: "ACTIVE",
+            roles: { has: "TEACHER" }
         },
         select: {
             id: true,

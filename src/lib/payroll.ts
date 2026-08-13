@@ -14,8 +14,10 @@ export async function calculateTeacherPayroll(teacherId: string, startDate: Date
     if (!teacher) throw new Error("Profesor no encontrado");
     const rate = teacher.hourlyRate || 0;
 
+    // Una clase borrada no se dictó: no se paga.
     const lessons = await prisma.lesson.findMany({
         where: {
+            status: "ACTIVE",
             course: { teacherId },
             date: {
                 gte: startDate,
@@ -81,10 +83,7 @@ export async function calculateBulkTeacherPayroll(instituteId: string, startDate
         where: { 
             instituteId, 
             status: "ACTIVE",
-            OR: [
-                { role: "TEACHER" },
-                { roles: { has: "TEACHER" } }
-            ]
+            roles: { has: "TEACHER" }
         },
         select: { 
             id: true, 
@@ -93,9 +92,11 @@ export async function calculateBulkTeacherPayroll(instituteId: string, startDate
         }
     });
 
-    // Obtenemos todas las lecciones del instituto en el rango
+    // Obtenemos todas las lecciones del instituto en el rango.
+    // Las borradas no cuentan: no se dictaron, no se pagan.
     const lessons = await prisma.lesson.findMany({
         where: {
+            status: "ACTIVE",
             course: { instituteId },
             date: {
                 gte: startDate,

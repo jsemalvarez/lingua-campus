@@ -11,7 +11,7 @@ interface ProfileFormProps {
         name: string;
         phone: string | null;
         email: string | null;
-        role: string;
+        isStudent: boolean;
         dni?: string | null;
         address?: string | null;
         birthDate?: Date | null;
@@ -32,7 +32,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
 
-    const isStudent = initialData.role === "STUDENT";
+    const isStudent = initialData.isStudent;
 
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");

@@ -1,15 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
 export async function createLessonAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     const courseId = formData.get("courseId") as string;
     const dateStr = formData.get("date") as string;
@@ -29,12 +25,8 @@ export async function createLessonAction(formData: FormData) {
     }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -89,10 +81,6 @@ export async function createLessonAction(formData: FormData) {
 }
 
 export async function editLessonAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     const lessonId = formData.get("lessonId") as string;
     const courseId = formData.get("courseId") as string;
@@ -113,12 +101,8 @@ export async function editLessonAction(formData: FormData) {
     }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -131,6 +115,10 @@ export async function editLessonAction(formData: FormData) {
 
         if (!lesson || lesson.course.instituteId !== user.instituteId) {
             return { success: false, error: "No autorizado (La clase no pertenece a tu instituto)" };
+        }
+
+        if (lesson.status !== "ACTIVE") {
+            return { success: false, error: "La clase fue eliminada" };
         }
 
         // Parse speaking phrases
@@ -171,8 +159,22 @@ export async function editLessonAction(formData: FormData) {
                 }
             });
         } else if (type === "CLASS" && speakingPhrases.length === 0) {
-            // If phrases were cleared, delete the practice record if it exists
-            await prisma.lessonPractice.deleteMany({ where: { lessonId } });
+            // El docente vació las frases. Antes se borraba el `LessonPractice`,
+            // y eso fallaba en cuanto algún alumno ya lo había practicado
+            // (BUG-03): `PracticeSession` lo referencia sin cascade.
+            //
+            // Se vacía el contenido y se despublica, pero la fila queda. Para el
+            // docente el efecto es el mismo —la práctica desaparece del curso—,
+            // y las sesiones que los alumnos ya hicieron siguen en pie.
+            await prisma.lessonPractice.updateMany({
+                where: { lessonId },
+                data: {
+                    speakingPhrases: [],
+                    listeningText: null,
+                    chatScenario: null,
+                    isPublished: false,
+                }
+            });
         }
 
         revalidatePath(`/courses/${courseId}`);
@@ -185,18 +187,10 @@ export async function editLessonAction(formData: FormData) {
 
 
 export async function deleteLessonAction(lessonId: string, courseId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -206,12 +200,18 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
             include: { course: { select: { instituteId: true } } }
         });
 
-        if (!lesson || lesson.course.instituteId !== user.instituteId) {
+        if (!lesson || lesson.course.instituteId !== user.instituteId || lesson.status !== "ACTIVE") {
             return { success: false, error: "No autorizado" };
         }
 
-        await prisma.lesson.delete({
-            where: { id: lessonId }
+        // Borrado lógico. `PracticeSession` apunta a la clase sin cascade, así que
+        // un `delete` fallaba en cuanto algún alumno hubiera practicado (BUG-02).
+        // Y aunque no fallara, tampoco correspondía: las sesiones de práctica son
+        // el historial del alumno, no algo que se lleve puesto el docente al sacar
+        // la clase de la lista.
+        await prisma.lesson.update({
+            where: { id: lessonId },
+            data: { status: "DELETED" }
         });
 
         revalidatePath(`/courses/${courseId}`);
@@ -223,18 +223,10 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
 }
 
 export async function generateLessonsAction(courseId: string, startDate: Date, endDate: Date) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
-    }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true, instituteId: true }
-        });
-
-        if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
+        const user = await requireRole(INSTITUTE_STAFF);
+        if (!user) {
             return { success: false, error: "No autorizado" };
         }
 
@@ -266,7 +258,13 @@ export async function generateLessonsAction(courseId: string, startDate: Date, e
             const daySchedules = schedules.filter(s => s.dayOfWeek === dayOfWeek);
 
             for (const schedule of daySchedules) {
-                // Check if lesson already exists for this date and schedule
+                // Check if lesson already exists for this date and schedule.
+                //
+                // A propósito **sin** filtrar por estado: una clase borrada sigue
+                // ocupando su lugar. Filtrarla haría que regenerar el período
+                // reviva lo que alguien borró a mano, y encima duplicado — la fila
+                // vieja seguiría ahí. Para recuperar una clase borrada hay que
+                // reactivarla, no volver a generarla.
                 const existing = await prisma.lesson.findFirst({
                     where: {
                         courseId,
@@ -279,7 +277,7 @@ export async function generateLessonsAction(courseId: string, startDate: Date, e
                     lessonsToCreate.push({
                         courseId,
                         date: new Date(current),
-                        topic: "Clase Programada",
+                        topic: SCHEDULED_LESSON_TOPIC,
                         type: "CLASS" as const,
                         scheduleId: schedule.id
                     });

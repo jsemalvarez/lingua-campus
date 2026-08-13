@@ -9,6 +9,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Mes con el que se guardan las matrículas. No es un vencimiento: la matrícula
+ * es anual y por curso, así que el mes no significa nada más que "ninguno".
+ *
+ * Está fijo a propósito. La restricción única de `Fee`
+ * —`[enrollmentId, type, year, month]`— sólo dice "una matrícula por inscripción
+ * y año" si todas las matrículas comparten el mes; con el mes de creación, dos
+ * generaciones en meses distintos pasaban de largo. Ver FIN-12.
+ *
+ * Ninguna pantalla lo muestra: `formatFeeLabel` ignora el mes de las matrículas.
+ */
+export const ENROLLMENT_FEE_MONTH = 0;
+
 export const getMonthName = (month: number): string => {
   const months = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",

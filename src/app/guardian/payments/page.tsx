@@ -36,8 +36,8 @@ export default async function GuardianPaymentsPage() {
         redirect("/login");
     }
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     if (activeRole !== "GUARDIAN") {

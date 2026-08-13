@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
@@ -9,17 +8,8 @@ import { ArrowLeft, UserPlus } from "lucide-react";
 import { EnrollmentForm } from "./EnrollmentForm";
 
 export default async function NewEnrollmentPage({ searchParams }: { searchParams: Promise<{ course?: string }> }) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
     const { course: preselectedCourseId } = await searchParams;
 

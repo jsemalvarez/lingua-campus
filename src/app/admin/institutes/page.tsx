@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSuperadmin } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import { PrismaInstituteRepository } from "@/features/superadmin/infrastructure/prisma/PrismaInstituteRepository";
 import { CreateInstituteForm } from "./CreateInstituteForm";
@@ -10,9 +9,7 @@ import Link from "next/link";
 import { AdminNavbar } from "./AdminNavbar";
 
 export default async function AdminInstitutesPage() {
-    const session = await getServerSession(authOptions);
-
-    if (!session || (session.user as any).role !== "SUPERADMIN") {
+    if (!await requireSuperadmin()) {
         redirect("/login");
     }
 

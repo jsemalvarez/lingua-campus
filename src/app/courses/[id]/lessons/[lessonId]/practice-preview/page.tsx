@@ -11,8 +11,8 @@ export default async function TeacherPracticePreviewPage(props: { params: Promis
     const session = await getServerSession(authOptions);
     if (!session || !session.user) redirect("/login");
 
-    const sessionUser = session.user as any;
-    const userRoles = sessionUser.roles || [sessionUser.role];
+    const sessionUser = session.user;
+    const userRoles = sessionUser.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     // Only allow teachers, admins or secretaries to view this preview
@@ -21,8 +21,8 @@ export default async function TeacherPracticePreviewPage(props: { params: Promis
     }
 
     // Get the specific practice for this lesson
-    const practiceItem = await prisma.lessonPractice.findUnique({
-        where: { lessonId: params.lessonId },
+    const practiceItem = await prisma.lessonPractice.findFirst({
+        where: { lessonId: params.lessonId, lesson: { status: "ACTIVE" } },
         include: {
             lesson: {
                 include: {

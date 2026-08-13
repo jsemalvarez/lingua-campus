@@ -6,6 +6,7 @@ import {
     CheckCircle2, XCircle, Loader2, LogOut, AlertCircle, Sparkles
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
+import { practiceApiError } from "./apiError";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,13 +81,18 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
         setError(null);
 
         try {
+            // Las frases base las lee el servidor de la práctica; mandarlas desde
+            // acá era dejar que el cliente arme el prompt (SEC-07).
             const res = await fetch("/api/practice/generate-phrases", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ seedPhrases: initialPhrases, count: 5 })
+                body: JSON.stringify({ lessonPracticeId, count: 5 })
             });
 
-            if (!res.ok) throw new Error("Error de API");
+            if (!res.ok) {
+                setError(await practiceApiError(res, "No pudimos generar frases nuevas. Probá con las originales."));
+                return;
+            }
 
             const data = await res.json();
             if (data.phrases && Array.isArray(data.phrases)) {
@@ -136,7 +142,7 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
             const res = await fetch("/api/practice/tts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: currentPhrase, language: "en-US", speed: 0.85 })
+                body: JSON.stringify({ lessonPracticeId, text: currentPhrase, language: "en-US", speed: 0.85 })
             });
 
             if (res.status === 204) {
@@ -163,7 +169,7 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
                 source.start();
             } else {
                 setPhase("idle");
-                setError("No se pudo reproducir el audio.");
+                setError(await practiceApiError(res, "No se pudo reproducir el audio."));
             }
         } catch (err) {
             console.error("TTS error:", err);
@@ -236,10 +242,14 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
             const res = await fetch("/api/practice/evaluate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ expected: currentPhrase, actual: transcript, language: "English" })
+                body: JSON.stringify({ lessonPracticeId, expected: currentPhrase, actual: transcript })
             });
 
-            if (!res.ok) throw new Error("API error");
+            if (!res.ok) {
+                setError(await practiceApiError(res, "No pudimos evaluar tu pronunciación. Probá de nuevo."));
+                setPhase("transcribed");
+                return;
+            }
 
             const result: EvaluationResult = await res.json();
             setCurrentResult(result);

@@ -14,7 +14,7 @@ async function main() {
             email: 'superadmin@lingua.com',
             name: 'Super Administrador',
             password: hashedPassword,
-            role: 'SUPERADMIN',
+            roles: ['SUPERADMIN'],
         },
     })
 

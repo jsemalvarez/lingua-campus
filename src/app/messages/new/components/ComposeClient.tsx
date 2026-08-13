@@ -12,17 +12,14 @@ type Course = { id: string; name: string; color: string; students: Student[] };
 type Teacher = { id: string; name: string };
 
 interface Props {
-    senderUserId: string;
-    instituteId: string;
     courses: Course[];
     allTeachers: Teacher[];
     isAdmin: boolean;
-    activeRole: string;
 }
 
 type RecipientType = "course" | "students" | "teachers";
 
-export function ComposeClient({ senderUserId, instituteId, courses, allTeachers, isAdmin, activeRole }: Props) {
+export function ComposeClient({ courses, allTeachers, isAdmin }: Props) {
     const router = useRouter();
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
@@ -99,13 +96,10 @@ export function ComposeClient({ senderUserId, instituteId, courses, allTeachers,
 
         try {
             const { threadId } = await createThread({
-                instituteId,
                 subject,
                 body,
                 type: recipientType === "course" ? "COURSE_BLAST" : "DIRECT",
                 courseId: selectedCourseId || undefined,
-                senderUserId,
-                senderRole: activeRole,
                 recipientStudentIds:
                     recipientType === "students" ? Array.from(selectedStudentIds) : [],
                 recipientUserIds:

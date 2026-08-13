@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# La plantilla sí se versiona: es la única lista completa de variables.
+!.env.example
 
 # vercel
 .vercel
@@ -46,6 +48,7 @@ next-env.d.ts
 # AI workspaces
 /artifacts
 /scratch
+.claude/settings.local.json
 
 # PWA
 public/sw.js

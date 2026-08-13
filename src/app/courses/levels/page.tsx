@@ -1,24 +1,14 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { Navbar } from "@/components/layout/Navbar";
 import { Layers, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { LevelManager } from "./LevelManager";
 
 export default async function LevelsPage() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, role: true, instituteId: true }
-    });
-
-    if (!user || user.role === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) redirect("/dashboard");
 
     const levels = await prisma.level.findMany({
         where: { instituteId: user.instituteId },

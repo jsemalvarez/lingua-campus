@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 import { calculateBulkTeacherPayroll } from "@/lib/payroll";
+import { requireRole } from "@/lib/authz";
 
 export async function GET(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, instituteId: true, role: true }
-        });
-
-        if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN") || !user.instituteId) {
+        const user = await requireRole(["ADMIN"]);
+        if (!user) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

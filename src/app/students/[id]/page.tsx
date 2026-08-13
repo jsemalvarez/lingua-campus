@@ -66,14 +66,14 @@ export default async function StudentDetailPage({
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true, role: true, roles: true, instituteId: true }
+        select: { id: true, roles: true, instituteId: true }
     }) as any;
 
     if (!user || (user.roles && user.roles.includes("SUPERADMIN")) || !user.instituteId) {
         redirect("/dashboard");
     }
 
-    const userRoles = user.roles || [user.role];
+    const userRoles = user.roles ?? [];
     const activeRole = await getActiveRole(userRoles);
 
     const isAdmin = ["ADMIN", "SECRETARY"].includes(activeRole);

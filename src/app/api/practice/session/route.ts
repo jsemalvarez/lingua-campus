@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthContext } from "@/lib/authz";
 import prisma from "@/lib/prisma";
 
 /**
@@ -21,9 +20,19 @@ import prisma from "@/lib/prisma";
  * (nunca se confía en el body para esto).
  */
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
+    // El alumno se identifica por id, no por email: `Student.email` es opcional
+    // y el login por DNI existe, así que exigir email dejaba a todo alumno sin
+    // correo con un 401 al terminar de practicar (BUG-01). `getAuthContext`
+    // además verifica contra la base que la cuenta siga activa.
+    const auth = await getAuthContext();
+    if (!auth) {
         return new Response("No autorizado", { status: 401 });
+    }
+
+    // Todo alumno tiene instituto (el schema lo exige); se comprueba para poder
+    // usarlo como filtro más abajo.
+    if (!auth.isStudent || !auth.instituteId) {
+        return new Response("El usuario no tiene perfil de alumno", { status: 403 });
     }
 
     try {
@@ -49,29 +58,40 @@ export async function POST(req: Request) {
             return new Response("Tipo de sesión inválido", { status: 400 });
         }
 
-        // Obtener el studentId desde la cuenta autenticada
-        const student = await prisma.student.findFirst({
-            where: { email: session.user.email },
+        // Verificar que la práctica existe, está publicada y es del instituto
+        // del alumno: el id viaja en el body, y sin acotar el instituto una
+        // sesión podía quedar colgada de la clase de otro instituto.
+        //
+        // La inscripción se agregó con SEC-07: el instituto solo no alcanza,
+        // porque deja a cualquier alumno guardar progreso en la clase de un
+        // curso que no cursa. Es la misma condición que aplica
+        // `guardPracticeAi` a los endpoints de IA; acá no se reutiliza el helper
+        // porque este endpoint es sólo para alumnos —el `studentId` sale de la
+        // sesión— y el de allá también deja pasar al personal para la vista
+        // previa.
+        const practice = await prisma.lessonPractice.findFirst({
+            where: {
+                id: lessonPracticeId,
+                lessonId,
+                isPublished: true,
+                lesson: {
+                    status: "ACTIVE",
+                    course: {
+                        instituteId: auth.instituteId,
+                        enrollments: { some: { studentId: auth.userId, status: "ACTIVE" } },
+                    },
+                },
+            },
             select: { id: true }
         });
 
-        if (!student) {
-            return new Response("El usuario no tiene perfil de alumno", { status: 403 });
-        }
-
-        // Verificar que la práctica existe y está publicada
-        const practice = await prisma.lessonPractice.findUnique({
-            where: { id: lessonPracticeId },
-            select: { isPublished: true, lessonId: true }
-        });
-
-        if (!practice || !practice.isPublished || practice.lessonId !== lessonId) {
+        if (!practice) {
             return new Response("Práctica no encontrada o no publicada", { status: 404 });
         }
 
         const practiceSession = await prisma.practiceSession.create({
             data: {
-                studentId: student.id,
+                studentId: auth.userId,
                 lessonId,
                 lessonPracticeId,
                 type,
