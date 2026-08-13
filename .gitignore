@@ -50,6 +50,11 @@ next-env.d.ts
 /scratch
 .claude/settings.local.json
 
+# Notas de trabajo locales: configuración de entornos, checklists de pruebas
+# manuales, verificaciones pendientes. No es documentación del proyecto — eso va
+# en /docs y se versiona.
+/tareas
+
 # PWA
 public/sw.js
 public/sw.js.map
