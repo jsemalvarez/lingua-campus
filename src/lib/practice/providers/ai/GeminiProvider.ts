@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
 
 /**
  * Provider de IA usando Gemini de Google — implementación con fetch directo.
@@ -17,6 +17,9 @@ import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PRONUNCI
 // Same model and endpoint that the n8n/Telegram demo uses with this API key.
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+/** Tope de frases del borrador de práctica. Se le piden 6; esto acota el desborde. */
+const MAX_DRAFT_PHRASES = 10;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -294,5 +297,67 @@ CRITICAL CONSTRAINTS:
             console.error("[GEMINI] Failed to parse generateListeningQuiz response:", jsonStr);
             return [];
         }
+    }
+
+    async generatePracticeDraft(
+        topic: string,
+        content: string | null,
+        language: string = "English"
+    ): Promise<PracticeDraft> {
+        // El tema y los contenidos los escribe la profesora en castellano; las
+        // frases y el texto van en el idioma de la práctica igual. Se le dice
+        // explícito porque si no el modelo sigue el idioma de la consigna.
+        const prompt = `You are a professional ${language} teacher preparing take-home practice for the class you just taught.
+
+Class topic: "${topic}"
+${content ? `What was covered in class:\n"""\n${content}\n"""` : "No further detail was recorded: work from the topic alone."}
+
+The topic and the notes may be written in Spanish, because that is the teacher's language. The practice material itself must still be in ${language}.
+
+Task: write the three practice sections for the students of THAT class, and respond ONLY with a valid JSON object in this exact format, with no markdown formatting around it:
+{
+  "speakingPhrases": ["phrase 1", "phrase 2"],
+  "listeningText": "The listening text goes here",
+  "chatScenario": "La consigna del chatbot va acá"
+}
+
+CRITICAL CONSTRAINTS:
+1. "speakingPhrases": exactly 6 phrases in ${language}, 6 to 12 words each, using the grammar and vocabulary of the class. They are read out loud, so no lists, no parentheses and no abbreviations.
+2. "listeningText": a single paragraph in ${language} of 60 to 90 words, at the same level, that reuses the vocabulary of the class in a concrete everyday situation. It is turned into audio, so plain prose only.
+3. "chatScenario": 2 or 3 sentences **in Spanish**, written as an instruction for a chatbot that will role-play with the student ("Sos un mozo en un café. El alumno es un turista..."). State the role, the situation and the level. The situation must be one where the content of this class is actually needed.
+4. If the topic is too vague to teach anything specific, choose the most common beginner reading of it and stay concrete.
+5. Plain text, no markdown, no comments.`;
+
+        const textResponse = await callGemini(this.apiKey, {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.9, maxOutputTokens: 2048, responseMimeType: "application/json" },
+        });
+
+        const jsonStr = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+        let parsed: Record<string, unknown>;
+        try {
+            parsed = JSON.parse(jsonStr);
+        } catch {
+            console.error("[GEMINI] Failed to parse generatePracticeDraft response:", jsonStr);
+            throw new Error("La IA devolvió un borrador con formato inválido.");
+        }
+
+        const speakingPhrases = Array.isArray(parsed.speakingPhrases)
+            ? parsed.speakingPhrases.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, MAX_DRAFT_PHRASES)
+            : [];
+        const listeningText = typeof parsed.listeningText === "string" ? parsed.listeningText.trim() : "";
+        const chatScenario = typeof parsed.chatScenario === "string" ? parsed.chatScenario.trim() : "";
+
+        // Sin frases no hay práctica: `editLessonAction` no crea el
+        // `LessonPractice` si `speakingPhrases` viene vacío. Devolver un borrador
+        // así sería el mismo fallo silencioso de PED-05 con otra cara — el
+        // docente aprieta el botón, no pasa nada y no sabe por qué.
+        if (speakingPhrases.length === 0) {
+            console.error("[GEMINI] generatePracticeDraft returned no phrases:", jsonStr);
+            throw new Error("La IA no devolvió frases de speaking.");
+        }
+
+        return { speakingPhrases, listeningText, chatScenario };
     }
 }

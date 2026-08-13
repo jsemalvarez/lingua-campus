@@ -1,6 +1,6 @@
-import { getAuthContext, INSTITUTE_STAFF } from "@/lib/authz";
+import { getAuthContext, requireRole, INSTITUTE_STAFF } from "@/lib/authz";
 import prisma from "@/lib/prisma";
-import { consumeAiQuota } from "@/lib/practice/quota";
+import { consumeAiQuota, QuotaResult } from "@/lib/practice/quota";
 
 /**
  * Puerta de entrada única a los endpoints de IA de `/api/practice` (SEC-07).
@@ -89,21 +89,21 @@ export async function guardPracticeAi(
     if (!meter) return { ok: true, practice };
 
     const quota = await consumeAiQuota(auth.userId, auth.instituteId);
-    if (!quota.allowed) {
-        const message = quota.scope === "user"
-            ? "Alcanzaste el límite de práctica con IA por ahora. Probá de nuevo más tarde."
-            : "El instituto alcanzó el límite de práctica con IA por hoy.";
-
-        return {
-            ok: false,
-            response: new Response(message, {
-                status: 429,
-                headers: { "Retry-After": String(quota.retryAfterSeconds) },
-            }),
-        };
-    }
+    if (!quota.allowed) return { ok: false, response: quotaResponse(quota) };
 
     return { ok: true, practice };
+}
+
+/** El 429 del tope de uso. Es el único error de esta capa que lee un humano. */
+function quotaResponse(quota: Extract<QuotaResult, { allowed: false }>): Response {
+    const message = quota.scope === "user"
+        ? "Alcanzaste el límite de práctica con IA por ahora. Probá de nuevo más tarde."
+        : "El instituto alcanzó el límite de práctica con IA por hoy.";
+
+    return new Response(message, {
+        status: 429,
+        headers: { "Retry-After": String(quota.retryAfterSeconds) },
+    });
 }
 
 /**
@@ -156,6 +156,82 @@ function findForStaff(id: string, activeRole: string, instituteId: string | null
         where: { id, lesson: { status: "ACTIVE", course: { instituteId } } },
         select: SELECT,
     });
+}
+
+/** La clase de la que se redacta el borrador, leída del servidor. */
+export type DraftSource = {
+    lessonId: string;
+    topic: string;
+    content: string | null;
+};
+
+export type DraftGuard =
+    | { ok: true; lesson: DraftSource }
+    | { ok: false; response: Response };
+
+/**
+ * `Lesson.content` es un `@db.Text` sin tope, y entra a un prompt. Setecientas
+ * palabras de contenidos alcanzan y sobran para redactar la práctica de una
+ * clase; lo que venga después no mejora el borrador, sólo agranda la llamada.
+ */
+const MAX_TOPIC_CHARS = 200;
+const MAX_CONTENT_CHARS = 4000;
+
+/**
+ * Autoriza la generación del borrador de práctica de una clase (PED-01).
+ *
+ * Distinta puerta que `guardPracticeAi` porque es otra operación: no la ejecuta
+ * el alumno sobre una práctica publicada, sino el docente sobre una clase que
+ * todavía no tiene material. El permiso es el mismo que el de `editLessonAction`
+ * —personal del instituto dueño del curso—, y por la misma razón: quien puede
+ * guardar la práctica es quien puede pedir el borrador. SUPERADMIN queda afuera
+ * por `requireRole`, igual que en la edición de clases.
+ *
+ * El `topic` y el `content` se leen de la base y no del body. Acá no es una
+ * defensa contra el que escribe —el docente puede guardar en `topic` lo que
+ * quiera— sino contra el resto: si el texto viajara en la request, cualquiera
+ * con una sesión de profesor tendría un prompt libre a nombre del proyecto, que
+ * es exactamente el agujero que cerró SEC-07.
+ *
+ * Consume una unidad de cuota, como cualquier otra llamada al proveedor.
+ */
+export async function guardPracticeDraft(lessonId: unknown): Promise<DraftGuard> {
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) {
+        return { ok: false, response: new Response("No autorizado", { status: 401 }) };
+    }
+
+    if (typeof lessonId !== "string" || lessonId.trim().length === 0) {
+        return { ok: false, response: new Response("'lessonId' es requerido", { status: 400 }) };
+    }
+
+    const lesson = await prisma.lesson.findFirst({
+        where: {
+            id: lessonId,
+            status: "ACTIVE",
+            // Sólo las clases tienen práctica: el modal esconde la sección en
+            // los TP y los exámenes, y `editLessonAction` no la guardaría.
+            type: "CLASS",
+            course: { instituteId: auth.instituteId },
+        },
+        select: { id: true, topic: true, content: true },
+    });
+
+    if (!lesson) {
+        return { ok: false, response: new Response("Clase no disponible", { status: 404 }) };
+    }
+
+    const quota = await consumeAiQuota(auth.userId, auth.instituteId);
+    if (!quota.allowed) return { ok: false, response: quotaResponse(quota) };
+
+    return {
+        ok: true,
+        lesson: {
+            lessonId: lesson.id,
+            topic: lesson.topic.slice(0, MAX_TOPIC_CHARS),
+            content: lesson.content?.slice(0, MAX_CONTENT_CHARS) || null,
+        },
+    };
 }
 
 /** Lee el body sin romper si viene vacío o mal formado. */

@@ -38,6 +38,17 @@ export interface ListeningQuestion {
     isTrue: boolean;
 }
 
+/**
+ * Borrador de las tres secciones de `LessonPractice`, redactado a partir de la
+ * clase. No se guarda solo: vuelve al modal para que el docente lo revise y
+ * decida si publica (PED-01).
+ */
+export interface PracticeDraft {
+    speakingPhrases: string[];
+    listeningText: string;
+    chatScenario: string;
+}
+
 export interface IAIProvider {
     /**
      * Evalúa la pronunciación del alumno comparando el texto esperado con lo que transcribió.
@@ -89,4 +100,22 @@ export interface IAIProvider {
         text: string,
         language?: string
     ): Promise<ListeningQuestion[]>;
+
+    /**
+     * Redacta las tres secciones de práctica a partir de lo que se dio en clase.
+     *
+     * Es la única generación que no parte de material que el profesor ya escribió
+     * —las otras cuatro necesitan `seedPhrases` o `seedText`—, y por eso es la que
+     * cierra el circuito: sin esto, para que exista práctica el docente tiene que
+     * cargarla a mano clase por clase (PED-01).
+     *
+     * @param topic    - `Lesson.topic`, el tema de la clase
+     * @param content  - `Lesson.content`, los contenidos dados (puede no estar)
+     * @param language - Idioma de la práctica
+     */
+    generatePracticeDraft(
+        topic: string,
+        content: string | null,
+        language?: string
+    ): Promise<PracticeDraft>;
 }

@@ -125,9 +125,10 @@ Acá está el diferencial del producto. Se empieza por cerrar el agujero de cost
 con urgencia real.
 
 ~~[SEC-07](#sec-07) (cerrar los endpoints de IA)~~ — hecho el 2026-08-11; **falta verificar en
-stage**, y hay una migración nueva que corre sola en el deploy. Sigue [PED-01](#ped-01) (generar la
-práctica con un botón) → [PED-02](#ped-02) (devolver el `weakArea` al docente) →
-[PED-04](#ped-04) (persistir las conversaciones).
+stage**, y hay una migración nueva que corre sola en el deploy. ~~[PED-01](#ped-01) (generar la
+práctica con un botón)~~ — hecho el 2026-08-11, **falta verificar en stage**; no lleva migración.
+Sigue [PED-02](#ped-02) (devolver el `weakArea` al docente) → [PED-04](#ped-04) (persistir las
+conversaciones).
 
 [PED-03](#ped-03) etapa 1 (reencuadrar la promesa) es solo texto y se puede hacer en cualquier
 momento.
@@ -225,7 +226,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
 | [ARQ-10](#arq-10) | P2 | No hay auditoría de las acciones del panel | [ ] |
-| [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [ ] |
+| [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
 | [PED-04](#ped-04) | P1 | Persistir y moderar las conversaciones del chatbot | [ ] |
@@ -2217,6 +2218,85 @@ justamente para eso).
 
 **Por qué es P1.** Convierte el diferencial de "depende de la disciplina del docente" a "sale gratis".
 Si hay que elegir **una sola cosa** de este módulo, es esta.
+
+### Resuelto — 2026-08-11 · pendiente de verificar en stage
+
+**Un botón en el modal de clase, y nada que se guarde solo.** "Generar práctica con IA" vive dentro
+de la sección de práctica de
+[`EditLessonModal`](../src/app/courses/[id]/lessons/components/EditLessonModal.tsx), llama a
+[`/api/practice/generate-draft`](../src/app/api/practice/generate-draft/route.ts) y **llena los tres
+campos del formulario**. No escribe en la base: el docente corrige lo que quiera y guarda con el
+mismo "Guardar Cambios" de siempre, que ya sabe hacer el upsert de `LessonPractice`. Publicar sigue
+siendo un acto aparte y deliberado — `isPublished` existe justamente para eso, y el borrador generado
+no lo toca.
+
+**Las tres secciones salen de una sola llamada** (`generatePracticeDraft` en
+[`IAIProvider`](../src/lib/practice/providers/ai/IAIProvider.ts), implementado en
+[`GeminiProvider`](../src/lib/practice/providers/ai/GeminiProvider.ts)). Tres llamadas habrían sido
+tres unidades de cuota y, peor, tres materiales sin relación entre sí: acá el escenario del chatbot
+tiene que necesitar el vocabulario del texto de listening, que a su vez es el de las frases. Es el
+mismo pedido, no tres.
+
+**El prompt se arma con lo que hay en la base.** `topic` y `content` los lee el guard, no vienen del
+body. Contra el docente no defiende nada —puede guardar en `topic` lo que se le ocurra— pero contra
+el resto sí: si el texto viajara en la request, cualquiera con sesión de profesor tendría un prompt
+libre a nombre del proyecto, que es el agujero que cerró [SEC-07](#sec-07). `content` es un `@db.Text`
+sin tope, así que se recorta a 4000 caracteres antes de entrar al prompt.
+
+**Puerta propia, mismo permiso que guardar** (`guardPracticeDraft` en
+[`guard.ts`](../src/lib/practice/guard.ts)). No reusa `guardPracticeAi` porque es la otra operación:
+no es el alumno sobre una práctica publicada, es el docente sobre una clase que todavía no tiene
+material. El criterio es el de `editLessonAction` —personal del instituto dueño del curso, clase
+`ACTIVE` de tipo `CLASS`—, y por la razón evidente: quien puede guardar la práctica es quien puede
+pedir el borrador. Descuenta cuota como cualquier otra llamada al proveedor.
+
+**No se genera sobre una clase vacía, y esto pega en el caso normal.** Las clases nacen en tanda
+desde los horarios del curso, con el tema en `SCHEDULED_LESSON_TOPIC` —"Clase Programada"— y sin
+contenidos. Sin chequeo, el botón le pide a la IA una práctica sobre ese título y la escribe igual,
+cobrando la llamada. La condición está en [`draft.ts`](../src/lib/practice/draft.ts), en un módulo
+sin `prisma` ni `next-auth` para que la usen los dos lados: el modal deshabilita el botón y dice qué
+falta **antes** del clic, y el endpoint responde 409 con el mismo texto, porque es el lado que gasta
+plata y la interfaz puede equivocarse o no ser la que llamó.
+
+Se exige tema real y **contenidos obligatorios** (30 caracteres, que no miden calidad: evitan que se
+saltee el requisito con un punto). El tema no sirve para llenar ese lugar: es el título que ven
+alumnos y tutores, corto por diseño. Lo que la IA lee es el contenido. Y los mensajes dicen
+*"guardá"* y no *"cargá"*, porque el borrador lo arma el servidor leyendo la clase de la base:
+escribirlo en el formulario sin guardar no alcanza.
+
+**Si la IA no devuelve frases, se avisa.** El borrador sin `speakingPhrases` no es un borrador:
+`editLessonAction` ni siquiera crearía el `LessonPractice`. El provider tira el error, el endpoint
+responde 500 y el modal muestra el cartel. Es lo contrario de lo que hacen hoy los otros generadores
+([PED-05](#ped-05)), a propósito: acá el docente aprieta un botón y espera, y el silencio sería
+indistinguible de que la IA no hizo nada.
+
+**Efecto colateral en el modal:** los campos de práctica ahora se cargan **al abrir** y no cuando
+cambian las props. Sincronizarlos con `lessonPractice` significaba que un `router.refresh()` del
+padre le borrara al docente lo que estaba escribiendo — con un borrador generado en pantalla, eso
+pasaba de molestia a pérdida de una llamada paga.
+
+**Lo que quedó afuera, a conciencia:**
+
+- **El modal de creación no tiene el botón, y lo dice.** La clase todavía no existe, así que no hay
+  `topic` en la base de dónde leer. El circuito es registrar la clase y generar al editarla, que
+  además es el momento natural: la práctica se arma después de dar la clase, no antes.
+
+  Se evaluó moverlo (2026-08-12): sacar la práctica del modal y darle pantalla propia, o aceptar el
+  tema y los contenidos desde el body. Se descartaron las dos por ahora. La razón para no dejarlo
+  callado es de **soporte**, no de interfaz: el 98% de las clases las crea el generador desde los
+  horarios, así que el que crea a mano es un caso raro y espaciado, y nadie va a recordar el paso
+  extra. Cuando eso llega a soporte llega mal contado. Así que el modal de creación muestra un cartel
+  en la sección de práctica que dice dónde está el botón y por qué conviene cargar bien los
+  contenidos — el tema es el título que ven alumnos y tutores, el contenido es lo que lee la IA.
+
+  Si el rediseño se retoma, lo que estaba sobre la mesa era: pantalla de práctica propia por clase,
+  entrando por el botón "Práctica" de la fila (hoy queda gris y sin acción cuando no hay material),
+  con la carga manual, la generación, publicar y la vista previa en un solo lugar. Tiene una trampa
+  anotada: si el modal deja de mandar los campos de práctica, la rama de `editLessonAction` que
+  limpia la fila cuando llegan cero frases —la de [BUG-03](#bug-03)— se dispara en **cada** edición y
+  borra la práctica en silencio. Mover la interfaz obliga a sacar la práctica de esa acción.
+- **No se puede regenerar una sola sección.** Reemplaza las tres. Generar sólo el listening ya lo
+  hace el alumno desde su práctica, y para el docente la coherencia entre las tres es el punto.
 
 ---
 

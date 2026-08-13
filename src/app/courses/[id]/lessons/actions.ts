@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
 export async function createLessonAction(formData: FormData) {
 
@@ -276,7 +277,7 @@ export async function generateLessonsAction(courseId: string, startDate: Date, e
                     lessonsToCreate.push({
                         courseId,
                         date: new Date(current),
-                        topic: "Clase Programada",
+                        topic: SCHEDULED_LESSON_TOPIC,
                         type: "CLASS" as const,
                         scheduleId: schedule.id
                     });

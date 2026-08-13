@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
 
 /**
  * Provider de IA usando GPT-4o de OpenAI.
@@ -96,5 +96,13 @@ export class OpenAIProvider implements IAIProvider {
         language?: string
     ): Promise<ListeningQuestion[]> {
         throw new Error("generateListeningQuiz not implemented for OpenAIProvider yet.");
+    }
+
+    async generatePracticeDraft(
+        topic: string,
+        content: string | null,
+        language?: string
+    ): Promise<PracticeDraft> {
+        throw new Error("generatePracticeDraft not implemented for OpenAIProvider yet.");
     }
 }

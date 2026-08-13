@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import {
     Plus, X, Calendar, BookOpen, FileText, CheckCircle, AlertCircle,
     FileEdit, GraduationCap, Sparkles, ChevronDown, ChevronUp, Mic2,
-    Headphones, MessageSquare, Eye, EyeOff
+    Headphones, MessageSquare, Eye, EyeOff, Wand2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -228,8 +228,31 @@ export function CreateLessonModal({
                             {showPractice && (
                                 <div className="px-5 pb-5 space-y-5 border-t border-violet-500/15">
 
+                                    {/*
+                                      * El botón de generar con IA vive en el modal de edición y no
+                                      * acá: la clase todavía no existe, y el servidor arma el
+                                      * material leyendo su tema y sus contenidos de la base (PED-01).
+                                      * Que falte sin explicación es lo que termina en un llamado a
+                                      * soporte, así que se dice acá mismo qué hacer.
+                                      */}
+                                    <div className="mt-4 flex items-start gap-2.5 p-3.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
+                                        <Wand2 size={15} className="text-violet-500 flex-shrink-0 mt-0.5" />
+                                        <div className="space-y-1.5">
+                                            <p className="text-[12px] font-bold text-violet-700 dark:text-violet-300">
+                                                El botón &quot;Generar práctica con IA&quot; aparece al editar la clase.
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                                                Creá la clase con el tema y los contenidos, y volvé a abrirla con el
+                                                lápiz de editar: ahí está el botón. La IA se apoya sobre todo en los{" "}
+                                                <strong>Contenidos</strong> —el Tema es el título que ven alumnos y
+                                                tutores—, así que cuanto más concreto sea lo que anotes, mejor sale el
+                                                material. También podés cargar la práctica a mano acá abajo.
+                                            </p>
+                                        </div>
+                                    </div>
+
                                     {/* Speaking */}
-                                    <div className="space-y-1.5 pt-4">
+                                    <div className="space-y-1.5">
                                         <label className="text-sm font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2">
                                             <Mic2 size={14} /> Frases para Speaking
                                         </label>
