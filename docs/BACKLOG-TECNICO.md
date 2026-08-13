@@ -235,6 +235,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
 | [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [ ] |
+| [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
+| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -2188,17 +2190,128 @@ asume.
 **Definir también:** qué ve un docente cuyo curso tiene `level` en `null` — hoy es un valor
 permitido. Lo razonable es que no vea pares, pero hay que decirlo.
 
-**Lo importante del "sólo ver".** Las tarjetas del calendario son clicables y llevan a la clase. Hay
-que asegurarse de que las ajenas **no naveguen**, porque hoy las pantallas de destino no distinguen
-al docente propio del ajeno: [`attendance/page.tsx`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx)
-autoriza por **instituto**, no por curso. O sea que un docente del instituto ya puede abrir la
-asistencia de la clase de otro escribiendo la URL — esto no lo empeora, pero lo pone a un clic. Si
-"sólo ver" es un requisito real y no una preferencia visual, hay que cerrarlo en las páginas de
-destino y no en el color de la tarjeta.
+**"Sólo ver" es un requisito, no una preferencia visual (confirmado 2026-08-13).** El docente ajeno
+tiene que poder ver por dónde va su par y **no poder editar nada**. Eso saca el problema del color de
+la tarjeta y lo lleva al servidor, porque hoy las pantallas de destino no distinguen al docente
+propio del ajeno: [`attendance/page.tsx`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx)
+autoriza por **instituto**, no por curso. Un docente del instituto ya puede abrir —y guardar— la
+asistencia de la clase de otro escribiendo la URL. Esta ficha no lo empeora, pero lo pone a un clic
+de distancia, así que hay que cerrarlo en el mismo pase.
+
+Alcance del cierre, para no quedarse a mitad de camino:
+
+1. Las tarjetas ajenas del calendario no navegan; muestran el tema y nada más.
+2. Las pantallas de clase —asistencia, notas, práctica— exigen ser el docente del curso, no
+   cualquier miembro del instituto. Los roles administrativos siguen entrando: el corte es entre
+   docentes, no contra la conducción.
+3. `saveLessonAttendanceAction` y las acciones equivalentes chequean lo mismo del lado del servidor.
+   Es donde de verdad se decide: esconder el botón no protege un server action, que es un POST como
+   cualquier otro. Ver [BUG-07](#bug-07), que ya arrastra este hueco.
+
+`AttendanceForm` ya tiene una prop `readOnly` que hoy nadie usa para esto: es el lugar natural para
+la vista del par.
 
 **Por qué está bueno el pedido.** Es coordinación pedagógica real entre docentes que dan el mismo
 nivel, y sale casi gratis sobre lo que ya existe. Es de las pocas cosas del backlog donde el valor
 es alto y el trabajo chico.
+
+---
+
+<a id="feat-08"></a>
+## FEAT-08 · Columna de novedades: plataforma, instituto y curso · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Una columna de novedades donde se comunican temas, en tres niveles:
+nosotros anunciamos funcionalidades nuevas, el instituto comunica por ejemplo una salida, y el curso
+comunica una tarea puntual. Las novedades deben poder firmarse — eso es [FEAT-09](#feat-09), que
+depende de esta.
+
+**No existe nada parecido**: no hay modelo de novedades ni de anuncios en el schema.
+
+**Tres emisores con tres alcances, y no son simétricos:**
+
+| Emisor | Destinatarios | Particularidad |
+|---|---|---|
+| Nosotros (SUPERADMIN) | Todos los institutos | **Cruza el límite de instituto**, cosa que hasta ahora ninguna funcionalidad hace a propósito |
+| El instituto | Su gente — a definir si todos, o por rol | Es el caso de la salida, y el que va a querer firma |
+| El curso | Alumnos y tutores de ese curso | Lo más parecido a lo que ya existe |
+
+El primero merece atención: todo el sistema está construido sobre "cada cosa pertenece a un
+instituto" ([ARQ-01](#arq-01), [`tenant.ts`](../src/lib/tenant.ts)). Una novedad de plataforma es la
+primera excepción deliberada, así que el modelo tiene que admitir `instituteId` nulo con un
+significado claro —"es de la plataforma"— y todas las consultas tienen que contemplarlo. Si se
+resuelve creando una fila por instituto se evita la excepción, a costa de duplicar el texto.
+
+**Cuidado con terminar con dos bandejas.** El módulo de mensajería ya hace "uno a muchos dentro de un
+curso" con los hilos `COURSE_BLAST`, y ya tiene su propio contador de no leídos —que hoy está roto
+para el admin, [BUG-06](#bug-06)—. Si las novedades nacen como un segundo sistema de mensajes, el
+usuario termina con dos lugares donde mirar y dos badges que no coinciden.
+
+Conviene decidirlo de entrada. La distinción sana es: **una novedad no es una conversación**. Es de
+una sola dirección, ordenada por fecha, y lo que importa es quién la leyó o la firmó, no quién
+respondió. Con ese criterio va un modelo propio, reutilizando la resolución de destinatarios de
+mensajería en vez de duplicarla.
+
+**A definir con el cliente:**
+
+- ¿La novedad del instituto le llega a todos —docentes, tutores, alumnos— o se elige el público?
+- ¿Caducan? Una salida del mes pasado no debería seguir arriba de la columna.
+- ¿Quién puede publicar en nombre del instituto: sólo ADMIN, o también la secretaría?
+
+---
+
+<a id="feat-09"></a>
+## FEAT-09 · Firma de conformidad de las novedades · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que las novedades sean "firmadas digitalmente por sus destinatarios".
+Depende de [FEAT-08](#feat-08): sin novedades no hay qué firmar.
+
+**Lo primero es el nombre, y no es una discusión de palabras.** En la Argentina, *firma digital* es
+un término con definición legal (Ley 25.506): exige un certificado emitido por un certificador
+licenciado y trae presunción de autoría. Todo lo demás es *firma electrónica*: es válida como prueba,
+pero si el firmante la desconoce, **la carga de probar que fue él es de quien la invoca** — o sea,
+del instituto. Lo que se puede construir acá dentro es una firma electrónica. Llamarla "firma
+digital" en la pantalla promete algo que no es, y el día que un padre diga "yo no autoricé esa
+salida", esa diferencia es todo el problema. **Conviene confirmarlo con quien asesore legalmente al
+instituto antes de definir el texto de la interfaz**, porque de eso depende para qué sirve la
+funcionalidad.
+
+**Una firma vale lo que valga el login que hay detrás, y hoy el login no aguanta.** Este es el punto
+técnico central:
+
+- Los tutores se crean con la contraseña `Modern2026`, escrita en el código e igual para todos
+  ([SEC-06](#sec-06)).
+- No hay recuperación de contraseña, así que la secretaría reparte y conoce las claves
+  ([FEAT-05](#feat-05)).
+
+Con ese cuadro, "el tutor firmó" no se sostiene: la contraseña la sabe la oficina. **[SEC-06](#sec-06)
+y [FEAT-05](#feat-05) son requisitos previos**, no mejoras deseables. Construir la firma antes que
+eso es fabricar un documento que no prueba nada, con la apariencia de que prueba.
+
+**Se firma un texto, no una fila.** Hay que guardar el **hash del contenido exacto** al momento de
+firmar. Si después alguien edita la novedad, la firma no puede seguir apareciendo como válida sobre
+un texto que el firmante nunca vio. Las dos salidas razonables: congelar la novedad al publicarla, o
+versionarla y volver a pedir firma. Cualquiera sirve; no decidirlo es lo que no sirve.
+
+**Quién firma cuando el destinatario es menor.** El instituto tiene alumnos de 6, 7 y 8 años
+([BUG-01](#bug-01)). Para una autorización de salida el firmante tiene que ser **el tutor**, no el
+alumno. Cada novedad necesita decir a quién le exige firma, y no puede ser "todos los destinatarios"
+por defecto.
+
+**Lo que el instituto realmente necesita no es la firma: es la lista de quién falta.** Ante una
+salida, la pregunta operativa es "¿qué chicos pueden ir?". La vista de firmas pendientes por novedad,
+con nombre y curso, es el valor de esta ficha; la firma es el mecanismo. Conviene construir esa vista
+desde el principio y no como agregado.
+
+**Qué guardar, con cuidado.** Quién firmó, cuándo, y el hash de lo firmado. Sobre IP y dispositivo
+hay una tensión real: [FEAT-04](#feat-04) tomó la posición de **no** guardarlos sin necesidad
+concreta, porque son datos personales y hay menores. Acá sí hay necesidad —son parte de la prueba—,
+así que la decisión es deliberada y hay que anotarla con la política de retención, no arrastrarla por
+inercia. Es el mismo terreno de [ARQ-10](#arq-10) (auditoría de acciones del panel), que también
+advierte sobre no copiar datos personales de más.
+
+**Alcance futuro.** El mecanismo sirve para cualquier documento que necesite conformidad —informes,
+autorizaciones, reglamento—, así que conviene que el modelo no quede atado a las novedades. Pero el
+pedido concreto es sobre las novedades y ahí empieza.
 
 ---
 
