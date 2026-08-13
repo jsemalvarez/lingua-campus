@@ -232,6 +232,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
+| [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -2045,6 +2046,61 @@ a la pregunta que se quiere responder.
 
 **Relacionado.** Encaja con el pendiente de mostrar uso real del instituto en el dashboard, anotado
 en [TODO.md](./TODO.md). Si se hace la opción 2, conviene resolverlo junto con ese ítem.
+
+---
+
+<a id="feat-05"></a>
+## FEAT-05 · Recuperar la contraseña por correo · **P1** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que el usuario pueda recuperar su contraseña por correo electrónico.
+
+**Hoy no existe ninguna recuperación**: si alguien se olvida la contraseña, la única salida es que
+el instituto se la restablezca a mano, y el reset la deja en una contraseña fija escrita en el código
+— [SEC-06](#sec-06) las lista todas. Los dos ítems son la misma conversación desde dos puntas:
+mientras no haya recuperación, sacar las contraseñas por defecto obliga al instituto a repartir
+claves aleatorias a mano. **Conviene hacer este primero**, y SEC-06 pasa a ser fácil.
+
+**El proyecto no manda correos.** No hay ninguna dependencia de envío ni configuración de SMTP: no es
+que falte la pantalla, falta el canal entero. Eso implica elegir proveedor, cargar sus variables de
+entorno y **verificar el dominio del remitente** (SPF y DKIM en el DNS). El trabajo de DNS y de
+reputación del remitente es real y no es de programación: sin eso los correos entran en spam, que
+para una funcionalidad de recuperación es lo mismo que no funcionar.
+
+**Tres cosas propias de este sistema que hay que resolver antes de copiar un flujo estándar:**
+
+1. **Muchos alumnos no tienen correo, y es a propósito.** El instituto tiene chicos de 6, 7 y 8 años;
+   el identificador obligatorio es el **DNI** y con eso entran ([BUG-01](#bug-01)). Un flujo "poné tu
+   email" no los cubre, y no es un caso de borde: es una franja entera de usuarios. Para ellos la
+   recuperación tiene que ir por el **tutor** o por el instituto. Diseñarlo como si todos tuvieran
+   correo deja a los más chicos afuera.
+2. **El correo no identifica a una persona sola.** `User.email` es único global
+   ([`schema.prisma:71`](../prisma/schema.prisma)), pero `Student.email` es opcional y único **por
+   instituto** (`@@unique([email, instituteId])`): la misma dirección puede existir en dos
+   institutos. El flujo tiene que resolver a qué cuenta corresponde el pedido, igual que hace el
+   login, que ya recibe `instituteId`.
+3. **El enlace tiene que llevar el instituto**, porque la pantalla de login es por instituto.
+
+**Forma del cambio.**
+
+- Modelo `PasswordResetToken` con el mismo patrón que ya existe en
+  [`StudentDataToken`](../prisma/schema.prisma) —token, vencimiento, `consumed`—, que conviene copiar
+  en vez de inventar. Dos diferencias: guardar el **hash** del token y no el token, porque queda en
+  la base y viaja por correo; y darle una vida corta (30 o 60 minutos, no días).
+- Invalidar el token al usarlo y al cambiar la contraseña por cualquier otra vía.
+- **La respuesta no debe revelar si la dirección existe.** Siempre el mismo mensaje: "si la dirección
+  está registrada, te llega un correo". Si no, el formulario es una forma de averiguar quién es
+  usuario del instituto.
+- **Límite de pedidos** por dirección y por IP. El proyecto ya tiene un contador por ventana en la
+  base para la IA ([`AiUsage`](../prisma/schema.prisma) y
+  [`quota.ts`](../src/lib/practice/quota.ts)); el mecanismo sirve igual acá y evita que el formulario
+  se use para inundar de correos a alguien.
+
+**Por qué P1.** Es el pedido con más volumen escondido: hoy cada olvido de contraseña es una llamada
+al instituto y un reset manual. Y desbloquea SEC-06, que es P1 de seguridad.
+
+**Relacionado.** [SEC-06](#sec-06) (contraseñas por defecto) y [FEAT-04](#feat-04) (saber quién entró
+alguna vez) tocan lo mismo desde otro ángulo: hoy nadie sabe cuántos tutores nunca pudieron entrar,
+que es probablemente donde está el problema real.
 
 ---
 
