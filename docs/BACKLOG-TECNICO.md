@@ -53,6 +53,19 @@ Las prioridades P0–P3 dicen **qué tan grave** es cada cosa. Este orden dice *
 conviene hacerlas**, que no es lo mismo: hay ítems graves que conviene postergar porque dependen de
 otro, e ítems menores que conviene adelantar porque son baratos y el cliente los está esperando.
 
+### Atención inmediata · pedido el 2026-08-13
+
+Dos reportes del cliente que se atienden **antes que cualquier tanda**, por decisión suya. Los dos
+los sufre alguien todos los días y los dos tienen la causa ya identificada:
+
+| | Estado del diagnóstico |
+|---|---|
+| [BUG-07](#bug-07) | No se guardan las asistencias. Causa probable: la transacción se agota haciendo una consulta por alumno. Antes de tocar código conviene pedir el mensaje exacto que ve la profesora — decide entre las dos causas candidatas en un minuto. |
+| [BUG-04](#bug-04) | Reabierto. La secretaria pasa a profesora en 11 pantallas. **Causa confirmada**: la cookie de rol es `httpOnly` y el `Navbar` la lee desde JavaScript, cosa que nunca puede funcionar. No requiere diagnóstico adicional. |
+
+BUG-04 se puede cerrar sin depender de nadie. BUG-07 conviene confirmarlo con una captura de
+pantalla, porque el arreglo es distinto según la causa.
+
 ### Tanda 1 · Pedidos del cliente que no dependen de nada
 
 Son acotados, aislados y de valor visible inmediato. Sacarlos primero compra tiempo para el trabajo
@@ -207,12 +220,14 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [ ] |
 | [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
+| [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
-| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
+| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [~] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
+| [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -235,6 +250,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-06](#ped-06) | P3 | `isCorrect` debe derivarse de `score` | [x] |
 | [PED-07](#ped-07) | P2 | Límites de consumo de IA por plan | [ ] |
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
+| [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [ ] |
 
 ---
 
@@ -1424,6 +1440,58 @@ cuando esté. Es el único lugar donde se decide; los llamadores le pasan lo que
 
 ---
 
+<a id="fin-20"></a>
+## FIN-20 · Cuotas duplicadas al cambiar de curso: la regla única es por inscripción · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-08-13).** Aparecieron cuotas duplicadas en alumnos que habían cambiado de curso.
+
+**Por qué la restricción de [FIN-06](#fin-06) no lo atajó.** El índice que se agregó es
+`@@unique([enrollmentId, type, year, month])`: impide dos cuotas del mismo mes **dentro de una
+inscripción**. No dice nada sobre el alumno. Si el mismo alumno tiene dos inscripciones activas,
+cada una genera su cuota del mismo mes y la base las acepta, porque para ella son de inscripciones
+distintas.
+
+Y esa regla es la correcta en el caso general: un alumno inscripto en dos cursos a la vez **debe**
+tener dos cuotas por mes, una por curso. El problema no es la regla, es que el cambio de curso puede
+dejar dos inscripciones abiertas.
+
+**Cómo se llega ahí.** Hay dos caminos para mover un alumno de curso y sólo uno es correcto:
+
+- [`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) **reasigna el `courseId` de la
+  inscripción existente**. Es el camino bueno: la inscripción sigue siendo una, y la restricción de
+  FIN-06 sigue valiendo. Las cuotas ya generadas quedan colgando de esa inscripción, con el precio
+  del curso viejo — que es otra discusión, pero no genera duplicados.
+- Inscribir al alumno en el curso nuevo con
+  [`createEnrollmentAction`](../src/app/enrollments/actions.ts) **sin dar de baja la vieja**. El
+  índice `studentId_courseId` sólo impide repetir el mismo curso, así que esto se permite: quedan dos
+  inscripciones `ACTIVE`. Desde ese momento, cada corrida del generador mensual produce dos cuotas
+  del mismo mes para el mismo alumno.
+
+Nada en la interfaz distingue "cambiar de curso" de "inscribir en otro curso más", y las dos cosas se
+ven igual desde la ficha del alumno.
+
+**Verificar antes de decidir el arreglo.** Una consulta a la base cierra la discusión: alumnos con
+más de una inscripción `ACTIVE`, y si sus cuotas duplicadas son del mismo mes con `enrollmentId`
+distinto. Si es eso, el diagnóstico está confirmado; si los duplicados comparten `enrollmentId`, el
+índice de FIN-06 no está aplicado en esa base y el problema es otro.
+
+**Cambio — a decidir con el cliente.** La pregunta de fondo es de negocio, no técnica: **¿un alumno
+puede cursar dos cursos al mismo tiempo en este instituto?**
+
+- Si **no** puede, la solución es dura y simple: impedir una segunda inscripción activa, y que el
+  cambio de curso pase siempre por `changeStudentCourseAction`.
+- Si **sí** puede, no se puede prohibir la segunda inscripción, y hay que atacar el cambio de curso:
+  que la interfaz obligue a elegir entre "mover" y "agregar", y que al mover se cierre la inscripción
+  anterior.
+
+En los dos casos hace falta además **limpiar los duplicados ya generados**, con el mismo cuidado de
+FIN-06: sólo se pueden borrar cuotas sin ningún pago asociado.
+
+**Relacionado.** [FIN-16](#fin-16) (el generador mensual ignora el período lectivo y a los alumnos
+de baja) toca la misma función y conviene mirarlos juntos.
+
+---
+
 # Bugs funcionales
 
 <a id="bug-01"></a>
@@ -1633,6 +1701,57 @@ inválida y `getActiveRole` devuelve `SECRETARY`.
 entre sesiones. Si sigue pasando, la causa no era ninguna de las dos y hay que mirar la cookie en el
 navegador.
 
+### Reabierto — 2026-08-13 · 🗣️ vuelve a reportarse
+
+Sigue pasando, así que la causa no era ninguna de las dos anteriores. **Esta vez sí está
+identificada, y es una tercera, independiente de las otras.**
+
+**La cookie es `httpOnly` y el `Navbar` intenta leerla desde JavaScript.**
+[`switchRoleAction`](../src/app/actions/roles.ts) guarda `lingua_current_role` con `httpOnly: true`,
+que es exactamente lo que impide que el navegador la exponga a `document.cookie`. Y
+[`Navbar.tsx:46`](../src/components/layout/Navbar.tsx) hace justamente eso:
+
+```ts
+const roleCookie = document.cookie.split("; ").find((row) => row.startsWith("lingua_current_role="))
+```
+
+Ese `find` devuelve `undefined` **siempre**, en todos los navegadores, desde el día uno. No es una
+falla intermitente ni depende de los datos.
+
+**Qué pasa entonces.** Ese camino sólo corre cuando la página no le pasa `currentActiveRole` al
+`Navbar`. En ese caso el rol mostrado queda en el valor inicial: `userRoles[0]` — **el primer
+elemento del array, sin ninguna prioridad aplicada**. La auditoría anotada más arriba dice que la
+usuaria tiene `roles = ['TEACHER', 'SECRETARY']`, así que `userRoles[0]` es `TEACHER`. El menú la
+muestra como profesora aunque su cookie diga secretaria.
+
+**Por qué lo ve tanto.** Son 11 pantallas las que renderizan `<Navbar />` sin la prop, contra 30 que
+sí la pasan. Las 11 son, casi exactamente, el trabajo de una secretaria:
+
+`/payments`, `/payments/debtors`, `/payments/payroll`, `/payments/tour`, `/enrollments/new`,
+`/students/new`, `/guardians/[id]`, `/courses/new`, `/courses/classrooms`, `/courses/levels`.
+
+Entra a Finanzas o a inscribir un alumno y el menú se le pasa a profesora; vuelve a una pantalla que
+sí manda la prop y aparece de nuevo como secretaria. Descripto por quien lo sufre, eso es
+"siempre se me cambia a profesora".
+
+**Alcance: es la interfaz, no los permisos.** Las acciones del servidor resuelven el rol con
+`requireRole`/`getAuthContext`, que leen la base y la cookie real. La secretaria no pierde
+atribuciones — pierde el menú, que en esas pantallas pasa a ser el de profesora y le esconde
+Finanzas e Informes.
+
+**Cambio.**
+
+1. Pasar `currentActiveRole` en las 11 pantallas, como ya hacen las otras 30.
+2. Borrar el bloque que lee `document.cookie` en `Navbar`: no puede funcionar y disimula el olvido de
+   la prop. Sin rol activo no hay que adivinar uno.
+3. Que el valor inicial deje de ser `userRoles[0]`. Si hace falta un rol por defecto, tiene que salir
+   de la prioridad de [`roles.ts`](../src/lib/roles.ts) —donde `SECRETARY` va antes que `TEACHER`—,
+   que es el criterio que ya usa el servidor.
+
+**Lección para la ficha.** Los tres intentos fallaron por lo mismo: se buscó la causa en la sesión y
+en los datos, y estaba en la pantalla. El síntoma "el sistema me cambia el rol" describía un cartel,
+no un permiso.
+
 ---
 
 <a id="bug-05"></a>
@@ -1724,6 +1843,56 @@ baja. Es previo a [BUG-05](#bug-05), pero se nota más ahora que el admin puede 
 
 Recomiendo la 3, y revisar con el cliente si el admin espera enterarse de mensajes nuevos en hilos
 que no son suyos.
+
+---
+
+<a id="bug-07"></a>
+## BUG-07 · No se pueden guardar las asistencias de la clase · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-08-13).** Los profesores dicen que no pueden guardar el parte de asistencia. Sin
+detalle de en qué clases, con cuántos alumnos, ni con qué mensaje en pantalla.
+
+**Lo que descarté.** El formulario está bien:
+[`AttendanceForm`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx) arma el
+payload con los alumnos que tienen estado marcado, llama a la acción y muestra el error que reciba.
+El problema está del lado del servidor, en
+[`saveLessonAttendanceAction`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts).
+
+**Causa más probable: se agota la transacción.** La acción abre una `$transaction` interactiva y
+adentro hace **una consulta por alumno**, en serie: un `findMany` y después un `update` o un `create`
+por cada uno. Contra una base remota, con 25 o 30 alumnos son 30 viajes de ida y vuelta dentro de una
+transacción cuyo tope por defecto en Prisma son 5 segundos. Al pasarse, se cae **todo el guardado**,
+no una fila.
+
+Encaja con el reporte: intermitente, peor en los cursos más numerosos y en los horarios de más uso,
+y sin patrón claro para quien lo sufre. Y es el mismo problema que [FIN-06](#fin-06) ya documenta
+haber sufrido en producción con la generación de cuotas y de notas — ahí la solución no fue agrandar
+el tope sino colapsar todo a una sola query. Es el tercer lugar con el mismo patrón.
+
+**Segunda causa posible: choque con el kiosco de QR.** La acción decide entre `update` y `create`
+mirando una lectura previa, y no hay nada que impida que entre la lectura y la escritura el kiosco
+([`scanAttendanceQRAction`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts)) cree
+la fila del mismo alumno. El modelo tiene `@@unique([studentId, lessonId])`, así que el `create`
+falla y arrastra la transacción entera. Es más raro, pero explicaría una falla puntual en una clase
+donde se usó el escáner.
+
+**Cambio propuesto.** Reemplazar el bucle por un `upsert` por alumno sobre la clave
+`studentId_lessonId`, agrupados en un `$transaction([...])` en su forma de arreglo: es un solo lote
+en vez de treinta viajes, elimina la carrera con el kiosco por construcción, y sigue siendo atómico.
+
+**Hueco de permisos que aparece de paso.** La acción sólo verifica que haya sesión con email
+(`if (!session || !session.user?.email)`). No comprueba rol ni instituto: cualquiera con sesión
+—incluido un tutor— puede escribir asistencia de cualquier clase de cualquier instituto, si conoce
+los ids. No es la causa de este bug, pero es del mismo tipo que [SEC-03](#sec-03) y quedó fuera de
+aquel barrido. Corregirlo en el mismo pase.
+
+**Antes de tocar código: pedir el mensaje exacto.** La acción devuelve `error.message` crudo de
+Prisma al cliente, así que la profesora **está viendo el texto del error**. Un `P2028` (transacción
+cerrada) confirma la causa 1; un `P2002` (restricción única) confirma la 2. Una captura de pantalla
+decide entre las dos en un minuto y evita adivinar.
+
+Que haga falta pedir una captura para saber qué se rompió es, en sí, [ARQ-09](#arq-09): los errores
+no se registran en ningún lado.
 
 ---
 
@@ -2465,6 +2634,51 @@ efecto y cada reproducción vuelve a generar el audio.
 
 **Cambio.** Pasar a `GET` con el texto hasheado en la URL, o cachear el audio del lado del servidor
 (Supabase Storage) con clave `hash(texto + voz + velocidad)`. Relevante si se usa un TTS pago.
+
+---
+
+<a id="ped-09"></a>
+## PED-09 · Generar recursos extra de la clase para el docente · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Un generador de contenido de recursos extra para la clase, para uso del
+docente.
+
+**Qué lo distingue de [PED-01](#ped-01).** PED-01 genera lo que practica **el alumno** solo, en su
+casa, y por eso tiene una forma fija: tres secciones que `LessonPractice` sabe guardar y que la app
+del alumno sabe ejecutar. Esto es otra cosa: material para **la profesora**, para dar la clase
+siguiente o reforzar la que dio. No lo consume la aplicación, lo consume una persona.
+
+Esa diferencia es la que hay que resolver antes de escribir código, y no es técnica:
+
+**Qué es un "recurso extra" hay que definirlo con el cliente.** Puede ser una guía de ejercicios para
+imprimir, una actividad de 10 minutos para arrancar la clase, un juego para el aula, ejemplos
+adicionales de un punto gramatical, o un texto de lectura. Cada una tiene una forma distinta, y "todo
+eso" no es una funcionalidad, es cinco. Conviene que la profesora diga cuáles pide de verdad y con
+qué frecuencia, antes de decidir qué genera el sistema.
+
+**Dos preguntas que cambian el diseño por completo:**
+
+1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
+   (`LessonResource`) y decidir quién lo ve — ¿sólo quien lo generó, todo el instituto, los alumnos?
+   Si es de un solo uso, alcanza con generarlo y ofrecer copiarlo o bajarlo en PDF, y no hay
+   migración.
+2. **¿En qué formato sale?** Texto para copiar y pegar es lo más barato. Un PDF armado ya es otro
+   trabajo, aunque el proyecto tiene `jspdf` y lo usa para recibos e informes, así que hay de dónde
+   agarrarse.
+
+**Lo que ya está construido y sirve.** El circuito completo de PED-01 es reutilizable tal cual: el
+patrón de providers (`IAIProvider`), el guard de personal sobre una clase
+([`guardPracticeDraft`](../src/lib/practice/guard.ts)), la cuota, y la validación de que la clase
+tenga tema y contenidos ([`draft.ts`](../src/lib/practice/draft.ts)). Un método nuevo en el provider
+y un endpoint que devuelva texto es la versión mínima, y es chica.
+
+**Prioridad.** P2 y no P1: es un pedido nuevo, no algo roto, y el diferencial del producto —el
+circuito aula → práctica → aula— pasa por [PED-02](#ped-02), no por acá. Pero es barato sobre lo que
+ya existe, y es el tipo de cosa que la profesora nota todos los días.
+
+**Riesgo a tener presente.** Cada generación cuesta cuota, y a diferencia de la práctica del alumno
+—que la usa un curso entero— esto lo dispara una sola persona para su propio uso. Si se vuelve
+frecuente, entra antes de lo previsto la discusión de [PED-07](#ped-07) (topes por plan).
 
 ---
 
