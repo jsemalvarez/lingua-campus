@@ -2231,15 +2231,22 @@ depende de esta.
 
 | Emisor | Destinatarios | Particularidad |
 |---|---|---|
-| Nosotros (SUPERADMIN) | Todos los institutos | **Cruza el límite de instituto**, cosa que hasta ahora ninguna funcionalidad hace a propósito |
+| Nosotros (SUPERADMIN) | **Sólo el personal**: ADMIN, SECRETARY y TEACHER, de todos los institutos | **Cruza el límite de instituto**, cosa que hasta ahora ninguna funcionalidad hace a propósito |
 | El instituto | Su gente — a definir si todos, o por rol | Es el caso de la salida, y el que va a querer firma |
 | El curso | Alumnos y tutores de ese curso | Lo más parecido a lo que ya existe |
 
-El primero merece atención: todo el sistema está construido sobre "cada cosa pertenece a un
-instituto" ([ARQ-01](#arq-01), [`tenant.ts`](../src/lib/tenant.ts)). Una novedad de plataforma es la
-primera excepción deliberada, así que el modelo tiene que admitir `instituteId` nulo con un
-significado claro —"es de la plataforma"— y todas las consultas tienen que contemplarlo. Si se
-resuelve creando una fila por instituto se evita la excepción, a costa de duplicar el texto.
+**Decisión (2026-08-13): como plataforma no nos comunicamos con tutores ni con alumnos.** Nuestras
+novedades —funcionalidades nuevas, avisos del producto— son para el personal del instituto y nadie
+más. Eso acota bastante el caso raro: el alcance que cruza institutos tiene un público chico,
+conocido y sin menores adentro, así que no arrastra las consideraciones de datos de terceros que
+tendría un anuncio masivo a familias.
+
+Aun así el primer emisor merece atención: todo el sistema está construido sobre "cada cosa pertenece
+a un instituto" ([ARQ-01](#arq-01), [`tenant.ts`](../src/lib/tenant.ts)). Una novedad de plataforma
+es la primera excepción deliberada, así que el modelo tiene que admitir `instituteId` nulo con un
+significado claro —"es de la plataforma"— y todas las consultas tienen que contemplarlo, filtrando
+además por rol para que no se le escape a un tutor. Si se resuelve creando una fila por instituto se
+evita la excepción, a costa de duplicar el texto.
 
 **Cuidado con terminar con dos bandejas.** El módulo de mensajería ya hace "uno a muchos dentro de un
 curso" con los hilos `COURSE_BLAST`, y ya tiene su propio contador de no leídos —que hoy está roto
@@ -2265,27 +2272,26 @@ mensajería en vez de duplicarla.
 **Pedido (2026-08-13).** Que las novedades sean "firmadas digitalmente por sus destinatarios".
 Depende de [FEAT-08](#feat-08): sin novedades no hay qué firmar.
 
-**Lo primero es el nombre, y no es una discusión de palabras.** En la Argentina, *firma digital* es
-un término con definición legal (Ley 25.506): exige un certificado emitido por un certificador
-licenciado y trae presunción de autoría. Todo lo demás es *firma electrónica*: es válida como prueba,
-pero si el firmante la desconoce, **la carga de probar que fue él es de quien la invoca** — o sea,
-del instituto. Lo que se puede construir acá dentro es una firma electrónica. Llamarla "firma
-digital" en la pantalla promete algo que no es, y el día que un padre diga "yo no autoricé esa
-salida", esa diferencia es todo el problema. **Conviene confirmarlo con quien asesore legalmente al
-instituto antes de definir el texto de la interfaz**, porque de eso depende para qué sirve la
-funcionalidad.
+**Decisión (2026-08-13): es firma electrónica, y el objetivo es saber quién vio.** No se busca una
+autorización con valor probatorio sino que el instituto sepa si los tutores y los alumnos vieron la
+novedad o el informe. Eso baja la exigencia de golpe: no hace falta certificador licenciado ni las
+formalidades de la *firma digital* de la Ley 25.506, que es un término legal distinto y con
+presunción de autoría. Lo que se construye es un acuse de lectura con conformidad explícita.
 
-**Una firma vale lo que valga el login que hay detrás, y hoy el login no aguanta.** Este es el punto
-técnico central:
+Conviene que la interfaz diga eso mismo —"confirmo que lo leí"— y no "firma digital", por dos
+razones: es lo que realmente hace, y evita que dentro de un año alguien lo invoque como si fuera lo
+otro.
 
-- Los tutores se crean con la contraseña `Modern2026`, escrita en el código e igual para todos
-  ([SEC-06](#sec-06)).
-- No hay recuperación de contraseña, así que la secretaría reparte y conoce las claves
-  ([FEAT-05](#feat-05)).
+**Dónde sí importa la fortaleza del login.** Un acuse de lectura tolera bien que las credenciales
+sean flojas: si la secretaría conoce la contraseña del tutor ([SEC-06](#sec-06)) y no hay
+recuperación ([FEAT-05](#feat-05)), lo que se degrada es la confianza del dato, no la exposición
+legal. Con este alcance, esos dos ítems **dejan de ser requisitos previos**.
 
-Con ese cuadro, "el tutor firmó" no se sostiene: la contraseña la sabe la oficina. **[SEC-06](#sec-06)
-y [FEAT-05](#feat-05) son requisitos previos**, no mejoras deseables. Construir la firma antes que
-eso es fabricar un documento que no prueba nada, con la apariencia de que prueba.
+Pero conviene tener marcada la frontera: el ejemplo de la salida es una **autorización**, no un
+aviso. Si el día de mañana el instituto empieza a apoyarse en estas firmas para permisos —que es la
+deriva natural, porque el mecanismo ya va a estar ahí—, entonces sí vuelven a pesar SEC-06 y
+FEAT-05, porque "el tutor autorizó" no se sostiene si la contraseña la sabe la oficina. Vale
+decidirlo cuando pase, no ahora, pero sabiendo que va a pasar.
 
 **Se firma un texto, no una fila.** Hay que guardar el **hash del contenido exacto** al momento de
 firmar. Si después alguien edita la novedad, la firma no puede seguir apareciendo como válida sobre
@@ -2309,9 +2315,12 @@ así que la decisión es deliberada y hay que anotarla con la política de reten
 inercia. Es el mismo terreno de [ARQ-10](#arq-10) (auditoría de acciones del panel), que también
 advierte sobre no copiar datos personales de más.
 
-**Alcance futuro.** El mecanismo sirve para cualquier documento que necesite conformidad —informes,
-autorizaciones, reglamento—, así que conviene que el modelo no quede atado a las novedades. Pero el
-pedido concreto es sobre las novedades y ahí empieza.
+**Los informes entran desde el día uno.** El pedido nombra "la novedad **o el informe**", así que no
+es un alcance futuro: son dos objetos firmables desde el arranque. El modelo no puede colgar de
+`Announcement` — necesita apuntar a "un documento" de tipo variable, y el módulo de informes
+([`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx),
+[`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx)) es el segundo caso a
+cubrir. Que el reglamento o una autorización se sumen después sale gratis si esto se diseña así.
 
 ---
 
