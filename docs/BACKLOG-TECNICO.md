@@ -61,7 +61,7 @@ los sufre alguien todos los días y los dos tienen la causa ya identificada:
 | | Estado del diagnóstico |
 |---|---|
 | [BUG-07](#bug-07) | ~~No se guardan las asistencias.~~ Resuelto el 2026-08-13 sin necesidad de la captura: el parte pasó de 78 sentencias a 4, medido. **Falta verificar en stage.** |
-| [BUG-04](#bug-04) | Reabierto. La secretaria pasa a profesora en 11 pantallas. **Causa confirmada**: la cookie de rol es `httpOnly` y el `Navbar` la lee desde JavaScript, cosa que nunca puede funcionar. No requiere diagnóstico adicional. |
+| [BUG-04](#bug-04) | ~~La secretaria pasa a profesora en 11 pantallas.~~ Resuelto el 2026-08-13: la prop `currentActiveRole` del `Navbar` pasó a ser obligatoria, así que la próxima pantalla que la olvide no compila. **Falta verificar con la usuaria.** |
 
 BUG-04 se puede cerrar sin depender de nadie.
 
@@ -224,7 +224,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
-| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [~] |
+| [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
@@ -1809,6 +1809,34 @@ Finanzas e Informes.
 **Lección para la ficha.** Los tres intentos fallaron por lo mismo: se buscó la causa en la sesión y
 en los datos, y estaba en la pantalla. El síntoma "el sistema me cambia el rol" describía un cartel,
 no un permiso.
+
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**La prop pasó a ser obligatoria.** `currentActiveRole` era opcional y ese era el fondo del asunto:
+olvidarla no costaba nada y once pantallas la olvidaron. Ahora es `currentActiveRole: string`, así
+que **la próxima pantalla que se olvide no compila**. Es el único de los tres puntos que impide la
+recaída; los otros dos arreglan lo que ya estaba roto.
+
+Las 11 renderizaciones que faltaban ya la pasan: ocho salen de `auth.activeRole` —el mismo
+`requireRole` que esas páginas ya llamaban—, dos de `payments/debtors` y `payments/tour` que **ya
+calculaban `activeRole` con `getActiveRole` y no lo estaban usando**, y `students/new`, la única que
+no tenía rol a mano, ahora lo pide con `getActiveRole`.
+
+**El bloque de `document.cookie` se borró.** Con la prop obligatoria no hay caso en que haga falta
+adivinar. De paso desaparecieron el `useState` y el `useEffect` que lo sostenían: el rol activo es
+ahora una lectura directa de la prop, sin estado propio. El cambio de rol sigue funcionando porque
+`switchRoleAction` escribe la cookie en el servidor y redirige, así que vuelve por una renderización
+nueva con la prop ya actualizada — nunca dependió del estado del cliente.
+
+**`userRoles[0]` no se reemplazó por nada.** El punto 3 del cambio pedía que el valor inicial saliera
+de la prioridad de [`roles.ts`](../src/lib/roles.ts) en vez del primer elemento del array. Al hacer
+la prop obligatoria el valor inicial dejó de existir: el servidor ya resolvió el rol con
+`getActiveRole`, que es exactamente esa prioridad. Poner un segundo criterio en el cliente habría
+sido una forma nueva de que los dos lados discrepen.
+
+**Verificado:** `tsc --noEmit` limpio y build completo. **Falta la verificación con la usuaria**, que
+es la única que cierra la ficha: entrar a `/payments` y a `/enrollments/new` y confirmar que el menú
+sigue diciendo "Modo Secretaría" y que Finanzas e Informes no desaparecen.
 
 ---
 
