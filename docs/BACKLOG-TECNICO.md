@@ -2059,6 +2059,9 @@ de modo que la profesora y el tutor vean que se incorporó.
 **Estado: resuelto.** Corregido en `72fbdca` y `7782037`, verificado en stage el 2026-08-09: el
 admin abre el hilo, responde, y queda listado entre los participantes.
 
+**Verificado en producción el 2026-08-14.** La administradora del instituto abre los hilos que antes
+le daban 404. Lo reportó ella, sin que se lo preguntáramos.
+
 `7782037` cerró un hueco detectado durante esa prueba: la vista guardaba en estado sólo los
 mensajes, así que tras responder el contador de participantes y el aviso de "estás viendo como
 administración" seguían mostrando el estado previo hasta recargar la página.
@@ -3147,7 +3150,12 @@ justamente para eso).
 **Por qué es P1.** Convierte el diferencial de "depende de la disciplina del docente" a "sale gratis".
 Si hay que elegir **una sola cosa** de este módulo, es esta.
 
-### Resuelto — 2026-08-11 · pendiente de verificar en stage
+### Resuelto — 2026-08-11 · **verificado en producción el 2026-08-14**
+
+**Verificado por uso real, no por prueba.** El instituto trabajó con el botón y lo mencionó como algo
+que les gustó. Nunca pasó por stage: llegó a producción con la promoción de emergencia del 13/08 y se
+confirmó usándolo. Vale como cierre — es la evidencia más fuerte que hay, aunque haya llegado por el
+camino equivocado.
 
 **Un botón en el modal de clase, y nada que se guarde solo.** "Generar práctica con IA" vive dentro
 de la sección de práctica de
