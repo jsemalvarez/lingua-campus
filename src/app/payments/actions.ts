@@ -22,6 +22,24 @@ async function getAuthAndInstitute() {
 }
 
 /**
+ * Igual que `getAuthAndInstitute`, pero sólo para ADMIN.
+ *
+ * El corte que definió el instituto (SEC-03): la secretaría entra a todo lo que
+ * es plata que **entra** —cuotas, matrículas e ingresos varios, que son el libro
+ * o la fotocopia que vende el instituto— y no toca lo que **sale**. Los gastos y
+ * los sueldos son del dueño.
+ *
+ * La pantalla de finanzas ya le escondía el formulario de egresos, el acceso a
+ * sueldos y los KPI que los muestran, pero eso no alcanzaba: un server action es
+ * un POST como cualquier otro y esconder el formulario no protege nada.
+ */
+async function getAdminAndInstitute() {
+    const auth = await requireRole(["ADMIN"]);
+    if (!auth) return null;
+    return { id: auth.userId, instituteId: auth.instituteId };
+}
+
+/**
  * Bloqueos de fila para las operaciones de cobro.
  *
  * Los importes de una cuota no se pueden calcular con `increment`: `paidAmount`
@@ -413,7 +431,9 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
 }
 
 export async function createExpenseAction(formData: FormData) {
-    const user = await getAuthAndInstitute();
+    // Sólo ADMIN: cubre también los sueldos, que entran por acá con
+    // `category === "Payroll"`. Ver SEC-03.
+    const user = await getAdminAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
     const description = formData.get("description") as string;
@@ -466,7 +486,8 @@ export async function createExpenseAction(formData: FormData) {
 }
 
 export async function voidExpenseAction(expenseId: string, reason?: string) {
-    const user = await getAuthAndInstitute();
+    // Sólo ADMIN, igual que darlo de alta. Ver SEC-03.
+    const user = await getAdminAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
     try {

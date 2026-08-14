@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
-import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
+import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -272,6 +272,19 @@ export async function getDebtorsReportAction() {
 
 /**
  * Elimina fisicamente una cuota PENDIENTE. Sólo si no tiene pagos asociados.
+ *
+ * **Deja asiento de quién la borró.** Es la única acción de plata que no dejaba
+ * rastro: anular un pago, un gasto o un ingreso escribe su contra-asiento con
+ * `operatorId`, pero acá la fila desaparecía y no quedaba nada. No borra plata
+ * cobrada —se niega si la cuota tiene pagos— pero **borra una deuda**, y eso hay
+ * que poder reconstruirlo. Ver SEC-03.
+ *
+ * El asiento va con importe 0 porque no hubo movimiento de dinero, con la misma
+ * forma que usa la aplicación de saldo a favor. Dos límites conocidos: hoy **no
+ * se ve en la tabla del libro mayor**, que filtra los de importe 0, y es un
+ * tercer sentido para `ADJUSTMENT` — los dos los resuelve [FIN-11] cuando se
+ * decida qué es esa tabla. El registro queda consultable igual, que es lo que
+ * faltaba.
  */
 export async function deleteFeeAction(feeId: string) {
     const user = await getAuthAndInstitute();
@@ -280,7 +293,7 @@ export async function deleteFeeAction(feeId: string) {
     try {
         const fee = await prisma.fee.findUnique({
             where: { id: feeId },
-            include: { payments: true }
+            include: { payments: true, student: { select: { name: true } } }
         });
 
         if (!fee || fee.instituteId !== user.instituteId) {
@@ -291,9 +304,21 @@ export async function deleteFeeAction(feeId: string) {
             return { success: false, error: "No se puede eliminar una cuota que ya tiene pagos. Anule los pagos primero." };
         }
 
-        await prisma.fee.delete({
-            where: { id: feeId }
-        });
+        // El asiento y el borrado van juntos: si falla el borrado no queremos un
+        // asiento de una cuota que sigue existiendo.
+        await prisma.$transaction([
+            prisma.transaction.create({
+                data: {
+                    instituteId: fee.instituteId,
+                    amount: 0,
+                    type: "ADJUSTMENT",
+                    method: "N/A",
+                    description: `Cuota eliminada — ${formatFeeLabel(fee.type, fee.month, fee.year)} de ${fee.student.name} (importe $${fee.originalAmount.toLocaleString()})`,
+                    operatorId: user.id,
+                }
+            }),
+            prisma.fee.delete({ where: { id: feeId } }),
+        ]);
 
         revalidatePath("/payments/debtors");
         revalidatePath("/students");
