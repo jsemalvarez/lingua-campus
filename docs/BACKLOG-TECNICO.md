@@ -1194,6 +1194,40 @@ dinero) o el libro de todos los movimientos, incluidos los internos de $0? De es
 
 La opción 1 es menos invasiva y no cambia lo que ve quien concilia caja.
 
+### Decidido — 2026-08-13 · la opción 1, y el acceso va en la ficha del alumno
+
+**La tabla de `/payments` es la caja.** El filtro de $0 se queda. Y el acceso no va ahí por una razón
+más fuerte que la elegancia del modelo: **nadie llega al problema por esa pantalla**. Los pagos mal
+cargados los reportan los alumnos o los tutores, y el instituto mira la ficha del alumno; si hay
+deuda, la página de deudores. A `/payments` no se entra a buscar un movimiento.
+
+**Deudores es donde se nota, no donde se arregla.** Lista cuotas `PENDING` o `PARTIAL`
+([`billingActions.ts:239`](../src/app/payments/billingActions.ts)), y una cuota mal pagada con saldo
+queda `PAID`: no aparece. Sirve para detectar que algo no cierra, no para corregirlo.
+
+**El trabajo real no es el botón, es que la ficha del alumno hoy no alcanza.** Trae sólo las
+**últimas 5 cuotas** (`take: 5`) y de cada una **sólo el último pago válido** (`take: 1`,
+[`students/[id]/page.tsx:125`](../src/app/students/[id]/page.tsx)). El pago con `method: "SALDO"` que
+hay que anular puede no estar cargado en la página, así que el acceso no se puede colgar de lo que ya
+se muestra.
+
+**Forma propuesta.** Un bloque propio en la ficha —"Saldo a favor aplicado"— que liste los `Payment`
+con `method: "SALDO"` y `status: "VALID"` del alumno, con la cuota a la que se aplicaron, el importe
+y la fecha, y un botón de anular por fila que llame a `voidPaymentAction`, que **ya sabe revertirlo
+bien** desde [FIN-02](#fin-02). Es una consulta aparte, no depende de los `take` de arriba, y le
+contesta literalmente al mensaje de error de [FIN-01](#fin-01): *"anulá primero los pagos hechos con
+ese saldo"* — el operador ve esa lista y nada más.
+
+**De paso, mejorar el mensaje de error.** Hoy dice qué hacer pero no dónde: nombrar las cuotas que
+retienen el saldo le ahorra la búsqueda.
+
+**Lo que esta decisión deja sin resolver, a propósito.** Los asientos internos de $0 siguen sin
+verse: la aplicación de saldo, el contra-asiento de anulación y —desde [SEC-03](#sec-03)— la cuota
+borrada. Son tres sentidos distintos de `ADJUSTMENT` conviviendo en un tipo, registrados y
+consultables pero invisibles en la interfaz. La opción 2 era la que los sacaba a la luz. Si algún día
+hace falta auditar desde la pantalla, esto vuelve — y probablemente vuelva junto con
+[ARQ-10](#arq-10), que es el mismo problema mirado desde otro lado.
+
 ---
 
 <a id="fin-12"></a>
