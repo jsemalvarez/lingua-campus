@@ -1376,6 +1376,49 @@ que cambia es que el "a cobrar del mes" pasa a ser sólo cuotas. Es la misma car
 `formatFeeLabel`. Y el selector de cuota al cobrar muestra el curso al lado de la matrícula: dos
 matrículas del mismo año eran indistinguibles.
 
+### El mes en producción no era arbitrario — 2026-08-13
+
+**Las matrículas de este cliente estaban en febrero a propósito.** Se cargaron en febrero para que
+los padres vieran una fecha coherente al descargar el recibo. La ficha asumía que el mes era ruido —
+el mes de creación— y coincidió: se generaron en febrero, así que quedó `month = 2` sola. Pero
+significaba algo.
+
+**Los recibos no se rompieron.** Se verificó: el recibo nunca miró el mes de la cuota. El concepto
+sale de `formatFeeLabel`, que para `ENROLLMENT` devuelve `Matrícula {año}` e ignora el mes, y la
+fecha sale de `payment.date`, que la migración no tocó. Lo que ven los padres quedó igual.
+
+**Lo que sí cambió es de puertas adentro**, y de forma retroactiva, porque la migración reescribió el
+mes de *todas* las matrículas existentes:
+
+- El **"Ingresos del Mes"** del dashboard y el **"Total a cobrar"** del período bajaron: ambos filtran
+  por mes exacto y el 0 no cae en ninguno. Febrero 2026 es el mes afectado en este cliente.
+- En la vista de los tutores las matrículas se ordenan al final del año en vez de entre las de
+  febrero ([`guardian/payments/page.tsx`](../src/app/guardian/payments/page.tsx) ordena por `month`).
+- La **caja no cambió**: sale del libro mayor por fecha de asiento. Y la **deuda tampoco**: usa
+  `<=`, y 0 es menor que cualquier mes.
+
+**Decisión: `ENROLLMENT_FEE_MONTH` se queda en 0.** Se evaluó ponerlo en 2 —la restricción única
+funciona con cualquier valor fijo, lo único que importa es que todas compartan el mes— y se descartó:
+codifica "la matrícula es de febrero" para todos los institutos y años. La corrección de los números
+de febrero se hace a mano en la base.
+
+> **Aviso para esa corrección a mano.** Los dos caminos que crean una matrícula escriben
+> `month: ENROLLMENT_FEE_MONTH` ([`billingActions.ts:202`](../src/app/payments/billingActions.ts),
+> [`actions.ts:643`](../src/app/payments/actions.ts)). Un `UPDATE` que ponga las viejas en 2 dejando
+> la constante en 0 **reabre el bug que cerró [FIN-06](#fin-06)**: el índice único es
+> `[enrollmentId, type, year, month]`, así que `(inscripción, ENROLLMENT, 2026, 2)` y
+> `(inscripción, ENROLLMENT, 2026, 0)` son filas distintas para la base y la garantía de "una
+> matrícula por inscripción y año" desaparece para esas inscripciones. Quedaría sólo el filtro en
+> memoria, que es exactamente lo que FIN-06 dice que no alcanza.
+>
+> Las dos salidas seguras son **no tocar el mes** (y explicarle al cliente por qué cambiaron los
+> números de febrero) o **cambiar la constante y las filas en la misma operación**. Tocar la base
+> dejando el código como está es la única combinación que rompe.
+
+**Relacionado.** [FIN-08](#fin-08) es la causa de fondo: mientras `Fee` no tenga `dueDate`, el mes es
+lo único que hace de vencimiento y una cuota anual no tiene mes donde caer. Con `dueDate` la
+matrícula vuelve al período que le corresponde sin forzar nada.
+
 ---
 
 <a id="fin-13"></a>
@@ -1589,6 +1632,41 @@ FIN-06: sólo se pueden borrar cuotas sin ningún pago asociado.
 
 **Relacionado.** [FIN-16](#fin-16) (el generador mensual ignora el período lectivo y a los alumnos
 de baja) toca la misma función y conviene mirarlos juntos.
+
+### Decidido — 2026-08-13 · la regla es la simultaneidad, y va por configuración
+
+**La pregunta de la ficha estaba mal planteada.** Preguntaba si un alumno puede cursar dos cursos,
+como si fuera sí o no. La respuesta del instituto es más fina y cambia el arreglo:
+
+- **No simultáneos.** Es un instituto de inglés: un alumno está en un curso por vez.
+- **Pero sí dos en el mismo año**, uno después del otro, porque hay **cursos cortos para adultos**.
+
+Por lo tanto **la restricción no puede ser por año, tiene que ser sobre la simultaneidad**: un alumno
+con una inscripción `ACTIVE` no puede tener otra `ACTIVE`; cuando la primera termina, puede empezar
+otra. La lectura fácil de "no puede hacer dos cursos" —una inscripción por alumno y año— habría roto
+los cursos cortos, que son un producto que el instituto vende.
+
+**Y no va escrita en el código.** El instituto siguiente puede ser de varios idiomas, donde cursar
+inglés y portugués a la vez es normal. El corte es una configuración por instituto —un
+`allowsConcurrentEnrollments` en `Institute`, en falso por defecto— que consulta
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts). Este cliente lo tiene apagado y el
+error se vuelve imposible; el día que aparezca el otro, se prende sin tocar código.
+
+**Alcance del cambio:**
+
+1. El campo en `Institute` y su migración.
+2. `createEnrollmentAction` rechaza la segunda inscripción activa cuando está apagado, con un mensaje
+   que mande a cambiar de curso en vez de a inscribir de nuevo.
+3. La interfaz, que hoy no distingue "mover" de "agregar". Con la bandera apagada alcanza con que el
+   rechazo explique la diferencia; con la bandera prendida hay que preguntar cuál de las dos cosas se
+   quiere hacer.
+4. Limpiar los duplicados ya generados, con el cuidado de [FIN-06](#fin-06): sólo cuotas sin ningún
+   pago.
+
+**Confirmado de paso, y cierra una duda de [FIN-12](#fin-12):** el adulto que hace dos cursos cortos
+en el mismo año tiene dos inscripciones y por lo tanto **paga dos matrículas**. Es intencional — la
+matrícula es por curso. Si el instituto quiere bonificar la segunda, aplica un descuento al cobrar,
+que es una decisión comercial y no una regla del sistema.
 
 ---
 
