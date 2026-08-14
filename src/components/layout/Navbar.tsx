@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -21,12 +20,22 @@ import { StudentQRModal } from "@/components/layout/StudentQRModal";
  * Desktop: top sticky bar with logo + links + actions.
  * Mobile: simplified top bar (logo + theme + profile) + fixed bottom tab bar with icons.
  */
-export function Navbar({ 
+export function Navbar({
     className,
     currentActiveRole
-}: { 
+}: {
     className?: string;
-    currentActiveRole?: string;
+    /**
+     * Rol activo, resuelto en el servidor con `getActiveRole`: mira la cookie
+     * `lingua_current_role` y, si no sirve, aplica la prioridad de `roles.ts`.
+     *
+     * **Es obligatorio a propósito.** Antes era opcional y 11 pantallas se
+     * olvidaban de pasarlo; el menú caía a `userRoles[0]` —el primer elemento
+     * del array, sin prioridad— y a una secretaria con
+     * `roles: ['TEACHER', 'SECRETARY']` le mostraba el menú de profesora. Con la
+     * prop obligatoria, la próxima pantalla que se olvide no compila. Ver BUG-04.
+     */
+    currentActiveRole: string;
 }) {
     const pathname = usePathname();
     const { data: session, status } = useSession();
@@ -38,22 +47,16 @@ export function Navbar({
     const sessionUser = session?.user;
     const userRoles: string[] = sessionUser?.roles ?? [];
     
-    // Si no viene el rol activo por prop, buscamos en cookies (Client side) o por defecto
-    const [activeRole, setActiveRole] = React.useState(currentActiveRole || userRoles[0]);
-
-    React.useEffect(() => {
-        if (!currentActiveRole) {
-            const roleCookie = document.cookie
-                .split("; ")
-                .find((row) => row.startsWith("lingua_current_role="))
-                ?.split("=")[1];
-            if (roleCookie && userRoles.includes(roleCookie)) {
-                setActiveRole(roleCookie);
-            }
-        } else {
-            setActiveRole(currentActiveRole);
-        }
-    }, [currentActiveRole, userRoles]);
+    // El servidor ya resolvió el rol activo. Acá no se adivina ni se guarda en
+    // estado: `switchRoleAction` escribe la cookie y redirige, así que el cambio
+    // de rol vuelve por una renderización nueva con la prop ya actualizada.
+    //
+    // Lo que había antes era un `useEffect` que leía `lingua_current_role` desde
+    // `document.cookie`. Esa cookie se escribe con `httpOnly: true`, que es
+    // precisamente lo que impide que el navegador la exponga a JavaScript: el
+    // `find` devolvía `undefined` siempre, en todos los navegadores, desde el
+    // primer día.
+    const activeRole = currentActiveRole;
 
     // /messages is shown as an icon in the right-side actions area (desktop) and in the bottom tab (mobile).
     // It is intentionally excluded from allNavLinks to avoid appearing in the left desktop nav.

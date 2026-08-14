@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getActiveRole } from "@/lib/roles";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import prisma from "@/lib/prisma";
@@ -13,6 +14,8 @@ export default async function NewStudentPage() {
     if (!session || !session.user?.email) {
         redirect("/login");
     }
+
+    const activeRole = await getActiveRole(session.user.roles ?? []);
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -30,7 +33,7 @@ export default async function NewStudentPage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8">
                 {/* Header y navegación */}

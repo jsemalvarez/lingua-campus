@@ -23,7 +23,7 @@ export default async function FinanceTourPage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
 
             <div className="bg-emerald-900 absolute top-0 left-0 w-full h-[500px] -z-10" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 80%, 0% 100%)' }}>
                 <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
