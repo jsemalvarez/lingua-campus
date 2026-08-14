@@ -240,6 +240,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [ ] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
 | [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
+| [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -489,10 +490,13 @@ decisión fue dejarla con la secretaría y emparejarle la traza, no restringirla
 quién podía, era que fuera invisible.
 
 El asiento va con importe 0, con la misma forma que la aplicación de saldo a favor, y nombra alumno,
-período e importe. **Dos límites conocidos:** hoy no se ve en la tabla del libro mayor, que filtra
-los de importe 0, y suma un tercer sentido a `ADJUSTMENT`. Los dos se resuelven con
-[FIN-11](#fin-11), que ya tenía que decidir exactamente eso. El registro queda consultable, que es lo
-que faltaba.
+período e importe. **Dos límites conocidos:** no se ve en la tabla del libro mayor, que filtra los de
+importe 0, y suma un tercer sentido a `ADJUSTMENT`.
+
+Ese filtro **se queda**: [FIN-11](#fin-11) decidió el mismo día que esa pantalla es la caja. Así que
+el rastro existe y es consultable, pero sólo desde la base. Hacerlo visible es
+[FEAT-10](#feat-10), que además lo saca de `Transaction` y le da tabla propia con motivo — este
+asiento es un puente, no la forma definitiva.
 
 **Qué falta verificar en stage.** Entrar como secretaria y confirmar: que `/payments/payroll`
 redirige al dashboard, que la pantalla de finanzas sigue dejándole registrar un ingreso vario, y que
@@ -2582,6 +2586,62 @@ es un alcance futuro: son dos objetos firmables desde el arranque. El modelo no 
 ([`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx),
 [`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx)) es el segundo caso a
 cubrir. Que el reglamento o una autorización se sumen después sale gratis si esto se diseña así.
+
+---
+
+<a id="feat-10"></a>
+## FEAT-10 · Seguimiento visual de las cuotas eliminadas · **P2**
+
+**Origen.** Sale de [SEC-03](#sec-03), al definir que la secretaría puede borrar cuotas. Ahí se le
+agregó a `deleteFeeAction` el rastro que le faltaba, pero quedó **invisible**: se escribe como asiento
+de importe 0 en `Transaction` y la tabla del libro mayor filtra esos movimientos — filtro que
+[FIN-11](#fin-11) decidió mantener, porque esa pantalla es la caja. Hoy el registro sólo se consulta
+desde la base.
+
+**Lo que falta es que el instituto lo pueda mirar sin entrar a Supabase.**
+
+**Decidido con el cliente el 2026-08-13:**
+
+| | |
+|---|---|
+| **Motivo** | **Obligatorio.** Sin motivo queda una lista de fechas, no un rastro. Es más exigente que las anulaciones, donde el motivo es opcional — y es a propósito: acá no queda la fila original para mirar |
+| **Dónde** | **Pantalla propia.** No en la ficha del alumno: el seguimiento es para revisar el conjunto, no para resolver un caso puntual |
+| **Quién** | **Sólo ADMIN.** La secretaría borra, pero el seguimiento es herramienta de control del dueño |
+
+**El registro necesita su propia tabla, no la fila en `Transaction`.** Esa fila fue un rodeo: era el
+único lugar del sistema con `operatorId`. Para sostener una pantalla no alcanza, por tres razones:
+
+- El libro mayor son movimientos de dinero y una cuota impaga borrada no lo es.
+- Listarla obligaría a filtrar por el **texto** de la descripción (`like 'Cuota eliminada%'`), que es
+  una base frágil para una pantalla.
+- No tiene dónde guardar el motivo, que es justamente lo que se decidió pedir.
+
+**Forma propuesta.** Una tabla `FeeDeletion` con la **foto** de la cuota —la fila original ya no
+existe cuando esto se escribe—: instituto, alumno (id y nombre), tipo, año, mes, importe, curso si la
+cuota tenía inscripción, más `reason`, `deletedById` y `deletedAt`. Índice por
+`[instituteId, deletedAt]`, que es como lo lista la pantalla.
+
+**Alcance del cambio:**
+
+1. La migración y el modelo.
+2. `deleteFeeAction` pasa a recibir `reason` y a escribir en `FeeDeletion` en vez de en
+   `Transaction`. Sigue compartiendo transacción con el `delete`.
+3. [`PendingFeeActions`](../src/app/payments/debtors/PendingFeeActions.tsx) —el único lugar desde
+   donde se borra, en la pantalla de deudores— pide el motivo. Hoy usa un `confirm()` pelado; el
+   componente ya tiene un modo de edición en línea del que copiar la forma.
+4. La pantalla, con fecha, alumno, cuota, importe, operador y motivo, filtrable por período.
+5. El acceso a la pantalla desde `/payments`, visible sólo para admin.
+
+**Deuda que deja el orden en que se hizo.** El rastro en `Transaction` sale con
+[SEC-03](#sec-03) y se reemplaza acá. Si se llega a borrar alguna cuota entre un despliegue y el
+otro, esos registros quedan en `Transaction` y **no van a aparecer en la pantalla nueva**. Son pocos
+o ninguno, y se pueden migrar a mano con el `like` de la descripción — pero hay que acordarse, o
+mirar primero si hay alguno.
+
+**Relacionado.** [ARQ-10](#arq-10) (auditoría de las acciones del panel) es este mismo problema
+generalizado. Esta ficha es el primer caso concreto y conviene mirarla como el primer ladrillo: si
+ARQ-10 se encara después, `FeeDeletion` debería poder absorberse en el modelo general en vez de
+quedar como una isla.
 
 ---
 
