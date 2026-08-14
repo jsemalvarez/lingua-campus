@@ -92,10 +92,13 @@ uno prepara el terreno para el siguiente, y así cada paso queda reversible.
 3. ~~[SEC-01](#sec-01) — migrar los llamadores a `roles[]` y borrar la columna `role`.~~ Hecho el 2026-08-10; **falta verificar en stage**.
 4. ~~[SEC-08](#sec-08) + [BUG-04](#bug-04) — el `Navbar` leía los roles del JWT viejo.~~ Hecho el 2026-08-10.
 5. ~~[SEC-04](#sec-04) — los chequeos de instituto que faltaban.~~ Hecho el 2026-08-10.
-   [SEC-03](#sec-03) quedó cubierto salvo la decisión de producto sobre qué puede anular una secretaria.
+   ~~[SEC-03](#sec-03) quedó cubierto salvo la decisión de producto sobre qué puede anular una
+   secretaria.~~ Decidido y cerrado el 2026-08-13: la secretaría entra a la plata que entra y no a la
+   que sale.
 
 **Tanda cerrada el 2026-08-10, a falta de verificar en stage.** Los tutores dejan de tener acceso de
-administrador y la secretaria deja de convertirse en profesora. Sigue la tanda 3.
+administrador y la secretaria deja de convertirse en profesora. [SEC-03](#sec-03) y
+[BUG-04](#bug-04) se cerraron el 2026-08-13. Sigue la tanda 3.
 
 ### Tanda 3 · Bugs de plata
 
@@ -192,7 +195,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 |---|---|---|---|
 | [SEC-01](#sec-01) | P0 | Eliminar `User.role` y unificar en `roles[]` | [x] |
 | [SEC-02](#sec-02) | P0 | Helper único de autorización (`requireRole`) | [x] |
-| [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [~] |
+| [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [x] |
 | [SEC-04](#sec-04) | P0 | Validación de instituto faltante en 2 acciones de cobro | [x] |
 | [SEC-05](#sec-05) | P1 | Login sin alcance de instituto | [ ] |
 | [SEC-06](#sec-06) | P1 | Contraseñas por defecto hardcodeadas | [ ] |
@@ -442,6 +445,59 @@ cliente: si SECRETARY puede **anular pagos y borrar cuotas** o sólo registrar c
 antes, no hay distinción — ambos roles pueden todo. Restringir `voidPaymentAction`,
 `voidExpenseAction`, `voidIncomeAction` y `deleteFeeAction` a `["ADMIN"]` es un cambio de una línea
 por acción cuando se defina.
+
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**La decisión la tomó el instituto y el criterio es la dirección de la plata, no la gravedad de la
+acción.** La secretaría entra a todo lo que **entra** —cuotas, matrículas e ingresos varios, que son
+el libro o la fotocopia que vende el instituto— y no toca lo que **sale**. Los gastos y los sueldos
+son del dueño.
+
+Eso deja el corte así:
+
+| Acción | Quién |
+|---|---|
+| `voidPaymentAction` | ADMIN + SECRETARY — es cuota o matrícula |
+| `createIncomeAction` / `voidIncomeAction` | ADMIN + SECRETARY — un libro, una fotocopia |
+| `deleteFeeAction` | ADMIN + SECRETARY — la cuota es lo suyo |
+| `createExpenseAction` | **ADMIN** — cubre los sueldos, que entran por acá con `category === "Payroll"` |
+| `voidExpenseAction` | **ADMIN** |
+
+**La interfaz ya estaba bien; lo que faltaba era el servidor.** `/payments` ya le escondía a la
+secretaría el formulario de egresos, el acceso a sueldos, el selector de mes y **todos** los bloques
+de KPI —incluidas Rentabilidad y Total de egresos, que exponen el gasto aunque no se liste—, y
+filtraba del libro mayor todo `EXPENSE`, `PAYROLL` o con `expenseId`. Pero las acciones seguían
+aceptando SECRETARY, y esconder un formulario no protege un server action.
+
+**Dos huecos que aparecieron al implementarlo, y que no eran de permisos de acción sino de acceso:**
+
+1. **`/payments/payroll` se abría escribiendo la URL.** El botón estaba escondido, pero la página
+   usaba `INSTITUTE_ADMINS`, que incluye SECRETARY. Se veía cuánto cobra cada profesor. Ahora es
+   `["ADMIN"]`.
+2. **`/api/teachers/[id]/payroll` le devolvía el sueldo de cualquier profesor.** Se sacó SECRETARY;
+   el profesor consultando el propio se mantiene por `isSelf`, así que una secretaria que además dé
+   clases sigue viendo el suyo.
+
+`/api/institutes/payroll` y las acciones de `teachers/actions.ts` —`processTeacherPayment`,
+`processBulkPayrollAction`— ya estaban en `["ADMIN"]`. La escritura de sueldos nunca estuvo abierta;
+lo que estaba abierto era mirarlos.
+
+**`deleteFeeAction` ahora deja asiento.** Era la única acción de plata sin rastro: anular un pago, un
+gasto o un ingreso escribe su contra-asiento con `operatorId`, pero acá la fila desaparecía y no
+quedaba nada. No borra plata cobrada —se niega si la cuota tiene pagos— pero **borra una deuda**. La
+decisión fue dejarla con la secretaría y emparejarle la traza, no restringirla: el problema no era
+quién podía, era que fuera invisible.
+
+El asiento va con importe 0, con la misma forma que la aplicación de saldo a favor, y nombra alumno,
+período e importe. **Dos límites conocidos:** hoy no se ve en la tabla del libro mayor, que filtra
+los de importe 0, y suma un tercer sentido a `ADJUSTMENT`. Los dos se resuelven con
+[FIN-11](#fin-11), que ya tenía que decidir exactamente eso. El registro queda consultable, que es lo
+que faltaba.
+
+**Qué falta verificar en stage.** Entrar como secretaria y confirmar: que `/payments/payroll`
+redirige al dashboard, que la pantalla de finanzas sigue dejándole registrar un ingreso vario, y que
+borrar una cuota impaga funciona y deja el asiento con su `operatorId`. Y como admin, que los gastos
+y los sueldos siguen funcionando igual.
 
 ---
 
