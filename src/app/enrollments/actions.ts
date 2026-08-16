@@ -22,21 +22,36 @@ export async function createEnrollmentAction(formData: FormData) {
             where: { studentId_courseId: { studentId, courseId } }
         });
 
-        if (existing) {
+        if (existing && existing.status === "ACTIVE") {
             return { success: false, error: "El estudiante ya se encuentra inscripto en este curso" };
         }
 
-        // Crear la inscripción oficial
-        const enrollment = await prisma.enrollment.create({
-            data: {
-                studentId,
-                courseId,
-                status: "ACTIVE",
-            },
-            include: {
-                course: true
-            }
-        });
+        // Si existe pero está cerrada, se **reactiva** en vez de crear otra.
+        //
+        // Hace falta desde FIN-23: antes, sacar a un alumno de un curso borraba la
+        // fila, así que volver a inscribirlo era crear una nueva y el índice único
+        // `[studentId, courseId]` nunca se cruzaba. Ahora la inscripción se conserva,
+        // y sin esto el alumno que dejó un curso no podría volver nunca a ese curso.
+        //
+        // Reactivar es además lo correcto y no un rodeo: mismo alumno y mismo curso
+        // es la misma inscripción, y así se queda con sus cuotas, su precio propio y
+        // su modalidad de cobro en lugar de empezar de cero.
+        const enrollment = existing
+            ? await prisma.enrollment.update({
+                where: { id: existing.id },
+                data: { status: "ACTIVE" },
+                include: { course: true }
+            })
+            : await prisma.enrollment.create({
+                data: {
+                    studentId,
+                    courseId,
+                    status: "ACTIVE",
+                },
+                include: {
+                    course: true
+                }
+            });
 
         // Año lectivo de la inscripción. La matrícula es anual y por curso, así que
         // el año lo tiene que dar el curso; el de calendario es sólo el recambio de
@@ -53,7 +68,17 @@ export async function createEnrollmentAction(formData: FormData) {
         // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
         const finalEnrollmentPrice = enrollment.course.enrollmentPrice;
 
-        if (finalEnrollmentPrice > 0) {
+        // A una inscripción reactivada no se le vuelve a emitir la matrícula del año
+        // si ya la tiene: la pagó cuando entró. Sin esto, el `create` de más abajo
+        // choca contra la restricción única de FIN-06 y el alta falla entera con un
+        // mensaje genérico.
+        const alreadyHasEnrollmentFee = existing
+            ? (await prisma.fee.count({
+                where: { enrollmentId: enrollment.id, type: "ENROLLMENT", year: academicYear }
+            })) > 0
+            : false;
+
+        if (finalEnrollmentPrice > 0 && !alreadyHasEnrollmentFee) {
             // La matrícula es por curso (FIN-12): esta inscripción lleva la suya.
             // Antes de emitirla buscamos una matrícula anticipada sin vincular —la
             // seña que se cobró antes de saber a qué curso iba— y la consumimos.

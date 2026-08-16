@@ -1993,6 +1993,47 @@ ya está rota por otros tres `RESTRICT` que no contempla — ver [ARQ-14](#arq-1
 además las cuotas y al alumno, detrás de un permiso propio: es una purga deliberada, no un efecto
 colateral.
 
+### Hecho — 2026-08-16 · con un punto abierto
+
+Entró el camino **A + C** completo:
+
+- `Fee.enrollment` pasa a `onDelete: Restrict`, con su migración
+  (`20260816120000_restrict_fee_enrollment_delete`). **No toca ninguna fila**: `RESTRICT` sólo actúa
+  sobre borrados futuros, y las cuotas ya sueltas no lo violan.
+- `removeStudentFromCourseAction` verifica antes y explica qué hacer en su lugar, para que el
+  operador no se coma el error crudo de la base.
+- `purgeStudentAction` borra las cuotas **antes** que las inscripciones, que es lo que ese orden
+  necesitaba para sobrevivir al cambio (ver [ARQ-14](#arq-14)).
+- `createEnrollmentAction` **reactiva** la inscripción cerrada en lugar de fallar contra el índice
+  único, así el alumno puede volver a un curso del que salió — y vuelve con sus cuotas, su precio
+  propio y su modalidad. Si la inscripción reactivada ya tiene la matrícula del año, no se le emite
+  otra.
+
+**El punto abierto, que salió al medir el efecto sobre datos reales.** La regla quedó en "no se borra
+si tiene **alguna** cuota", y eso **deja sin salida al error de carga**, que era el caso para el que
+la acción existía:
+
+- Las **206** inscripciones de producción tienen cuotas. Ninguna se puede borrar más. Correcto y
+  buscado.
+- Pero **27 de los 31 cursos activos** tienen matrícula mayor a cero, y `createEnrollmentAction`
+  emite esa cuota **en el mismo acto de inscribir**. O sea que una inscripción cargada por error nace
+  con una cuota y ya no se puede deshacer, ni un minuto después.
+
+Dos salidas, y es decisión de negocio:
+
+1. **Dejarlo así.** El error de carga se resuelve marcando la inscripción, no borrándola. Queda una
+   inscripción cerrada y una matrícula impaga que hay que anular aparte. Es lo más conservador y no
+   pierde nada, pero deja basura visible por cada error.
+2. **Afinar la regla a "no se borra si tiene cuotas con pagos".** Si las cuotas están todas en cero,
+   se borran junto con la inscripción en la misma transacción. Es lo que de verdad significa deshacer
+   un error de carga —no hay plata de por medio— y el criterio es el mismo de [FIN-06](#fin-06) y
+   `deleteFeeAction`. **Contra:** borra cuotas físicamente, y eso choca con la política de borrado
+   lógico, salvo que se lo entienda como lo que es: deshacer, dentro de la misma operación, algo que
+   el sistema acababa de crear solo.
+
+**Recomendación: la 2**, y que el borrado deje su rastro por [FEAT-10](#feat-10) cuando esa pantalla
+exista.
+
 **Relacionado.** [FIN-22](#fin-22) (el duplicado que esto causaba), [FIN-20](#fin-20) (el diagnóstico
 que buscaba dos inscripciones donde en realidad había una borrada), [ARQ-05](#arq-05) (interfaz para
 restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento),

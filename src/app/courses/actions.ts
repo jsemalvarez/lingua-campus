@@ -230,7 +230,27 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
             return { success: false, error: "Curso no encontrado o sin acceso" };
         }
 
-        // Hard-delete: used for errors
+        // Borrado físico, y sólo para lo que dice el comentario original: deshacer
+        // un error de carga. Una inscripción con cuotas emitidas **no se borra**.
+        //
+        // Antes se borraba siempre, y como la clave foránea era ON DELETE SET NULL,
+        // eso le sacaba el curso a todas las cuotas del alumno —las pagas incluidas—
+        // sin avisar. Es como se generaron las cuotas duplicadas que reportó el
+        // instituto: se soltaban acá y el generador volvía a emitirlas (FIN-23, y su
+        // consecuencia, FIN-22).
+        //
+        // El chequeo es para poder explicar qué hacer en su lugar; quien impide el
+        // borrado de verdad es la base, que desde la migración de FIN-23 tiene la
+        // clave foránea en RESTRICT.
+        const feeCount = await prisma.fee.count({ where: { enrollmentId } });
+
+        if (feeCount > 0) {
+            return {
+                success: false,
+                error: "Esta inscripción ya tiene cuotas emitidas, así que no se puede eliminar sin perderlas. Si el alumno dejó el curso, marcá la inscripción como incompleta. Si pasa a otro curso, usá «Cambiar curso» desde su ficha: se lleva las cuotas con él."
+            };
+        }
+
         await prisma.enrollment.delete({
             where: { id: enrollmentId }
         });

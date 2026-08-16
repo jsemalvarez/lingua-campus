@@ -516,7 +516,12 @@ model Fee {
   student     Student  @relation(fields: [studentId], references: [id])
   
   enrollmentId String?
-  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id])
+  // `Restrict` y no el `SetNull` que Prisma pone por defecto en una relación
+  // opcional: con aquel, borrar una inscripción le sacaba el curso a todas sus
+  // cuotas —las pagas incluidas— sin avisar, y la cuota quedaba sin dueño. Ver
+  // FIN-23. La regla que impone acá es la que queremos: una inscripción con
+  // cuotas emitidas no se borra, se marca.
+  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
 
   type        FeeType @default(MONTHLY)
   
