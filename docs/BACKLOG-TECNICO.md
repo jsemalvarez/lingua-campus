@@ -227,6 +227,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-22](#fin-22) | P1 | 🗣️ El generador mensual no ve las cuotas sin inscripción y las duplica | [x] |
 | [FIN-23](#fin-23) | P1 | Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas | [ ] |
 | [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
+| [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
+| [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -2048,13 +2050,118 @@ nada más.
 emitidas se conservan; desde el mes que viene se cobra $X"— en vez de advertir sobre consecuencias.
 La diferencia con un cartel de advertencia es que acá el sistema ya decidió y sólo informa.
 
+### Decidido — 2026-08-16
+
+**1 · La cuota emitida no se toca, venga del curso que venga.** El motivo cierra la discusión mejor
+que cualquier argumento de diseño: **se factura en un país con inflación**, y las cuotas de un mismo
+curso ya cambian de valor cada dos o tres meses. El precio de una cuota **nunca** fue "el precio
+actual del curso": es el precio del momento en que se emitió. Repreciarla al mover de curso sería
+inconsistente con cómo funcionan los precios desde siempre. Que el importe venga del curso anterior o
+del actual no es el eje.
+
+**2 · Que la cuota recuerde su curso — pendiente de decidir cómo.** Es la consecuencia directa de la
+decisión 1: si la cuota es la foto de lo que se acordó, tiene que ser la foto **completa**. Hoy
+congela el importe pero el curso se lo pide prestado a la inscripción, que es justamente el dato que
+cambia; por eso una cuota de marzo del curso x pasa a mostrarse como del curso z.
+
+> **Corrección a lo escrito en [FIN-23](#fin-23):** ahí se descartó guardar el curso en `Fee` por
+> considerarlo un dato duplicado. Con la decisión 1 adelante, **no lo es**: son dos hechos distintos.
+> La inscripción dice *dónde está el alumno hoy*; la cuota tiene que decir *qué se cobró y por qué
+> curso*. Lo que sigue valiendo de FIN-23 es lo otro: la inscripción no se borra. Las dos cosas
+> conviven.
+
+**3 · La beca se muda con el alumno, y está bien — pero tiene que verse.** `customMonthlyPrice`
+**no se muestra hoy en ninguna pantalla**: sólo se usa para calcular. Un alumno con beca es
+indistinguible de uno sin beca para quien está frente a la pantalla, y depende de que alguien se
+acuerde. Va badge → [FIN-25](#fin-25).
+
+**4 · `FULL_COURSE` también se mantiene al mover, y también tiene que verse.** Que el alumno que pagó
+el curso entero lo siga teniendo pago es lo correcto. El badge `💎 Pago Único 100%` existe, pero
+**sólo en la ficha del alumno**: no está en el listado del curso, ni en deudores, ni en cobros →
+[FIN-25](#fin-25).
+
+Lo que queda abierto de este punto es la plata: mover a alguien de un curso pago entero a otro de
+distinto precio deja una diferencia a favor o en contra, y hoy no hay dónde resolverla →
+[FIN-26](#fin-26).
+
 **Cómo apareció (2026-08-16).** Al etiquetar el botón de cambiar curso en [FIN-23](#fin-23), el
 tooltip decía "conservando sus cuotas". Se sacó: le pedía a la secretaria que entendiera una
 consecuencia contable que el sistema no contempla. La ficha es el otro lado de ese texto borrado.
 
 **Relacionado.** [FIN-23](#fin-23) (de donde salió), [FIN-19](#fin-19) (dos matrículas del mismo año
 se ven idénticas — el mismo problema de que la cuota no dice de qué curso es), [FIN-20](#fin-20) (que
-ya anotaba el precio del curso viejo como "otra discusión": es esta).
+ya anotaba el precio del curso viejo como "otra discusión": es esta), [FIN-25](#fin-25) y
+[FIN-26](#fin-26), que salieron de sus decisiones.
+
+---
+
+<a id="fin-25"></a>
+## FIN-25 · Las condiciones especiales de una inscripción no se ven · **P2**
+
+Sale de las decisiones 3 y 4 de [FIN-24](#fin-24). Una inscripción puede tener condiciones que
+cambian lo que el alumno paga, y **quien está frente a la pantalla no las ve**: dependen de que
+alguien se acuerde.
+
+| Condición | Dónde vive | Dónde se ve hoy |
+|---|---|---|
+| **Beca / precio propio** | `Enrollment.customMonthlyPrice` | **En ningún lado.** Verificado el 2026-08-16: sólo se lee en [`billingActions.ts`](../src/app/payments/billingActions.ts) para calcular. Ninguna pantalla la muestra |
+| **Curso completo pago** | `Enrollment.billingMode = FULL_COURSE` | Sólo en la ficha del alumno (`💎 Pago Único 100%`, [`students/[id]/page.tsx`](../src/app/students/[id]/page.tsx)). No en el listado del curso, ni en deudores, ni en cobros |
+| Matrícula propia, examen propio | `customEnrollmentPrice`, `customExamPrice` | En ningún lado |
+
+**Por qué importa más desde [FIN-24](#fin-24).** Las dos condiciones **se mudan con el alumno** cuando
+cambia de curso, y se decidió que está bien que así sea. Pero una condición que viaja sola y no se ve
+es una condición que nadie vuelve a aprobar: la beca acordada para un curso termina aplicada a otro
+sin que aparezca en ninguna pantalla.
+
+**Cambio.** Un badge en la inscripción, con el mismo criterio que el de `FULL_COURSE` que ya existe, y
+llevarlo a **las pantallas donde se decide sobre plata**: el listado del curso, el reporte de
+deudores y el selector de cobro. En la beca, el badge tiene que decir el importe —"Beca $X"—, porque
+saber que tiene beca sin saber de cuánto no alcanza para cobrar.
+
+**Cuidado con quién lo ve.** El precio propio de un alumno es un dato sensible entre compañeros. El
+badge va en las pantallas administrativas; conviene revisar que no se filtre a las del alumno o el
+tutor antes de sumarlo en cualquier lado.
+
+**Relacionado.** [FIN-24](#fin-24) (de donde sale), [FIN-13](#fin-13) (no se ve quién aplicó un
+descuento ni por qué — el mismo hueco, del lado del cobro puntual).
+
+---
+
+<a id="fin-26"></a>
+## FIN-26 · No hay dónde conciliar una diferencia de plata a favor del alumno · **P2**
+
+**Pedido (2026-08-16).** Sale de la decisión 4 de [FIN-24](#fin-24), y el caso que lo dispara es
+mover a un alumno que pagó el curso completo a otro curso de distinto precio: queda una diferencia, y
+hoy **no hay ninguna pantalla donde resolverla**.
+
+La diferencia puede ir para cualquiera de los dos lados y tiene tres salidas posibles, todas
+legítimas y todas decisión del instituto:
+
+1. **Devolverle la plata** al alumno.
+2. **Que pague la diferencia** para completar el curso nuevo.
+3. **Bonificársela**, aplicando la diferencia como descuento.
+
+Ninguna de las tres existe hoy como operación. La única herramienta cercana es el saldo a favor, que
+resuelve el caso 1 a medias —y cuya anulación recién se destraba con [FIN-11](#fin-11)—, pero no
+contempla ni la bonificación ni el cobro de la diferencia como concepto propio.
+
+**Qué hay que definir antes de programar nada.**
+
+- **Dónde vive.** El pedido es que se haga **desde finanzas**, no desde la ficha del alumno: es una
+  decisión de plata, y es del dueño. Encaja con el criterio de [FIN-24](#fin-24).
+- **Qué deja escrito.** Las tres salidas mueven plata y por lo tanto tienen que dejar asiento en el
+  libro mayor, con el motivo. Una bonificación sin motivo registrado es un descuento que nadie puede
+  explicar después — es el mismo problema que anota [FIN-13](#fin-13).
+- **Quién puede.** Bonificar y devolver plata no es lo mismo que cobrar. Se cruza con
+  [SEC-03](#sec-03), que ya separó qué puede hacer una secretaria en lo financiero.
+
+**No es sólo el cambio de curso.** La misma carencia aparece cada vez que hay que devolver o
+compensar: un alumno que se va a mitad de año habiendo pagado de más, un cobro duplicado, una cuota
+emitida de más. Conviene resolverlo como "conciliación", no como "el caso del cambio de curso".
+
+**Relacionado.** [FIN-24](#fin-24) (de donde sale), [FIN-11](#fin-11) (anular una aplicación de saldo
+a favor, la herramienta más cercana que existe), [FIN-13](#fin-13) (descuentos sin motivo
+registrado), [SEC-03](#sec-03) (qué puede hacer la secretaría con la plata).
 
 ---
 
