@@ -1858,7 +1858,22 @@ La corrida trae también las cuotas sueltas del período y deja afuera a esos al
 **Verificado contra la base de producción** simulando la lógica nueva sobre los datos reales, antes y
 después: volver a generar cualquier mes de marzo a julio creaba **2** cuotas duplicadas —Aylen Zunda
 y Benjamin Rivero— y con el cambio crea **0**. Agosto y septiembre daban 0 en los dos casos.
-**Falta probarlo en stage con el botón**, que es lo que no se puede simular con una consulta.
+
+**Y verificado en stage con el botón, sobre el código desplegado — 2026-08-16.** La consulta no puede
+ejercitar la server action, así que se armó el caso a mano:
+
+| Paso | Qué se hizo |
+|---|---|
+| Control | Generar Agosto 2026 con todo normal → *"Se generaron 0 cuotas"*, sin aviso |
+| Preparación | A una de las 5 cuotas de agosto se le puso `enrollmentId = NULL` por SQL, que es lo que provoca hoy desinscribir a un alumno |
+| Predicción | Medida antes de correr: el código **viejo** crearía **1** duplicada; el nuevo dejaría **1** alumno afuera |
+| Resultado | **5** cuotas de agosto y **0** alumnos con duplicado — corriendo el generador **dos veces**. Con el código viejo habrían sido 6 y 1 |
+| Aviso | El cartel amarillo *"1 alumno quedó afuera…"* aparece. Confirmado en pantalla |
+| Restauración | La cuota volvió a su `enrollmentId` original. Stage quedó idéntico a antes: 2/6/6/6/5 cuotas por mes, 0 sueltas, 0 duplicados |
+
+**De paso quedó a la vista algo que no es de esta ficha:** el `confirm()` pelado del botón de generar
+bloquea el hilo de la página. Además de impedir que la confirmación explique nada, cuelga cualquier
+automatización del navegador hasta que una persona lo acepta a mano.
 
 **Queda pendiente y no es de esta ficha:** las cuotas sueltas siguen sueltas. Normalizarlas es
 trabajo de datos, no de código — ver «Aparecido durante el lote» en
@@ -1926,7 +1941,9 @@ alumnos — y ahí el único botón que saca a alguien es el que borra. El camin
 pantalla y no se anuncia. El resultado es el que se vio en producción.
 
 **Lo barato de esto**, y conviene hacerlo aunque el `delete` se arregle: ponerle etiqueta al botón de
-cambiar curso, para que el camino sano se encuentre. **Hecho el 2026-08-16.**
+cambiar curso, para que el camino sano se encuentre. **Hecho el 2026-08-16**, y **verificado en
+stage**: el botón se lee «✏️ Cambiar curso» debajo del badge de estado, en la tarjeta de la
+inscripción, sin romper el ancho de la tarjeta.
 
 **Lo que NO se hace: avisar en la confirmación de eliminar que las cuotas quedan sin curso.** Se
 descartó a propósito. Un cartel que advierte sobre una consecuencia contable le traslada la decisión
