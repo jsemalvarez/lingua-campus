@@ -16,6 +16,9 @@ async function getAuthAndInstitute() {
  * Genera las cuotas mensuales para todos los alumnos inscriptos en cursos activos.
  * Evita duplicados para el mismo mes/año/inscripción.
  * Optimizado para ejecuciones en masa de alto rendimiento (1 single SQL bulk insert).
+ *
+ * Devuelve además `skipped`: los alumnos que quedaron afuera por tener una cuota
+ * suelta del período (ver FIN-22, abajo).
  */
 export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const user = await getAuthAndInstitute();
@@ -27,10 +30,17 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
 
     try {
         // 1. Obtener todas las inscripciones activas del instituto (solo modalidad cuotas mensuales)
+        //
+        // El filtro por `student.status` es de FIN-16: un alumno dado de baja cuya
+        // inscripción quedó activa seguía generando cuotas. El generador anual ya lo
+        // filtraba desde FIN-12; este se había quedado atrás.
         const enrollments = await prisma.enrollment.findMany({
             where: {
                 status: "ACTIVE",
                 billingMode: "MONTHLY",
+                student: {
+                    status: "ACTIVE"
+                },
                 course: {
                     instituteId: user.instituteId as string,
                     status: "ACTIVE"
@@ -42,7 +52,7 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
         });
 
         if (enrollments.length === 0) {
-            return { success: true, count: 0 };
+            return { success: true, count: 0, skipped: 0 };
         }
 
         // 2. Traer en 1 sola query todas las cuotas ya existentes para este periodo
@@ -63,10 +73,41 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
             existingFees.map(f => f.enrollmentId).filter((id): id is string => id !== null)
         );
 
+        // 2b. Las cuotas **sueltas** del período: mismo alumno, mismo mes, sin
+        // inscripción. La consulta de arriba no las trae —no están en el `in` de
+        // `enrollmentId`— y el índice único de FIN-06 tampoco las alcanza, porque
+        // Postgres no considera iguales dos NULL. Sin esto, cada corrida le crea al
+        // alumno una segunda cuota del mismo mes: es FIN-22, y es lo que le pasó a
+        // los dos alumnos que reportó el instituto.
+        //
+        // Las hay porque la carga inicial de datos entró por script y dejó cuotas sin
+        // vincular para los alumnos que todavía no tenían inscripción en la app.
+        const looseFees = await prisma.fee.findMany({
+            where: {
+                instituteId: user.instituteId as string,
+                month: targetMonth,
+                year: targetYear,
+                type: "MONTHLY",
+                enrollmentId: null,
+                studentId: {
+                    in: enrollments.map(e => e.studentId)
+                }
+            },
+            select: { studentId: true }
+        });
+
+        const studentsWithLooseFee = new Set(looseFees.map(f => f.studentId));
+
         // 3. Filtrar en memoria las inscripciones que necesitan nueva cuota
         const feesToCreate = enrollments
             .filter(enrollment => {
                 if (existingEnrollmentIds.has(enrollment.id)) return false;
+                // El alumno ya tiene la cuota del mes, suelta. No se la generamos de
+                // nuevo y **tampoco la vinculamos acá**: si tuviera dos inscripciones
+                // activas no hay forma de saber de cuál es, y una corrida masiva no es
+                // lugar para reescribir el historial. Queda para normalizar aparte, y
+                // el operador se entera por el conteo que devolvemos (FIN-22).
+                if (studentsWithLooseFee.has(enrollment.studentId)) return false;
                 const finalPrice = enrollment.customMonthlyPrice !== null 
                     ? enrollment.customMonthlyPrice 
                     : enrollment.course.monthlyPrice;
@@ -104,7 +145,14 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
         }
 
         revalidatePath("/payments");
-        return { success: true, count: feesToCreate.length };
+        return {
+            success: true,
+            count: feesToCreate.length,
+            // Alumnos, no inscripciones: es el número que el operador tiene que ir a
+            // mirar. Si un alumno con cuota suelta tuviera dos inscripciones, las dos
+            // quedaron afuera y sigue siendo un solo caso para revisar.
+            skipped: studentsWithLooseFee.size
+        };
     } catch (e: any) {
         console.error("Error al generar cuotas masivas:", e);
         return { success: false, error: "Error al generar cuotas" };

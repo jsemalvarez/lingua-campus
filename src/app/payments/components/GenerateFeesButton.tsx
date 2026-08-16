@@ -30,6 +30,16 @@ export function GenerateFeesButton() {
                 const res = await generateMonthlyFeesAction(month, year);
                 if (res.success) {
                     toast.success(`Se generaron ${res.count} cuotas mensuales para ${monthName} ${year}.`);
+                    // FIN-22: alumnos que ya tenían una cuota de ese mes sin curso
+                    // asociado. No se les generó nada, para no duplicarles la cuota.
+                    // Hay que mirarlos a mano: la cuota suelta es la buena, pero no
+                    // sabemos a qué inscripción corresponde.
+                    if (res.skipped && res.skipped > 0) {
+                        toast.warning(
+                            `${res.skipped} ${res.skipped === 1 ? "alumno quedó afuera" : "alumnos quedaron afuera"}: ya tenían una cuota de ${monthName} sin curso asociado. Revisalos en su ficha antes de volver a generar.`,
+                            { duration: 10000 }
+                        );
+                    }
                     setShowOptions(false);
                 } else {
                     toast.error(res.error || "Error al generar cuotas");
