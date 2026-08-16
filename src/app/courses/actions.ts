@@ -239,21 +239,33 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
         // instituto: se soltaban acá y el generador volvía a emitirlas (FIN-23, y su
         // consecuencia, FIN-22).
         //
-        // El chequeo es para poder explicar qué hacer en su lugar; quien impide el
-        // borrado de verdad es la base, que desde la migración de FIN-23 tiene la
-        // clave foránea en RESTRICT.
-        const feeCount = await prisma.fee.count({ where: { enrollmentId } });
+        // El corte es **el pago, no la cuota**. Inscribir emite la matrícula en el
+        // mismo acto —27 de los 31 cursos tienen matrícula mayor a cero—, así que
+        // exigir "ninguna cuota" dejaba sin salida al error de carga: la inscripción
+        // nacía imposible de deshacer. Con plata cobrada de por medio, en cambio, no
+        // hay error de carga que valga: eso se marca, no se borra.
+        //
+        // El criterio de "sin pagos" se pregunta por filas de `Payment` y no por
+        // `paidAmount`, que es el mismo de FIN-06 y `deleteFeeAction`, y además el
+        // único que evita chocar contra `Payment_feeId_fkey`, que es RESTRICT: un
+        // pago anulado deja la cuota en cero pero la fila sigue ahí.
+        const feesWithPayments = await prisma.fee.count({
+            where: { enrollmentId, payments: { some: {} } }
+        });
 
-        if (feeCount > 0) {
+        if (feesWithPayments > 0) {
             return {
                 success: false,
-                error: "Esta inscripción ya tiene cuotas emitidas, así que no se puede eliminar sin perderlas. Si el alumno dejó el curso, marcá la inscripción como incompleta. Si pasa a otro curso, usá «Cambiar curso» desde su ficha: se lleva las cuotas con él."
+                error: "Esta inscripción tiene cuotas con pagos registrados, así que no se puede eliminar sin perderlos. Si el alumno dejó el curso, marcá la inscripción como incompleta. Si pasa a otro curso, usá «Cambiar curso» desde su ficha: se lleva las cuotas con él."
             };
         }
 
-        await prisma.enrollment.delete({
-            where: { id: enrollmentId }
-        });
+        // Las cuotas se borran junto con la inscripción y en la misma transacción.
+        // Van primero por el RESTRICT de FIN-23, igual que en `purgeStudentAction`.
+        await prisma.$transaction([
+            prisma.fee.deleteMany({ where: { enrollmentId } }),
+            prisma.enrollment.delete({ where: { id: enrollmentId } })
+        ]);
 
         revalidatePath(`/courses/${courseId}`);
         revalidatePath("/courses");

@@ -2051,6 +2051,35 @@ Dos salidas, y es decisión de negocio:
 **Recomendación: la 2**, y que el borrado deje su rastro por [FEAT-10](#feat-10) cuando esa pantalla
 exista.
 
+### Resuelto el punto abierto — 2026-08-16 · va la opción 2
+
+El corte pasa a ser **el pago, no la cuota**: se rechaza si alguna cuota tiene filas de `Payment`, y
+si no, las cuotas se borran junto con la inscripción en una transacción. Se pregunta por filas de
+`Payment` y no por `paidAmount` porque es el criterio de [FIN-06](#fin-06) y porque un pago anulado
+deja la cuota en cero con la fila viva, que es justo lo que haría fallar a `Payment_feeId_fkey`.
+
+**Y queda un riesgo abierto que conviene mirar de frente**, porque la regla es más ancha de lo que
+sugiere el nombre "error de carga":
+
+> Un alumno **deudor** —cinco cuotas impagas, ningún pago— cumple la condición. Apretar el tacho le
+> borra la inscripción **y la deuda**, en silencio. No es lo que la acción quiere hacer, pero es lo
+> que permite.
+
+Marcar la inscripción como incompleta es lo correcto en ese caso y ya existe, pero **nada obliga a
+elegirlo**. Tres formas de cerrarlo, para decidir más adelante:
+
+- **Que deje rastro.** Cuando exista [FEAT-10](#feat-10), que este borrado escriba en `FeeDeletion`
+  igual que `deleteFeeAction`, con motivo obligatorio. Es lo más barato y lo que más sirve: no
+  impide, pero nada se pierde sin dejar quién y por qué. **Es la salida recomendada.**
+- **Acotar por antigüedad o por tipo** —por ejemplo, permitir sólo si la inscripción no tiene cuotas
+  `MONTHLY`—, con lo que el error de carga sigue funcionando y el deudor queda afuera. Más estrecho,
+  pero la regla se vuelve difícil de explicar.
+- **Restringir quién puede.** Hoy la acción admite `ADMIN` y `SECRETARY`. Borrar una deuda es una
+  decisión de plata; se cruza con [SEC-03](#sec-03).
+
+No se cerró ahora porque las tres dependen de decisiones que exceden esta ficha, y porque **el daño
+grave ya está tapado**: nada con plata cobrada se puede borrar, ni por este camino ni por ninguno.
+
 **Relacionado.** [FIN-22](#fin-22) (el duplicado que esto causaba), [FIN-20](#fin-20) (el diagnóstico
 que buscaba dos inscripciones donde en realidad había una borrada), [ARQ-05](#arq-05) (interfaz para
 restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento),
