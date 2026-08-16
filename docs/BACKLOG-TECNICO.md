@@ -2116,6 +2116,29 @@ Dos salidas, y es decisión de negocio:
 **Recomendación: la 2**, y que el borrado deje su rastro por [FEAT-10](#feat-10) cuando esa pantalla
 exista.
 
+### Verificado en stage — 2026-08-16
+
+La migración se aplicó sola con el despliegue, a las 20:13 UTC, **sin rollback y sin tocar ninguna
+fila**: 7 alumnos, 6 inscripciones, 38 cuotas, 0 sueltas y 9 pagos, antes y después. Las tres claves
+foráneas quedaron como se buscaba:
+
+```
+Fee_enrollmentId_fkey → ON DELETE RESTRICT   (era SET NULL)
+Fee_studentId_fkey    → ON DELETE RESTRICT
+Payment_feeId_fkey    → ON DELETE RESTRICT
+```
+
+**Probado el rechazo, que es la mitad importante.** Sobre una inscripción con 7 cuotas y 5 pagos, el
+tacho del listado del curso **no borró nada**: la inscripción y sus cuotas siguen enteras. Es la
+garantía que se buscaba — con plata cobrada de por medio, no hay camino que suelte ni borre.
+
+**Sin probar por pantalla: el borrado que sí procede** —inscripción sin ningún pago—. Hacía falta una
+inscripción descartable y no había ninguna: en stage los seis alumnos activos están en el único curso,
+y el alta de un alumno de prueba no se pudo completar por automatización porque el formulario es
+controlado y no toma valores puestos por código. Se dejó sin probar antes que borrar datos existentes
+de stage para fabricar el caso. Queda pendiente y es de un minuto a mano: crear un alumno, inscribirlo
+y borrar esa inscripción.
+
 ### Resuelto el punto abierto — 2026-08-16 · va la opción 2
 
 El corte pasa a ser **el pago, no la cuota**: se rechaza si alguna cuota tiene filas de `Payment`, y
@@ -3445,19 +3468,26 @@ saber cuál de los dos casos es.
 es una decisión más grande que este ítem. **La detección no espera al correo**: bloquear el duplicado
 y mostrarlo en la aplicación se puede hacer ya.
 
-### 2 · A un preinscripto se lo puede inscribir a un curso
+### 2 · La regla "sólo un activo se inscribe" no está en el servidor · **P3**
 
-[`createEnrollmentAction`](../src/app/enrollments/actions.ts) no mira `student.status`, así que un
-aspirante que el instituto todavía no aceptó puede quedar inscripto, con su matrícula emitida y su
-deuda corriendo.
+> **Corregido el 2026-08-16, el mismo día**, al intentar reproducirlo en stage. La primera versión de
+> esta ficha decía que a un preinscripto **se lo podía inscribir desde la pantalla**. Es falso, y la
+> prueba lo mostró enseguida: el buscador no lo encuentra.
+> [`enrollments/new/page.tsx`](../src/app/enrollments/new/page.tsx) lista los alumnos con
+> `where: { status: "ACTIVE" }`, así que un aspirante nunca aparece para elegir.
 
-**Regla:** sólo un alumno **activo** se inscribe a un curso. Aceptar la preinscripción —pasarlo a
-activo— es el paso que lo habilita, y es una decisión del instituto.
+**Regla, y esto sí vale:** sólo un alumno **activo** se inscribe a un curso. Aceptar la
+preinscripción —pasarlo a activo— es el paso que lo habilita, y es una decisión del instituto.
 
-**Hoy queda a medio camino, que es lo peor de los dos mundos:** se lo puede inscribir, pero desde
-[FIN-22](#fin-22) los generadores mensual y anual sólo facturan a alumnos activos. O sea que un
-preinscripto inscripto **ocupa lugar en el curso y no se le factura nada**, en silencio. Con la regla
-puesta, esa incoherencia desaparece sola.
+**Lo que falta es que el servidor la sostenga.**
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts) no mira `student.status` en ningún
+momento: la regla vive sólo en la consulta que arma el desplegable. Es defensa en profundidad, no un
+agujero que el operador pueda pisar sin querer, y por eso es **P3** y no P1 como la mitad de arriba.
+
+Vale la pena igual, porque el estado del alumno ya decide otras cosas del mismo circuito: desde
+[FIN-22](#fin-22) los dos generadores facturan sólo a alumnos activos, así que si alguna vez entrara
+una inscripción de un preinscripto por otro camino, **ocuparía lugar en el curso sin que se le
+facture nada**, en silencio.
 
 **Relacionado.** [FEAT-12](#feat-12) (el aviso por correo y la decisión de infraestructura que
 arrastra), [SEC-06](#sec-06) (el alta del alumno y sus credenciales), [FIN-16](#fin-16) (el filtro de
