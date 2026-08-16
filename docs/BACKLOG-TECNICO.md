@@ -258,6 +258,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-11](#arq-11) | P2 | Guardar las notas de un informe cuesta 250 sentencias | [ ] |
 | [ARQ-12](#arq-12) | P2 | Versionar el proyecto y mostrar la versión en la app | [ ] |
 | [ARQ-13](#arq-13) | P3 | Saber qué versión está usando cada usuario | [ ] |
+| [ARQ-14](#arq-14) | P3 | La purga de un alumno no puede borrar a ningún alumno real | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -1962,9 +1963,13 @@ desaparecer. La salida limpia: que [`createEnrollmentAction`](../src/app/enrollm
 alumno y mismo curso es la misma inscripción— y así se conservan sus cuotas.
 
 **C sirve como red mientras A se decide**, y encima codifica en la base la regla que se quería: sólo
-se puede borrar una inscripción sin cuotas. **Ojo:**
+se puede borrar una inscripción sin cuotas.
+
+**Ojo con la purga, que hoy depende de este mismo defecto.**
 [`purgeStudentAction`](../src/app/students/[id]/actions.ts) borra las inscripciones **antes** que las
-cuotas, así que con `RESTRICT` fallaría hasta invertir ese orden en la transacción.
+cuotas, y le funciona **porque** el `SET NULL` las desvincula sola en el camino. Con `RESTRICT` ese
+paso empieza a fallar; el arreglo es mover una línea, borrar las cuotas primero. Esa función además
+ya está rota por otros tres `RESTRICT` que no contempla — ver [ARQ-14](#arq-14), que salió de acá.
 
 **Cambio.** Que desinscribir marque la inscripción en vez de borrarla. Hay que decidir dos cosas:
 
@@ -3529,6 +3534,61 @@ propio para un solo dato.
 
 **Recomendación.** Hacer la forma barata como parte de ARQ-12, y dejar la métrica para cuando exista
 un lugar donde ya se guarden métricas.
+
+---
+
+<a id="arq-14"></a>
+## ARQ-14 · La purga de un alumno no puede borrar a ningún alumno real · **P3**
+
+**Cómo apareció (2026-08-16).** Mirando las claves foráneas de verdad en la base de producción
+mientras se analizaba [FIN-23](#fin-23). No lo reportó nadie, y es probable que nunca se haya
+intentado usar.
+
+[`purgeStudentAction`](../src/app/students/[id]/actions.ts) es el borrado **físico** de un alumno, con
+su propio permiso ("Sin permisos para eliminar permanentemente"). Borra en una transacción:
+
+```ts
+attendance → grade → enrollment → fee → student
+```
+
+**Falla con casi cualquier alumno real**, porque hay tres claves foráneas `RESTRICT` que esa lista no
+contempla — verificadas sobre la base de producción, no leídas del schema:
+
+| Tabla | Apunta a | Al borrar el padre | Consecuencia |
+|---|---|---|---|
+| `Payment` | `Fee` | **RESTRICT** | La transacción borra las cuotas pero **no los pagos**: un alumno que alguna vez pagó algo no se puede purgar |
+| `GuardianStudentLink` | `Student` | **RESTRICT** | Un alumno con tutor vinculado tampoco |
+| `PracticeSession` | `Student` | **RESTRICT** | Ni uno que haya practicado |
+
+Sólo pasa un alumno sin ningún historial. Como la transacción se revierte entera, el operador ve
+"Error al purgar los datos del estudiante" y nada más: ni qué lo impidió ni que en realidad no se
+borró nada.
+
+**Y hay una dependencia oculta con [FIN-23](#fin-23), que es por donde salió esto.** El paso que borra
+las inscripciones funciona hoy **sólo porque** `Fee_enrollmentId_fkey` es `ON DELETE SET NULL`: en ese
+momento las cuotas todavía existen y todavía apuntan a esas inscripciones, y Postgres las desvincula
+sola antes de borrar. Es decir, **la purga se apoya en el mismo desprendimiento silencioso que FIN-23
+quiere eliminar**. Si esa clave foránea pasa a `RESTRICT`, este paso empieza a fallar también, y el
+arreglo es mover una línea: borrar las cuotas **antes** que las inscripciones.
+
+**Qué decidir, y es antes de programar nada.** Desde que los borrados pasaron de físicos a lógicos
+—para que lo que se borra sin querer se pueda recuperar—, esta función es la excepción, y hay que
+decidir si sigue existiendo:
+
+- **Sacarla.** Si la política es borrado lógico, un botón que borra de verdad y para siempre es
+  justamente lo que se quiso evitar. El alumno ya se marca `DELETED` desde la ficha.
+- **Arreglarla.** Si se quiere conservar para el caso real de tener que eliminar los datos de una
+  persona —un pedido de baja de datos personales, por ejemplo—, hay que agregar los pagos y los
+  vínculos que faltan, y decidir qué pasa con la plata: borrar los pagos de un alumno **cambia la
+  caja histórica del instituto**, y eso no puede ser un efecto colateral silencioso de borrar una
+  ficha.
+
+**Recomendación.** Sacarla, y si algún día hace falta la baja de datos personales, resolverla como lo
+que es —anonimizar la ficha conservando los asientos contables—, que no es lo mismo que borrar filas.
+
+**Relacionado.** [FIN-23](#fin-23) (de donde salió, y de cuyo `SET NULL` depende hoy),
+[ARQ-05](#arq-05) (la interfaz para restaurar lo borrado, que es el otro lado de la política de
+borrado lógico).
 
 ---
 
