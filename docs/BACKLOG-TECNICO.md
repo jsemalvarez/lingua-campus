@@ -2132,12 +2132,19 @@ Payment_feeId_fkey    → ON DELETE RESTRICT
 tacho del listado del curso **no borró nada**: la inscripción y sus cuotas siguen enteras. Es la
 garantía que se buscaba — con plata cobrada de por medio, no hay camino que suelte ni borre.
 
-**Sin probar por pantalla: el borrado que sí procede** —inscripción sin ningún pago—. Hacía falta una
-inscripción descartable y no había ninguna: en stage los seis alumnos activos están en el único curso,
-y el alta de un alumno de prueba no se pudo completar por automatización porque el formulario es
-controlado y no toma valores puestos por código. Se dejó sin probar antes que borrar datos existentes
-de stage para fabricar el caso. Queda pendiente y es de un minuto a mano: crear un alumno, inscribirlo
-y borrar esa inscripción.
+**Y probado el borrado que sí procede.** Sobre una inscripción con 6 cuotas —5 mensuales y la
+matrícula— y **ningún pago**, con el resultado anotado antes de apretar:
+
+| | Daría el código viejo | Predicción del nuevo | Resultado |
+|---|---|---|---|
+| Inscripciones | 5 | 5 | **5** |
+| Cuotas totales | 38 | 32 | **32** |
+| **Cuotas sueltas** | **6** | **0** | **0** |
+| Pagos | 9 | 9 | **9** |
+
+La inscripción y sus seis cuotas se borraron juntas y **no quedó ninguna cuota huérfana**, que es
+justamente lo que el `SET NULL` habría producido. Las dos mitades de la regla quedan verificadas
+sobre el código desplegado: con pagos no se borra, sin pagos se borra entero y limpio.
 
 ### Resuelto el punto abierto — 2026-08-16 · va la opción 2
 
