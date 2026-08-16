@@ -261,7 +261,7 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
         }
 
         // Las cuotas se borran junto con la inscripción y en la misma transacción.
-        // Van primero por el RESTRICT de FIN-23, igual que en `purgeStudentAction`.
+        // Van primero por el RESTRICT de FIN-23, igual que en `hardDeleteStudentAction`.
         await prisma.$transaction([
             prisma.fee.deleteMany({ where: { enrollmentId } }),
             prisma.enrollment.delete({ where: { id: enrollmentId } })

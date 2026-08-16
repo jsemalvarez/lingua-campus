@@ -236,6 +236,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
+| [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -1159,6 +1160,23 @@ entonces, no hay dónde poner el vencimiento de algo anual.
 **Cambio.** Agregar `student: { status: "ACTIVE" }` al filtro. Confirmar antes si el negocio quiere
 seguir viendo la deuda histórica de un alumno dado de baja — puede que sí.
 
+### Decidido — 2026-08-16 · no se filtran: se agrega un filtro
+
+**La duda que dejaba la ficha está contestada, y por la negativa: la deuda del alumno en la papelera
+tiene que seguir viéndose.** Sacarla del reporte sería perder plata de vista.
+
+El caso real que lo define: un alumno deja de asistir debiendo cuotas y se va del instituto. Esas
+cuotas **quedan como deuda** y el alumno va a la papelera —con deuda y todo, y también si llegó a
+pagar la matrícula y alguna cuota—. Si más adelante vuelve y se lo restaura, **la deuda tiene que
+reaparecer**, y ahí el instituto decide si se la perdona o se la cobra.
+
+**Entonces el cambio es al revés del que decía la ficha:** en vez de excluirlos, el reporte de
+deudores lleva un **filtro por estado del alumno** —activos, en papelera, o todos—, con los activos
+como vista por defecto. La deuda del que se fue deja de ensuciar el trabajo diario sin desaparecer.
+
+**Perdonar la deuda todavía no existe como operación**, y es lo que hace falta cuando el alumno
+vuelve. Está en [FIN-26](#fin-26), junto con las otras formas de conciliar una diferencia.
+
 **Relacionado.** `deleteFeeAction` bloquea el borrado si `fee.payments.length > 0`
 ([`billingActions.ts:244`](../src/app/payments/billingActions.ts)), contando también los pagos
 `VOIDED`. Una cuota cuyo único pago fue anulado no se puede borrar.
@@ -1492,6 +1510,23 @@ genera nada, que es lo correcto.
 **Tope: antes de tomar las matrículas de diciembre de 2026.** Hasta entonces el daño requiere que
 alguien elija el año próximo en el desplegable, que arranca en el año en curso.
 
+### Definido — 2026-08-16 · el freno va en el código, y tiene que explicarse
+
+**No alcanza con que el filtro deje de emitir de más: el operador tiene que entender por qué.** Un
+botón que se aprieta y no hace nada se lee como una falla del sistema, y el siguiente paso previsible
+es volver a apretarlo o buscar otro camino para lograrlo.
+
+Las dos mitades:
+
+- **La limitante**, que es el filtro por año lectivo de arriba: pedir un año sin cursos no genera
+  nada, y no hay forma de forzarlo desde la pantalla.
+- **La explicación**, antes de apretar y no después: que el formulario diga cuántas inscripciones
+  alcanza el año elegido. Con **0**, el botón se deshabilita y dice por qué —*"todavía no hay cursos
+  que empiecen en 2027"*—, en vez de dejar apretar para después informar que no pasó nada.
+
+Es el mismo criterio de [FIN-24](#fin-24): el sistema resuelve la consecuencia y la pantalla informa
+el resultado, en lugar de advertir sobre un riesgo y dejar la decisión del lado del operador.
+
 ---
 
 <a id="fin-15"></a>
@@ -1512,6 +1547,21 @@ quedó sin cubrir. Atenuantes: es de a un alumno por vez, desde un formulario, y
 'ENROLLMENT'`—, que Prisma 5 no sabe expresar en el schema y hay que escribir a mano en la migración,
 con el costo de quedar fuera de su radar. Evaluar si vale la pena o si alcanza con la ventana chica
 que queda.
+
+### Replanteado — 2026-08-16 · puede que no sea un defecto
+
+**Antes de poner el índice hay que decidir si el caso está mal.** Dos matrículas anticipadas del
+mismo alumno pueden ser una funcionalidad futura y no un accidente: el alumno que va a hacer **dos
+cursos cortos** en el año —el producto que ya obligó a replantear [FIN-20](#fin-20)— necesita dos
+señas, y hoy no hay forma de cobrárselas por adelantado.
+
+Con eso, el índice de esta ficha **prohibiría algo que el instituto podría querer vender**. Sigue
+existiendo el problema real —dos envíos simultáneos del mismo formulario crean dos filas iguales sin
+que nadie lo haya pedido—, pero la solución ya no puede ser "una sola por alumno y año".
+
+**Queda pendiente distinguir las dos cosas:** el duplicado accidental, que hay que evitar, de las dos
+señas deliberadas, que habría que poder emitir a propósito y ver diferenciadas. Mientras no esté
+resuelto, no poner el índice.
 
 ---
 
@@ -1547,6 +1597,21 @@ De paso, algo que quedó a la vista al mirar los datos y que pertenece a esta mi
 un mes pasado le crea la cuota a todo el que no la tenga. En producción, marzo tiene 175 cuotas sobre
 206 inscripciones, así que regenerarlo emitiría 31 cuotas de marzo a alumnos que entraron después.
 Es el mismo agujero del período lectivo, visto desde el otro lado.
+
+### Definido — 2026-08-16 · regenerar un mes cerrado también se limita, y se explica
+
+Mismo criterio que [FIN-14](#fin-14). El período lectivo del curso es la limitante de fondo —un
+alumno que entró en julio no puede recibir una cuota de marzo—, pero hace falta además que la
+pantalla lo diga **antes** de apretar:
+
+- Cuántas cuotas va a emitir el mes elegido, y **a cuántos alumnos que entraron después** deja
+  afuera. Hoy el operador aprieta a ciegas y se entera por el número final, cuando ya se emitieron.
+- Que elegir un mes ya cerrado se distinga de la corrida normal del mes en curso, que es la operación
+  de todos los días.
+
+Sin período lectivo cargado no hay forma de saber cuándo empezó a cursar el alumno; con `enrolledAt`
+se puede aproximar, pero la respuesta buena depende de la decisión pendiente sobre **qué se espera de
+un curso sin fechas**.
 
 ---
 
@@ -1991,7 +2056,7 @@ alumno y mismo curso es la misma inscripción— y así se conservan sus cuotas.
 se puede borrar una inscripción sin cuotas.
 
 **Ojo con la purga, que hoy depende de este mismo defecto.**
-[`purgeStudentAction`](../src/app/students/[id]/actions.ts) borra las inscripciones **antes** que las
+[`hardDeleteStudentAction`](../src/app/students/[id]/actions.ts) borra las inscripciones **antes** que las
 cuotas, y le funciona **porque** el `SET NULL` las desvincula sola en el camino. Con `RESTRICT` ese
 paso empieza a fallar; el arreglo es mover una línea, borrar las cuotas primero. Esa función además
 ya está rota por otros tres `RESTRICT` que no contempla — ver [ARQ-14](#arq-14), que salió de acá.
@@ -2006,7 +2071,7 @@ ya está rota por otros tres `RESTRICT` que no contempla — ver [ARQ-14](#arq-1
   impone el camino **C**.
 
 **El otro `delete` no es este problema.**
-[`purgeStudentAction`](../src/app/students/[id]/actions.ts) también borra inscripciones, pero borra
+[`hardDeleteStudentAction`](../src/app/students/[id]/actions.ts) también borra inscripciones, pero borra
 además las cuotas y al alumno, detrás de un permiso propio: es una purga deliberada, no un efecto
 colateral.
 
@@ -2019,7 +2084,7 @@ Entró el camino **A + C** completo:
   sobre borrados futuros, y las cuotas ya sueltas no lo violan.
 - `removeStudentFromCourseAction` verifica antes y explica qué hacer en su lugar, para que el
   operador no se coma el error crudo de la base.
-- `purgeStudentAction` borra las cuotas **antes** que las inscripciones, que es lo que ese orden
+- `hardDeleteStudentAction` borra las cuotas **antes** que las inscripciones, que es lo que ese orden
   necesitaba para sobrevivir al cambio (ver [ARQ-14](#arq-14)).
 - `createEnrollmentAction` **reactiva** la inscripción cerrada en lugar de fallar contra el índice
   único, así el alumno puede volver a un curso del que salió — y vuelve con sus cuotas, su precio
@@ -2146,10 +2211,20 @@ actual del curso": es el precio del momento en que se emitió. Repreciarla al mo
 inconsistente con cómo funcionan los precios desde siempre. Que el importe venga del curso anterior o
 del actual no es el eje.
 
-**2 · Que la cuota recuerde su curso — pendiente de decidir cómo.** Es la consecuencia directa de la
+**2 · Que la cuota recuerde su curso — decidido, va.** Es la consecuencia directa de la
 decisión 1: si la cuota es la foto de lo que se acordó, tiene que ser la foto **completa**. Hoy
 congela el importe pero el curso se lo pide prestado a la inscripción, que es justamente el dato que
 cambia; por eso una cuota de marzo del curso x pasa a mostrarse como del curso z.
+
+> **Confirmado el 2026-08-16, y con la forma que se quiere ver:** al mover un alumno de curso, en su
+> ficha tiene que poder verse que **la matrícula y las primeras cuotas son de un curso y las nuevas
+> de otro**. No es sólo corregir una etiqueta equivocada: es que el historial cuente la trayectoria
+> del alumno por el instituto, que es lo que alguien busca cuando abre esa ficha.
+>
+> El campo va en `Fee` y se escribe **al emitir**; los cambios de curso posteriores no lo tocan. La
+> matrícula anticipada nace sin curso —todavía no se sabe cuál— y lo recibe cuando la inscripción la
+> consume. **De paso cierra [FIN-19](#fin-19)**, que es el mismo problema visto desde las dos
+> matrículas del mismo año que se ven idénticas.
 
 > **Corrección a lo escrito en [FIN-23](#fin-23):** ahí se descartó guardar el curso en `Fee` por
 > considerarlo un dato duplicado. Con la decisión 1 adelante, **no lo es**: son dos hechos distintos.
@@ -2245,6 +2320,13 @@ contempla ni la bonificación ni el cobro de la diferencia como concepto propio.
 **No es sólo el cambio de curso.** La misma carencia aparece cada vez que hay que devolver o
 compensar: un alumno que se va a mitad de año habiendo pagado de más, un cobro duplicado, una cuota
 emitida de más. Conviene resolverlo como "conciliación", no como "el caso del cambio de curso".
+
+**Un cuarto caso, agregado el 2026-08-16: perdonar la deuda del que vuelve.** El alumno que se fue
+debiendo va a la papelera con su deuda; cuando vuelve y se lo restaura, la deuda reaparece y el
+instituto **decide si se la perdona o se la cobra** (ver [FIN-09](#fin-09)). Perdonarla es la salida
+3 de esta ficha —bonificar— aplicada a cuotas viejas, y hoy la única forma de hacerlo es borrar las
+cuotas, que borra también el registro de que existieron. Es el caso que más claramente necesita que
+la operación deje asiento y motivo.
 
 **Relacionado.** [FIN-24](#fin-24) (de donde sale), [FIN-11](#fin-11) (anular una aplicación de saldo
 a favor, la herramienta más cercana que existe), [FIN-13](#fin-13) (descuentos sin motivo
@@ -3326,6 +3408,63 @@ correo —no avisa a quien no entró—, pero es de horas y no de días.
 
 ---
 
+<a id="bug-08"></a>
+## BUG-08 · La preinscripción no tiene reglas: duplica alumnos y se la puede inscribir a un curso · **P1** · 🗣️ Pedido del cliente
+
+**Qué es la preinscripción (definido el 2026-08-16).** Es **el que llenó el formulario público y el
+instituto todavía no aceptó**. No es un alumno: es un aspirante esperando respuesta. De ahí salen dos
+reglas que hoy no existen.
+
+### 1 · Crea alumnos duplicados, y le rompe el acceso al que ya existía
+
+[`createPreEnrollmentAction`](../src/app/inscription/actions.ts) **no verifica nada** antes de
+crear: no hay `findFirst` ni `findUnique` en la función. Llama directo a `student.create` con
+`status: "PRE_INSCRIBED"`.
+
+Entonces un alumno que **ya existe** —activo, o en la papelera— que vuelve a llenar el formulario
+genera una **segunda fila `Student` con el mismo DNI**. Y `Student.dni` no tiene `@unique` en el
+schema, así que la base lo acepta.
+
+**No es sólo un registro repetido: le rompe el ingreso.** El DNI es el identificador obligatorio del
+alumno y su forma de entrar al sistema —hay chicos de 6 a 8 años sin correo—, así que con dos filas
+del mismo DNI el login pasa a depender de cuál encuentre primero. El alumno puede terminar entrando a
+una ficha vacía, sin sus cursos ni sus cuotas.
+
+**Qué tiene que pasar en su lugar.** Detectar que ese DNI ya existe y **avisar a los dos lados**:
+
+- **Al que está llenando el formulario**, para que sepa que ya está registrado y no vuelva a
+  intentarlo pensando que no funcionó.
+- **Al instituto**, porque es información: alguien que ya es alumno se está queriendo anotar de
+  nuevo, o alguien que está en la papelera quiere volver. Las dos cosas piden una acción humana.
+
+El mensaje al aspirante tiene que ser cuidadoso: confirmarle que **su solicitud llegó**, sin revelar
+datos de la ficha existente ni si está activo o dado de baja. Del otro lado, el instituto sí necesita
+saber cuál de los dos casos es.
+
+**Se apoya en [FEAT-12](#feat-12)** para el aviso por correo, y esa ficha explica por qué el correo
+es una decisión más grande que este ítem. **La detección no espera al correo**: bloquear el duplicado
+y mostrarlo en la aplicación se puede hacer ya.
+
+### 2 · A un preinscripto se lo puede inscribir a un curso
+
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts) no mira `student.status`, así que un
+aspirante que el instituto todavía no aceptó puede quedar inscripto, con su matrícula emitida y su
+deuda corriendo.
+
+**Regla:** sólo un alumno **activo** se inscribe a un curso. Aceptar la preinscripción —pasarlo a
+activo— es el paso que lo habilita, y es una decisión del instituto.
+
+**Hoy queda a medio camino, que es lo peor de los dos mundos:** se lo puede inscribir, pero desde
+[FIN-22](#fin-22) los generadores mensual y anual sólo facturan a alumnos activos. O sea que un
+preinscripto inscripto **ocupa lugar en el curso y no se le factura nada**, en silencio. Con la regla
+puesta, esa incoherencia desaparece sola.
+
+**Relacionado.** [FEAT-12](#feat-12) (el aviso por correo y la decisión de infraestructura que
+arrastra), [SEC-06](#sec-06) (el alta del alumno y sus credenciales), [FIN-16](#fin-16) (el filtro de
+estado en los generadores, que es la otra mitad de la incoherencia).
+
+---
+
 # Arquitectura
 
 <a id="arq-01"></a>
@@ -3805,7 +3944,7 @@ un lugar donde ya se guarden métricas.
 mientras se analizaba [FIN-23](#fin-23). No lo reportó nadie, y es probable que nunca se haya
 intentado usar.
 
-[`purgeStudentAction`](../src/app/students/[id]/actions.ts) es el borrado **físico** de un alumno, con
+[`hardDeleteStudentAction`](../src/app/students/[id]/actions.ts) es el borrado **físico** de un alumno, con
 su propio permiso ("Sin permisos para eliminar permanentemente"). Borra en una transacción:
 
 ```ts
@@ -3846,6 +3985,24 @@ decidir si sigue existiendo:
 
 **Recomendación.** Sacarla, y si algún día hace falta la baja de datos personales, resolverla como lo
 que es —anonimizar la ficha conservando los asientos contables—, que no es lo mismo que borrar filas.
+
+### Decidido — 2026-08-16 · se saca
+
+**Ningún alumno se borra de forma permanente. Todos los estados son lógicos.** La razón es la misma
+que llevó a pasar los borrados físicos a lógicos: lo que se borra sin querer —o queriendo— tiene que
+poder recuperarse, y esta función es la única que no lo permite.
+
+Y el caso de negocio que parecía justificarla tampoco la necesita: el alumno que se va del instituto
+**va a la papelera con su deuda intacta**, y si vuelve, se restaura y la deuda reaparece para que el
+instituto decida (ver [FIN-09](#fin-09)). Borrarlo de verdad no resuelve nada de eso: lo rompe.
+
+Queda entonces sacar `hardDeleteStudentAction` y su acceso en la interfaz, en vez de arreglar los
+tres `RESTRICT` que hoy la hacen fallar. **La baja de datos personales, si alguna vez hace falta, es
+otra cosa** —anonimizar la ficha conservando los asientos— y merece su propia ficha el día que se
+pida.
+
+**Ojo al sacarla:** es el único lugar del código que borra filas de `Fee` en masa. Conviene verificar
+que ninguna pantalla dependa de ella antes de quitarla.
 
 **Relacionado.** [FIN-23](#fin-23) (de donde salió, y de cuyo `SET NULL` depende hoy),
 [ARQ-05](#arq-05) (la interfaz para restaurar lo borrado, que es el otro lado de la política de
