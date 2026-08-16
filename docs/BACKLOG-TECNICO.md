@@ -224,6 +224,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
 | [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
 | [FIN-21](#fin-21) | P2 | No se puede registrar un pago con fecha pasada | [ ] |
+| [FIN-22](#fin-22) | P1 | 🗣️ El generador mensual no ve las cuotas sin inscripción y las duplica | [x] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -241,6 +242,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
 | [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
 | [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [ ] |
+| [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
+| [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -252,6 +255,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
 | [ARQ-10](#arq-10) | P2 | No hay auditoría de las acciones del panel | [ ] |
 | [ARQ-11](#arq-11) | P2 | Guardar las notas de un informe cuesta 250 sentencias | [ ] |
+| [ARQ-12](#arq-12) | P2 | Versionar el proyecto y mostrar la versión en la app | [ ] |
+| [ARQ-13](#arq-13) | P3 | Saber qué versión está usando cada usuario | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -261,6 +266,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-07](#ped-07) | P2 | Límites de consumo de IA por plan | [ ] |
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
 | [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [ ] |
+| [PED-10](#ped-10) | P2 | Consumo de IA por instituto, visible para el superadmin | [ ] |
 
 ---
 
@@ -1521,6 +1527,22 @@ que ver con la restricción única que ese ítem resolvió.
 **Cambio.** Agregar `student: { status: "ACTIVE" }` al filtro y acotar el mes al período del curso
 cuando las fechas estén cargadas. Confirmar antes qué se espera de un curso sin fechas.
 
+### Hecha la mitad — 2026-08-16 · `6889995`
+
+El filtro `student: { status: "ACTIVE" }` entró junto con [FIN-22](#fin-22), que toca la misma
+función. En producción no cambia nada hoy: no hay ninguna inscripción activa de un alumno dado de
+baja —verificado el 15/08—, así que es una red, no una corrección.
+
+**Queda abierta la otra mitad**, y por eso el ítem sigue sin tildar: acotar el mes al período lectivo
+del curso. No entró porque necesita decidir **qué se espera de un curso sin fechas**, y sin esa
+respuesta el filtro dejaría de generar cuotas de cursos que hoy sí las generan. Es una decisión de
+negocio, no de código.
+
+De paso, algo que quedó a la vista al mirar los datos y que pertenece a esta mitad: volver a generar
+un mes pasado le crea la cuota a todo el que no la tenga. En producción, marzo tiene 175 cuotas sobre
+206 inscripciones, así que regenerarlo emitiría 31 cuotas de marzo a alumnos que entraron después.
+Es el mismo agujero del período lectivo, visto desde el otro lado.
+
 ---
 
 <a id="fin-17"></a>
@@ -1668,6 +1690,39 @@ en el mismo año tiene dos inscripciones y por lo tanto **paga dos matrículas**
 matrícula es por curso. Si el instituto quiere bonificar la segunda, aplica un descuento al cobrar,
 que es una decisión comercial y no una regla del sistema.
 
+### Corregido — 2026-08-15 · el diagnóstico era otro, y la bandera no va
+
+**Reemplaza a la decisión del 13/08 de arriba**, que queda como está para que se entienda de dónde
+salió. Las dos cosas cambiaron: la causa y el arreglo.
+
+**La causa no era esta.** La consulta de verificación que esta misma ficha pedía se corrió contra la
+base de producción el 15/08, y dio que **ningún alumno tuvo nunca más de una inscripción**, de
+cualquier estado. El índice de [FIN-06](#fin-06) sí está aplicado en esa base. Los duplicados que
+reportó el cliente salieron de otro lado: el generador mensual no ve las cuotas con `enrollmentId` en
+`null` y las vuelve a crear. Eso es [FIN-22](#fin-22), que se abrió con ese hallazgo y **es lo que
+arregla el pedido del cliente**.
+
+**Y la bandera `allowsConcurrentEnrollments` no se hace.** La decisión del 13/08 leyó de más lo que
+dijo el instituto: que *este* instituto no va a tener un alumno en dos cursos a la vez, y que otro
+podría. De ahí no se sigue que haga falta una configuración — alcanza con que **todos los institutos
+puedan**, que es el caso general y el que el modelo ya soporta. Una columna para prohibir algo que
+nadie pidió prohibir es lógica de más.
+
+Con esto se caen los puntos 1, 2 y 3 del alcance: no hay campo en `Institute`, no hay migración y
+`createEnrollmentAction` no rechaza nada. El punto 4 —limpiar los duplicados— **ya lo hizo el
+instituto con un script contra la base**, y la consulta del 15/08 confirma que no queda ninguna cuota
+mensual duplicada.
+
+**Que el sistema no lo impida es deliberado.** El instituto sostiene que no va a tener alumnos
+simultáneos; queda como acuerdo con ellos, no como regla del código. Es la misma línea que el resto
+del modelo, donde los obligatorios del negocio son opcionales en el schema.
+
+**Lo que queda abierto de esta ficha**, y no entró en el lote del 15/08: la interfaz sigue sin
+distinguir **mover** de **agregar**, que es la rama que la propia ficha anticipaba para el caso de
+"sí puede cursar dos". Con dos inscripciones activas permitidas, inscribir en el curso nuevo sin dar
+de baja el viejo genera dos cuotas por mes — que ahora es el comportamiento correcto, pero puede no
+ser el que el operador quiso. En producción no pasó nunca, así que no urge.
+
 ---
 
 <a id="fin-21"></a>
@@ -1719,6 +1774,78 @@ Tres decisiones antes de tocar código:
 
 **Relacionado.** [FIN-08](#fin-08) es el otro lado de la misma carencia de fechas: aquel es *cuándo
 vence* una cuota, este es *cuándo se cobró*. Conviene decidirlos juntos.
+
+---
+
+<a id="fin-22"></a>
+## FIN-22 · El generador mensual no ve las cuotas sin inscripción y las duplica · **P1** · 🗣️ Pedido del cliente
+
+**Es la causa real del reporte que abrió [FIN-20](#fin-20)**, y no es lo que esa ficha suponía. Salió
+al correr la consulta de verificación contra la base de producción el 2026-08-15, dentro de T4 del
+lote del fin de semana.
+
+`generateMonthlyFeesAction` ([`billingActions.ts`](../src/app/payments/billingActions.ts)) averigua
+qué cuotas ya existen así:
+
+```ts
+where: { instituteId, month, year, type: "MONTHLY", enrollmentId: { in: enrollments.map(e => e.id) } }
+```
+
+Una cuota con `enrollmentId` en `null` **no cae en ese `in`**. El generador no la ve, y crea otra del
+mismo mes atada a la inscripción. Y la restricción única de [FIN-06](#fin-06) tampoco la ataja:
+Postgres no considera iguales dos `NULL` en un índice único, así que `skipDuplicates` no tiene con
+qué comparar. El resultado es una cuota duplicada por alumno y por mes, en cada corrida.
+
+**Qué mostró la base de producción (2026-08-15).**
+
+- **Cero** alumnos con más de una inscripción, de cualquier estado. El mecanismo que suponía FIN-20
+  —dos inscripciones `ACTIVE`— no ocurrió nunca en esta base.
+- **Ocho** alumnos con cuotas `MONTHLY` sueltas: seis sin ninguna inscripción, y **Aylen Zunda** y
+  **Benjamin Rivero**, que son los dos casos reportados. A los dos los inscribieron en la app en
+  agosto teniendo ya cargadas por script las cuotas de marzo a julio, sueltas.
+- Las cuotas de agosto de los dos se crearon en la misma corrida masiva, el 10/08 a las 14:01.
+
+Los duplicados **existieron** y se borraron a mano con un script contra la base; por eso la consulta
+de hoy no los encuentra. Lo que sigue en pie es el mecanismo que los produjo.
+
+**Sigue vivo.** Los seis alumnos sin inscripción tienen cuotas sueltas de los meses 3 a 8. El día que
+los inscriban en la app, la siguiente corrida sobre cualquiera de esos meses les duplica la cuota
+igual que a los otros dos.
+
+**Cambio.** Que la corrida traiga también las cuotas sueltas —`enrollmentId: null`, mismo período y
+tipo— de los alumnos alcanzados, y que el alumno que tenga una **quede afuera de la generación**, con
+su cuenta aparte en el resultado para que el operador lo vea.
+
+**Y que no las vincule al pasar.** Es la decisión de fondo de esta ficha, y va en contra de lo que
+parece más servicial:
+
+- Con dos inscripciones activas legítimas —que desde la decisión del 2026-08-15 en
+  [FIN-20](#fin-20) puede tener cualquier instituto— **no hay forma de saber de cuál de las dos es
+  la cuota suelta**. Vincularla sería adivinar, y con plata cobrada adentro.
+- Un generador masivo que reescribe el historial mientras corre es exactamente la forma del incidente
+  del 13/08. El generador tiene que dejar de duplicar y avisar; **vincular es normalizar**, y eso se
+  hace una vez, mirando las filas, fuera de una corrida masiva.
+
+**No lleva migración.** El índice de FIN-06 se queda como está.
+
+**Relacionado.** [FIN-20](#fin-20) (de donde salió, y que queda reducida a la interfaz de mover vs.
+agregar), [FIN-16](#fin-16) (los otros huecos de la misma función), [FIN-06](#fin-06) (el patrón
+"consultar y después crear", del que esto es otro caso), [FIN-18](#fin-18) (las matrículas sueltas,
+que son el mismo desprendimiento del lado de la matrícula).
+
+### Hecho — 2026-08-16 · `6889995`
+
+La corrida trae también las cuotas sueltas del período y deja afuera a esos alumnos, devolviendo
+`skipped` para que el botón de generar lo muestre en un aviso aparte. No las vincula.
+
+**Verificado contra la base de producción** simulando la lógica nueva sobre los datos reales, antes y
+después: volver a generar cualquier mes de marzo a julio creaba **2** cuotas duplicadas —Aylen Zunda
+y Benjamin Rivero— y con el cambio crea **0**. Agosto y septiembre daban 0 en los dos casos.
+**Falta probarlo en stage con el botón**, que es lo que no se puede simular con una consulta.
+
+**Queda pendiente y no es de esta ficha:** las cuotas sueltas siguen sueltas. Normalizarlas es
+trabajo de datos, no de código — ver «Aparecido durante el lote» en
+[`tareas/lote-finde-2026-08-15.md`](../tareas/lote-finde-2026-08-15.md).
 
 ---
 
@@ -2726,6 +2853,76 @@ quedar como una isla.
 
 ---
 
+<a id="feat-11"></a>
+## FEAT-11 · Métricas de uso de la plataforma para el administrador · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-15).** Que el administrador del instituto pueda ver métricas de usabilidad de la
+aplicación.
+
+**Esto y [FEAT-04](#feat-04) son la misma pregunta con dos alcances**, y conviene decidirlos juntos o
+fusionarlos. FEAT-04 pide saber **quiénes entraron**, sobre todo los tutores, y es un pedido concreto
+con una respuesta concreta. Esto es más amplio: qué se usa, cuánto y por quién. Hacer FEAT-04 por su
+cuenta y después esto significa construir dos veces el mismo registro.
+
+**Lo que hay que definir antes de tocar código, y no es técnico.** "Métricas de usabilidad" no es una
+funcionalidad: son N funcionalidades hasta que alguien dice cuáles tres o cuatro preguntas quiere
+contestar. Las candidatas, por lo que ya pidió el instituto:
+
+- ¿Qué tutores no entraron nunca? (es literalmente FEAT-04)
+- ¿Cuántos alumnos practican, y con qué frecuencia?
+- ¿Qué docentes cargan asistencia y notas al día?
+- ¿Qué pantallas no usa nadie?
+
+Las tres primeras se contestan con datos que **ya existen** en la base — sesiones de práctica,
+`Attendance`, `Grade` — y no necesitan registro nuevo, sólo consultas y una pantalla. La última exige
+instrumentar la aplicación, que es otro trabajo y otro costo. **Conviene separar las dos mitades**: la
+primera es barata y es la que el cliente pidió; la segunda es un proyecto.
+
+**Relacionado.** [ARQ-09](#arq-09) anota que las métricas y el registro de errores son cosas
+distintas y no conviene mezclarlas: "cuántos errores hubo" sale del registro, "cuánto se usa la
+plataforma" no. Comparten, eso sí, las mismas tres decisiones caras — dónde se guarda, cuánto tiempo
+y quién lo ve. También hay un ítem viejo en [TODO.md](./TODO.md) que pide mostrar uso real del
+instituto en el dashboard, y es esto.
+
+---
+
+<a id="feat-12"></a>
+## FEAT-12 · Aviso por correo cuando llega un formulario de inscripción · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-15).** Que llegue un correo al instituto avisando que entró un formulario de
+pre-inscripción.
+
+**El problema real es que hoy el instituto no se entera.** La pre-inscripción pública
+([`inscription/actions.ts`](../src/app/inscription/actions.ts)) crea el registro y ahí queda: alguien
+tiene que acordarse de mirar. Un aspirante puede quedar sin respuesta durante días sin que nadie lo
+sepa.
+
+**El costo no está en el aviso, está en que no hay correo en el proyecto.** No hay ninguna librería
+de envío en `package.json` — ni nodemailer, ni Resend, ni SendGrid. Este ítem es, en realidad, la
+decisión de **cómo manda correo esta aplicación**, y esa decisión no es de este ítem solo:
+
+- [FEAT-05](#feat-05) (recuperar la contraseña por correo) es **P1 y pedido del cliente**, y necesita
+  exactamente la misma infraestructura.
+- [SEC-06](#sec-06) (contraseñas por defecto hardcodeadas) se resuelve de verdad mandando un enlace de
+  alta, que también es correo.
+- El formulario de contacto del landing, anotado en [TODO.md](./TODO.md), es el tercer caso.
+
+**Por eso conviene que el primero que se haga sea FEAT-05**, que es el más urgente, y que deje el
+helper de envío montado. Los otros tres pasan a ser una plantilla y una llamada. Hacer este primero
+sería resolver el problema chico y dejar el caro para después.
+
+**Decisiones que arrastra.** Proveedor y dominio remitente (un correo que sale de un dominio sin SPF
+y DKIM cae en spam, que es peor que no mandarlo); a qué dirección se avisa —¿la del instituto,
+configurable por instituto?—; y qué lleva el cuerpo, teniendo presente que **hay datos de menores**:
+conviene que el correo avise que llegó una inscripción y mande a la aplicación, no que copie los
+datos del aspirante.
+
+**Alternativa más barata, mientras tanto.** Un contador de pre-inscripciones sin atender en el
+dashboard del instituto resuelve buena parte del problema sin infraestructura nueva. No reemplaza al
+correo —no avisa a quien no entró—, pero es de horas y no de días.
+
+---
+
 # Arquitectura
 
 <a id="arq-01"></a>
@@ -3125,6 +3322,79 @@ conviene hacerlo cuando se toque ese módulo por otra razón, no como interrupci
 
 ---
 
+<a id="arq-12"></a>
+## ARQ-12 · Versionar el proyecto y mostrar la versión en la app · **P2**
+
+**Pedido (2026-08-15).** Poder versionar el proyecto, y decidir dónde se muestra el número de versión
+dentro de la aplicación.
+
+**Estado actual.** `package.json` dice `"version": "1.0.2"` y **nada lo lee**: no aparece en ninguna
+pantalla, no se registra en ningún lado y no se toca al desplegar. Es un número que quedó ahí. No hay
+tags de git ni notas de release.
+
+**Por qué esto no es cosmético, y cuál es su mejor argumento.** El 13/08, con producción caída, la
+pregunta que había que contestar era *"¿qué código está sirviendo ahora mismo?"* — y la única forma de
+contestarla era mirar commits en Vercel. Una versión visible en la app convierte esa pregunta en algo
+que puede contestar **el cliente por teléfono**, sin acceso al dashboard. Con dos proyectos de Vercel
+sobre el mismo repositorio y dos bases, saber qué está desplegado dónde no es un lujo.
+
+**Tres decisiones, en orden:**
+
+1. **Qué numera.** Semver a mano en `package.json` es lo más simple y lo que ya está empezado, pero
+   se olvida. La alternativa es derivar la versión del despliegue: Vercel expone
+   `VERCEL_GIT_COMMIT_SHA`, que no se olvida nunca pero no le dice nada a una persona. La combinación
+   —versión semver para humanos, sha corto al lado para diagnóstico— es la que sirve para las dos
+   cosas.
+2. **Cuándo sube.** Si se numera a mano, hace falta el hábito o un paso en el flujo de promoción a
+   `main`. Conviene atarlo a lo que ya existe: la promoción `stage` → `main` es el momento natural, y
+   es el único release real que tiene el proyecto.
+3. **Dónde se muestra.** Candidatos: el pie del panel, la pantalla de configuración del instituto, o
+   sólo el panel del superadmin. Mostrarlo a todo el mundo tiene un costo bajo y una ventaja concreta
+   —el cliente puede leerlo cuando reporta algo—, así que probablemente el pie del panel alcance, con
+   el sha visible sólo para el superadmin.
+
+**Nota técnica.** Leer `package.json` desde el código del cliente no funciona en Next; hay que
+inyectarlo como variable de entorno en tiempo de build (`env` en `next.config`) o generar un módulo
+con el valor. Es la parte fácil, pero conviene decidirlo antes para no leerlo de dos formas distintas.
+
+**Relacionado.** [ARQ-13](#arq-13) es la continuación natural: una vez que existe el número, saber
+quién lo está usando. Y esto es también lo que le falta a `tareas/config-pendiente.md` para poder
+afirmar qué quedó desplegado después de cada incidente.
+
+---
+
+<a id="arq-13"></a>
+## ARQ-13 · Saber qué versión está usando cada usuario · **P3**
+
+**Pedido (2026-08-15).** Métricas de qué versión de la aplicación tienen los usuarios.
+
+**Depende de [ARQ-12](#arq-12)**: sin número de versión no hay nada que medir.
+
+**Ojo con la analogía móvil, porque acá la pregunta es otra.** En una app de celular tiene sentido
+preguntar qué versión tiene instalada cada usuario, porque las instalaciones quedan atrás durante
+meses. Esto es una aplicación web: en el próximo refresco, todos están en la última. La distribución
+de versiones sería casi siempre una sola barra, y no vale un desarrollo.
+
+**Lo que sí tiene valor es la variante corta de esa pregunta: los clientes rancios.** Alguien con una
+pestaña abierta desde antes del despliegue sigue ejecutando JavaScript viejo contra un servidor nuevo,
+y eso **sí** produce errores reales — es primo del problema del 13/08, donde el desajuste fue entre
+base y código. También es lo que explica el reporte "a mí no me anda" de la persona que no cerró el
+navegador en tres días.
+
+**Forma barata.** Que el cliente mande su versión en las peticiones (una cabecera) y que el servidor
+compare con la suya; si no coinciden, avisarle al usuario que recargue. Eso resuelve el problema real
+sin construir métricas, y es lo que conviene hacer primero.
+
+**Forma cara.** Registrar la versión de cada sesión para poder graficar la distribución. Sólo tiene
+sentido si antes existe [FEAT-11](#feat-11) o [ARQ-09](#arq-09), porque comparte las mismas
+decisiones —dónde se guarda, cuánto tiempo, quién lo ve— y no vale la pena construir un registro
+propio para un solo dato.
+
+**Recomendación.** Hacer la forma barata como parte de ARQ-12, y dejar la métrica para cuando exista
+un lugar donde ya se guarden métricas.
+
+---
+
 # Módulo pedagógico
 
 > **Tesis.** El diferencial no es "tenemos IA" — eso lo replica cualquiera en un fin de semana. El
@@ -3419,6 +3689,46 @@ ya existe, y es el tipo de cosa que la profesora nota todos los días.
 **Riesgo a tener presente.** Cada generación cuesta cuota, y a diferencia de la práctica del alumno
 —que la usa un curso entero— esto lo dispara una sola persona para su propio uso. Si se vuelve
 frecuente, entra antes de lo previsto la discusión de [PED-07](#ped-07) (topes por plan).
+
+---
+
+<a id="ped-10"></a>
+## PED-10 · Consumo de IA por instituto, visible para el superadmin · **P2**
+
+**Pedido (2026-08-15).** Que el superadmin pueda ver cuántos tokens se gastan por instituto.
+
+**Buena parte del andamiaje ya está**, y salió de [SEC-07](#sec-07): la tabla
+[`AiUsage`](../prisma/schema.prisma) ya cuenta consumo por instituto y por usuario, en ventanas de
+tiempo, y ya la escribe cada llamada a IA a través de
+[`consumeAiQuota`](../src/lib/practice/quota.ts). Nadie la lee: `AiUsage` aparece en **un solo
+archivo** de todo `src`, que es el que la escribe.
+
+**Pero hay tres huecos entre lo que existe y lo que el pedido dice, y los tres importan:**
+
+1. **Cuenta llamadas, no tokens.** `AiUsage.count` se incrementa de a uno por request, sin mirar el
+   tamaño. Para el tope de cuota eso alcanza y es deliberado. Para "cuánto gasta este instituto" no:
+   una evaluación de una frase y la generación de una práctica entera cuentan igual, y la factura no
+   las cobra igual. Medir tokens de verdad requiere leer el uso que devuelve cada proveedor —Gemini
+   lo trae en `usageMetadata`— y guardarlo aparte del contador de cuota.
+2. **No hay historia.** `pruneOldWindows` borra las ventanas de más de **2 días**
+   ([`quota.ts`](../src/lib/practice/quota.ts)), a propósito: es un contador de cuota, no un registro.
+   Cualquier reporte mensual necesita una tabla o una agregación que sobreviva a la poda.
+3. **Las filas de usuario no se pueden agregar por instituto.** `AiUsage` guarda `subjectId` sin
+   `instituteId` y sin clave foránea, así que sólo agregan las filas `INSTITUTE`. Alcanza para el
+   total del instituto; no para ver **quién** dentro del instituto consume.
+
+**Camino sugerido, de menor a mayor.** Una pantalla en el panel del superadmin que muestre las filas
+`INSTITUTE` de los últimos días es de horas y ya contesta "quién está usando esto". Recién si hace
+falta el costo real conviene agregar el registro de tokens, que es donde está el trabajo.
+
+**Decidir antes: qué pregunta se contesta.** No es lo mismo *controlar el gasto* (necesita tokens y
+costo por proveedor), que *ver quién usa el módulo pedagógico* (alcanza con llamadas), que *cobrar por
+consumo* (necesita las dos cosas y además ser exacto). La tercera es [PED-07](#ped-07).
+
+**Relacionado.** [PED-07](#ped-07) (límites por plan) se apoya en la misma tabla y su ficha ya anota
+que lo que falta ahí es la decisión comercial, no el mecanismo. Si el consumo se va a facturar, los
+dos son el mismo trabajo y conviene mirarlos juntos. [FEAT-11](#feat-11) es la versión de esta
+pregunta para el administrador del instituto en vez del superadmin.
 
 ---
 
