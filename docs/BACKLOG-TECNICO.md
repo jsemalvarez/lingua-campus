@@ -1906,6 +1906,25 @@ líneas más abajo— hace exactamente eso sin borrar nada. El `delete` quedó d
 para deshacer un error de carga, que es lo que dice su comentario; pero es el botón que tiene el
 operador para sacar a un alumno de un curso, y lo usa para mover gente.
 
+**Y no es sólo el `delete`: los dos caminos no compiten de igual a igual.** Verificado el 2026-08-16.
+El permiso no es el problema —las dos acciones admiten `ADMIN` y `SECRETARY`, y la secretaria, que es
+quien más mueve alumnos, ve las dos—. El problema es dónde están y cómo se ven:
+
+| | «Cambiar curso» (el bueno) | «Eliminar inscripción» (el que rompe) |
+|---|---|---|
+| **Pantalla** | Ficha del alumno, tarjeta de la inscripción | Listado del curso, fila del alumno |
+| **Aspecto** | Un ícono de lápiz de 14 px, **sin etiqueta** | Ícono de tacho rojo, **oculto hasta pasar el mouse** en escritorio |
+| **Qué anuncia** | Sólo el `title="Cambiar de curso"` | `title="Eliminar inscripción (Error de carga)"` |
+| **Confirmación** | Modal con curso actual y destino | "¿Eliminar? / Confirmar" en línea, **sin decir qué se lleva** |
+
+Quien piensa "muevo a este alumno del curso x al z" abre **el curso**, que es donde está la lista de
+alumnos — y ahí el único botón que saca a alguien es el que borra. El camino bueno está en otra
+pantalla y no se anuncia. El resultado es el que se vio en producción.
+
+**Lo barato de esto**, y conviene hacerlo aunque el `delete` se arregle: ponerle etiqueta al botón de
+cambiar curso, y que la confirmación de eliminar diga que las cuotas van a quedar sin curso. Son dos
+strings y no dependen de ninguna decisión.
+
 **Cambio.** Que desinscribir marque la inscripción en vez de borrarla. Hay que decidir dos cosas:
 
 - **Qué estado le corresponde** a "lo saqué del curso": `INCOMPLETE` es el que más se le parece, pero
