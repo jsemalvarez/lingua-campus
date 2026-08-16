@@ -1925,13 +1925,55 @@ pantalla y no se anuncia. El resultado es el que se vio en producción.
 cambiar curso, y que la confirmación de eliminar diga que las cuotas van a quedar sin curso. Son dos
 strings y no dependen de ninguna decisión.
 
+**Y lo que lo cierra de verdad, para más adelante (pedido el 2026-08-16):** llevar el botón de
+cambiar curso **también al listado del curso**, al lado del de eliminar. Es la pantalla donde el
+operador ya está parado cuando piensa "muevo a este alumno", y hoy es la única de las dos que no le
+ofrece el camino bueno. Con los dos botones juntos, la decisión se toma mirando las dos opciones en
+vez de eligiendo la única que hay a mano. El modal
+([`ChangeCourseModal`](../src/app/students/[id]/components/ChangeCourseModal.tsx)) ya es un componente
+cliente autónomo: recibe `enrollmentId`, el curso actual y la lista de cursos, así que se monta ahí
+sin tocar su lógica. Lo que hay que resolver es de dónde saca la lista de cursos disponibles esa
+página, que hoy no la carga.
+
+### Por qué la cuota no debería quedar suelta, y cuál de los tres caminos — 2026-08-16
+
+Una cuota suelta no es sólo una cuota sin curso: es una cuota **sin dueño**. No sale en el listado del
+curso, el recibo no puede nombrar de qué curso era, el generador la saltea desde [FIN-22](#fin-22)
+—mejor que duplicarla, pero tampoco correcto— y si el alumno tenía precio propio, ese precio se fue
+con la inscripción y no se puede reconstruir.
+
+| | Qué hace | Costo |
+|---|---|---|
+| **A · No borrar la inscripción** | Se le pone un estado. La cuota sigue colgada de ella y la inscripción del curso | Chico: el camino ya existe |
+| **B · Guardar el curso en la cuota** | Un `courseId` propio en `Fee` | Migración, backfill y un dato duplicado que puede contradecir a la inscripción |
+| **C · Que la base no deje borrar** | La clave foránea pasa de `SET NULL` a `RESTRICT` | Migración chica, pero hay que reordenar el purgado |
+
+**Va A, y B se descarta.** La inscripción **es** el vínculo con el curso: mientras exista, la cuota
+sabe de qué curso es, a qué precio y con qué condiciones. Un `courseId` en `Fee` guarda dos veces el
+mismo dato, y se contradicen solos en cuanto alguien cambie de curso —`changeStudentCourseAction`
+reasigna el `courseId` de la inscripción y el de las cuotas viejas no—, con lo que habría que decidir
+a cuál creerle. Es más deuda, no menos.
+
+**A arrastra una decisión, y es la que muerde.** `Enrollment` tiene `@@unique([studentId, courseId])`.
+Si la inscripción deja de borrarse, el día que el alumno **vuelva al mismo curso** el alta falla con
+*"El estudiante ya se encuentra inscripto en este curso"*. Hoy no pasa porque el borrado la hace
+desaparecer. La salida limpia: que [`createEnrollmentAction`](../src/app/enrollments/actions.ts)
+**reactive** la inscripción cerrada en vez de crear otra. Es lo correcto además de lo cómodo —mismo
+alumno y mismo curso es la misma inscripción— y así se conservan sus cuotas.
+
+**C sirve como red mientras A se decide**, y encima codifica en la base la regla que se quería: sólo
+se puede borrar una inscripción sin cuotas. **Ojo:**
+[`purgeStudentAction`](../src/app/students/[id]/actions.ts) borra las inscripciones **antes** que las
+cuotas, así que con `RESTRICT` fallaría hasta invertir ese orden en la transacción.
+
 **Cambio.** Que desinscribir marque la inscripción en vez de borrarla. Hay que decidir dos cosas:
 
 - **Qué estado le corresponde** a "lo saqué del curso": `INCOMPLETE` es el que más se le parece, pero
   hoy significa "no terminó el curso", que no es lo mismo que "lo movimos".
 - **Qué pasa con el error de carga real** —inscribí al alumno equivocado hace cinco minutos, sin
   cuotas emitidas—, que es para lo que la acción se escribió. Puede seguir borrando si la inscripción
-  no tiene ninguna cuota asociada, que es verificable en el momento.
+  no tiene ninguna cuota asociada, que es verificable en el momento, y que es exactamente lo que
+  impone el camino **C**.
 
 **El otro `delete` no es este problema.**
 [`purgeStudentAction`](../src/app/students/[id]/actions.ts) también borra inscripciones, pero borra
