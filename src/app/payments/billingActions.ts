@@ -80,8 +80,11 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
         // alumno una segunda cuota del mismo mes: es FIN-22, y es lo que le pasó a
         // los dos alumnos que reportó el instituto.
         //
-        // Las hay porque la carga inicial de datos entró por script y dejó cuotas sin
-        // vincular para los alumnos que todavía no tenían inscripción en la app.
+        // Las hay sobre todo porque **desinscribir a un alumno borra la fila de
+        // `Enrollment`** y la clave foránea de `Fee` es ON DELETE SET NULL: le suelta
+        // todas las cuotas de golpe, incluidas las pagas (FIN-23, sin arreglar). Mover
+        // a alguien de curso por desinscribir + inscribir pasa por ahí. La otra fuente,
+        // menor, es la carga inicial de datos por script.
         const looseFees = await prisma.fee.findMany({
             where: {
                 instituteId: user.instituteId as string,

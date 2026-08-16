@@ -225,6 +225,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
 | [FIN-21](#fin-21) | P2 | No se puede registrar un pago con fecha pasada | [ ] |
 | [FIN-22](#fin-22) | P1 | 🗣️ El generador mensual no ve las cuotas sin inscripción y las duplica | [x] |
+| [FIN-23](#fin-23) | P1 | Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -1812,6 +1813,18 @@ de hoy no los encuentra. Lo que sigue en pie es el mecanismo que los produjo.
 los inscriban en la app, la siguiente corrida sobre cualquiera de esos meses les duplica la cuota
 igual que a los otros dos.
 
+**De dónde salen las cuotas sueltas — corregido el 2026-08-16.** La primera versión de esta ficha lo
+atribuía a la carga inicial de datos por script. Es **una** de las fuentes, pero la importante es
+otra y está en el código: **desinscribir a un alumno borra la fila de `Enrollment`**, y como la clave
+foránea es `ON DELETE SET NULL`, todas sus cuotas quedan sueltas de golpe. Eso es
+[FIN-23](#fin-23).
+
+Con eso el caso reportado se reconstruye entero, y ya no hace falta suponer nada: al alumno lo sacan
+del curso viejo —se le sueltan las cuotas, incluidas las de meses ya cobrados— y lo inscriben en el
+nuevo; la siguiente corrida del generador no ve las sueltas y emite otra vez la del mes. Nunca
+existieron dos inscripciones, que es lo que la consulta contra producción mostró y lo que hacía
+incomprensible el reporte.
+
 **Cambio.** Que la corrida traiga también las cuotas sueltas —`enrollmentId: null`, mismo período y
 tipo— de los alumnos alcanzados, y que el alumno que tenga una **quede afuera de la generación**, con
 su cuenta aparte en el resultado para que el operador lo vea.
@@ -1846,6 +1859,69 @@ y Benjamin Rivero— y con el cambio crea **0**. Agosto y septiembre daban 0 en 
 **Queda pendiente y no es de esta ficha:** las cuotas sueltas siguen sueltas. Normalizarlas es
 trabajo de datos, no de código — ver «Aparecido durante el lote» en
 [`tareas/lote-finde-2026-08-15.md`](../tareas/lote-finde-2026-08-15.md).
+
+---
+
+<a id="fin-23"></a>
+## FIN-23 · Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas · **P1**
+
+**Es de dónde salen las cuotas sueltas de [FIN-22](#fin-22)**, y explica el caso que el instituto no
+podía reconstruir: por qué aparecían duplicados sin que ningún alumno tuviera dos inscripciones.
+
+[`removeStudentFromCourseAction`](../src/app/courses/actions.ts) —el botón de desinscribir del
+listado del curso— **borra la fila de `Enrollment`**:
+
+```ts
+// Hard-delete: used for errors
+await prisma.enrollment.delete({ where: { id: enrollmentId } });
+```
+
+Y la clave foránea de `Fee` es `ON DELETE SET NULL` — verificado el 2026-08-16 sobre la base de
+producción, no sólo en el schema:
+
+```
+Fee_enrollmentId_fkey → SET NULL
+Fee_studentId_fkey    → RESTRICT
+```
+
+**Al borrar la inscripción, todas sus cuotas quedan con `enrollmentId` en `null`.** Las impagas y las
+pagas por igual, en silencio, sin aviso ni confirmación. Las cuotas sobreviven —eso lo garantiza el
+`RESTRICT` de `studentId`— pero **pierden de qué curso eran**.
+
+**Qué se pierde con la fila.** No es sólo el vínculo: la inscripción tiene `billingMode`,
+`customMonthlyPrice`, `customEnrollmentPrice`, `customExamPrice`, `customFullCoursePrice` y
+`takesExam`. Al alumno con beca o precio propio, desinscribirlo le borra la beca sin dejar rastro.
+
+**Y después duplica.** Con las cuotas sueltas, el generador mensual las creaba de nuevo — eso es
+[FIN-22](#fin-22), ya arreglado en `6889995`, así que **el duplicado ya no ocurre**. Lo que sigue
+ocurriendo es el desprendimiento: mover un alumno de curso por desinscribir + inscribir le suelta el
+historial, y desde FIN-22 además lo deja **afuera de la generación** hasta que alguien normalice sus
+cuotas a mano. El síntoma cambió de "cuota duplicada" a "cuota que no se generó", que es mejor pero
+no es correcto.
+
+**Contradice la regla del proyecto**, que es **borrado lógico siempre**. Y el camino lógico ya
+existe: `Enrollment.status` admite `ACTIVE`, `FINISHED` e `INCOMPLETE`, y
+[`markEnrollmentIncompleteAction`](../src/app/courses/actions.ts) —en el mismo archivo, treinta
+líneas más abajo— hace exactamente eso sin borrar nada. El `delete` quedó de cuando la acción era
+para deshacer un error de carga, que es lo que dice su comentario; pero es el botón que tiene el
+operador para sacar a un alumno de un curso, y lo usa para mover gente.
+
+**Cambio.** Que desinscribir marque la inscripción en vez de borrarla. Hay que decidir dos cosas:
+
+- **Qué estado le corresponde** a "lo saqué del curso": `INCOMPLETE` es el que más se le parece, pero
+  hoy significa "no terminó el curso", que no es lo mismo que "lo movimos".
+- **Qué pasa con el error de carga real** —inscribí al alumno equivocado hace cinco minutos, sin
+  cuotas emitidas—, que es para lo que la acción se escribió. Puede seguir borrando si la inscripción
+  no tiene ninguna cuota asociada, que es verificable en el momento.
+
+**El otro `delete` no es este problema.**
+[`purgeStudentAction`](../src/app/students/[id]/actions.ts) también borra inscripciones, pero borra
+además las cuotas y al alumno, detrás de un permiso propio: es una purga deliberada, no un efecto
+colateral.
+
+**Relacionado.** [FIN-22](#fin-22) (el duplicado que esto causaba), [FIN-20](#fin-20) (el diagnóstico
+que buscaba dos inscripciones donde en realidad había una borrada), [ARQ-05](#arq-05) (interfaz para
+restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento).
 
 ---
 
