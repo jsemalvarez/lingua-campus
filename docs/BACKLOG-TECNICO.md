@@ -237,6 +237,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
 | [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
+| [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -249,6 +250,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [ ] |
 | [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
 | [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
+| [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -514,6 +516,34 @@ asiento es un puente, no la forma definitiva.
 redirige al dashboard, que la pantalla de finanzas sigue dejándole registrar un ingreso vario, y que
 borrar una cuota impaga funciona y deja el asiento con su `operatorId`. Y como admin, que los gastos
 y los sueldos siguen funcionando igual.
+
+### Verificado en stage — 2026-08-16
+
+**Como secretaria** (`roles = {TEACHER, SECRETARY}`, en modo Secretaría):
+
+- `/payments/payroll` **escribiendo la URL redirige al dashboard**. Era el hueco real de esta ficha:
+  el botón estaba escondido pero la página se abría y mostraba cuánto cobra cada profesor.
+- En `/payments` **no hay formulario de egresos**, ni KPI de Rentabilidad, ni de Total de egresos, ni
+  acceso a sueldos. El único formulario de la pantalla es el de cobro. La palabra "egresos" aparece
+  sólo en el subtítulo genérico de la pantalla.
+
+**Como admin**, que es la mitad que comprueba que no se haya trabado nada del lado del dueño:
+
+- **Gasto asentado y anulado.** $12.345 en ALQUILER: se creó con `status VALID` y su `Transaction`
+  de −12.345; al anularlo quedó en `VOIDED` con un `ADJUSTMENT` de +12.345 y la descripción
+  "Anulación de Gasto #…". Neto cero, sin borrar la fila.
+- **Sueldo liquidado y anulado.** "Pago de Haberes - July 2026", $20.000, `category = 'Payroll'`, con
+  su `Transaction` de tipo `PAYROLL` y el destinatario correcto. Entra por `createExpenseAction`, que
+  desde este ítem es sólo de admin, así que es la prueba de que ese corte no rompió la liquidación.
+- **El operador quedó bien registrado en las cuatro operaciones.**
+- Como admin **sí** aparecen el KPI de Rentabilidad, el acceso a Pago de Sueldos y la solapa de Otros
+  Gastos. El contraste entre los dos roles es el que definió el instituto.
+
+**Los dos gastos de prueba quedaron anulados, no borrados**, que es lo que corresponde a la política
+de borrado lógico: en stage hay dos `Expense` en `VOIDED` con su contrapartida, de neto cero.
+
+**Sigue sin probarse** el borrado de una cuota impaga con su asiento, que es el tercer punto que esta
+ficha pide para la secretaría.
 
 ---
 
@@ -2624,6 +2654,30 @@ Finanzas e Informes.
 en los datos, y estaba en la pantalla. El síntoma "el sistema me cambia el rol" describía un cartel,
 no un permiso.
 
+### Verificado en stage — 2026-08-16
+
+Con un usuario en `roles = {TEACHER, SECRETARY}` —la forma exacta de la usuaria del reporte, con
+`TEACHER` primero, que es lo que hacía que `userRoles[0]` diera profesora—, en modo Secretaría:
+
+- **Las ocho pantallas que la secretaria puede abrir muestran «Modo Secretaría»**, y Finanzas e
+  Informes siguen en el menú: `/payments`, `/payments/debtors`, `/payments/tour`, `/enrollments/new`,
+  `/students/new`, `/courses/new`, `/courses/classrooms`, `/courses/levels`.
+- **Sin parpadeo al ir y volver**: `/payments` → `/courses` → `/payments` → `/students` →
+  `/payments`, con navegación de cliente. El modo no cambia en ningún salto. Era exactamente lo que
+  ella describía como "siempre se me cambia a profesora".
+- **El selector cambia a Profesora y se mantiene**, y ahí Finanzas e Informes desaparecen, que es lo
+  correcto. Sirve de comprobación de que sacarle el estado local al `Navbar` no rompió el cambio de
+  rol: ahora depende del redirect de `switchRoleAction`.
+
+**Dos de las diez pantallas que lista esta ficha no son verificables con una secretaria, y conviene
+corregirlo acá:** `/payments/payroll` y `/guardians/[id]` son las dos `requireRole(["ADMIN"])` y la
+redirigen al dashboard. La ficha las agrupa como "casi exactamente el trabajo de una secretaria" y en
+esas dos no lo es. Que `/guardians/[id]` sea sólo de admin **es una pregunta abierta para el
+instituto**, no un defecto de este ítem: la secretaría es quien trata con los tutores.
+
+**Falta todavía la confirmación con la usuaria**, que es la única que cierra la ficha — los tres
+intentos anteriores también pasaban las pruebas de quien los escribía.
+
 ### Resuelto — 2026-08-13 · pendiente de verificar en stage
 
 **La prop pasó a ser obligatoria.** `currentActiveRole` era opcional y ese era el fondo del asunto:
@@ -2880,6 +2934,43 @@ lo que la pantalla ya muestra:
 
 **Qué falta verificar en stage:** guardar un parte en el curso más numeroso que haya, y guardar con
 el escáner de QR corriendo en paralelo sobre la misma clase.
+
+### Verificado en stage — 2026-08-16 · con 25 alumnos
+
+**El curso más numeroso de stage tenía 5 alumnos, así que no servía**: el defecto era de cantidad de
+sentencias y con 5 no se acerca al tope. Se crearon 20 alumnos de prueba por SQL —sin pasar por
+`createEnrollmentAction`, así que sin cuotas— hasta llegar a **25 inscriptos activos**, que es el
+curso más grande del cliente. Al terminar se borraron los tres niveles (asistencias, inscripciones,
+alumnos) y stage quedó como estaba: 7 alumnos, 5 inscriptos, 0 sobrantes.
+
+Sobre la clase del 27/08, por pantalla y contra el código desplegado, recargando la página entre cada
+paso para leer del servidor y no del estado del formulario:
+
+| | Qué se hizo | Resultado |
+|---|---|---|
+| **Alta** | Los 25 marcados | 25 filas |
+| **Regrabado 1** | 3 estados cambiados + una nota nueva | Persistió. Siguen 25 filas |
+| **Regrabado 2** | Esa nota vaciada | La nota quedó en `null`. Siguen 25 filas |
+
+**La prueba de que fueron las dos sentencias masivas está en las marcas de tiempo**, y es más directa
+de lo que se esperaba: las 25 filas comparten `createdAt` **idéntico al milisegundo** (22:05:55.320),
+porque salieron de un solo `INSERT`, y comparten `updatedAt` idéntico (22:18:22.493), porque el
+regrabado fue un solo `UPDATE` con `NOW()`. Con el bucle viejo —o incluso con un `upsert` por
+alumno— las marcas diferirían fila por fila. De paso descarta el borrar-y-recrear: el `createdAt` del
+alta sobrevivió a los dos regrabados.
+
+**Las notas vacías quedan en `null`, no en cadena vacía:** 25 filas, 25 `null`, 0 `''`.
+
+**Un detalle útil para quien verifique esta pantalla:** el formulario **no** arranca con todos en
+Presente. Un alumno sin registro previo queda en `status: null`, sin ningún botón encendido
+([`AttendanceForm.tsx:42`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx)).
+Por eso los estados marcados al abrir la página son datos guardados y no un valor por defecto. El
+comentario de la línea 33 dice lo contrario y quedó viejo.
+
+**Sigue sin probarse el escáner de QR en paralelo** sobre la misma clase, que es el otro escenario
+que pedía esta ficha.
+
+**De acá salió [FEAT-13](#feat-13)**, la idea de que cada marca escriba sola.
 
 ---
 
@@ -3438,6 +3529,56 @@ correo —no avisa a quien no entró—, pero es de horas y no de días.
 
 ---
 
+<a id="feat-13"></a>
+## FEAT-13 · Guardar la asistencia sola, sin botón de guardar · **P3**
+
+**Idea (2026-08-16)**, surgida al verificar [BUG-07](#bug-07) en stage: que cada marca de presente sea
+un `insert` o un `update` inmediato, en vez de un parte que se manda entero al apretar Guardar.
+
+**El argumento a favor es real pero engaña, y conviene dejarlo escrito.** Es cierto que con este
+enfoque BUG-07 no habría pasado: no hay transacción grande que se pase de los 5 segundos. Pero la
+causa de BUG-07 no era el tamaño del parte, era **cuántas sentencias se emitían por guardado** — y en
+esa cuenta el guardado por clic es **peor que lo que quedó**, no mejor:
+
+| Forma de guardar 25 alumnos | Requests | Sentencias |
+|---|---|---|
+| Bucle en `$transaction` interactiva (el código que falló) | 1 | 78 |
+| `UPDATE ... FROM (VALUES)` + `createMany` (lo que hay hoy) | 1 | **4** |
+| Un guardado por clic | **25** | ~75 |
+
+Los ~75 salen de que cada clic es un request completo: `getAuthContext` lee el usuario de la base
+para autorizar, la acción verifica la matrícula, y recién ahí escribe. **Y el pool es de 5**
+([ARQ-02](#arq-02)), así que el final de hora —cuando todos los docentes guardan a la vez— es
+exactamente el peor momento para multiplicar los requests por 25. Se cambia una conexión tomada cinco
+segundos por veinticinco conexiones peleándose.
+
+**Lo que sí resuelve, y es su verdadero valor: el trabajo que se pierde.** Hoy, si el docente marca a
+los 25 y se va sin apretar Guardar, o si se le corta la conexión antes, **no queda nada**. Eso BUG-07
+no lo cubre, y es un problema distinto que este enfoque ataca de verdad. El argumento a favor está
+bien; lo que hay que corregir es el motivo.
+
+**Las contras a analizar.**
+
+1. **El parte deja de ser atómico.** Hoy se guarda entero o no se guarda. Por clic, un parte a medias
+   pasa a ser un estado legítimo, y «sin marcar» deja de distinguirse de «no se llegó a guardar».
+2. **Los errores pasan a ser por fila.** Si falla el alumno 12, ¿qué ve el docente? Hace falta estado
+   y reintento por fila, no el cartel único que hay hoy.
+3. **Las notas no pueden ir por tecla.** Necesitan su propio mecanismo de espera, aparte del de los
+   estados.
+4. **El aula con wifi flojo empeora.** Un guardado único se reintenta; veinticinco sueltos dejan la
+   lista a mitad de camino, y hay que saber cuál es cuál.
+5. `revalidatePath` por clic sería desperdicio puro.
+
+**El punto medio, que probablemente es lo que conviene evaluar primero:** guardado automático con
+espera. Se juntan los cambios de unos segundos y se mandan con **la misma sentencia masiva que ya
+existe**. Gana el «no se pierde el trabajo» sin multiplicar los requests, y no toca la acción del
+servidor: es todo del lado del formulario.
+
+**Relacionado.** [BUG-07](#bug-07) (de donde sale), [ARQ-02](#arq-02) (el pool de conexiones),
+[ARQ-11](#arq-11) (el mismo patrón de muchas sentencias, en las notas de los informes).
+
+---
+
 <a id="bug-08"></a>
 ## BUG-08 · La preinscripción no tiene reglas: duplica alumnos y se la puede inscribir a un curso · **P1** · 🗣️ Pedido del cliente
 
@@ -3502,7 +3643,27 @@ estado en los generadores, que es la otra mitad de la incoherencia).
 
 ---
 
-# Arquitectura
+<a id="bug-09"></a>
+## BUG-09 · Los meses salen en inglés en la liquidación de sueldos · **P3**
+
+**Visto el 2026-08-16** verificando [SEC-03](#sec-03) en stage. En `/payments/payroll` el selector de
+período ofrece `January … December`, y el comprobante que se genera queda con el mes en inglés: el
+gasto de la prueba se guardó como **"Pago de Haberes - July 2026"**, y el modal de confirmación dice
+*"Período: July 2026"*. El resto de la aplicación está en castellano, incluida la pantalla de
+finanzas de al lado.
+
+**No es sólo la etiqueta: queda escrito en la base.** La descripción del `Expense` se arma con el
+nombre del mes, así que el historial de liquidaciones del instituto queda mezclado —lo viejo en
+inglés, lo nuevo en castellano el día que se arregle—. Conviene decidir si se normaliza lo ya
+escrito o se deja como está; son pocas filas.
+
+**Causa probable.** Un `toLocaleString`/`Intl` sin locale, o un array de meses en inglés escrito a
+mano. Es el mismo tipo de olvido que [FIN-10](#fin-10), que también sale de no fijar el locale: en
+Vercel el idioma por defecto del servidor es inglés, así que **esto no se ve corriendo en local** —
+que es probablemente por qué llegó hasta acá.
+
+**P3 porque es cosmético y no afecta ningún importe.** Pero es de la pantalla del dueño, y el dueño
+es quien mira los sueldos.
 
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
