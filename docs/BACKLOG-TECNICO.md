@@ -226,6 +226,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-21](#fin-21) | P2 | No se puede registrar un pago con fecha pasada | [ ] |
 | [FIN-22](#fin-22) | P1 | 🗣️ El generador mensual no ve las cuotas sin inscripción y las duplica | [x] |
 | [FIN-23](#fin-23) | P1 | Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas | [ ] |
+| [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -1923,8 +1924,13 @@ alumnos — y ahí el único botón que saca a alguien es el que borra. El camin
 pantalla y no se anuncia. El resultado es el que se vio en producción.
 
 **Lo barato de esto**, y conviene hacerlo aunque el `delete` se arregle: ponerle etiqueta al botón de
-cambiar curso, y que la confirmación de eliminar diga que las cuotas van a quedar sin curso. Son dos
-strings y no dependen de ninguna decisión.
+cambiar curso, para que el camino sano se encuentre. **Hecho el 2026-08-16.**
+
+**Lo que NO se hace: avisar en la confirmación de eliminar que las cuotas quedan sin curso.** Se
+descartó a propósito. Un cartel que advierte sobre una consecuencia contable le traslada la decisión
+al operador, y esa decisión no es suya: la secretaria saca a un alumno de un curso, no elige qué pasa
+con la caja. Documentar el defecto no es arreglarlo. El criterio está escrito en [FIN-24](#fin-24), y
+lo que corresponde acá es que el borrado deje de perder cosas — que es esta ficha.
 
 **Y lo que lo cierra de verdad, para más adelante (pedido el 2026-08-16):** llevar el botón de
 cambiar curso **también al listado del curso**, al lado del de eliminar. Es la pantalla donde el
@@ -1987,7 +1993,68 @@ colateral.
 
 **Relacionado.** [FIN-22](#fin-22) (el duplicado que esto causaba), [FIN-20](#fin-20) (el diagnóstico
 que buscaba dos inscripciones donde en realidad había una borrada), [ARQ-05](#arq-05) (interfaz para
-restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento).
+restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento),
+[FIN-24](#fin-24) (qué pasa con las cuotas al mover de curso, que es la decisión que el sistema
+todavía no toma).
+
+---
+
+<a id="fin-24"></a>
+## FIN-24 · Cambiar de curso no define qué pasa con las cuotas · **P2**
+
+> **El criterio que abre esta ficha, y que vale más allá de ella (2026-08-16).** Las consecuencias
+> contables las tiene que contemplar el sistema —permitiéndolas o limitándolas—, no quien aprieta el
+> botón. La secretaria mueve alumnos; no decide sobre la caja del instituto. Cuando un texto de
+> interfaz le pide a un operador que entienda una consecuencia contable, lo que falta no es el texto:
+> **es la regla.** Un cartel que avisa de un efecto raro es un defecto documentado, no resuelto.
+
+[`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) hace exactamente una cosa:
+
+```ts
+await prisma.enrollment.update({ where: { id: enrollmentId }, data: { courseId: newCourseId } });
+```
+
+Está bien que no borre nada —es el camino sano, y el que [FIN-23](#fin-23) quiere que se use—, pero
+**no decide nada sobre la plata**, y hay cuatro consecuencias que hoy ocurren solas:
+
+1. **Las cuotas ya emitidas quedan con el precio del curso viejo.** Mover a alguien de un curso de
+   $42.000 a uno de $65.000 a mitad de mes deja ese mes cobrado al precio viejo. Nadie eligió eso.
+2. **Y encima pasan a mostrarse como del curso nuevo.** La cuota cuelga de la inscripción, y la
+   inscripción ahora apunta al otro curso: una cuota de marzo del curso x aparece como del curso z.
+   El importe no miente, pero la etiqueta sí.
+3. **El precio propio se muda con el alumno.** `customMonthlyPrice` está en la inscripción, no en el
+   curso: una beca acordada para el curso x se le aplica al z en silencio, sin que nadie la vuelva a
+   aprobar.
+4. **`billingMode` también.** Una inscripción `FULL_COURSE` —el alumno pagó el curso x entero por
+   adelantado— movida al curso z sigue diciendo que está paga entera. Es el caso más caro de los
+   cuatro y el menos visible.
+
+**Ninguna de las cuatro tiene hoy una regla.** Son el resultado de que la acción actualiza un campo y
+nada más.
+
+**Qué hay que decidir**, y es de negocio:
+
+- **Las cuotas pagas no se tocan nunca.** Eso no debería estar en discusión: son historia y hay un
+  recibo emitido. Lo que sí falta es que la cuota recuerde de qué curso era, para que el punto 2 deje
+  de pasar.
+- **La cuota impaga del mes del movimiento**: ¿se reprecia al curso nuevo o se respeta la emitida? Las
+  dos son defendibles. Respetar la emitida es más predecible —lo que se comunicó se cobra— y
+  repreciarla es más exacto. **Recomendación: respetar la emitida, y que el cambio rija desde la
+  generación siguiente**, que es la regla más fácil de explicarle a un padre.
+- **El precio propio y el `billingMode`**: al mover de curso, el sistema tiene que **preguntar o
+  limpiar**, no arrastrar. Arrastrar es la única de las tres opciones que nadie eligió.
+
+**Recomendación de forma.** Que el modal de cambiar curso muestre el efecto ya resuelto —"las cuotas
+emitidas se conservan; desde el mes que viene se cobra $X"— en vez de advertir sobre consecuencias.
+La diferencia con un cartel de advertencia es que acá el sistema ya decidió y sólo informa.
+
+**Cómo apareció (2026-08-16).** Al etiquetar el botón de cambiar curso en [FIN-23](#fin-23), el
+tooltip decía "conservando sus cuotas". Se sacó: le pedía a la secretaria que entendiera una
+consecuencia contable que el sistema no contempla. La ficha es el otro lado de ese texto borrado.
+
+**Relacionado.** [FIN-23](#fin-23) (de donde salió), [FIN-19](#fin-19) (dos matrículas del mismo año
+se ven idénticas — el mismo problema de que la cuota no dice de qué curso es), [FIN-20](#fin-20) (que
+ya anotaba el precio del curso viejo como "otra discusión": es esta).
 
 ---
 
