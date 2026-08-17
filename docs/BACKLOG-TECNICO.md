@@ -251,7 +251,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [ ] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
 | [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
-| [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [ ] |
+| [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [x] |
 | [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
 | [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
 | [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
@@ -3764,6 +3764,67 @@ mirar primero si hay alguno.
 generalizado. Esta ficha es el primer caso concreto y conviene mirarla como el primer ladrillo: si
 ARQ-10 se encara después, `FeeDeletion` debería poder absorberse en el modelo general en vez de
 quedar como una isla.
+
+### Resuelto — 2026-08-17 · `75fc4d7`
+
+Los cinco puntos del alcance, con la migración `20260817120000_add_fee_deletion`, que **sólo crea la
+tabla**: no borra ni modifica ninguna fila.
+
+| | |
+|---|---|
+| **El modelo** | `FeeDeletion`, la foto: instituto, alumno (id **y** nombre), tipo, año, mes, importe, curso si la cuota tenía inscripción, `reason`, `deletedById` y `deletedAt`. Índice `[instituteId, deletedAt]` |
+| **La acción** | `deleteFeeAction(feeId, reason)` escribe en `FeeDeletion` **en vez de** en `Transaction`, en la misma transacción que el `delete`. Motivo obligatorio, tope de 200 caracteres |
+| **El motivo** | Se pide **en la tarjeta de la cuota**, con la forma del modo de edición en línea que el componente ya tenía |
+| **La pantalla** | `/payments/deletions`, `requireRole(["ADMIN"])` con `redirect("/dashboard")` — el mismo patrón de `/payments/payroll`, que es el que SEC-03 verificó. Filtra por período sobre `deletedAt`, y arranca **sin filtro** a propósito: borrar una cuota es raro y un mes vacío no se distingue de una pantalla que no anduvo |
+| **El acceso** | Botón «Cuotas Eliminadas» en `/payments`, escondido para la secretaría |
+
+**Sin claves foráneas, a propósito.** Ni a `Student`, ni a `Course`, ni a `User`. La fila tiene que
+sobrevivir a que después se borre o se purgue lo que nombra, que es exactamente el caso para el que
+se escribe — y `purgeStudentAction` borra alumnos de verdad. Por eso el alumno va con su id y con su
+nombre: el id para llegar a la ficha, el nombre para que la pantalla siga diciendo algo si el id ya
+no lleva a ningún lado.
+
+**El `confirm()` no se reemplazó sólo por el campo.** El cartel del navegador decía *"¿Eliminar esta
+cuota/matrícula no pagada permanentemente?"*, sin nombrar al alumno, el período ni el importe: no
+confirmaba nada, porque no dejaba ver cuál se estaba por borrar. El formulario nuevo vive dentro de
+la tarjeta, con esos tres datos a la vista arriba del campo.
+
+**Verificado por pantalla el 17/08**, contra la base de desarrollo y con el resultado anotado antes
+de apretar:
+
+- Con el campo **vacío**, el botón de confirmar **no borra**: sale «Escribí el motivo: sin él queda
+  una fecha, no un rastro» y la cuota sigue en la lista.
+- Borrada la **Matrícula 2026 de `estudiante uno 2233`, $15.000** con motivo *"duplicada con la carga
+  inicial de febrero"*: `Fee` pasó de 10 a 9, `FeeDeletion` de 0 a 1 con la foto completa —curso
+  `Adolescents+ M-J` incluido— y el operador correcto.
+- **Los asientos `'Cuota eliminada%'` en `Transaction` siguieron en cero**, que es la mitad que
+  comprueba que el rodeo viejo dejó de escribirse. En el libro mayor de `/payments` no apareció nada.
+- La pantalla mostró **«1 cuota eliminada · $15.000 de deuda dada de baja»** con fecha, alumno,
+  cuota, curso, importe, operador y motivo. Filtrada por **2026 · Julio** queda vacía con su cartel;
+  por **2026 · Agosto** vuelve la fila.
+- **Como secretaría** —cambiándole los roles al usuario de prueba en la base de desarrollo, y
+  restaurados al terminar—, `/payments/deletions` **escribiendo la URL redirige al dashboard**, y en
+  `/payments` el botón no está.
+
+**La base de desarrollo quedó como estaba**: la cuota se restauró con su mismo id y la fila de
+`FeeDeletion` de la prueba se borró.
+
+**Lo que quedó sin ejercitar por pantalla**, y por qué no frena: las dos son guardas que este cambio
+**no tocó**. Que una cuota **con pagos** se rechace (`paidAmount > 0 || payments.length > 0`, igual
+que antes) y que la **secretaría sí pueda borrar** con el motivo (`getAuthAndInstitute`, que sigue
+siendo `["ADMIN", "SECRETARY"]` por decisión de [SEC-03](#sec-03)). Conviene barrerlas en la
+verificación de stage.
+
+**La ventana de huérfanos quedó en cero, como se buscaba.** La consulta 5 del lote midió el 16/08
+contra producción: cero filas `'Cuota eliminada%'`. Y en producción [SEC-03](#sec-03) todavía no
+está —sale con T1—, así que el asiento viejo nunca llegó a escribirse ahí. Si alguna cuota se borra
+en stage entre este commit y el despliegue, ese registro queda en `Transaction` y **no aparece en la
+pantalla nueva**; se migra a mano con el `like` de la descripción.
+
+**Lo que no entró.** [FIN-23](#fin-23) deja anotado que `removeStudentFromCourseAction` también borra
+cuotas físicamente y que, cuando exista esta tabla, ese borrado debería escribir acá con motivo
+obligatorio. Es la salida recomendada de aquella ficha y sigue abierta: son tres decisiones que
+exceden ésta.
 
 ---
 
