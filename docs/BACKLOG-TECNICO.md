@@ -216,7 +216,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
-| [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [ ] |
+| [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [x] |
 | [FIN-15](#fin-15) | P2 | La matrícula anticipada no tiene restricción única en la base | [ ] |
 | [FIN-16](#fin-16) | P2 | El generador mensual ignora el período lectivo y a los alumnos de baja | [ ] |
 | [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [ ] |
@@ -229,6 +229,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
 | [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
+| [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -1699,8 +1700,32 @@ una pantalla que promete un número que la corrida no cumple es peor que no most
 nadie llegó a correr el generador con el año próximo, así que la regresión estaba abierta pero no
 había hecho daño.
 
-**Falta ejercitarlo por pantalla en stage.** No se pudo hacer localmente —el Postgres de desarrollo no
-está levantado—. Verificado con `tsc --noEmit`.
+### Verificado por pantalla — 2026-08-17 · contra la base de desarrollo
+
+Ejercitado en `/payments` con el admin, sobre una base con **30 cursos, todos con inicio en marzo de
+2026 y ninguno sin fecha**. Los números se predijeron contra la base **antes** de abrir el navegador,
+que es lo que le da valor a la coincidencia:
+
+| Año pedido | Lógica vieja | Predicho | En pantalla |
+|---|---|---|---|
+| 2025 | 145 inscripciones | 0 | — |
+| **2026** | 145 inscripciones | 145 | **«Alcanza a 145 inscripciones de 2026»** |
+| **2027** | 145 inscripciones | 0 | **Botón deshabilitado + el cartel ámbar** |
+
+Con el código anterior, pedir **2027** habría emitido **145 matrículas 2027 atadas a las inscripciones
+de 2026**: el doble cobro de esta ficha, con número.
+
+- **2027**: el botón quedó deshabilitado con el monto ya cargado en $15.000, y el clic **no hizo nada**
+  —sin diálogo, sin aviso— y la base siguió con **cero matrículas 2027**.
+- **2026**: el `confirm()` nuevo salió con el alcance adentro, y la corrida emitió **143 sobre 145**.
+  Las dos que faltan son las que ya estaban cubiertas: una matrícula vinculada y una suelta que el
+  generador consume. Las 143 se borraron después y la base quedó con los mismos 3 ids que antes.
+
+Que el número de la pantalla coincidiera con el medido de antemano es lo que prueba que el conteo y la
+corrida siguen compartiendo el mismo `where`.
+
+**Salió de acá [FIN-28](#fin-28)**: el año del curso lo da la fecha de inicio, que es un campo
+opcional. Sin ella el curso no tiene año propio y este filtro no lo puede ubicar.
 
 ---
 
@@ -2590,6 +2615,60 @@ la cuota elegida en vez de saltar siempre a la primera.
 
 **Relacionado.** [FIN-11](#fin-11) (de donde salió), [FIN-01](#fin-01) y [FIN-02](#fin-02) (la
 mecánica del saldo a favor), [FEAT-14](#feat-14) (el carrito, que se lleva puesto todo este flujo).
+
+---
+
+<a id="fin-28"></a>
+## FIN-28 · La fecha de inicio del curso es opcional, y sin ella el curso no tiene año · **P3 hoy · P1 en noviembre**
+
+**Apareció el 2026-08-17**, al terminar [FIN-14](#fin-14). Salió de una pregunta del dueño y no de una
+auditoría: *"¿el administrador puede en diciembre crear los cursos del año próximo, si los cursos que
+cree en diciembre van a ser de este año?"*
+
+**Puede**, y esa parte está bien: el año del curso lo da el campo **Fecha de Inicio** del alta
+([`CourseForm.tsx:163`](../src/app/courses/new/CourseForm.tsx)), no el momento en que se crea. Un curso
+dado de alta en diciembre de 2026 con fecha 09/03/2027 es un curso de 2027.
+
+**El hueco es que ese campo es opcional.** Arranca vacío, no tiene `required`, no lo valida el
+formulario ni la acción del servidor —[`courses/actions.ts:41`](../src/app/courses/actions.ts) hace
+`startDateStr ? new Date(startDateStr) : null`—, y la etiqueta no dice "Opcional" como sí lo dice la de
+Fecha de Fin. El mismo patrón está en el alta y en la edición
+([`EditCourseModal.tsx:77`](../src/app/courses/components/EditCourseModal.tsx)).
+
+**Dos consecuencias, y la segunda es la de fondo:**
+
+1. **El caso puntual.** Si en diciembre se crean los cursos de 2027 sin fecha, la generación masiva de
+   matrículas de 2027 no los alcanza y muestra *"Todavía no hay cursos que empiecen en 2027"* con los
+   cursos recién creados en pantalla. El operador no tiene forma de entender por qué.
+2. **Un curso sin fecha no tiene año propio: tiene el año de hoy.** Todo el sistema lo trata como del
+   año en curso —[`createEnrollmentAction`](../src/app/enrollments/actions.ts) para el año lectivo de
+   la matrícula, y el filtro de FIN-14—, así que **el 1 de enero cambia de año solo**, sin que nadie lo
+   toque. Una matrícula emitida en diciembre y una emitida en enero para el mismo curso caen en años
+   distintos.
+
+**Cambio, decidido con el dueño el 2026-08-17: hacer obligatoria la fecha de inicio.** Es lo que le da
+año propio al curso y cierra las dos consecuencias de raíz. La alternativa —dejarla opcional y que la
+pantalla de matrículas avise cuántos cursos sin fecha está dejando afuera— tapa el síntoma y deja la
+deriva de enero intacta.
+
+Falta resolver, y es lo que lo hace más que una validación de una línea: **qué se hace con los cursos
+sin fecha que ya existan** cuando la validación entre. Es la misma pregunta que frena la otra mitad de
+[FIN-16](#fin-16) —qué se espera de un curso sin fechas— y conviene contestarla una sola vez.
+
+### Prioridad — 2026-08-17 · hoy no, en noviembre sí
+
+**Hoy no hay ni un caso** y no urge. Verificado contra la base de **producción** el 17/08: **31
+cursos, los 31 con fecha de inicio cargada, todos de 2026**. (Uno no tiene fecha de fin, que es otro
+campo y sí está marcado como opcional.) O sea que el instituto viene cargándola siempre, por costumbre,
+sin que nada se lo exija.
+
+**Sube a P1 en noviembre o diciembre de 2026**, que es cuando se arman los cursos del año siguiente y
+la costumbre deja de alcanzar: es el único momento del año en que un curso se crea para un año que no
+es el corriente, y es exactamente cuando olvidarse la fecha hace daño.
+
+**Relacionado.** [FIN-14](#fin-14) (de donde salió, y quien consume el año del curso),
+[FIN-16](#fin-16) (comparte la decisión sobre los cursos sin fechas), [FIN-18](#fin-18) (la inscripción
+tampoco tiene año propio, que es el otro lado de esta carencia).
 
 ---
 
