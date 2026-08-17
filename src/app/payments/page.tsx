@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import dayjs from "dayjs";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
-import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles, Percent, Coins } from "lucide-react";
+import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles, Percent, Coins, Trash2 } from "lucide-react";
 
 import { RegisterIncomesForm } from "./components/RegisterIncomesForm";
 import { RegisterOutgoingsForm } from "./components/RegisterOutgoingsForm";
@@ -405,6 +405,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                 <Button variant="outline" className="flex items-center gap-2 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
                                     <DollarSign size={16} />
                                     Pago de Sueldos
+                                </Button>
+                            </Link>
+                        )}
+                        {/* Seguimiento de lo que la secretaría dio de baja: es control
+                            del dueño, así que el acceso no se le muestra a ella. La
+                            pantalla lo verifica por su cuenta con `requireRole`. */}
+                        {!isSecretary && (
+                            <Link href="/payments/deletions">
+                                <Button variant="outline" className="flex items-center gap-2 border-rose-500/30 text-rose-600 hover:bg-rose-50">
+                                    <Trash2 size={16} />
+                                    Cuotas Eliminadas
                                 </Button>
                             </Link>
                         )}

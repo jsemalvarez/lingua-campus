@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
-import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
+import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -386,30 +386,51 @@ export async function getDebtorsReportAction() {
     }
 }
 
+/** Tope del motivo. El `input` de la pantalla lleva el mismo número. */
+const DELETION_REASON_MAX = 200;
+
 /**
  * Elimina fisicamente una cuota PENDIENTE. Sólo si no tiene pagos asociados.
  *
- * **Deja asiento de quién la borró.** Es la única acción de plata que no dejaba
- * rastro: anular un pago, un gasto o un ingreso escribe su contra-asiento con
- * `operatorId`, pero acá la fila desaparecía y no quedaba nada. No borra plata
- * cobrada —se niega si la cuota tiene pagos— pero **borra una deuda**, y eso hay
- * que poder reconstruirlo. Ver SEC-03.
+ * **Deja la foto de lo que borró, con motivo.** Es la única acción de plata que
+ * no dejaba rastro: anular un pago, un gasto o un ingreso escribe su
+ * contra-asiento con `operatorId`, pero acá la fila desaparecía y no quedaba
+ * nada. No borra plata cobrada —se niega si la cuota tiene pagos— pero **borra
+ * una deuda**, y eso hay que poder reconstruirlo. Ver SEC-03.
  *
- * El asiento va con importe 0 porque no hubo movimiento de dinero, con la misma
- * forma que usa la aplicación de saldo a favor. Dos límites conocidos: hoy **no
- * se ve en la tabla del libro mayor**, que filtra los de importe 0, y es un
- * tercer sentido para `ADJUSTMENT` — los dos los resuelve [FIN-11] cuando se
- * decida qué es esa tabla. El registro queda consultable igual, que es lo que
- * faltaba.
+ * SEC-03 lo resolvió con un asiento de importe 0 en `Transaction`, que fue un
+ * puente y no la forma definitiva: quedaba **invisible** en la tabla del libro
+ * mayor, que filtra los movimientos en cero —filtro que FIN-11 decidió mantener,
+ * porque esa pantalla es la caja—, y no tenía dónde guardar el motivo. Desde
+ * FEAT-10 el registro va a `FeeDeletion`, que es su propia tabla y tiene
+ * pantalla: `/payments/deletions`.
+ *
+ * El motivo es **obligatorio**. Es más exigente que el de las anulaciones, que
+ * es opcional, y es a propósito: al anular queda la fila original para mirar, y
+ * acá no queda nada.
  */
-export async function deleteFeeAction(feeId: string) {
+export async function deleteFeeAction(feeId: string, reason: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
+
+    const cleanReason = (reason ?? "").trim();
+    if (!cleanReason) {
+        return { success: false, error: "Escribí el motivo: sin él queda una fecha, no un rastro." };
+    }
+    if (cleanReason.length > DELETION_REASON_MAX) {
+        return { success: false, error: `El motivo no puede pasar de ${DELETION_REASON_MAX} caracteres.` };
+    }
 
     try {
         const fee = await prisma.fee.findUnique({
             where: { id: feeId },
-            include: { payments: true, student: { select: { name: true } } }
+            include: {
+                payments: true,
+                student: { select: { id: true, name: true } },
+                // El curso es parte de la foto: la inscripción sigue existiendo,
+                // pero la cuota que la nombraba no va a estar para preguntarle.
+                enrollment: { select: { course: { select: { name: true } } } }
+            }
         });
 
         if (!fee || fee.instituteId !== user.instituteId) {
@@ -420,23 +441,29 @@ export async function deleteFeeAction(feeId: string) {
             return { success: false, error: "No se puede eliminar una cuota que ya tiene pagos. Anule los pagos primero." };
         }
 
-        // El asiento y el borrado van juntos: si falla el borrado no queremos un
-        // asiento de una cuota que sigue existiendo.
+        // El registro y el borrado van juntos: si falla el borrado no queremos el
+        // registro de una cuota que sigue existiendo, ni al revés — una cuota
+        // borrada sin su motivo es exactamente el agujero que esto cierra.
         await prisma.$transaction([
-            prisma.transaction.create({
+            prisma.feeDeletion.create({
                 data: {
                     instituteId: fee.instituteId,
-                    amount: 0,
-                    type: "ADJUSTMENT",
-                    method: "N/A",
-                    description: `Cuota eliminada — ${formatFeeLabel(fee.type, fee.month, fee.year)} de ${fee.student.name} (importe $${fee.originalAmount.toLocaleString()})`,
-                    operatorId: user.id,
+                    studentId: fee.student.id,
+                    studentName: fee.student.name,
+                    type: fee.type,
+                    year: fee.year,
+                    month: fee.month,
+                    amount: fee.originalAmount,
+                    courseName: fee.enrollment?.course.name ?? null,
+                    reason: cleanReason,
+                    deletedById: user.id,
                 }
             }),
             prisma.fee.delete({ where: { id: feeId } }),
         ]);
 
         revalidatePath("/payments/debtors");
+        revalidatePath("/payments/deletions");
         revalidatePath("/students");
         return { success: true };
     } catch (e: any) {

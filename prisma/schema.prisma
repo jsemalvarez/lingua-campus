@@ -555,6 +555,45 @@ model Fee {
   @@unique([enrollmentId, type, year, month])
 }
 
+// La foto de una cuota borrada. Ver FEAT-10.
+//
+// `deleteFeeAction` borra la fila de `Fee` físicamente —es la única acción de
+// plata que lo hace, y sólo sobre deuda impaga—, así que cuando esto se escribe
+// la cuota ya no existe: no hay a qué apuntar, hay que copiar. Por eso el alumno
+// va con su id y con su nombre, y por eso no hay ninguna clave foránea: la fila
+// tiene que sobrevivir a que después se borre lo que nombra.
+//
+// No es una fila del libro mayor. Una deuda borrada no movió dinero, y de hecho
+// el rodeo anterior —un asiento de importe 0 en `Transaction`— quedaba invisible
+// en la tabla de `/payments`, que filtra los movimientos en cero (FIN-11), y no
+// tenía dónde guardar el motivo.
+model FeeDeletion {
+  id          String   @id @default(cuid())
+  instituteId String
+
+  // Datos del alumno al momento de borrar. El id sirve para llegar a la ficha;
+  // el nombre, para que la pantalla siga diciendo algo si al alumno lo purgan.
+  studentId   String
+  studentName String
+
+  // La cuota que ya no está.
+  type        FeeType
+  year        Int
+  month       Int
+  amount      Float    // `originalAmount` de la cuota borrada
+  courseName  String?  // Sólo si la cuota estaba vinculada a una inscripción
+
+  // Obligatorio, y es más exigente que el motivo de las anulaciones —que es
+  // opcional— a propósito: acá no queda la fila original para mirar.
+  reason      String
+
+  deletedById String
+  deletedAt   DateTime @default(now())
+
+  // Es como lo lista la pantalla: el instituto, lo último arriba.
+  @@index([instituteId, deletedAt])
+}
+
 model Payment {
   id          String   @id @default(cuid())
   feeId       String
