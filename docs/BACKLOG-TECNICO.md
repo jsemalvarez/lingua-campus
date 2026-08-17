@@ -229,6 +229,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
 | [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
+| [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
@@ -239,6 +240,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
 | [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
 | [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
+| [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
+| [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -252,6 +255,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
 | [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
 | [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
+| [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -1726,6 +1730,27 @@ corrida siguen compartiendo el mismo `where`.
 
 **Salió de acá [FIN-28](#fin-28)**: el año del curso lo da la fecha de inicio, que es un campo
 opcional. Sin ella el curso no tiene año propio y este filtro no lo puede ubicar.
+
+### Evaluado y descartado — 2026-08-17 · los dos relojes del "año en curso"
+
+Visto al escribir el filtro, y **se deja como está por decisión del dueño**. Queda anotado porque el
+próximo que lea el código lo va a encontrar y va a querer arreglarlo.
+
+El desplegable del formulario arma los años con `now.getFullYear()` del **navegador** (Argentina,
+UTC−3) y el filtro del servidor decide si el año pedido es el de calendario con
+`new Date().getFullYear()` **del servidor** (Vercel, UTC). Entre las 21:00 del 31 de diciembre y la
+medianoche los dos no coinciden: el navegador dice 2026 y el servidor 2027, así que en esa franja una
+corrida de 2026 dejaría afuera a los cursos **sin fecha de inicio**.
+
+**Por qué no se arregla:** son tres horas al año, **el 31 de diciembre es feriado y nadie trabaja en
+esa franja**. Y el arreglo no es local: `createEnrollmentAction`
+([`enrollments/actions.ts:63`](../src/app/enrollments/actions.ts)) usa el mismo
+`new Date().getFullYear()` para su año de recambio, así que tocar uno solo dejaría **dos definiciones
+distintas de "año en curso"**, que es peor que la que hay.
+
+**Si alguna vez se toca**, tiene que ser junto con `createEnrollmentAction` y con la decisión sobre los
+cursos sin fechas ([FIN-28](#fin-28) y [FIN-16](#fin-16)): resuelto eso, el caso desaparece solo,
+porque un curso con fecha propia no depende de qué año sea hoy.
 
 ---
 

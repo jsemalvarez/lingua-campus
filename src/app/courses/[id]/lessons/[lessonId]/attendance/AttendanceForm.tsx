@@ -30,7 +30,8 @@ export function AttendanceForm({
     const [attendanceState, setAttendanceState] = useState<Record<string, { status: AttendanceStatus | null, notes: string }>>({});
 
     useEffect(() => {
-        // Inicializar el estado de presentismo por default a PRESENT, a menos que exista un registro previo
+        // El alumno sin registro previo arranca en `null` — "Sin Marcar", no PRESENT:
+        // el docente tiene que marcar a cada uno. Lo que hay guardado se muestra tal cual.
         const initialState: Record<string, any> = {};
         for (const student of students) {
             if (existingAttendances[student.id]) {
