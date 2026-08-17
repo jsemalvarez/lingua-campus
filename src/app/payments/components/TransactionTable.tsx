@@ -145,11 +145,21 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                                             ? <Wallet size={16} />
                                                             : tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className={`font-semibold text-sm max-w-[350px] truncate ${tx.status === "VOIDED" ? "line-through text-muted-foreground" : ""}`} title={displayTitle}>
+                                                    {/* El tope de ancho va acá y no en el `<td>`: la tabla es de
+                                                        layout automático y el `max-width` de una celda es apenas
+                                                        una sugerencia, la de un div se respeta. Sin esto, la
+                                                        segunda línea —etiqueta, "Anula a: …", ticket, ANULADO—
+                                                        crece con su contenido, y como la tabla es
+                                                        `whitespace-nowrap` empuja Monto y Acciones fuera de la
+                                                        pantalla: parece que desaparecieron los importes de todos
+                                                        los movimientos. Ver BUG-10. */}
+                                                    <div className="flex flex-col min-w-0 max-w-[350px]">
+                                                        <span className={`font-semibold text-sm truncate ${tx.status === "VOIDED" ? "line-through text-muted-foreground" : ""}`} title={displayTitle}>
                                                             {displayTitle}
                                                         </span>
-                                                        <div className="flex items-center gap-2 text-xs font-medium mt-0.5">
+                                                        {/* Envuelve en vez de estirar: la fila se hace más alta,
+                                                            que es barato, y las columnas de la derecha no se mueven. */}
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 whitespace-normal text-xs font-medium mt-0.5">
                                                             <span className={
                                                                 tx.isCreditApplication
                                                                     ? "text-blue-500"
