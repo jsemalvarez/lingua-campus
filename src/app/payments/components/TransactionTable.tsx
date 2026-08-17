@@ -163,11 +163,18 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                                                     ? "SALDO APLICADO"
                                                                     : isCancellation ? "ANULACIÓN" : tx.type === "INCOME" ? "INGRESO" : "GASTO"}
                                                             </span>
+                                                            {/* Corto a propósito: la tabla es `whitespace-nowrap` y esta
+                                                                línea no trunca, así que un texto largo acá ensancha la
+                                                                columna y empuja Monto y Acciones fuera de la pantalla.
+                                                                La explicación entera va en el tooltip. */}
                                                             {tx.isCreditApplication && (
                                                                 <>
                                                                     <span className="text-muted-foreground/30">·</span>
-                                                                    <span className="text-muted-foreground italic">
-                                                                        No mueve caja: el dinero había ingresado antes
+                                                                    <span
+                                                                        className="text-muted-foreground italic cursor-help"
+                                                                        title="El dinero había ingresado antes, cuando se cobró de más. Aplicarlo no mueve la caja."
+                                                                    >
+                                                                        no mueve caja
                                                                     </span>
                                                                 </>
                                                             )}

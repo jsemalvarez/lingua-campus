@@ -320,7 +320,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             ticketNumber = mi.ticketNumber || null;
         }
 
-        const relatedTitle = (t.type === "ADJUSTMENT" || t.type === "REFUND") ? voidedTitlesMap.get(entityId || "") : null;
+        // La aplicación de saldo comparte `paymentId` con su propio contra-asiento,
+        // así que al anularla el mapa le devolvía su propio título y la fila decía
+        // "Anula a: <ella misma>". No es un contra-asiento de nada: es el original.
+        const relatedTitle = !isCreditApplication && (t.type === "ADJUSTMENT" || t.type === "REFUND")
+            ? voidedTitlesMap.get(entityId || "")
+            : null;
 
         return {
             id: t.id,
