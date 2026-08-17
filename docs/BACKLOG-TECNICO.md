@@ -3919,6 +3919,45 @@ Entró **dentro del lote y no después**, a pedido del instituto, con un argumen
 primera vista no se van a dar cuenta de lo que pasó, como me pasó a mí"*. Un error que se presenta como
 "desaparecieron todos los importes" no admite quedar en la cola.
 
+---
+
+<a id="bug-11"></a>
+## BUG-11 · El saldo a favor del formulario queda viejo si se anula desde la tabla · **P3**
+
+**Visto el 2026-08-17**, cerrando la verificación de [FIN-11](#fin-11) en stage.
+
+**El hueco.** El saldo que muestra el formulario de cobro
+([`RegisterFeeForm.tsx`](../src/app/payments/components/RegisterFeeForm.tsx)) es estado del navegador:
+se carga con `loadFees` al elegir al alumno y no se vuelve a leer. Anular un pago desde la **tabla** es
+otro componente; `revalidatePath` redibuja la tabla —que es servidor— pero **el formulario conserva su
+estado**. Queda mostrando el saldo de antes de la anulación, con su botón «Usar Saldo».
+
+**La plata no corre riesgo, y conviene dejar escrito por qué.** `applyCreditToFeeAction` no descuenta
+leyendo y después escribiendo: la condición viaja dentro del `UPDATE`
+(`where: { creditBalance: { gte: creditAmount } }`, [`actions.ts:1002`](../src/app/payments/actions.ts)),
+evaluada contra la fila real y con la cuota bloqueada. Aplicar un saldo que ya no existe devuelve
+**«Saldo insuficiente»**. Lo mismo protege contra dos pestañas abiertas.
+
+**El caso al revés es el que molesta de verdad.** Si el saldo **aparece** por una anulación hecha en la
+tabla, el formulario sigue en cero y **ni siquiera dibuja el bloque azul**: la secretaría no ve un
+saldo que existe y le cobra en efectivo al alumno. No se pierde plata —vuelve a quedar a favor— pero es
+un cobro que no había que hacer, y nadie tiene motivo para sospecharlo.
+
+**Dos arreglos posibles.**
+
+1. **Barato:** que `handleApplyCredit` relea antes de aplicar. Tapa el caso que se vio, no el inverso.
+2. **De fondo:** que el importe lo decida el servidor. La acción recibiría la cuota y un "aplicá lo que
+   haya hasta cubrir la deuda", y calcularía `min(saldo real, deuda)` sobre la fila ya bloqueada. El
+   cliente deja de tener autoridad sobre el número, que es de donde sale todo este problema. Reemplaza
+   el `gte: creditAmount` por el cálculo desde la fila leída dentro de la transacción — hay que
+   conservar la atomicidad que ese chequeo aporta hoy.
+
+**P3** porque no hay plata en juego y el back rechaza lo inválido. Sube si el instituto reporta cobros
+en efectivo a alumnos que tenían saldo.
+
+**Relacionado.** [FIN-27](#fin-27) (el mismo formulario mostrando un estado que ya no corresponde),
+[FIN-11](#fin-11) (de donde salió), [FEAT-14](#feat-14) (el carrito rehace este flujo entero).
+
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
 
