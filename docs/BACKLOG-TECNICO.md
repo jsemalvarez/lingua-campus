@@ -1731,10 +1731,10 @@ corrida siguen compartiendo el mismo `where`.
 **Salió de acá [FIN-28](#fin-28)**: el año del curso lo da la fecha de inicio, que es un campo
 opcional. Sin ella el curso no tiene año propio y este filtro no lo puede ubicar.
 
-### Evaluado y descartado — 2026-08-17 · los dos relojes del "año en curso"
+### Mejora a futuro, sin prioridad hoy — 2026-08-17 · los dos relojes del "año en curso"
 
-Visto al escribir el filtro, y **se deja como está por decisión del dueño**. Queda anotado porque el
-próximo que lea el código lo va a encontrar y va a querer arreglarlo.
+Visto al escribir el filtro. **No está descartado: es una mejora válida que hoy no tiene prioridad.**
+Queda anotado porque el próximo que lea el código lo va a encontrar, y para que sepa que ya se miró.
 
 El desplegable del formulario arma los años con `now.getFullYear()` del **navegador** (Argentina,
 UTC−3) y el filtro del servidor decide si el año pedido es el de calendario con
@@ -1742,15 +1742,20 @@ UTC−3) y el filtro del servidor decide si el año pedido es el de calendario c
 medianoche los dos no coinciden: el navegador dice 2026 y el servidor 2027, así que en esa franja una
 corrida de 2026 dejaría afuera a los cursos **sin fecha de inicio**.
 
-**Por qué no se arregla:** son tres horas al año, **el 31 de diciembre es feriado y nadie trabaja en
-esa franja**. Y el arreglo no es local: `createEnrollmentAction`
+**Por qué no entra hoy:** son tres horas al año, **el 31 de diciembre es feriado y nadie trabaja en esa
+franja**. Y el arreglo no es local: `createEnrollmentAction`
 ([`enrollments/actions.ts:63`](../src/app/enrollments/actions.ts)) usa el mismo
 `new Date().getFullYear()` para su año de recambio, así que tocar uno solo dejaría **dos definiciones
 distintas de "año en curso"**, que es peor que la que hay.
 
-**Si alguna vez se toca**, tiene que ser junto con `createEnrollmentAction` y con la decisión sobre los
-cursos sin fechas ([FIN-28](#fin-28) y [FIN-16](#fin-16)): resuelto eso, el caso desaparece solo,
-porque un curso con fecha propia no depende de qué año sea hoy.
+**Cuando entre, cómo entra.** Los dos lugares juntos, con una sola definición de "año en curso" —el
+reloj del servidor, que es el que decide— y el desplegable armándose desde ahí en vez de desde el
+navegador. No es un cambio grande; lo que lo hace no-trivial es que son dos archivos que hoy no saben
+uno del otro.
+
+**Y puede que se resuelva solo.** Si entra [FIN-28](#fin-28) —fecha de inicio obligatoria—, deja de
+haber cursos sin fecha, que son los únicos a los que este desfasaje afecta. El caso desaparece sin
+tocar ninguno de los dos relojes. Conviene mirar eso antes de encarar este.
 
 ---
 
