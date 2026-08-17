@@ -2541,8 +2541,28 @@ etiqueta de una cuota salió a una función (`feeLabel`), que el `<select>` y el
 
 **Commit.** `3b27801`.
 
+**Verificado en stage el 2026-08-17.** El cartel es el nuevo y el formulario queda vacío.
+
+### Pendiente — 2026-08-17 · el arreglo se pasó de seguro, y hay un punto medio
+
+Al vaciar el formulario, pagar **lo que falta** de una cuota que el saldo cubrió sólo en parte obliga a
+**volver a buscar al alumno**. Reportado por el instituto al ejercitar el caso mixto: aplicó $10.000 de
+saldo a una cuota de $15.000 y tuvo que rehacer la búsqueda para cobrar los $5.000.
+
+**El peligro nunca fue que el formulario quedara cargado: era que quedaba cargado sobre *otra* cuota**,
+una que nadie pensaba pagar. Que quede cargado sobre **la misma cuota que se acaba de tocar**, con el
+saldo restante, no tiene ese problema — se confirma exactamente lo que se está mirando.
+
+**Cambio propuesto**, unas seis líneas: si el saldo **cubrió** la cuota, limpiar todo como ahora; si
+quedó **parcial**, conservar alumno y cuota, con el importe en lo que falta y el cartel diciendo
+*"aplicado $10.000, quedan $5.000"*. `getStudentPendingFeesAction` ya devuelve las `PARTIAL` y el
+importe se recalcula solo como deuda menos pagado: lo único que falta es que `loadFees` pueda conservar
+la cuota elegida en vez de saltar siempre a la primera.
+
+**No entró el 17/08** por agenda: quedaban T5, T6 y T7 del lote.
+
 **Relacionado.** [FIN-11](#fin-11) (de donde salió), [FIN-01](#fin-01) y [FIN-02](#fin-02) (la
-mecánica del saldo a favor).
+mecánica del saldo a favor), [FEAT-14](#feat-14) (el carrito, que se lleva puesto todo este flujo).
 
 ---
 
@@ -3731,6 +3751,50 @@ servidor: es todo del lado del formulario.
 
 ---
 
+<a id="feat-14"></a>
+## FEAT-14 · Carrito de pagos: cobrar varias cuotas en una sola operación · **P2 · 🗣️ cliente**
+
+**Pedido por el instituto el 2026-08-17**, al ejercitar [FIN-11](#fin-11) en stage.
+
+**El hueco.** Cada cobro es una cuota. Un padre con **dos hijos y cuatro cuotas** obliga a repetir el
+recorrido entero cuatro veces —buscar alumno, elegir cuota, importe, método, confirmar— y se lleva
+**cuatro comprobantes** por una sola entrega de plata. Lo mismo pasa en chico cuando una cuota se paga
+mitad con saldo a favor y mitad en efectivo: son dos pasadas por el formulario.
+
+**Forma pedida.** Un carrito donde se acumulan los movimientos —cuotas de uno o varios alumnos, con su
+importe, método, recargo o descuento, y las aplicaciones de saldo— y **se confirman todos juntos, una
+sola vez**.
+
+**Tres decisiones antes de estimar, y ninguna es de programación.**
+
+1. **El recibo es el argumento más fuerte, más que los clics.** Quien paga $60.000 quiere **un**
+   comprobante, no cuatro. `generatePaymentReceipt` ya acepta **varios conceptos** —hoy los usa para
+   separar recargo y descuento—, así que el PDF combinado está más cerca de lo que parece. Lo que falta
+   es **algo que agrupe los pagos** para poder reimprimirlo después, y eso es cambio de modelo: un
+   `PaymentBatch`, o un id de lote en `Payment`.
+2. **Todo junto o nada.** Cuatro cuotas tienen que confirmarse en **una** transacción: si la tercera
+   falla no puede quedar cobrada la primera. [`actions.ts`](../src/app/payments/actions.ts) ya tiene
+   una disciplina de bloqueos escrita para evitar deadlocks —`Fee`, después `Payment`, después
+   `Enrollment`—; con N cuotas hay que **tomarlos en orden determinístico**. Es la parte con filo.
+3. **Entre hermanos hay una pregunta de negocio.** El saldo a favor es **por alumno**
+   (`Student.creditBalance`). Si el padre paga de más, ¿el excedente queda a favor del hijo cuya cuota
+   se estaba cobrando, o del grupo familiar? ¿Y el saldo de un hermano puede pagar la cuota del otro?
+   Eso decide si el carrito **cruza alumnos** o es uno por alumno, que es la diferencia de tamaño más
+   grande de toda la ficha. Roza [ARQ-06](#arq-06) y la relación tutor–alumno.
+
+**Lo que no cambia.** Cada línea sigue siendo su propio `Payment` con su asiento `PAYMENT`: la caja
+sigue viendo un movimiento por cuota, y ningún KPI cambia. El carrito es de la interfaz y de la
+transacción, no del libro mayor.
+
+**No entra en el lote del 15/08**, que es para cerrar los huecos del release accidental. Esto es
+funcionalidad nueva.
+
+**Relacionado.** [FIN-27](#fin-27) (el punto medio del formulario, que es el parche mientras esto no
+exista), [FIN-11](#fin-11) (de donde salió la conversación), [FIN-01](#fin-01) (el excedente y a quién
+pertenece).
+
+---
+
 <a id="bug-08"></a>
 ## BUG-08 · La preinscripción no tiene reglas: duplica alumnos y se la puede inscribir a un curso · **P1** · 🗣️ Pedido del cliente
 
@@ -3841,12 +3905,19 @@ nombres de alumno y de curso: *"Anulación de Pago de Cuota #abc123 · Anula a: 
 María Fernanda Gutiérrez Rodríguez"* con un nombre real y un curso de nombre largo llega igual. En
 producción hay 181 usuarios y nadie miró los largos.
 
-**Cambio.** Truncar también la segunda línea, o dejar que la columna se encoja (sacarle el `nowrap` a
-esa celda y permitir el salto de línea). Conviene decidirlo mirando la tabla en un teléfono, que es
-donde ya viene apretada.
-
 **P2 y no P3** porque la pantalla es la caja: una columna de importes que parece vacía es de las cosas
 que hacen desconfiar del sistema entero.
+
+### Resuelto — 2026-08-17 · `170f888`
+
+El tope de ancho quedó en el `div` y **no en el `<td>`**: la tabla es de layout automático, donde el
+`max-width` de una celda es apenas una sugerencia que el navegador puede ignorar, y el de un div se
+respeta siempre. La segunda línea ahora **envuelve** (`flex-wrap` + `whitespace-normal`) en vez de
+estirarse: la fila se hace más alta, que es barato, y las columnas de la derecha no se mueven.
+
+Entró **dentro del lote y no después**, a pedido del instituto, con un argumento que vale anotar: *"a
+primera vista no se van a dar cuenta de lo que pasó, como me pasó a mí"*. Un error que se presenta como
+"desaparecieron todos los importes" no admite quedar en la cola.
 
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
