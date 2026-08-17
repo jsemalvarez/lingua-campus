@@ -1277,6 +1277,21 @@ servidor (Vercel, `en-US`), y guarda `"2,000"` en lugar de `"2.000"` en la nota 
 ([`actions.ts:576`](../src/app/payments/actions.ts)) usa el mismo `toLocaleString()` pelado, y es
 texto que ve el operador. Arreglar los dos juntos.
 
+### Resuelto a medias — 2026-08-17 · los dos casos de `actions.ts`, con helper (`b0d0ee7`)
+
+`formatCurrency` en [`utils.ts`](../src/lib/utils.ts) es `toLocaleString("es-AR")` **sin el signo
+`$`**, para que reemplace a `toLocaleString()` justo donde ya estaba y la barrida que falta sea
+mecánica. Entró en los dos casos que nombra esta ficha —la nota del recibo y el mensaje de error— más
+los dos importes de la columna financiera de la ficha del alumno, que quedaban pegados al bloque nuevo
+de [FIN-11](#fin-11) y se veían `$15,000` arriba de `$15.000`.
+
+**Y corrige el conteo del lote: no son 57 casos parejos.** El defecto aparece **sólo donde el string se
+arma en el servidor**. `toLocaleString()` en un componente cliente usa el locale del navegador, así que
+la tabla del libro mayor imprime `$30.000` bien mientras los KPI de la misma pantalla —que son server
+components— imprimen `$30,000`. Eso explica los dos formatos conviviendo en `/payments`, que el lote
+había anotado como misterio. Lo que falta barrer es el subconjunto que corre en el servidor, bastante
+menor que 57, y **no se puede detectar mirando la pantalla en un navegador argentino**.
+
 ---
 
 <a id="fin-11"></a>
@@ -1342,6 +1357,57 @@ borrada. Son tres sentidos distintos de `ADJUSTMENT` conviviendo en un tipo, reg
 consultables pero invisibles en la interfaz. La opción 2 era la que los sacaba a la luz. Si algún día
 hace falta auditar desde la pantalla, esto vuelve — y probablemente vuelva junto con
 [ARQ-10](#arq-10), que es el mismo problema mirado desde otro lado.
+
+### Reabierto y resuelto — 2026-08-17 · la fila también va en el libro mayor
+
+**La decisión de arriba se tomó sobre una premisa falsa.** Reproducir el caso en stage la falsificó, y
+el instituto la reabrió: *"tomé mal la decisión y recién ahora entiendo bien todo el problema"*.
+
+**Cómo se falsificó.** Se armó el caso completo con datos reales de stage —dos hermanas, la madre paga
+$30.000 de las dos, se carga todo sobre una, el excedente se aplica a la cuota siguiente— y se le pidió
+al operador que hiciera lo que el mensaje de error le manda a hacer. **Anuló la fila equivocada:** no
+encontró la aplicación de saldo en el libro mayor, vio otro movimiento de $15.000 y anuló ese. El
+mensaje decía la verdad y aun así no alcanzaba.
+
+De los tres argumentos que sostenían la opción 1, **dos no sobrevivieron al código**:
+
+| Lo que decía la decisión | Lo verificado el 2026-08-17 |
+|---|---|
+| *"Listarla obligaría a filtrar por el **texto** de la descripción"* | **Falso.** Los tres ajustes en $0 se distinguen por estructura: la aplicación de saldo tiene `paymentId` → pago con `method: SALDO`; el contra-asiento de una anulación nace `VALID` con el original ya `VOIDED`; y la cuota borrada de [SEC-03](#sec-03) no tiene `paymentId` |
+| *"Mete filas en $0 en la pantalla que se usa para conciliar caja"* | **Cierto sólo visualmente.** Ningún KPI suma `ADJUSTMENT`: *Cobrado* filtra `type === "PAYMENT"`, *Ventas* `MISC_INCOME`, los egresos `EXPENSE`/`PAYROLL`. Mostrar la fila no mueve un solo total |
+| *"Nadie llega al problema por esa pantalla"* | **Es el que se cayó.** El operador **está parado en `/payments`** cuando aparece el muro, porque el mensaje de error sale ahí |
+
+**Lo que se hizo, entonces, son dos accesos y no uno.**
+
+1. **La fila en Movimientos Recientes**, que es donde está el operador cuando se traba. Se muestra como
+   movimiento interno y no como plata: sin `+` ni `−`, en azul, con la etiqueta **SALDO APLICADO** y la
+   aclaración *"no mueve caja"*. Los totales quedan idénticos, que es lo que la caja necesitaba
+   proteger. El botón de anular se habilita sólo para ella; el resto de los `ADJUSTMENT` y `REFUND`
+   sigue sin acciones.
+2. **El bloque «Saldo a Favor Aplicado» en la ficha del alumno**, que es donde mira el instituto cuando
+   el que reclama es el tutor. Con **consulta propia**: las cuotas de la ficha traen sólo las últimas 5
+   y un pago por cuota, así que el pago a anular puede no estar entre ellas.
+
+**Lo que no cambió:** la caja sigue siendo la caja. Lo que se corrigió es **qué muestra**, no qué suma.
+
+**El contra-asiento de anular una aplicación no se dibuja**, a propósito: también vale $0, y la fila
+original tachada con `ANULADO` ya dice que se anuló. Por eso anular un pago en efectivo deja dos filas
+y anular una aplicación de saldo deja una sola.
+
+**Verificado en stage el 2026-08-17, ejercitando el callejón entero por pantalla.** Sobre la alumna que
+había quedado trabada: se anuló la aplicación de saldo desde la fila nueva —el pago quedó `VOIDED`, la
+cuota volvió a `PENDING`, **el saldo volvió de $0 a $15.000** y el contra-asiento salió `ADJUSTMENT` de
+**$0**, sin inventar una salida de caja— y recién ahí se pudo anular el pago original de $30.000, que
+es lo que el viernes no tenía salida: quedó `VOIDED` con su `REFUND` de **−$30.000**, las dos cuotas en
+`PENDING` y el saldo en $0. Neto cero y la secretaría en condiciones de cobrarle a cada hermana.
+
+**Commits.** `b0d0ee7` (los dos accesos, el mensaje que nombra la cuota y [FIN-10](#fin-10)) ·
+`677e59d` (dos defectos propios: el texto largo empujaba la columna Monto fuera de la pantalla, y la
+fila anulada se señalaba a sí misma con *"Anula a:"*).
+
+**Sigue sin resolverse, y ahora es sólo la mitad.** Los otros dos `ADJUSTMENT` en $0 —el contra-asiento
+y la cuota borrada— siguen invisibles. La cuota borrada tiene su propia pantalla en
+[FEAT-10](#feat-10); el contra-asiento no le importa a nadie hoy.
 
 ---
 
@@ -2443,6 +2509,40 @@ la operación deje asiento y motivo.
 **Relacionado.** [FIN-24](#fin-24) (de donde sale), [FIN-11](#fin-11) (anular una aplicación de saldo
 a favor, la herramienta más cercana que existe), [FIN-13](#fin-13) (descuentos sin motivo
 registrado), [SEC-03](#sec-03) (qué puede hacer la secretaría con la plata).
+
+---
+
+<a id="fin-27"></a>
+## FIN-27 · «Usar Saldo» deja el formulario armado para un cobro que nadie hizo · **P1**
+
+**Apareció el 2026-08-17**, reproduciendo [FIN-11](#fin-11) en stage. No lo encontró una auditoría del
+código: lo pisó el operador, en el segundo intento de seguir un instructivo.
+
+**El hueco.** Al aplicar un saldo a favor,
+[`RegisterFeeForm.tsx`](../src/app/payments/components/RegisterFeeForm.tsx) hacía tres cosas mal
+seguidas: mostraba **«Pago registrado exitosamente»** —reusa el estado `success` del cobro normal, así
+que afirma algo que no pasó—, recargaba las cuotas pendientes y **auto-seleccionaba la siguiente**, con
+el `useEffect` cargándole el importe adeudado. El formulario quedaba completo bajo un botón que dice
+**«Confirmar Ingreso (+)»**.
+
+**Un clic de más asienta un cobro en efectivo que nunca ocurrió.** Pasó exactamente así: diez segundos
+después de aplicar el saldo había **$15.000 de ingreso inventado** sobre una cuota de junio que nadie
+había pagado. Se detectó por la base, no por la pantalla — porque en la pantalla se ve como un cobro
+normal y correcto.
+
+**Es peor que el problema que estaba reproduciendo.** [FIN-11](#fin-11) traba al operador; esto le
+fabrica plata en la caja, en silencio, y el error queda indistinguible de un cobro legítimo salvo que
+alguien recuerde que ese alumno no pagó.
+
+**Cambio.** Un estado propio para la aplicación de saldo, con su mensaje: qué importe y a qué cuota,
+más la aclaración de que **no ingresó dinero** porque ese saldo ya se había cobrado, y dónde se anula.
+Y soltar al alumno: el formulario queda vacío, no armado sobre otra cuota. De paso, el armado de la
+etiqueta de una cuota salió a una función (`feeLabel`), que el `<select>` y el mensaje comparten.
+
+**Commit.** `3b27801`.
+
+**Relacionado.** [FIN-11](#fin-11) (de donde salió), [FIN-01](#fin-01) y [FIN-02](#fin-02) (la
+mecánica del saldo a favor).
 
 ---
 
@@ -3716,6 +3816,37 @@ que es probablemente por qué llegó hasta acá.
 
 **P3 porque es cosmético y no afecta ningún importe.** Pero es de la pantalla del dueño, y el dueño
 es quien mira los sueldos.
+
+---
+
+<a id="bug-10"></a>
+## BUG-10 · Un concepto largo empuja el importe fuera de la pantalla · **P2**
+
+**Visto el 2026-08-17**, provocado por un texto que agregó [FIN-11](#fin-11) y revertido ahí mismo —
+pero **la fragilidad es anterior y sigue**.
+
+La tabla del libro mayor es `whitespace-nowrap`
+([`TransactionTable.tsx`](../src/app/payments/components/TransactionTable.tsx)) y de la columna
+*Concepto / Referencia* **sólo trunca el título** (`max-w-[350px] truncate`). La segunda línea —la que
+lleva la etiqueta, el *"Anula a: …"*, el ticket y el badge de anulado— **no trunca nunca**, así que
+crece con su contenido y empuja *Fecha*, *Monto* y *Acciones* fuera del `overflow-x-auto`.
+
+**Se ve como si los importes hubieran desaparecido de todos los movimientos**, no sólo del que tiene el
+texto largo: la columna sigue ahí, hay que arrastrar la tabla en horizontal para encontrarla. Es un
+susto grande para algo que no perdió ningún dato — el reporte fue literalmente *"desaparecieron todos
+los montos de todos los movimientos"*.
+
+**Hoy no se dispara con los datos de prueba, que son cortos.** Pero el texto de esa línea incluye
+nombres de alumno y de curso: *"Anulación de Pago de Cuota #abc123 · Anula a: Cuota Septiembre 2026 -
+María Fernanda Gutiérrez Rodríguez"* con un nombre real y un curso de nombre largo llega igual. En
+producción hay 181 usuarios y nadie miró los largos.
+
+**Cambio.** Truncar también la segunda línea, o dejar que la columna se encoja (sacarle el `nowrap` a
+esa celda y permitir el salto de línea). Conviene decidirlo mirando la tabla en un teléfono, que es
+donde ya viene apretada.
+
+**P2 y no P3** porque la pantalla es la caja: una columna de importes que parece vacía es de las cosas
+que hacen desconfiar del sistema entero.
 
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
