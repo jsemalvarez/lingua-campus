@@ -13,6 +13,12 @@ interface TransactionActionsProps {
         description: string;
         amount: number;
         source: "PAYMENT" | "EXPENSE" | "MISC_INCOME" | "PAYROLL" | "REFUND" | "ADJUSTMENT" | string;
+        /**
+         * Aplicación de saldo a favor. Es un `ADJUSTMENT` —el resto se oculta, para
+         * que no se anulen los contra-asientos— pero sí se anula: mientras exista,
+         * el pago original que generó ese saldo queda trabado. Ver FIN-11.
+         */
+        isCreditApplication?: boolean;
     };
 }
 
@@ -68,14 +74,14 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
     };
 
     // Filter out actions for adjustments or refunds themselves
-    if (tx.source === "REFUND" || tx.source === "ADJUSTMENT") {
+    if ((tx.source === "REFUND" || tx.source === "ADJUSTMENT") && !tx.isCreditApplication) {
         return null;
     }
 
     const handleVoid = () => {
         startTransition(async () => {
             let result;
-            if (tx.source === "PAYMENT") {
+            if (tx.isCreditApplication || tx.source === "PAYMENT") {
                     result = await voidPaymentAction(tx.id, reason.trim() || undefined);
             } else if (tx.source === "EXPENSE" || tx.source === "PAYROLL") {
                 result = await voidExpenseAction(tx.id, reason.trim() || undefined);
@@ -122,12 +128,16 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
                             <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <AlertTriangle size={24} />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">¿Confirmar anulación?</h3>
+                            <h3 className="text-xl font-bold mb-2">
+                                {tx.isCreditApplication ? "¿Anular esta aplicación de saldo?" : "¿Confirmar anulación?"}
+                            </h3>
                             <p className="text-muted-foreground text-sm">
                                 Estás a punto de anular: <br/>
                                 <span className="font-semibold text-foreground">"{tx.description}"</span> por <span className="font-semibold text-foreground">${tx.amount.toLocaleString()}</span>.
                                 <br/><br/>
-                                Esto generará un asiento contable de ajuste para revertir el balance. No se eliminará del historial.
+                                {tx.isCreditApplication
+                                    ? "El importe vuelve al saldo a favor del alumno y la cuota queda impaga. No sale ni entra plata de la caja: ese dinero ya había ingresado."
+                                    : "Esto generará un asiento contable de ajuste para revertir el balance. No se eliminará del historial."}
                             </p>
                             <textarea
                                 className="w-full mt-4 p-3 rounded-lg border border-input bg-background text-sm resize-none focus:ring-2 focus:ring-primary/20 outline-none"

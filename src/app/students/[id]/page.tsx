@@ -12,9 +12,10 @@ import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
 import { StudentDangerZone } from "./StudentDangerZone";
 import { ChangeCourseModal } from "./components/ChangeCourseModal";
 import { ExamRegistrationToggle } from "./components/ExamRegistrationToggle";
+import { AppliedCreditList } from "./components/AppliedCreditList";
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
-import { formatFeeLabel } from "@/lib/utils";
+import { formatCurrency, formatFeeLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +139,7 @@ export default async function StudentDetailPage({
     }
 
     // Parallelize metadata fetching to reduce database connection hold time
-    const [availableCourses, instituteLevels] = await Promise.all([
+    const [availableCourses, instituteLevels, appliedCredits] = await Promise.all([
         prisma.course.findMany({
             where: { instituteId: student.instituteId },
             select: { id: true, name: true, level: true },
@@ -147,7 +148,28 @@ export default async function StudentDetailPage({
         prisma.level.findMany({
             where: { instituteId: student.instituteId },
             orderBy: { name: 'asc' }
-        })
+        }),
+        // Los pagos hechos con saldo a favor. Consulta aparte y no el `include` de
+        // `fees` de arriba: ese trae las últimas 5 cuotas y un pago por cuota, así
+        // que el pago con método SALDO que hay que anular puede no estar. Es el
+        // único acceso a esos pagos — su asiento es de $0 y el libro mayor los
+        // filtra (FIN-11). Sólo para quien puede anular: el tutor ve la ficha.
+        isAdmin
+            ? prisma.payment.findMany({
+                where: {
+                    method: "SALDO",
+                    status: "VALID",
+                    fee: { studentId: id, instituteId: student.instituteId }
+                },
+                select: {
+                    id: true,
+                    amount: true,
+                    date: true,
+                    fee: { select: { type: true, month: true, year: true } }
+                },
+                orderBy: { date: 'desc' }
+            })
+            : Promise.resolve([])
     ]);
 
     // Resolve registeredLevel display name
@@ -270,7 +292,7 @@ export default async function StudentDetailPage({
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/70 leading-none mb-1">Saldo a Favor</p>
                                             <h3 className="text-xl font-bold text-emerald-600 leading-tight">
-                                                ${student.creditBalance.toLocaleString()}
+                                                ${formatCurrency(student.creditBalance)}
                                             </h3>
                                         </div>
                                     </div>
@@ -298,7 +320,7 @@ export default async function StudentDetailPage({
                                                     <span className="text-xs text-muted-foreground shrink-0">{dayjs(f.datePaid || f.createdAt).format("DD/MM")}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center mt-0.5">
-                                                    <span className="font-bold text-emerald-600">${f.paidAmount.toLocaleString()}</span>
+                                                    <span className="font-bold text-emerald-600">${formatCurrency(f.paidAmount)}</span>
                                                     {(f as any).payments?.[0] && (
                                                         <ReceiptDownloadButton paymentId={(f as any).payments[0].id} variant="icon" />
                                                     )}
@@ -315,6 +337,19 @@ export default async function StudentDetailPage({
                                 )}
 
                             </Card>
+
+                            {/* Sin aplicaciones de saldo no se dibuja: es el acceso a una
+                                corrección, no información permanente de la ficha. */}
+                            {appliedCredits.length > 0 && (
+                                <AppliedCreditList
+                                    payments={appliedCredits.map(p => ({
+                                        id: p.id,
+                                        label: formatFeeLabel(p.fee.type, p.fee.month, p.fee.year),
+                                        amount: p.amount,
+                                        date: p.date
+                                    }))}
+                                />
+                            )}
                         </div>
                     )}
                 </div>

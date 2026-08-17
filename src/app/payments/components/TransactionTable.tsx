@@ -22,6 +22,8 @@ interface Transaction {
     operatorName?: string;
     note?: string | null;
     relatedTitle?: string | null;
+    /** Aplicación de saldo a favor: no movió caja, pero se puede anular. Ver FIN-11. */
+    isCreditApplication?: boolean;
 }
 
 interface TransactionTableProps {
@@ -111,7 +113,10 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                         const displayTitle = tx.title;
                                         const noteStr = tx.note || null;
 
-                                            const isCancellation = tx.category === "ADJUSTMENT" || tx.category === "REFUND";
+                                            // La aplicación de saldo también es un ADJUSTMENT, pero no
+                                            // es una anulación: no se pinta de ámbar ni dice ANULACIÓN.
+                                            const isCancellation = !tx.isCreditApplication &&
+                                                (tx.category === "ADJUSTMENT" || tx.category === "REFUND");
                                             const isHighlighted = hoveredOriginalId && tx.originalId === hoveredOriginalId;
 
                                             return (
@@ -128,13 +133,17 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                             <td className="px-5 py-4">
                                                 <div className={`flex items-center gap-3 ${tx.status === "VOIDED" ? "opacity-50 grayscale" : ""}`}>
                                                     <div className={`p-2 rounded-full ${
-                                                        isCancellation
-                                                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                                            : tx.type === "INCOME" 
-                                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                                                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                                        tx.isCreditApplication
+                                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                                            : isCancellation
+                                                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                                : tx.type === "INCOME"
+                                                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                                                     }`}>
-                                                        {tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
+                                                        {tx.isCreditApplication
+                                                            ? <Wallet size={16} />
+                                                            : tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className={`font-semibold text-sm max-w-[350px] truncate ${tx.status === "VOIDED" ? "line-through text-muted-foreground" : ""}`} title={displayTitle}>
@@ -142,14 +151,26 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                                         </span>
                                                         <div className="flex items-center gap-2 text-xs font-medium mt-0.5">
                                                             <span className={
-                                                                isCancellation
-                                                                    ? "text-amber-500"
-                                                                    : tx.type === "INCOME" 
-                                                                        ? "text-emerald-500" 
-                                                                        : "text-rose-500"
+                                                                tx.isCreditApplication
+                                                                    ? "text-blue-500"
+                                                                    : isCancellation
+                                                                        ? "text-amber-500"
+                                                                        : tx.type === "INCOME"
+                                                                            ? "text-emerald-500"
+                                                                            : "text-rose-500"
                                                             }>
-                                                                {isCancellation ? "ANULACIÓN" : tx.type === "INCOME" ? "INGRESO" : "GASTO"}
+                                                                {tx.isCreditApplication
+                                                                    ? "SALDO APLICADO"
+                                                                    : isCancellation ? "ANULACIÓN" : tx.type === "INCOME" ? "INGRESO" : "GASTO"}
                                                             </span>
+                                                            {tx.isCreditApplication && (
+                                                                <>
+                                                                    <span className="text-muted-foreground/30">·</span>
+                                                                    <span className="text-muted-foreground italic">
+                                                                        No mueve caja: el dinero había ingresado antes
+                                                                    </span>
+                                                                </>
+                                                            )}
                                                             {tx.relatedTitle && (
                                                                 <>
                                                                     <span className="text-muted-foreground/30">·</span>
@@ -205,24 +226,30 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                             </td>
                                             <td className={`px-5 py-4 text-right ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
                                                 <span className={`font-bold tabular-nums tracking-tight ${
-                                                    isCancellation
-                                                        ? "text-amber-600 dark:text-amber-400"
-                                                        : tx.type === "INCOME" 
-                                                            ? "text-emerald-600 dark:text-emerald-400" 
-                                                            : "text-rose-600 dark:text-rose-400"
+                                                    tx.isCreditApplication
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : isCancellation
+                                                            ? "text-amber-600 dark:text-amber-400"
+                                                            : tx.type === "INCOME"
+                                                                ? "text-emerald-600 dark:text-emerald-400"
+                                                                : "text-rose-600 dark:text-rose-400"
                                                 } ${tx.status === "VOIDED" ? "line-through" : ""}`}>
-                                                    {tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
+                                                    {/* Sin `+` ni `-`: no entró ni salió plata. El importe está para
+                                                        reconocer cuál es, no para sumarlo a la caja. */}
+                                                    {tx.isCreditApplication ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-4 text-right pr-6">
-                                                {tx.status !== "VOIDED" && tx.category !== "REFUND" && tx.category !== "ADJUSTMENT" && tx.originalId && (
-                                                    <TransactionActions 
+                                                {tx.status !== "VOIDED" && tx.originalId &&
+                                                 (tx.isCreditApplication || (tx.category !== "REFUND" && tx.category !== "ADJUSTMENT")) && (
+                                                    <TransactionActions
                                                         tx={{
                                                             id: tx.originalId,
                                                             description: displayTitle,
                                                             amount: tx.amount,
-                                                            source: tx.category!
-                                                        }} 
+                                                            source: tx.category!,
+                                                            isCreditApplication: tx.isCreditApplication
+                                                        }}
                                                     />
                                                 )}
                                             </td>

@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
-import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
+import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -141,7 +141,7 @@ export async function createPaymentAction(formData: FormData) {
                     surcharge,
                     discount,
                     method,
-                    notes: surplus > 0 ? `${notes || ""} (Excedente de $${surplus.toLocaleString()} acreditado a saldo)`.trim() : notes,
+                    notes: surplus > 0 ? `${notes || ""} (Excedente de $${formatCurrency(surplus)} acreditado a saldo)`.trim() : notes,
                     date: new Date()
                 }
             });
@@ -738,10 +738,30 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
 
                     if (!student) throw new Error("Alumno no encontrado");
 
+                    // Decir "anulá primero los pagos hechos con ese saldo" sin decir cuáles
+                    // deja al operador buscándolos, y no están en el libro mayor: el asiento
+                    // de una aplicación de saldo es de $0 y la tabla filtra los $0 (FIN-11).
+                    // Nombrar las cuotas lo manda derecho al bloque de la ficha del alumno.
+                    const creditPayments = await tx.payment.findMany({
+                        where: {
+                            method: "SALDO",
+                            status: "VALID",
+                            fee: { studentId: fee.studentId }
+                        },
+                        select: { fee: { select: { type: true, month: true, year: true } } }
+                    });
+
+                    // Dos aplicaciones sobre la misma cuota son un solo nombre para quien lee.
+                    const heldBy = [...new Set(
+                        creditPayments.map(p => formatFeeLabel(p.fee.type, p.fee.month, p.fee.year))
+                    )];
+
                     throw new Error(
-                        `No se puede anular: hay que devolver $${(-creditDelta).toLocaleString()} de saldo a favor ` +
-                        `y el alumno sólo tiene $${student.creditBalance.toLocaleString()}. ` +
-                        `Anulá primero los pagos hechos con ese saldo.`
+                        `No se puede anular: hay que devolver $${formatCurrency(-creditDelta)} de saldo a favor ` +
+                        `y el alumno sólo tiene $${formatCurrency(student.creditBalance)}. ` +
+                        (heldBy.length > 0
+                            ? `Anulá primero, desde la ficha del alumno, los pagos hechos con ese saldo: ${heldBy.join(", ")}.`
+                            : `Anulá primero los pagos hechos con ese saldo.`)
                     );
                 }
             }

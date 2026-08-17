@@ -22,6 +22,19 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const ENROLLMENT_FEE_MONTH = 0;
 
+/**
+ * Importes en pesos, con el locale del negocio y no el del proceso.
+ *
+ * `toLocaleString()` pelado usa el locale de donde corre: en Vercel es `en-US`,
+ * así que 15000 sale `15,000` en vez de `15.000`. Pasa en pantalla, en la nota
+ * del recibo y en los mensajes de error, que es texto que lee el operador.
+ * Ver FIN-10.
+ *
+ * Devuelve el número sin el signo `$` a propósito: así reemplaza a
+ * `toLocaleString()` en el lugar donde ya estaba, sin tocar el resto del string.
+ */
+export const formatCurrency = (amount: number): string => amount.toLocaleString("es-AR");
+
 export const getMonthName = (month: number): string => {
   const months = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",

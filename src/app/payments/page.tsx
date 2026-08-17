@@ -259,6 +259,22 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     // Combinar y Sortear desde el Ledger
     const allTransactionsRaw = filteredLedger.map(t => {
+        // La aplicación de saldo a favor se asienta en $0 —la plata entró antes,
+        // cuando se cobró de más— pero es el único movimiento en $0 sobre el que
+        // hay algo que hacer: mientras exista, el pago original no se puede
+        // anular. Se muestra por eso, y se reconoce por estructura y no por el
+        // texto de la descripción. Los otros dos ajustes en $0 quedan afuera: la
+        // cuota borrada de SEC-03 no tiene pago asociado, y el contra-asiento de
+        // anular una aplicación comparte pago, tipo e importe con el original —se
+        // distinguen porque al anular, el original queda VOIDED y el
+        // contra-asiento nace VALID—. No se muestra el contra-asiento: el
+        // original tachado ya dice que se anuló, y no hubo plata de por medio.
+        // Ver FIN-11.
+        const isCreditApplication =
+            t.type === "ADJUSTMENT" &&
+            t.payment?.method === "SALDO" &&
+            !(t.payment?.status === "VOIDED" && t.status === "VALID");
+
         let title = t.description || "";
         let note = null;
         let recipientName = null;
@@ -281,6 +297,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             if (t.payment.notes) {
                 note = t.payment.notes;
             }
+        } else if (isCreditApplication && t.payment?.fee?.student) {
+            const fee = t.payment.fee;
+            title = `Saldo aplicado: ${formatFeeLabel(fee.type, fee.month, fee.year)} - ${fee.student.name}`;
         } else if (t.type === "EXPENSE" && t.expense) {
             title = `${t.expense.category}: ${t.expense.description}`;
             recipientName = t.expense.recipient?.name || null;
@@ -311,7 +330,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             note,
             recipientName,
             ticketNumber,
-            amount: Math.abs(t.amount),
+            // En la aplicación de saldo el asiento vale $0, pero el importe que se
+            // usó es el del pago. Se muestra sin signo y etiquetado aparte: no es
+            // plata que entró ni salió, y la tabla es la caja.
+            amount: isCreditApplication ? (t.payment?.amount ?? 0) : Math.abs(t.amount),
+            isCreditApplication,
             type: t.amount >= 0 ? "INCOME" as const : "EXPENSE" as const,
             status: t.status,
             method: t.method,
@@ -319,7 +342,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema",
             relatedTitle
         };
-    }).filter(t => t.amount > 0);
+    }).filter(t => t.amount > 0 || t.isCreditApplication);
 
     const normalizeString = (str: string) => {
         return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
