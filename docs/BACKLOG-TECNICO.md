@@ -1179,6 +1179,58 @@ cobrar del mes" pasó a ser sólo cuotas. **Este ítem es lo que lo arregla de v
 la matrícula tiene dónde decir cuándo vence y los agregados por período pueden usarlo. Hasta
 entonces, no hay dónde poner el vencimiento de algo anual.
 
+### Evaluado y descartado — 2026-08-16 · mover el mes de la matrícula a febrero
+
+Salió de contestar la segunda pregunta al cliente de T2 del lote del 15/08. **Propuesta del dueño:**
+en vez del `0`, guardar las matrículas en el mes **2**, que es donde se cargó la enorme mayoría (209
+de 212 en producción) y donde la plata entró de verdad. **Decisión: no. Se deja el `0`** — y el
+motivo que lo cierra lo puso el mismo dueño, por lo contable.
+
+**Por qué se descarta.** Con la constante en `2`, la matrícula del alumno que se inscriba en agosto
+de 2027 se sumaría al **"Ingresos del Mes" de febrero de 2027** y al "Progreso de Cobro" de febrero:
+un mes ya cerrado que sigue creciendo hacia atrás. Con el `0` eso no puede pasar nunca — ninguna
+matrícula entra en el mes de nadie— y la plata se ve en el mes en que entró, por la caja. El `0` no
+es una fecha mala: es la ausencia de fecha, que es lo honesto mientras no exista `dueDate`.
+
+**El valor tiene que ser uniforme, sea cual sea.** No se puede poner febrero a las históricas y
+dejar el `0` para las nuevas: la restricción única es `[enrollmentId, type, year, month]`, así que
+una matrícula en mes 2 y otra en mes 0 de la misma inscripción y año **no chocan**, y vuelve el
+duplicado que FIN-12 vino a tapar. O todas en 0, o todas en 2.
+
+**Superficie real del cambio, si algún día se hace.** Es más chica de lo que parece: la constante
+`ENROLLMENT_FEE_MONTH` en [`utils.ts:23`](../src/lib/utils.ts) más una migración que renormalice las
+filas. El valor se usa en **cuatro** lugares, todos de escritura —
+[`enrollments/actions.ts:114`](../src/app/enrollments/actions.ts) (vincular una anticipada) y `:126`
+(emitir al inscribir), [`billingActions.ts:253`](../src/app/payments/billingActions.ts) (el generador
+masivo) y [`payments/actions.ts:643`](../src/app/payments/actions.ts) (la anticipada)— y **nada en el
+código bifurca sobre `month === 0`**.
+
+**Qué no toca el mes, verificado el 16/08.** Es la parte que costó averiguar y conviene no volver a
+averiguarla:
+
+- **El recibo en PDF.** La fecha sale de `payment.date`
+  ([`ReceiptDownloadButton.tsx:52`](../src/components/financials/ReceiptDownloadButton.tsx)), la del
+  cobro real. El concepto sale de `formatFeeLabel`, que para `ENROLLMENT` devuelve `Matrícula <año>`
+  e **ignora el mes**. El mes no entra nunca al PDF.
+- **Los KPI por fecha de asiento:** "Cobrado en \<mes\>" con su desglose, "Rentabilidad (Neto)" y
+  "Gastos Operativos". Filtran `Transaction` por fecha, así que la matrícula cobrada en agosto
+  aparece en agosto.
+- **"Deuda Total".** Las matrículas impagas **sí** cuentan: el filtro es `month <= mes actual` y el
+  `0` siempre entra, computada como deuda histórica
+  ([`payments/page.tsx:124`](../src/app/payments/page.tsx)).
+
+**Qué sí quedó afuera con el `0`,** y es exactamente lo que este ítem arregla: **"Progreso de Cobro"**
+([`payments/page.tsx:70`](../src/app/payments/page.tsx)) e **"Ingresos del Mes"** del dashboard
+([`dashboard/page.tsx:568`](../src/app/dashboard/page.tsx)), que filtran `Fee.month = mes actual`. Son
+la vista de devengado —"de lo que tenía que cobrar este mes, cuánto llevo"— y las matrículas no
+figuran. Con `dueDate` esas dos consultas pasan a agrupar por vencimiento y el problema desaparece
+sin tener que elegir un mes falso.
+
+**Impacto medido en producción al 16/08**, para dimensionar la urgencia: julio perdió $46.000 sobre
+$10.843.000 de cuotas (0,4 %) y agosto $55.000 sobre $10.964.000 (0,5 %). El bloque grande es
+febrero —209 matrículas, $7.315.000— pero es la carga inicial. **No hay urgencia**; el instituto no
+lo va a notar, y además todavía se están migrando datos.
+
 ---
 
 <a id="fin-09"></a>
