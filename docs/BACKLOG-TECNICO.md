@@ -1675,6 +1675,33 @@ Las dos mitades:
 Es el mismo criterio de [FIN-24](#fin-24): el sistema resuelve la consecuencia y la pantalla informa
 el resultado, en lugar de advertir sobre un riesgo y dejar la decisión del lado del operador.
 
+### Hecha — 2026-08-17 · `1922188` · T5 del lote del fin de semana
+
+Las dos mitades, sin migración.
+
+**La limitante.** La corrida toma sólo las inscripciones cuyo curso pertenece al año pedido. El
+criterio salió de `createEnrollmentAction`, que ya lo tenía: el año es `course.startDate` leído en
+**UTC** —las fechas se guardan a medianoche UTC y en hora local un curso del 1 de enero cae en
+diciembre del año anterior—. Los cursos **sin fecha** entran únicamente cuando el año pedido es el de
+calendario; si entraran siempre, pedir 2027 volvería a alcanzar a las inscripciones de 2026, que es
+el defecto entero.
+
+**La explicación.** El formulario pide el alcance del año elegido antes de apretar y lo muestra. Con
+cero, el botón queda deshabilitado y dice por qué —*"Todavía no hay cursos que empiecen en 2027"*—.
+Con más de cero, muestra a cuántas inscripciones alcanza y aclara que sólo se emite a las que
+todavía no tienen la suya. El texto del `confirm()` dejó de decir "TODAS las inscripciones activas",
+que era falso desde este cambio y engañoso desde antes.
+
+**El conteo y la corrida comparten un solo `where`** (`yearlyEnrollmentTargetsWhere`), a propósito:
+una pantalla que promete un número que la corrida no cumple es peor que no mostrar ninguno.
+
+**Sin filas que arreglar.** La consulta 2 de T2 contra producción dio cero matrículas con año > 2026:
+nadie llegó a correr el generador con el año próximo, así que la regresión estaba abierta pero no
+había hecho daño.
+
+**Falta ejercitarlo por pantalla en stage.** No se pudo hacer localmente —el Postgres de desarrollo no
+está levantado—. Verificado con `tsc --noEmit`.
+
 ---
 
 <a id="fin-15"></a>
