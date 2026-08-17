@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
@@ -163,6 +164,70 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
 }
 
 /**
+ * Las inscripciones que alcanza la matrícula de un año lectivo (FIN-14).
+ *
+ * El año lo da `course.startDate`, que es el criterio que ya usa
+ * `createEnrollmentAction`, y se lee en UTC porque las fechas se guardan a
+ * medianoche UTC: un curso que arranca el 1 de enero, leído en hora local, cae
+ * en diciembre del año anterior.
+ *
+ * Los cursos **sin fecha** entran únicamente cuando el año pedido es el de
+ * calendario. Si entraran siempre, pedir 2027 volvería a alcanzar a las
+ * inscripciones de 2026 — que es exactamente la regresión que esto cierra.
+ *
+ * Lo usan la corrida y el conteo que la pantalla muestra antes de apretar. Va en
+ * un solo lugar a propósito: si el conteo y la corrida usaran criterios
+ * distintos, la pantalla prometería un número y el botón haría otro.
+ */
+function yearlyEnrollmentTargetsWhere(instituteId: string, year: number): Prisma.EnrollmentWhereInput {
+    const startsInAcademicYear = {
+        startDate: {
+            gte: new Date(Date.UTC(year, 0, 1)),
+            lt: new Date(Date.UTC(year + 1, 0, 1))
+        }
+    };
+
+    const courseOfTheYear = year === new Date().getFullYear()
+        ? { OR: [startsInAcademicYear, { startDate: null }] }
+        : startsInAcademicYear;
+
+    return {
+        status: "ACTIVE",
+        student: { status: "ACTIVE" },
+        course: {
+            instituteId,
+            status: "ACTIVE",
+            ...courseOfTheYear
+        }
+    };
+}
+
+/**
+ * Cuántas inscripciones alcanza la matrícula de un año, para que la pantalla lo
+ * diga **antes** de apretar (FIN-14). Con cero, el botón se deshabilita: un
+ * botón que se aprieta y no hace nada se lee como una falla del sistema.
+ *
+ * Es sólo el alcance del año lectivo, no la cuenta de lo que se va a emitir: de
+ * esas inscripciones, las que ya tienen su matrícula quedan afuera igual.
+ */
+export async function countYearlyEnrollmentTargetsAction(year: number) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    if (!year) return { success: false, error: "Año inválido" };
+
+    try {
+        const reached = await prisma.enrollment.count({
+            where: yearlyEnrollmentTargetsWhere(user.instituteId as string, year)
+        });
+        return { success: true, reached };
+    } catch (e: any) {
+        console.error("Error al contar inscripciones del año lectivo:", e);
+        return { success: false, error: "Error al contar inscripciones" };
+    }
+}
+
+/**
  * Genera las matrículas anuales del instituto: **una por inscripción activa** que
  * todavía no tenga la suya. La matrícula es por curso, así que el alumno que hace
  * dos cursos paga dos (FIN-12); si el instituto quiere bonificar la segunda,
@@ -182,16 +247,16 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
     }
 
     try {
-        // 1. Inscripciones activas de alumnos activos, en cursos activos del instituto
+        // 1. Inscripciones activas de alumnos activos, en cursos activos del
+        //    instituto **que pertenezcan al año lectivo pedido** (FIN-14).
+        //
+        //    Sin ese último filtro, pedir 2027 en diciembre de 2026 creaba
+        //    matrículas 2027 atadas a las inscripciones de 2026. Después, al
+        //    armar los cursos de 2027 e inscribir al alumno,
+        //    `createEnrollmentAction` busca una anticipada **sin vincular**, no
+        //    encuentra esta porque ya está vinculada, y emite otra: doble cobro.
         const enrollments = await prisma.enrollment.findMany({
-            where: {
-                status: "ACTIVE",
-                student: { status: "ACTIVE" },
-                course: {
-                    instituteId: user.instituteId as string,
-                    status: "ACTIVE"
-                }
-            },
+            where: yearlyEnrollmentTargetsWhere(user.instituteId as string, year),
             select: { id: true, studentId: true, customEnrollmentPrice: true },
             orderBy: { enrolledAt: "asc" }
         });

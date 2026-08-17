@@ -1,7 +1,7 @@
 "use client";
 
-import { useTransition, useState } from "react";
-import { generateMonthlyFeesAction, generateYearlyEnrollmentFeesAction } from "../billingActions";
+import { useTransition, useState, useEffect } from "react";
+import { generateMonthlyFeesAction, generateYearlyEnrollmentFeesAction, countYearlyEnrollmentTargetsAction } from "../billingActions";
 import { Button } from "@/components/ui/Button";
 import { Calculator, ChevronDown, Calendar, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,30 @@ export function GenerateFeesButton() {
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
+
+    // FIN-14: cuántas inscripciones alcanza el año elegido. Se pide antes de
+    // apretar, no después, porque un botón que no hace nada se lee como una
+    // falla del sistema. `null` es "todavía no sé": ni habilita ni explica.
+    const [reachedEnrollments, setReachedEnrollments] = useState<number | null>(null);
+    const isCurrentYear = year === now.getFullYear();
+
+    useEffect(() => {
+        if (mode !== "ENROLLMENT") return;
+
+        let cancelled = false;
+        setReachedEnrollments(null);
+
+        countYearlyEnrollmentTargetsAction(year).then(res => {
+            if (cancelled) return;
+            setReachedEnrollments(res.success ? (res.reached ?? 0) : null);
+        });
+
+        return () => { cancelled = true; };
+    }, [mode, year]);
+
+    // Sólo frena cuando la respuesta llegó y dio cero. Mientras no se sabe, el
+    // botón queda como estaba: la corrida filtra igual del lado del servidor.
+    const noEnrollmentsForYear = mode === "ENROLLMENT" && reachedEnrollments === 0;
 
     const handleGenerate = () => {
         if (mode === "MONTHLY") {
@@ -50,7 +74,15 @@ export function GenerateFeesButton() {
                 toast.error("Debes ingresar un monto base válido para las matrículas.");
                 return;
             }
-            if (!confirm(`¿Generar masivamente las Matrículas Anuales ${year} para TODAS las inscripciones activas por un valor de $${enrollmentAmount}? El alumno inscripto en dos cursos recibirá dos matrículas.`)) return;
+            if (noEnrollmentsForYear) {
+                toast.error(`No hay inscripciones de ${year} a las que emitirles matrícula.`);
+                return;
+            }
+
+            const alcance = reachedEnrollments !== null
+                ? `${reachedEnrollments} ${reachedEnrollments === 1 ? "inscripción" : "inscripciones"} de ${year}`
+                : `las inscripciones de ${year}`;
+            if (!confirm(`¿Generar masivamente las Matrículas Anuales ${year} por un valor de $${enrollmentAmount}? Alcanza a ${alcance}, y sólo se emite a las que todavía no tienen la suya. El alumno inscripto en dos cursos recibirá dos matrículas.`)) return;
 
             startTransition(async () => {
                 const res = await generateYearlyEnrollmentFeesAction(year, enrollmentAmount);
@@ -78,10 +110,15 @@ export function GenerateFeesButton() {
                     <ChevronDown size={14} className={`transition-transform ${showOptions ? 'rotate-180' : ''}`} />
                 </Button>
                 
-                <Button 
-                    onClick={handleGenerate} 
-                    disabled={isPending}
-                    className={`flex items-center gap-2 text-white h-10 px-4 rounded-l-none shadow-sm ${mode === "MONTHLY" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                <Button
+                    onClick={handleGenerate}
+                    disabled={isPending || noEnrollmentsForYear}
+                    title={noEnrollmentsForYear
+                        ? (isCurrentYear
+                            ? `No hay inscripciones activas en ${year}.`
+                            : `Todavía no hay cursos que empiecen en ${year}.`)
+                        : undefined}
+                    className={`flex items-center gap-2 text-white h-10 px-4 rounded-l-none shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${mode === "MONTHLY" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
                 >
                     {isPending ? (
                         "Generando..."
@@ -158,6 +195,25 @@ export function GenerateFeesButton() {
                             <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight">
                                 Se generará una matrícula por <b>cada inscripción activa</b> que aún no tenga la suya en el año seleccionado. El alumno que cursa dos materias recibe dos matrículas; si tiene precio propio de matrícula, se usa ese en lugar de este monto.
                             </p>
+
+                            {/* FIN-14: el alcance del año lectivo, antes de apretar. Sólo
+                                cuentan los cursos que empiezan en ese año; los cursos sin
+                                fecha entran únicamente en el año en curso. */}
+                            {reachedEnrollments === null ? (
+                                <p className="text-[10px] text-muted-foreground mt-2 leading-tight">
+                                    Calculando el alcance de {year}…
+                                </p>
+                            ) : reachedEnrollments === 0 ? (
+                                <p className="text-[10px] font-semibold text-amber-600 mt-2 leading-tight">
+                                    {isCurrentYear
+                                        ? `No hay inscripciones activas en ${year}, así que no hay a quién emitirle matrícula.`
+                                        : `Todavía no hay cursos que empiecen en ${year}, así que no hay a quién emitirle matrícula. Armá los cursos ${year} e inscribí a los alumnos primero.`}
+                                </p>
+                            ) : (
+                                <p className="text-[10px] font-semibold text-blue-600 mt-2 leading-tight">
+                                    Alcanza a {reachedEnrollments} {reachedEnrollments === 1 ? "inscripción" : "inscripciones"} de {year}. De esas, se emite sólo a las que todavía no tienen su matrícula.
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
