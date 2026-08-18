@@ -3806,14 +3806,24 @@ de apretar:
   restaurados al terminar—, `/payments/deletions` **escribiendo la URL redirige al dashboard**, y en
   `/payments` el botón no está.
 
-**La base de desarrollo quedó como estaba**: la cuota se restauró con su mismo id y la fila de
-`FeeDeletion` de la prueba se borró.
+**La base de desarrollo quedó como estaba** después de la primera tanda: la cuota se restauró con su
+mismo id y la fila de `FeeDeletion` de la prueba se borró. De las pruebas del dueño quedaron dos
+cuotas borradas —la matrícula de `abril dukard98` y la de `pilar melczarski`, $10.000 cada una— con
+sus dos registros. **Son sólo de la base de desarrollo.**
 
-**Lo que quedó sin ejercitar por pantalla**, y por qué no frena: las dos son guardas que este cambio
-**no tocó**. Que una cuota **con pagos** se rechace (`paidAmount > 0 || payments.length > 0`, igual
-que antes) y que la **secretaría sí pueda borrar** con el motivo (`getAuthAndInstitute`, que sigue
-siendo `["ADMIN", "SECRETARY"]` por decisión de [SEC-03](#sec-03)). Conviene barrerlas en la
-verificación de stage.
+**Las dos guardas que faltaban, ejercitadas por el dueño el mismo 17/08.** Ninguna de las dos la tocó
+este cambio, pero pasan por la función que sí se tocó:
+
+- **Una cuota con pagos se rechaza.** Sobre la Cuota Abril 2026 de `zoe grimalt`, que tiene
+  `paidAmount = 0` y **una fila de `Payment` anulada** —así que la interfaz sí le muestra el tacho y
+  el único que la frena es el servidor—: salió «No se puede eliminar una cuota que ya tiene pagos.
+  Anule los pagos primero.» y la cuota siguió en la lista. Es el criterio de [FIN-06](#fin-06): un
+  pago anulado deja la fila viva.
+- **La secretaría borra, y el dueño ve quién fue.** Con `secretaria@test.com` —una secretaria de
+  verdad, no un usuario con los roles cambiados a mano— se borró la Cuota Abril 2026 de
+  `pilar melczarski` con motivo «beca de agosto», y `/payments/deletions` escribiendo la URL la
+  mandó al dashboard. Entrando después como admin, la fila figura con **`Secretaria Uno`** en la
+  columna «Eliminó». Es el punto entero de esta ficha, ejercitado de punta a punta.
 
 **La ventana de huérfanos quedó en cero, como se buscaba.** La consulta 5 del lote midió el 16/08
 contra producción: cero filas `'Cuota eliminada%'`. Y en producción [SEC-03](#sec-03) todavía no
