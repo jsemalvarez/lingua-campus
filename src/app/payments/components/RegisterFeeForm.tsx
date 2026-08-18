@@ -7,18 +7,39 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, Wallet } from "lucide-react";
 import { EntitySearch } from "./EntitySearch";
-import { getMonthName } from "@/lib/utils";
+import { formatCurrency, getMonthName } from "@/lib/utils";
 
 interface StudentListOption {
     id: string;
     name: string;
 }
 
+interface PendingFeeOption {
+    type: string;
+    year: number;
+    month: number;
+    enrollment?: { course?: { name?: string | null } | null } | null;
+}
+
+/**
+ * Cómo se nombra una cuota en esta pantalla. La matrícula lleva el curso al lado
+ * porque es por curso: un alumno con dos cursos tiene dos matrículas del mismo
+ * año y sin eso son indistinguibles al cobrar.
+ */
+function feeLabel(f: PendingFeeOption): string {
+    if (f.type === "ENROLLMENT") {
+        return `Matrícula ${f.year}${f.enrollment?.course?.name ? ` - ${f.enrollment.course.name}` : ""}`;
+    }
+    if (f.type === "EXAM") return `Derecho de Examen ${f.year}`;
+    return `Cuota ${getMonthName(f.month)} ${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
+}
+
 export function RegisterFeeForm({ students }: { students: StudentListOption[] }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
-    const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+    const [status, setStatus] = useState<"idle" | "success" | "error" | "credit">("idle");
     const [errorMsg, setErrorMsg] = useState("");
+    const [creditMsg, setCreditMsg] = useState("");
 
     const [selectedStudent, setSelectedStudent] = useState<StudentListOption | null>(null);
     const [pendingFees, setPendingFees] = useState<any[]>([]);
@@ -44,6 +65,11 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
     useEffect(() => {
         if (selectedStudent) {
+            // El aviso de saldo aplicado es del alumno anterior: al elegir otro se va.
+            if (status === "credit") {
+                setStatus("idle");
+                setCreditMsg("");
+            }
             loadFees(selectedStudent.id);
         } else {
             setPendingFees([]);
@@ -66,7 +92,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
     const handleApplyCredit = async () => {
         if (!selectedFeeId || studentCredit <= 0) return;
-        
+
         setIsApplyingCredit(true);
         const fee = pendingFees.find(f => f.id === selectedFeeId);
         const debt = fee.originalAmount - fee.paidAmount;
@@ -74,10 +100,19 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
         const res = await applyCreditToFeeAction(selectedFeeId, toApply);
         if (res.success) {
-            setStatus("success");
-            // Reload fees and credit
-            loadFees(selectedStudent!.id);
-            setTimeout(() => setStatus("idle"), 2000);
+            // Antes esto mostraba "Pago registrado exitosamente" —el cartel del cobro
+            // normal, que acá dice algo que no pasó— y después recargaba las cuotas,
+            // con lo cual el formulario quedaba auto-seleccionado en la cuota
+            // siguiente y con el importe cargado, bajo un botón que dice "Confirmar
+            // Ingreso (+)". Un clic de más asentaba un cobro en efectivo que nunca
+            // ocurrió. Ahora dice qué se hizo y suelta al alumno: el formulario
+            // queda vacío, no armado sobre otra cuota. Ver FIN-27.
+            setStatus("credit");
+            setCreditMsg(`Saldo aplicado: $${formatCurrency(toApply)} a ${feeLabel(fee)}.`);
+            setSelectedStudent(null);
+            setBaseAmount(0);
+            setSurcharge(0);
+            setDiscount(0);
         } else {
             setStatus("error");
             setErrorMsg(res.error || "Error al aplicar saldo");
@@ -159,25 +194,11 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                 onChange={(e) => setSelectedFeeId(e.target.value)}
                                 className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20"
                             >
-                                {pendingFees.map(f => {
-                                    let label = "";
-                                    if (f.type === "ENROLLMENT") {
-                                        // Con el curso al lado: la matrícula es por curso, así
-                                        // que un alumno con dos cursos tiene dos matrículas del
-                                        // mismo año y sin esto son indistinguibles al cobrar.
-                                        label = `Matrícula ${f.year}${f.enrollment?.course?.name ? ` - ${f.enrollment.course.name}` : ""}`;
-                                    } else if (f.type === "EXAM") {
-                                        label = `Derecho de Examen ${f.year}`;
-                                    } else {
-                                        label = `Cuota ${getMonthName(f.month)} ${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
-                                    }
-                                    
-                                    return (
-                                        <option key={f.id} value={f.id}>
-                                            {label} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
-                                        </option>
-                                    );
-                                })}
+                                {pendingFees.map(f => (
+                                    <option key={f.id} value={f.id}>
+                                        {feeLabel(f)} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
+                                    </option>
+                                ))}
                             </select>
                         )}
                     </div>
@@ -288,6 +309,19 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
             {status === "success" && (
                 <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-sm font-medium animate-in">
                     <CheckCircle size={16} /> Pago registrado exitosamente
+                </div>
+            )}
+
+            {status === "credit" && (
+                <div className="flex items-start gap-2 p-3 mt-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-sm font-medium animate-in">
+                    <Wallet size={16} className="mt-0.5 shrink-0" />
+                    <div>
+                        <p>{creditMsg}</p>
+                        <p className="text-[11px] font-normal opacity-80 mt-1">
+                            No ingresó dinero a la caja: ese saldo ya se había cobrado. Se puede anular
+                            desde la ficha del alumno o desde Movimientos Recientes.
+                        </p>
+                    </div>
                 </div>
             )}
 

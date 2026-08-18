@@ -15,11 +15,15 @@ export async function GET(
 
         const { id } = await params;
 
-        // Permitir acceso a: ADMIN, SECRETARY, o el propio profesor consultando sus datos
+        // Permitir acceso a: ADMIN, o el propio profesor consultando sus datos.
+        //
+        // La secretaría queda afuera del sueldo ajeno (SEC-03): entra a la plata
+        // que entra —cuotas, matrículas, ingresos varios— y no a la que sale. Si
+        // alguna vez es también profesora, sigue viendo el suyo por `isSelf`.
         const isSelf = id === user.userId;
-        const isAdminOrSecretary = user.activeRole === "ADMIN" || user.activeRole === "SECRETARY";
+        const isAdmin = user.activeRole === "ADMIN";
 
-        if (!isSelf && !isAdminOrSecretary) {
+        if (!isSelf && !isAdmin) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

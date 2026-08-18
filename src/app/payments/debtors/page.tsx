@@ -71,7 +71,7 @@ export default async function DebtorsPage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={activeRole} />
             <main className="container mx-auto px-4 py-8 max-w-5xl">
                 <header className="mb-8">
                     <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">

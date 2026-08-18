@@ -53,6 +53,18 @@ Las prioridades P0–P3 dicen **qué tan grave** es cada cosa. Este orden dice *
 conviene hacerlas**, que no es lo mismo: hay ítems graves que conviene postergar porque dependen de
 otro, e ítems menores que conviene adelantar porque son baratos y el cliente los está esperando.
 
+### Atención inmediata · pedido el 2026-08-13
+
+Dos reportes del cliente que se atienden **antes que cualquier tanda**, por decisión suya. Los dos
+los sufre alguien todos los días y los dos tienen la causa ya identificada:
+
+| | Estado del diagnóstico |
+|---|---|
+| [BUG-07](#bug-07) | ~~No se guardan las asistencias.~~ Resuelto el 2026-08-13 sin necesidad de la captura: el parte pasó de 78 sentencias a 4, medido. **Falta verificar en stage.** |
+| [BUG-04](#bug-04) | ~~La secretaria pasa a profesora en 11 pantallas.~~ Resuelto el 2026-08-13: la prop `currentActiveRole` del `Navbar` pasó a ser obligatoria, así que la próxima pantalla que la olvide no compila. **Falta verificar con la usuaria.** |
+
+BUG-04 se puede cerrar sin depender de nadie.
+
 ### Tanda 1 · Pedidos del cliente que no dependen de nada
 
 Son acotados, aislados y de valor visible inmediato. Sacarlos primero compra tiempo para el trabajo
@@ -80,10 +92,13 @@ uno prepara el terreno para el siguiente, y así cada paso queda reversible.
 3. ~~[SEC-01](#sec-01) — migrar los llamadores a `roles[]` y borrar la columna `role`.~~ Hecho el 2026-08-10; **falta verificar en stage**.
 4. ~~[SEC-08](#sec-08) + [BUG-04](#bug-04) — el `Navbar` leía los roles del JWT viejo.~~ Hecho el 2026-08-10.
 5. ~~[SEC-04](#sec-04) — los chequeos de instituto que faltaban.~~ Hecho el 2026-08-10.
-   [SEC-03](#sec-03) quedó cubierto salvo la decisión de producto sobre qué puede anular una secretaria.
+   ~~[SEC-03](#sec-03) quedó cubierto salvo la decisión de producto sobre qué puede anular una
+   secretaria.~~ Decidido y cerrado el 2026-08-13: la secretaría entra a la plata que entra y no a la
+   que sale.
 
 **Tanda cerrada el 2026-08-10, a falta de verificar en stage.** Los tutores dejan de tener acceso de
-administrador y la secretaria deja de convertirse en profesora. Sigue la tanda 3.
+administrador y la secretaria deja de convertirse en profesora. [SEC-03](#sec-03) y
+[BUG-04](#bug-04) se cerraron el 2026-08-13. Sigue la tanda 3.
 
 ### Tanda 3 · Bugs de plata
 
@@ -180,7 +195,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 |---|---|---|---|
 | [SEC-01](#sec-01) | P0 | Eliminar `User.role` y unificar en `roles[]` | [x] |
 | [SEC-02](#sec-02) | P0 | Helper único de autorización (`requireRole`) | [x] |
-| [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [~] |
+| [SEC-03](#sec-03) | P0 | Control de rol en las acciones financieras | [x] |
 | [SEC-04](#sec-04) | P0 | Validación de instituto faltante en 2 acciones de cobro | [x] |
 | [SEC-05](#sec-05) | P1 | Login sin alcance de instituto | [ ] |
 | [SEC-06](#sec-06) | P1 | Contraseñas por defecto hardcodeadas | [ ] |
@@ -201,22 +216,46 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
-| [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [ ] |
+| [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [x] |
 | [FIN-15](#fin-15) | P2 | La matrícula anticipada no tiene restricción única en la base | [ ] |
 | [FIN-16](#fin-16) | P2 | El generador mensual ignora el período lectivo y a los alumnos de baja | [ ] |
-| [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [ ] |
+| [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [x] |
 | [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
+| [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
+| [FIN-21](#fin-21) | P2 | No se puede registrar un pago con fecha pasada | [ ] |
+| [FIN-22](#fin-22) | P1 | 🗣️ El generador mensual no ve las cuotas sin inscripción y las duplica | [x] |
+| [FIN-23](#fin-23) | P1 | Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas | [ ] |
+| [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
+| [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
+| [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
+| [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
+| [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
+| [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
+| [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
+| [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
+| [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
+| [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
+| [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
+| [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
+| [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [ ] |
+| [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
+| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
+| [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [x] |
+| [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
+| [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
+| [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
+| [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -227,6 +266,10 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
 | [ARQ-10](#arq-10) | P2 | No hay auditoría de las acciones del panel | [ ] |
+| [ARQ-11](#arq-11) | P2 | Guardar las notas de un informe cuesta 250 sentencias | [ ] |
+| [ARQ-12](#arq-12) | P2 | Versionar el proyecto y mostrar la versión en la app | [ ] |
+| [ARQ-13](#arq-13) | P3 | Saber qué versión está usando cada usuario | [ ] |
+| [ARQ-14](#arq-14) | P3 | La purga de un alumno no puede borrar a ningún alumno real | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -235,6 +278,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-06](#ped-06) | P3 | `isCorrect` debe derivarse de `score` | [x] |
 | [PED-07](#ped-07) | P2 | Límites de consumo de IA por plan | [ ] |
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
+| [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [ ] |
+| [PED-10](#ped-10) | P2 | Consumo de IA por instituto, visible para el superadmin | [ ] |
 
 ---
 
@@ -420,6 +465,90 @@ cliente: si SECRETARY puede **anular pagos y borrar cuotas** o sólo registrar c
 antes, no hay distinción — ambos roles pueden todo. Restringir `voidPaymentAction`,
 `voidExpenseAction`, `voidIncomeAction` y `deleteFeeAction` a `["ADMIN"]` es un cambio de una línea
 por acción cuando se defina.
+
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**La decisión la tomó el instituto y el criterio es la dirección de la plata, no la gravedad de la
+acción.** La secretaría entra a todo lo que **entra** —cuotas, matrículas e ingresos varios, que son
+el libro o la fotocopia que vende el instituto— y no toca lo que **sale**. Los gastos y los sueldos
+son del dueño.
+
+Eso deja el corte así:
+
+| Acción | Quién |
+|---|---|
+| `voidPaymentAction` | ADMIN + SECRETARY — es cuota o matrícula |
+| `createIncomeAction` / `voidIncomeAction` | ADMIN + SECRETARY — un libro, una fotocopia |
+| `deleteFeeAction` | ADMIN + SECRETARY — la cuota es lo suyo |
+| `createExpenseAction` | **ADMIN** — cubre los sueldos, que entran por acá con `category === "Payroll"` |
+| `voidExpenseAction` | **ADMIN** |
+
+**La interfaz ya estaba bien; lo que faltaba era el servidor.** `/payments` ya le escondía a la
+secretaría el formulario de egresos, el acceso a sueldos, el selector de mes y **todos** los bloques
+de KPI —incluidas Rentabilidad y Total de egresos, que exponen el gasto aunque no se liste—, y
+filtraba del libro mayor todo `EXPENSE`, `PAYROLL` o con `expenseId`. Pero las acciones seguían
+aceptando SECRETARY, y esconder un formulario no protege un server action.
+
+**Dos huecos que aparecieron al implementarlo, y que no eran de permisos de acción sino de acceso:**
+
+1. **`/payments/payroll` se abría escribiendo la URL.** El botón estaba escondido, pero la página
+   usaba `INSTITUTE_ADMINS`, que incluye SECRETARY. Se veía cuánto cobra cada profesor. Ahora es
+   `["ADMIN"]`.
+2. **`/api/teachers/[id]/payroll` le devolvía el sueldo de cualquier profesor.** Se sacó SECRETARY;
+   el profesor consultando el propio se mantiene por `isSelf`, así que una secretaria que además dé
+   clases sigue viendo el suyo.
+
+`/api/institutes/payroll` y las acciones de `teachers/actions.ts` —`processTeacherPayment`,
+`processBulkPayrollAction`— ya estaban en `["ADMIN"]`. La escritura de sueldos nunca estuvo abierta;
+lo que estaba abierto era mirarlos.
+
+**`deleteFeeAction` ahora deja asiento.** Era la única acción de plata sin rastro: anular un pago, un
+gasto o un ingreso escribe su contra-asiento con `operatorId`, pero acá la fila desaparecía y no
+quedaba nada. No borra plata cobrada —se niega si la cuota tiene pagos— pero **borra una deuda**. La
+decisión fue dejarla con la secretaría y emparejarle la traza, no restringirla: el problema no era
+quién podía, era que fuera invisible.
+
+El asiento va con importe 0, con la misma forma que la aplicación de saldo a favor, y nombra alumno,
+período e importe. **Dos límites conocidos:** no se ve en la tabla del libro mayor, que filtra los de
+importe 0, y suma un tercer sentido a `ADJUSTMENT`.
+
+Ese filtro **se queda**: [FIN-11](#fin-11) decidió el mismo día que esa pantalla es la caja. Así que
+el rastro existe y es consultable, pero sólo desde la base. Hacerlo visible es
+[FEAT-10](#feat-10), que además lo saca de `Transaction` y le da tabla propia con motivo — este
+asiento es un puente, no la forma definitiva.
+
+**Qué falta verificar en stage.** Entrar como secretaria y confirmar: que `/payments/payroll`
+redirige al dashboard, que la pantalla de finanzas sigue dejándole registrar un ingreso vario, y que
+borrar una cuota impaga funciona y deja el asiento con su `operatorId`. Y como admin, que los gastos
+y los sueldos siguen funcionando igual.
+
+### Verificado en stage — 2026-08-16
+
+**Como secretaria** (`roles = {TEACHER, SECRETARY}`, en modo Secretaría):
+
+- `/payments/payroll` **escribiendo la URL redirige al dashboard**. Era el hueco real de esta ficha:
+  el botón estaba escondido pero la página se abría y mostraba cuánto cobra cada profesor.
+- En `/payments` **no hay formulario de egresos**, ni KPI de Rentabilidad, ni de Total de egresos, ni
+  acceso a sueldos. El único formulario de la pantalla es el de cobro. La palabra "egresos" aparece
+  sólo en el subtítulo genérico de la pantalla.
+
+**Como admin**, que es la mitad que comprueba que no se haya trabado nada del lado del dueño:
+
+- **Gasto asentado y anulado.** $12.345 en ALQUILER: se creó con `status VALID` y su `Transaction`
+  de −12.345; al anularlo quedó en `VOIDED` con un `ADJUSTMENT` de +12.345 y la descripción
+  "Anulación de Gasto #…". Neto cero, sin borrar la fila.
+- **Sueldo liquidado y anulado.** "Pago de Haberes - July 2026", $20.000, `category = 'Payroll'`, con
+  su `Transaction` de tipo `PAYROLL` y el destinatario correcto. Entra por `createExpenseAction`, que
+  desde este ítem es sólo de admin, así que es la prueba de que ese corte no rompió la liquidación.
+- **El operador quedó bien registrado en las cuatro operaciones.**
+- Como admin **sí** aparecen el KPI de Rentabilidad, el acceso a Pago de Sueldos y la solapa de Otros
+  Gastos. El contraste entre los dos roles es el que definió el instituto.
+
+**Los dos gastos de prueba quedaron anulados, no borrados**, que es lo que corresponde a la política
+de borrado lógico: en stage hay dos `Expense` en `VOIDED` con su contrapartida, de neto cero.
+
+**Sigue sin probarse** el borrado de una cuota impaga con su asiento, que es el tercer punto que esta
+ficha pide para la secretaría.
 
 ---
 
@@ -1055,6 +1184,58 @@ cobrar del mes" pasó a ser sólo cuotas. **Este ítem es lo que lo arregla de v
 la matrícula tiene dónde decir cuándo vence y los agregados por período pueden usarlo. Hasta
 entonces, no hay dónde poner el vencimiento de algo anual.
 
+### Evaluado y descartado — 2026-08-16 · mover el mes de la matrícula a febrero
+
+Salió de contestar la segunda pregunta al cliente de T2 del lote del 15/08. **Propuesta del dueño:**
+en vez del `0`, guardar las matrículas en el mes **2**, que es donde se cargó la enorme mayoría (209
+de 212 en producción) y donde la plata entró de verdad. **Decisión: no. Se deja el `0`** — y el
+motivo que lo cierra lo puso el mismo dueño, por lo contable.
+
+**Por qué se descarta.** Con la constante en `2`, la matrícula del alumno que se inscriba en agosto
+de 2027 se sumaría al **"Ingresos del Mes" de febrero de 2027** y al "Progreso de Cobro" de febrero:
+un mes ya cerrado que sigue creciendo hacia atrás. Con el `0` eso no puede pasar nunca — ninguna
+matrícula entra en el mes de nadie— y la plata se ve en el mes en que entró, por la caja. El `0` no
+es una fecha mala: es la ausencia de fecha, que es lo honesto mientras no exista `dueDate`.
+
+**El valor tiene que ser uniforme, sea cual sea.** No se puede poner febrero a las históricas y
+dejar el `0` para las nuevas: la restricción única es `[enrollmentId, type, year, month]`, así que
+una matrícula en mes 2 y otra en mes 0 de la misma inscripción y año **no chocan**, y vuelve el
+duplicado que FIN-12 vino a tapar. O todas en 0, o todas en 2.
+
+**Superficie real del cambio, si algún día se hace.** Es más chica de lo que parece: la constante
+`ENROLLMENT_FEE_MONTH` en [`utils.ts:23`](../src/lib/utils.ts) más una migración que renormalice las
+filas. El valor se usa en **cuatro** lugares, todos de escritura —
+[`enrollments/actions.ts:114`](../src/app/enrollments/actions.ts) (vincular una anticipada) y `:126`
+(emitir al inscribir), [`billingActions.ts:253`](../src/app/payments/billingActions.ts) (el generador
+masivo) y [`payments/actions.ts:643`](../src/app/payments/actions.ts) (la anticipada)— y **nada en el
+código bifurca sobre `month === 0`**.
+
+**Qué no toca el mes, verificado el 16/08.** Es la parte que costó averiguar y conviene no volver a
+averiguarla:
+
+- **El recibo en PDF.** La fecha sale de `payment.date`
+  ([`ReceiptDownloadButton.tsx:52`](../src/components/financials/ReceiptDownloadButton.tsx)), la del
+  cobro real. El concepto sale de `formatFeeLabel`, que para `ENROLLMENT` devuelve `Matrícula <año>`
+  e **ignora el mes**. El mes no entra nunca al PDF.
+- **Los KPI por fecha de asiento:** "Cobrado en \<mes\>" con su desglose, "Rentabilidad (Neto)" y
+  "Gastos Operativos". Filtran `Transaction` por fecha, así que la matrícula cobrada en agosto
+  aparece en agosto.
+- **"Deuda Total".** Las matrículas impagas **sí** cuentan: el filtro es `month <= mes actual` y el
+  `0` siempre entra, computada como deuda histórica
+  ([`payments/page.tsx:124`](../src/app/payments/page.tsx)).
+
+**Qué sí quedó afuera con el `0`,** y es exactamente lo que este ítem arregla: **"Progreso de Cobro"**
+([`payments/page.tsx:70`](../src/app/payments/page.tsx)) e **"Ingresos del Mes"** del dashboard
+([`dashboard/page.tsx:568`](../src/app/dashboard/page.tsx)), que filtran `Fee.month = mes actual`. Son
+la vista de devengado —"de lo que tenía que cobrar este mes, cuánto llevo"— y las matrículas no
+figuran. Con `dueDate` esas dos consultas pasan a agrupar por vencimiento y el problema desaparece
+sin tener que elegir un mes falso.
+
+**Impacto medido en producción al 16/08**, para dimensionar la urgencia: julio perdió $46.000 sobre
+$10.843.000 de cuotas (0,4 %) y agosto $55.000 sobre $10.964.000 (0,5 %). El bloque grande es
+febrero —209 matrículas, $7.315.000— pero es la carga inicial. **No hay urgencia**; el instituto no
+lo va a notar, y además todavía se están migrando datos.
+
 ---
 
 <a id="fin-09"></a>
@@ -1065,6 +1246,23 @@ entonces, no hay dónde poner el vencimiento de algo anual.
 
 **Cambio.** Agregar `student: { status: "ACTIVE" }` al filtro. Confirmar antes si el negocio quiere
 seguir viendo la deuda histórica de un alumno dado de baja — puede que sí.
+
+### Decidido — 2026-08-16 · no se filtran: se agrega un filtro
+
+**La duda que dejaba la ficha está contestada, y por la negativa: la deuda del alumno en la papelera
+tiene que seguir viéndose.** Sacarla del reporte sería perder plata de vista.
+
+El caso real que lo define: un alumno deja de asistir debiendo cuotas y se va del instituto. Esas
+cuotas **quedan como deuda** y el alumno va a la papelera —con deuda y todo, y también si llegó a
+pagar la matrícula y alguna cuota—. Si más adelante vuelve y se lo restaura, **la deuda tiene que
+reaparecer**, y ahí el instituto decide si se la perdona o se la cobra.
+
+**Entonces el cambio es al revés del que decía la ficha:** en vez de excluirlos, el reporte de
+deudores lleva un **filtro por estado del alumno** —activos, en papelera, o todos—, con los activos
+como vista por defecto. La deuda del que se fue deja de ensuciar el trabajo diario sin desaparecer.
+
+**Perdonar la deuda todavía no existe como operación**, y es lo que hace falta cuando el alumno
+vuelve. Está en [FIN-26](#fin-26), junto con las otras formas de conciliar una diferencia.
 
 **Relacionado.** `deleteFeeAction` bloquea el borrado si `fee.payments.length > 0`
 ([`billingActions.ts:244`](../src/app/payments/billingActions.ts)), contando también los pagos
@@ -1083,6 +1281,21 @@ servidor (Vercel, `en-US`), y guarda `"2,000"` en lugar de `"2.000"` en la nota 
 **Segundo caso (2026-08-10).** El mensaje de error de `voidPaymentAction`
 ([`actions.ts:576`](../src/app/payments/actions.ts)) usa el mismo `toLocaleString()` pelado, y es
 texto que ve el operador. Arreglar los dos juntos.
+
+### Resuelto a medias — 2026-08-17 · los dos casos de `actions.ts`, con helper (`b0d0ee7`)
+
+`formatCurrency` en [`utils.ts`](../src/lib/utils.ts) es `toLocaleString("es-AR")` **sin el signo
+`$`**, para que reemplace a `toLocaleString()` justo donde ya estaba y la barrida que falta sea
+mecánica. Entró en los dos casos que nombra esta ficha —la nota del recibo y el mensaje de error— más
+los dos importes de la columna financiera de la ficha del alumno, que quedaban pegados al bloque nuevo
+de [FIN-11](#fin-11) y se veían `$15,000` arriba de `$15.000`.
+
+**Y corrige el conteo del lote: no son 57 casos parejos.** El defecto aparece **sólo donde el string se
+arma en el servidor**. `toLocaleString()` en un componente cliente usa el locale del navegador, así que
+la tabla del libro mayor imprime `$30.000` bien mientras los KPI de la misma pantalla —que son server
+components— imprimen `$30,000`. Eso explica los dos formatos conviviendo en `/payments`, que el lote
+había anotado como misterio. Lo que falta barrer es el subconjunto que corre en el servidor, bastante
+menor que 57, y **no se puede detectar mirando la pantalla en un navegador argentino**.
 
 ---
 
@@ -1115,6 +1328,91 @@ dinero) o el libro de todos los movimientos, incluidos los internos de $0? De es
    para el primero.
 
 La opción 1 es menos invasiva y no cambia lo que ve quien concilia caja.
+
+### Decidido — 2026-08-13 · la opción 1, y el acceso va en la ficha del alumno
+
+**La tabla de `/payments` es la caja.** El filtro de $0 se queda. Y el acceso no va ahí por una razón
+más fuerte que la elegancia del modelo: **nadie llega al problema por esa pantalla**. Los pagos mal
+cargados los reportan los alumnos o los tutores, y el instituto mira la ficha del alumno; si hay
+deuda, la página de deudores. A `/payments` no se entra a buscar un movimiento.
+
+**Deudores es donde se nota, no donde se arregla.** Lista cuotas `PENDING` o `PARTIAL`
+([`billingActions.ts:239`](../src/app/payments/billingActions.ts)), y una cuota mal pagada con saldo
+queda `PAID`: no aparece. Sirve para detectar que algo no cierra, no para corregirlo.
+
+**El trabajo real no es el botón, es que la ficha del alumno hoy no alcanza.** Trae sólo las
+**últimas 5 cuotas** (`take: 5`) y de cada una **sólo el último pago válido** (`take: 1`,
+[`students/[id]/page.tsx:125`](../src/app/students/[id]/page.tsx)). El pago con `method: "SALDO"` que
+hay que anular puede no estar cargado en la página, así que el acceso no se puede colgar de lo que ya
+se muestra.
+
+**Forma propuesta.** Un bloque propio en la ficha —"Saldo a favor aplicado"— que liste los `Payment`
+con `method: "SALDO"` y `status: "VALID"` del alumno, con la cuota a la que se aplicaron, el importe
+y la fecha, y un botón de anular por fila que llame a `voidPaymentAction`, que **ya sabe revertirlo
+bien** desde [FIN-02](#fin-02). Es una consulta aparte, no depende de los `take` de arriba, y le
+contesta literalmente al mensaje de error de [FIN-01](#fin-01): *"anulá primero los pagos hechos con
+ese saldo"* — el operador ve esa lista y nada más.
+
+**De paso, mejorar el mensaje de error.** Hoy dice qué hacer pero no dónde: nombrar las cuotas que
+retienen el saldo le ahorra la búsqueda.
+
+**Lo que esta decisión deja sin resolver, a propósito.** Los asientos internos de $0 siguen sin
+verse: la aplicación de saldo, el contra-asiento de anulación y —desde [SEC-03](#sec-03)— la cuota
+borrada. Son tres sentidos distintos de `ADJUSTMENT` conviviendo en un tipo, registrados y
+consultables pero invisibles en la interfaz. La opción 2 era la que los sacaba a la luz. Si algún día
+hace falta auditar desde la pantalla, esto vuelve — y probablemente vuelva junto con
+[ARQ-10](#arq-10), que es el mismo problema mirado desde otro lado.
+
+### Reabierto y resuelto — 2026-08-17 · la fila también va en el libro mayor
+
+**La decisión de arriba se tomó sobre una premisa falsa.** Reproducir el caso en stage la falsificó, y
+el instituto la reabrió: *"tomé mal la decisión y recién ahora entiendo bien todo el problema"*.
+
+**Cómo se falsificó.** Se armó el caso completo con datos reales de stage —dos hermanas, la madre paga
+$30.000 de las dos, se carga todo sobre una, el excedente se aplica a la cuota siguiente— y se le pidió
+al operador que hiciera lo que el mensaje de error le manda a hacer. **Anuló la fila equivocada:** no
+encontró la aplicación de saldo en el libro mayor, vio otro movimiento de $15.000 y anuló ese. El
+mensaje decía la verdad y aun así no alcanzaba.
+
+De los tres argumentos que sostenían la opción 1, **dos no sobrevivieron al código**:
+
+| Lo que decía la decisión | Lo verificado el 2026-08-17 |
+|---|---|
+| *"Listarla obligaría a filtrar por el **texto** de la descripción"* | **Falso.** Los tres ajustes en $0 se distinguen por estructura: la aplicación de saldo tiene `paymentId` → pago con `method: SALDO`; el contra-asiento de una anulación nace `VALID` con el original ya `VOIDED`; y la cuota borrada de [SEC-03](#sec-03) no tiene `paymentId` |
+| *"Mete filas en $0 en la pantalla que se usa para conciliar caja"* | **Cierto sólo visualmente.** Ningún KPI suma `ADJUSTMENT`: *Cobrado* filtra `type === "PAYMENT"`, *Ventas* `MISC_INCOME`, los egresos `EXPENSE`/`PAYROLL`. Mostrar la fila no mueve un solo total |
+| *"Nadie llega al problema por esa pantalla"* | **Es el que se cayó.** El operador **está parado en `/payments`** cuando aparece el muro, porque el mensaje de error sale ahí |
+
+**Lo que se hizo, entonces, son dos accesos y no uno.**
+
+1. **La fila en Movimientos Recientes**, que es donde está el operador cuando se traba. Se muestra como
+   movimiento interno y no como plata: sin `+` ni `−`, en azul, con la etiqueta **SALDO APLICADO** y la
+   aclaración *"no mueve caja"*. Los totales quedan idénticos, que es lo que la caja necesitaba
+   proteger. El botón de anular se habilita sólo para ella; el resto de los `ADJUSTMENT` y `REFUND`
+   sigue sin acciones.
+2. **El bloque «Saldo a Favor Aplicado» en la ficha del alumno**, que es donde mira el instituto cuando
+   el que reclama es el tutor. Con **consulta propia**: las cuotas de la ficha traen sólo las últimas 5
+   y un pago por cuota, así que el pago a anular puede no estar entre ellas.
+
+**Lo que no cambió:** la caja sigue siendo la caja. Lo que se corrigió es **qué muestra**, no qué suma.
+
+**El contra-asiento de anular una aplicación no se dibuja**, a propósito: también vale $0, y la fila
+original tachada con `ANULADO` ya dice que se anuló. Por eso anular un pago en efectivo deja dos filas
+y anular una aplicación de saldo deja una sola.
+
+**Verificado en stage el 2026-08-17, ejercitando el callejón entero por pantalla.** Sobre la alumna que
+había quedado trabada: se anuló la aplicación de saldo desde la fila nueva —el pago quedó `VOIDED`, la
+cuota volvió a `PENDING`, **el saldo volvió de $0 a $15.000** y el contra-asiento salió `ADJUSTMENT` de
+**$0**, sin inventar una salida de caja— y recién ahí se pudo anular el pago original de $30.000, que
+es lo que el viernes no tenía salida: quedó `VOIDED` con su `REFUND` de **−$30.000**, las dos cuotas en
+`PENDING` y el saldo en $0. Neto cero y la secretaría en condiciones de cobrarle a cada hermana.
+
+**Commits.** `b0d0ee7` (los dos accesos, el mensaje que nombra la cuota y [FIN-10](#fin-10)) ·
+`677e59d` (dos defectos propios: el texto largo empujaba la columna Monto fuera de la pantalla, y la
+fila anulada se señalaba a sí misma con *"Anula a:"*).
+
+**Sigue sin resolverse, y ahora es sólo la mitad.** Los otros dos `ADJUSTMENT` en $0 —el contra-asiento
+y la cuota borrada— siguen invisibles. La cuota borrada tiene su propia pantalla en
+[FEAT-10](#feat-10); el contra-asiento no le importa a nadie hoy.
 
 ---
 
@@ -1260,6 +1558,49 @@ que cambia es que el "a cobrar del mes" pasa a ser sólo cuotas. Es la misma car
 `formatFeeLabel`. Y el selector de cuota al cobrar muestra el curso al lado de la matrícula: dos
 matrículas del mismo año eran indistinguibles.
 
+### El mes en producción no era arbitrario — 2026-08-13
+
+**Las matrículas de este cliente estaban en febrero a propósito.** Se cargaron en febrero para que
+los padres vieran una fecha coherente al descargar el recibo. La ficha asumía que el mes era ruido —
+el mes de creación— y coincidió: se generaron en febrero, así que quedó `month = 2` sola. Pero
+significaba algo.
+
+**Los recibos no se rompieron.** Se verificó: el recibo nunca miró el mes de la cuota. El concepto
+sale de `formatFeeLabel`, que para `ENROLLMENT` devuelve `Matrícula {año}` e ignora el mes, y la
+fecha sale de `payment.date`, que la migración no tocó. Lo que ven los padres quedó igual.
+
+**Lo que sí cambió es de puertas adentro**, y de forma retroactiva, porque la migración reescribió el
+mes de *todas* las matrículas existentes:
+
+- El **"Ingresos del Mes"** del dashboard y el **"Total a cobrar"** del período bajaron: ambos filtran
+  por mes exacto y el 0 no cae en ninguno. Febrero 2026 es el mes afectado en este cliente.
+- En la vista de los tutores las matrículas se ordenan al final del año en vez de entre las de
+  febrero ([`guardian/payments/page.tsx`](../src/app/guardian/payments/page.tsx) ordena por `month`).
+- La **caja no cambió**: sale del libro mayor por fecha de asiento. Y la **deuda tampoco**: usa
+  `<=`, y 0 es menor que cualquier mes.
+
+**Decisión: `ENROLLMENT_FEE_MONTH` se queda en 0.** Se evaluó ponerlo en 2 —la restricción única
+funciona con cualquier valor fijo, lo único que importa es que todas compartan el mes— y se descartó:
+codifica "la matrícula es de febrero" para todos los institutos y años. La corrección de los números
+de febrero se hace a mano en la base.
+
+> **Aviso para esa corrección a mano.** Los dos caminos que crean una matrícula escriben
+> `month: ENROLLMENT_FEE_MONTH` ([`billingActions.ts:202`](../src/app/payments/billingActions.ts),
+> [`actions.ts:643`](../src/app/payments/actions.ts)). Un `UPDATE` que ponga las viejas en 2 dejando
+> la constante en 0 **reabre el bug que cerró [FIN-06](#fin-06)**: el índice único es
+> `[enrollmentId, type, year, month]`, así que `(inscripción, ENROLLMENT, 2026, 2)` y
+> `(inscripción, ENROLLMENT, 2026, 0)` son filas distintas para la base y la garantía de "una
+> matrícula por inscripción y año" desaparece para esas inscripciones. Quedaría sólo el filtro en
+> memoria, que es exactamente lo que FIN-06 dice que no alcanza.
+>
+> Las dos salidas seguras son **no tocar el mes** (y explicarle al cliente por qué cambiaron los
+> números de febrero) o **cambiar la constante y las filas en la misma operación**. Tocar la base
+> dejando el código como está es la única combinación que rompe.
+
+**Relacionado.** [FIN-08](#fin-08) es la causa de fondo: mientras `Fee` no tenga `dueDate`, el mes es
+lo único que hace de vencimiento y una cuota anual no tiene mes donde caer. Con `dueDate` la
+matrícula vuelve al período que le corresponde sin forzar nada.
+
 ---
 
 <a id="fin-13"></a>
@@ -1322,6 +1663,100 @@ genera nada, que es lo correcto.
 **Tope: antes de tomar las matrículas de diciembre de 2026.** Hasta entonces el daño requiere que
 alguien elija el año próximo en el desplegable, que arranca en el año en curso.
 
+### Definido — 2026-08-16 · el freno va en el código, y tiene que explicarse
+
+**No alcanza con que el filtro deje de emitir de más: el operador tiene que entender por qué.** Un
+botón que se aprieta y no hace nada se lee como una falla del sistema, y el siguiente paso previsible
+es volver a apretarlo o buscar otro camino para lograrlo.
+
+Las dos mitades:
+
+- **La limitante**, que es el filtro por año lectivo de arriba: pedir un año sin cursos no genera
+  nada, y no hay forma de forzarlo desde la pantalla.
+- **La explicación**, antes de apretar y no después: que el formulario diga cuántas inscripciones
+  alcanza el año elegido. Con **0**, el botón se deshabilita y dice por qué —*"todavía no hay cursos
+  que empiecen en 2027"*—, en vez de dejar apretar para después informar que no pasó nada.
+
+Es el mismo criterio de [FIN-24](#fin-24): el sistema resuelve la consecuencia y la pantalla informa
+el resultado, en lugar de advertir sobre un riesgo y dejar la decisión del lado del operador.
+
+### Hecha — 2026-08-17 · `1922188` · T5 del lote del fin de semana
+
+Las dos mitades, sin migración.
+
+**La limitante.** La corrida toma sólo las inscripciones cuyo curso pertenece al año pedido. El
+criterio salió de `createEnrollmentAction`, que ya lo tenía: el año es `course.startDate` leído en
+**UTC** —las fechas se guardan a medianoche UTC y en hora local un curso del 1 de enero cae en
+diciembre del año anterior—. Los cursos **sin fecha** entran únicamente cuando el año pedido es el de
+calendario; si entraran siempre, pedir 2027 volvería a alcanzar a las inscripciones de 2026, que es
+el defecto entero.
+
+**La explicación.** El formulario pide el alcance del año elegido antes de apretar y lo muestra. Con
+cero, el botón queda deshabilitado y dice por qué —*"Todavía no hay cursos que empiecen en 2027"*—.
+Con más de cero, muestra a cuántas inscripciones alcanza y aclara que sólo se emite a las que
+todavía no tienen la suya. El texto del `confirm()` dejó de decir "TODAS las inscripciones activas",
+que era falso desde este cambio y engañoso desde antes.
+
+**El conteo y la corrida comparten un solo `where`** (`yearlyEnrollmentTargetsWhere`), a propósito:
+una pantalla que promete un número que la corrida no cumple es peor que no mostrar ninguno.
+
+**Sin filas que arreglar.** La consulta 2 de T2 contra producción dio cero matrículas con año > 2026:
+nadie llegó a correr el generador con el año próximo, así que la regresión estaba abierta pero no
+había hecho daño.
+
+### Verificado por pantalla — 2026-08-17 · contra la base de desarrollo
+
+Ejercitado en `/payments` con el admin, sobre una base con **30 cursos, todos con inicio en marzo de
+2026 y ninguno sin fecha**. Los números se predijeron contra la base **antes** de abrir el navegador,
+que es lo que le da valor a la coincidencia:
+
+| Año pedido | Lógica vieja | Predicho | En pantalla |
+|---|---|---|---|
+| 2025 | 145 inscripciones | 0 | — |
+| **2026** | 145 inscripciones | 145 | **«Alcanza a 145 inscripciones de 2026»** |
+| **2027** | 145 inscripciones | 0 | **Botón deshabilitado + el cartel ámbar** |
+
+Con el código anterior, pedir **2027** habría emitido **145 matrículas 2027 atadas a las inscripciones
+de 2026**: el doble cobro de esta ficha, con número.
+
+- **2027**: el botón quedó deshabilitado con el monto ya cargado en $15.000, y el clic **no hizo nada**
+  —sin diálogo, sin aviso— y la base siguió con **cero matrículas 2027**.
+- **2026**: el `confirm()` nuevo salió con el alcance adentro, y la corrida emitió **143 sobre 145**.
+  Las dos que faltan son las que ya estaban cubiertas: una matrícula vinculada y una suelta que el
+  generador consume. Las 143 se borraron después y la base quedó con los mismos 3 ids que antes.
+
+Que el número de la pantalla coincidiera con el medido de antemano es lo que prueba que el conteo y la
+corrida siguen compartiendo el mismo `where`.
+
+**Salió de acá [FIN-28](#fin-28)**: el año del curso lo da la fecha de inicio, que es un campo
+opcional. Sin ella el curso no tiene año propio y este filtro no lo puede ubicar.
+
+### Mejora a futuro, sin prioridad hoy — 2026-08-17 · los dos relojes del "año en curso"
+
+Visto al escribir el filtro. **No está descartado: es una mejora válida que hoy no tiene prioridad.**
+Queda anotado porque el próximo que lea el código lo va a encontrar, y para que sepa que ya se miró.
+
+El desplegable del formulario arma los años con `now.getFullYear()` del **navegador** (Argentina,
+UTC−3) y el filtro del servidor decide si el año pedido es el de calendario con
+`new Date().getFullYear()` **del servidor** (Vercel, UTC). Entre las 21:00 del 31 de diciembre y la
+medianoche los dos no coinciden: el navegador dice 2026 y el servidor 2027, así que en esa franja una
+corrida de 2026 dejaría afuera a los cursos **sin fecha de inicio**.
+
+**Por qué no entra hoy:** son tres horas al año, **el 31 de diciembre es feriado y nadie trabaja en esa
+franja**. Y el arreglo no es local: `createEnrollmentAction`
+([`enrollments/actions.ts:63`](../src/app/enrollments/actions.ts)) usa el mismo
+`new Date().getFullYear()` para su año de recambio, así que tocar uno solo dejaría **dos definiciones
+distintas de "año en curso"**, que es peor que la que hay.
+
+**Cuando entre, cómo entra.** Los dos lugares juntos, con una sola definición de "año en curso" —el
+reloj del servidor, que es el que decide— y el desplegable armándose desde ahí en vez de desde el
+navegador. No es un cambio grande; lo que lo hace no-trivial es que son dos archivos que hoy no saben
+uno del otro.
+
+**Y puede que se resuelva solo.** Si entra [FIN-28](#fin-28) —fecha de inicio obligatoria—, deja de
+haber cursos sin fecha, que son los únicos a los que este desfasaje afecta. El caso desaparece sin
+tocar ninguno de los dos relojes. Conviene mirar eso antes de encarar este.
+
 ---
 
 <a id="fin-15"></a>
@@ -1343,6 +1778,21 @@ quedó sin cubrir. Atenuantes: es de a un alumno por vez, desde un formulario, y
 con el costo de quedar fuera de su radar. Evaluar si vale la pena o si alcanza con la ventana chica
 que queda.
 
+### Replanteado — 2026-08-16 · puede que no sea un defecto
+
+**Antes de poner el índice hay que decidir si el caso está mal.** Dos matrículas anticipadas del
+mismo alumno pueden ser una funcionalidad futura y no un accidente: el alumno que va a hacer **dos
+cursos cortos** en el año —el producto que ya obligó a replantear [FIN-20](#fin-20)— necesita dos
+señas, y hoy no hay forma de cobrárselas por adelantado.
+
+Con eso, el índice de esta ficha **prohibiría algo que el instituto podría querer vender**. Sigue
+existiendo el problema real —dos envíos simultáneos del mismo formulario crean dos filas iguales sin
+que nadie lo haya pedido—, pero la solución ya no puede ser "una sola por alumno y año".
+
+**Queda pendiente distinguir las dos cosas:** el duplicado accidental, que hay que evitar, de las dos
+señas deliberadas, que habría que poder emitir a propósito y ver diferenciadas. Mientras no esté
+resuelto, no poner el índice.
+
 ---
 
 <a id="fin-16"></a>
@@ -1362,6 +1812,37 @@ que ver con la restricción única que ese ítem resolvió.
 **Cambio.** Agregar `student: { status: "ACTIVE" }` al filtro y acotar el mes al período del curso
 cuando las fechas estén cargadas. Confirmar antes qué se espera de un curso sin fechas.
 
+### Hecha la mitad — 2026-08-16 · `6889995`
+
+El filtro `student: { status: "ACTIVE" }` entró junto con [FIN-22](#fin-22), que toca la misma
+función. En producción no cambia nada hoy: no hay ninguna inscripción activa de un alumno dado de
+baja —verificado el 15/08—, así que es una red, no una corrección.
+
+**Queda abierta la otra mitad**, y por eso el ítem sigue sin tildar: acotar el mes al período lectivo
+del curso. No entró porque necesita decidir **qué se espera de un curso sin fechas**, y sin esa
+respuesta el filtro dejaría de generar cuotas de cursos que hoy sí las generan. Es una decisión de
+negocio, no de código.
+
+De paso, algo que quedó a la vista al mirar los datos y que pertenece a esta mitad: volver a generar
+un mes pasado le crea la cuota a todo el que no la tenga. En producción, marzo tiene 175 cuotas sobre
+206 inscripciones, así que regenerarlo emitiría 31 cuotas de marzo a alumnos que entraron después.
+Es el mismo agujero del período lectivo, visto desde el otro lado.
+
+### Definido — 2026-08-16 · regenerar un mes cerrado también se limita, y se explica
+
+Mismo criterio que [FIN-14](#fin-14). El período lectivo del curso es la limitante de fondo —un
+alumno que entró en julio no puede recibir una cuota de marzo—, pero hace falta además que la
+pantalla lo diga **antes** de apretar:
+
+- Cuántas cuotas va a emitir el mes elegido, y **a cuántos alumnos que entraron después** deja
+  afuera. Hoy el operador aprieta a ciegas y se entera por el número final, cuando ya se emitieron.
+- Que elegir un mes ya cerrado se distinga de la corrida normal del mes en curso, que es la operación
+  de todos los días.
+
+Sin período lectivo cargado no hay forma de saber cuándo empezó a cursar el alumno; con `enrolledAt`
+se puede aproximar, pero la respuesta buena depende de la decisión pendiente sobre **qué se espera de
+un curso sin fechas**.
+
 ---
 
 <a id="fin-17"></a>
@@ -1380,6 +1861,47 @@ exactamente el "consultar y después crear" de [FIN-06](#fin-06), sin red debajo
 **Cambio.** Mismo tratamiento que la matrícula: un mes fijo para las `EXAM` —conviene una constante
 al lado de `ENROLLMENT_FEE_MONTH` ([`utils.ts`](../src/lib/utils.ts))— y una migración que normalice
 las existentes con el criterio de [FIN-12](#fin-12). Es chico y cierra el patrón entero.
+
+### Resuelto — 2026-08-17 · `c463844`
+
+`EXAM_FEE_MONTH = 0` en [`utils.ts`](../src/lib/utils.ts), al lado de `ENROLLMENT_FEE_MONTH`, y
+`toggleExamRegistrationAction` ([`enrollments/actions.ts`](../src/app/enrollments/actions.ts)) la
+usa en vez del mes del calendario. Comparte el valor con la matrícula y no hay ambigüedad: `type`
+está dentro de la restricción, así que la matrícula y el examen de la misma inscripción y año
+siguen siendo dos filas distintas. Migración `20260817130000_normalize_exam_fee_month`, nombrada
+por encima de la de [FEAT-10](#feat-10), que era la otra migración del mismo fin de semana.
+
+**Cero filas afectadas, y medido antes de escribir la migración:** no existe ninguna cuota `EXAM`
+en producción ni en stage. El interruptor de examen no se usó todavía, así que el `DELETE` y el
+`UPDATE` no tocan nada en ninguna de las dos bases. Es preventivo a propósito: después de la
+primera cuota emitida deja de ser gratis.
+
+**Un lugar más del que decía el enunciado.** Arriba dice que `formatFeeLabel` no muestra el mes, y
+es cierto — pero el portal del tutor
+([`guardian/payments/page.tsx`](../src/app/guardian/payments/page.tsx)) tiene **su propia** función
+de etiqueta y era el único punto del sistema que imprimía el mes de una cuota de examen. Con el mes
+fijo habría dicho «Examen Mes 0 2026» en la pantalla que ve la familia. Quedó como el resto:
+«Derecho de Examen 2026».
+
+**Lo que cambia en los números, y es lo mismo que ya pasó con las matrículas.** Las cuotas de
+examen salen de las dos vistas de devengado que filtran por mes exacto —«Progreso de Cobro» en
+[`payments/page.tsx`](../src/app/payments/page.tsx) e «Ingresos del Mes» del
+[`dashboard`](../src/app/dashboard/page.tsx)— y **siguen contando enteras** en «Deuda Total» y en
+el reporte de deudores, cuyo filtro es `month <= mes actual`, computadas como mora histórica. Nada
+que vaya por fecha de asiento se mueve. Es el hueco que arregla de fondo [FIN-08](#fin-08) con
+`dueDate`; el mapa completo de qué KPI mira cada cosa está en esa ficha.
+
+**Verificado por pantalla el 2026-08-17** contra la base de desarrollo, con los números anotados
+antes de abrir el navegador. Prender el interruptor sobre `sofia sanabria` emitió la cuota con
+**mes 0** y apagarlo la borró por impaga; sobre `catalina gonzalez rossi`, cuya cuota está **paga**,
+apagar **no** la borró y volver a prender **no la duplicó** —mismo id—. En deudores se lee «Derecho
+de Examen 2026 (Adolescents+ M-J)», sin mes, bajo «Vencido (histórico)» y no bajo «Agosto», que es
+exactamente lo previsto.
+
+**Y la restricción se probó de las dos maneras**, con dos `INSERT` directos dentro de una
+transacción revertida: con el mes fijo la base **rechaza** la segunda cuota de examen de la misma
+inscripción y año (`P2002`); con un mes cualquiera —lo que escribía el código hasta acá— **la
+aceptaba**. Ese era el hueco, y no había restricción que lo atajara.
 
 ---
 
@@ -1421,6 +1943,803 @@ selector de cobro ([`RegisterFeeForm`](../src/app/payments/components/RegisterFe
 
 **Cambio.** Que `formatFeeLabel` acepte el nombre del curso como parámetro opcional y lo agregue
 cuando esté. Es el único lugar donde se decide; los llamadores le pasan lo que ya tienen a mano.
+
+---
+
+<a id="fin-20"></a>
+## FIN-20 · Cuotas duplicadas al cambiar de curso: la regla única es por inscripción · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-08-13).** Aparecieron cuotas duplicadas en alumnos que habían cambiado de curso.
+
+**Por qué la restricción de [FIN-06](#fin-06) no lo atajó.** El índice que se agregó es
+`@@unique([enrollmentId, type, year, month])`: impide dos cuotas del mismo mes **dentro de una
+inscripción**. No dice nada sobre el alumno. Si el mismo alumno tiene dos inscripciones activas,
+cada una genera su cuota del mismo mes y la base las acepta, porque para ella son de inscripciones
+distintas.
+
+Y esa regla es la correcta en el caso general: un alumno inscripto en dos cursos a la vez **debe**
+tener dos cuotas por mes, una por curso. El problema no es la regla, es que el cambio de curso puede
+dejar dos inscripciones abiertas.
+
+**Cómo se llega ahí.** Hay dos caminos para mover un alumno de curso y sólo uno es correcto:
+
+- [`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) **reasigna el `courseId` de la
+  inscripción existente**. Es el camino bueno: la inscripción sigue siendo una, y la restricción de
+  FIN-06 sigue valiendo. Las cuotas ya generadas quedan colgando de esa inscripción, con el precio
+  del curso viejo — que es otra discusión, pero no genera duplicados.
+- Inscribir al alumno en el curso nuevo con
+  [`createEnrollmentAction`](../src/app/enrollments/actions.ts) **sin dar de baja la vieja**. El
+  índice `studentId_courseId` sólo impide repetir el mismo curso, así que esto se permite: quedan dos
+  inscripciones `ACTIVE`. Desde ese momento, cada corrida del generador mensual produce dos cuotas
+  del mismo mes para el mismo alumno.
+
+Nada en la interfaz distingue "cambiar de curso" de "inscribir en otro curso más", y las dos cosas se
+ven igual desde la ficha del alumno.
+
+**Verificar antes de decidir el arreglo.** Una consulta a la base cierra la discusión: alumnos con
+más de una inscripción `ACTIVE`, y si sus cuotas duplicadas son del mismo mes con `enrollmentId`
+distinto. Si es eso, el diagnóstico está confirmado; si los duplicados comparten `enrollmentId`, el
+índice de FIN-06 no está aplicado en esa base y el problema es otro.
+
+**Cambio — a decidir con el cliente.** La pregunta de fondo es de negocio, no técnica: **¿un alumno
+puede cursar dos cursos al mismo tiempo en este instituto?**
+
+- Si **no** puede, la solución es dura y simple: impedir una segunda inscripción activa, y que el
+  cambio de curso pase siempre por `changeStudentCourseAction`.
+- Si **sí** puede, no se puede prohibir la segunda inscripción, y hay que atacar el cambio de curso:
+  que la interfaz obligue a elegir entre "mover" y "agregar", y que al mover se cierre la inscripción
+  anterior.
+
+En los dos casos hace falta además **limpiar los duplicados ya generados**, con el mismo cuidado de
+FIN-06: sólo se pueden borrar cuotas sin ningún pago asociado.
+
+**Relacionado.** [FIN-16](#fin-16) (el generador mensual ignora el período lectivo y a los alumnos
+de baja) toca la misma función y conviene mirarlos juntos.
+
+### Decidido — 2026-08-13 · la regla es la simultaneidad, y va por configuración
+
+**La pregunta de la ficha estaba mal planteada.** Preguntaba si un alumno puede cursar dos cursos,
+como si fuera sí o no. La respuesta del instituto es más fina y cambia el arreglo:
+
+- **No simultáneos.** Es un instituto de inglés: un alumno está en un curso por vez.
+- **Pero sí dos en el mismo año**, uno después del otro, porque hay **cursos cortos para adultos**.
+
+Por lo tanto **la restricción no puede ser por año, tiene que ser sobre la simultaneidad**: un alumno
+con una inscripción `ACTIVE` no puede tener otra `ACTIVE`; cuando la primera termina, puede empezar
+otra. La lectura fácil de "no puede hacer dos cursos" —una inscripción por alumno y año— habría roto
+los cursos cortos, que son un producto que el instituto vende.
+
+**Y no va escrita en el código.** El instituto siguiente puede ser de varios idiomas, donde cursar
+inglés y portugués a la vez es normal. El corte es una configuración por instituto —un
+`allowsConcurrentEnrollments` en `Institute`, en falso por defecto— que consulta
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts). Este cliente lo tiene apagado y el
+error se vuelve imposible; el día que aparezca el otro, se prende sin tocar código.
+
+**Alcance del cambio:**
+
+1. El campo en `Institute` y su migración.
+2. `createEnrollmentAction` rechaza la segunda inscripción activa cuando está apagado, con un mensaje
+   que mande a cambiar de curso en vez de a inscribir de nuevo.
+3. La interfaz, que hoy no distingue "mover" de "agregar". Con la bandera apagada alcanza con que el
+   rechazo explique la diferencia; con la bandera prendida hay que preguntar cuál de las dos cosas se
+   quiere hacer.
+4. Limpiar los duplicados ya generados, con el cuidado de [FIN-06](#fin-06): sólo cuotas sin ningún
+   pago.
+
+**Confirmado de paso, y cierra una duda de [FIN-12](#fin-12):** el adulto que hace dos cursos cortos
+en el mismo año tiene dos inscripciones y por lo tanto **paga dos matrículas**. Es intencional — la
+matrícula es por curso. Si el instituto quiere bonificar la segunda, aplica un descuento al cobrar,
+que es una decisión comercial y no una regla del sistema.
+
+### Corregido — 2026-08-15 · el diagnóstico era otro, y la bandera no va
+
+**Reemplaza a la decisión del 13/08 de arriba**, que queda como está para que se entienda de dónde
+salió. Las dos cosas cambiaron: la causa y el arreglo.
+
+**La causa no era esta.** La consulta de verificación que esta misma ficha pedía se corrió contra la
+base de producción el 15/08, y dio que **ningún alumno tuvo nunca más de una inscripción**, de
+cualquier estado. El índice de [FIN-06](#fin-06) sí está aplicado en esa base. Los duplicados que
+reportó el cliente salieron de otro lado: el generador mensual no ve las cuotas con `enrollmentId` en
+`null` y las vuelve a crear. Eso es [FIN-22](#fin-22), que se abrió con ese hallazgo y **es lo que
+arregla el pedido del cliente**.
+
+**Y la bandera `allowsConcurrentEnrollments` no se hace.** La decisión del 13/08 leyó de más lo que
+dijo el instituto: que *este* instituto no va a tener un alumno en dos cursos a la vez, y que otro
+podría. De ahí no se sigue que haga falta una configuración — alcanza con que **todos los institutos
+puedan**, que es el caso general y el que el modelo ya soporta. Una columna para prohibir algo que
+nadie pidió prohibir es lógica de más.
+
+Con esto se caen los puntos 1, 2 y 3 del alcance: no hay campo en `Institute`, no hay migración y
+`createEnrollmentAction` no rechaza nada. El punto 4 —limpiar los duplicados— **ya lo hizo el
+instituto con un script contra la base**, y la consulta del 15/08 confirma que no queda ninguna cuota
+mensual duplicada.
+
+**Que el sistema no lo impida es deliberado.** El instituto sostiene que no va a tener alumnos
+simultáneos; queda como acuerdo con ellos, no como regla del código. Es la misma línea que el resto
+del modelo, donde los obligatorios del negocio son opcionales en el schema.
+
+**Lo que queda abierto de esta ficha**, y no entró en el lote del 15/08: la interfaz sigue sin
+distinguir **mover** de **agregar**, que es la rama que la propia ficha anticipaba para el caso de
+"sí puede cursar dos". Con dos inscripciones activas permitidas, inscribir en el curso nuevo sin dar
+de baja el viejo genera dos cuotas por mes — que ahora es el comportamiento correcto, pero puede no
+ser el que el operador quiso. En producción no pasó nunca, así que no urge.
+
+---
+
+<a id="fin-21"></a>
+## FIN-21 · No se puede registrar un pago con fecha pasada · **P2**
+
+**Estado actual.** Los tres lugares que crean un `Payment` escriben la fecha a mano con
+`date: new Date()`: el cobro normal
+([`payments/actions.ts:119`](../src/app/payments/actions.ts)), el pago único de curso completo
+([`:374`](../src/app/payments/actions.ts)) y la aplicación de saldo a favor
+([`:969`](../src/app/payments/actions.ts)). Los asientos del libro mayor que los acompañan hacen lo
+mismo.
+
+El modelo **sí lo permite**: `Payment.date` es un campo propio con `@default(now())`, distinto de
+`createdAt`, y existe justamente para poder guardar la fecha del cobro. Lo que falta es exponerlo:
+ningún formulario de cobro tiene campo de fecha, y el código pisa el default con el momento de la
+carga. Hoy `date` y `createdAt` son siempre el mismo valor.
+
+**Dos consecuencias, ninguna cosmética.**
+
+1. **El recibo lleva la fecha de carga, no la del cobro.** El PDF imprime `data.date`, que sale de
+   `payment.date` ([`ReceiptDownloadButton.tsx:52`](../src/components/financials/ReceiptDownloadButton.tsx)).
+   Un pago recibido el viernes y cargado el lunes le llega al padre fechado el lunes.
+2. **La caja del período se corre.** El KPI "Cobrado" y la rentabilidad filtran el libro mayor por
+   fecha de asiento ([`payments/page.tsx:87`](../src/app/payments/page.tsx)), y el asiento se crea
+   con la misma fecha del sistema. Cargar con demora mueve plata de un mes al siguiente. Es la
+   explicación más probable de un futuro "los números del mes no me cierran".
+
+**Cómo apareció (2026-08-13).** Salió al revisar qué efecto tuvo [FIN-12](#fin-12) sobre los
+recibos. Las matrículas se habían cargado en febrero para que los padres vieran una fecha coherente,
+y la duda era si normalizar el mes a `ENROLLMENT_FEE_MONTH` los había roto. **No los rompió**: el
+recibo nunca miró el mes de la cuota — el concepto sale de `formatFeeLabel`, que para `ENROLLMENT`
+devuelve `Matrícula {año}` e ignora el mes, y la fecha sale del pago. Al confirmar eso quedó a la
+vista que la fecha del pago tampoco es elegible.
+
+**Cambio.** Agregar un campo de fecha opcional a los formularios de cobro y propagarlo a las tres
+creaciones **y al asiento del libro mayor**: si el pago y el asiento no llevan la misma fecha, el
+recibo y la caja dejan de coincidir, que es peor que el problema actual.
+
+Tres decisiones antes de tocar código:
+
+- **Rango admitido.** No futura. Probablemente tampoco anterior al inicio del año lectivo, para que
+  un error de tipeo no mande un cobro a 2019.
+- **Quién puede retrofechar.** Una fecha de cobro editable es una forma de maquillar la caja de un
+  período. Si la secretaria puede, conviene que quede registrado quién lo hizo — se cruza con
+  [SEC-03](#sec-03) (qué puede hacer una secretaria en lo financiero) y con
+  [ARQ-10](#arq-10) (auditoría de las acciones del panel).
+- **Qué pasa con lo ya cargado.** Los pagos existentes tienen la fecha de carga y no hay forma de
+  saber la real. No hay migración posible acá: se arregla de acá en adelante.
+
+**Relacionado.** [FIN-08](#fin-08) es el otro lado de la misma carencia de fechas: aquel es *cuándo
+vence* una cuota, este es *cuándo se cobró*. Conviene decidirlos juntos.
+
+---
+
+<a id="fin-22"></a>
+## FIN-22 · El generador mensual no ve las cuotas sin inscripción y las duplica · **P1** · 🗣️ Pedido del cliente
+
+**Es la causa real del reporte que abrió [FIN-20](#fin-20)**, y no es lo que esa ficha suponía. Salió
+al correr la consulta de verificación contra la base de producción el 2026-08-15, dentro de T4 del
+lote del fin de semana.
+
+`generateMonthlyFeesAction` ([`billingActions.ts`](../src/app/payments/billingActions.ts)) averigua
+qué cuotas ya existen así:
+
+```ts
+where: { instituteId, month, year, type: "MONTHLY", enrollmentId: { in: enrollments.map(e => e.id) } }
+```
+
+Una cuota con `enrollmentId` en `null` **no cae en ese `in`**. El generador no la ve, y crea otra del
+mismo mes atada a la inscripción. Y la restricción única de [FIN-06](#fin-06) tampoco la ataja:
+Postgres no considera iguales dos `NULL` en un índice único, así que `skipDuplicates` no tiene con
+qué comparar. El resultado es una cuota duplicada por alumno y por mes, en cada corrida.
+
+**Qué mostró la base de producción (2026-08-15).**
+
+- **Cero** alumnos con más de una inscripción, de cualquier estado. El mecanismo que suponía FIN-20
+  —dos inscripciones `ACTIVE`— no ocurrió nunca en esta base.
+- **Ocho** alumnos con cuotas `MONTHLY` sueltas: seis sin ninguna inscripción, y **Aylen Zunda** y
+  **Benjamin Rivero**, que son los dos casos reportados. A los dos los inscribieron en la app en
+  agosto teniendo ya cargadas por script las cuotas de marzo a julio, sueltas.
+- Las cuotas de agosto de los dos se crearon en la misma corrida masiva, el 10/08 a las 14:01.
+
+Los duplicados **existieron** y se borraron a mano con un script contra la base; por eso la consulta
+de hoy no los encuentra. Lo que sigue en pie es el mecanismo que los produjo.
+
+**Sigue vivo.** Los seis alumnos sin inscripción tienen cuotas sueltas de los meses 3 a 8. El día que
+los inscriban en la app, la siguiente corrida sobre cualquiera de esos meses les duplica la cuota
+igual que a los otros dos.
+
+**De dónde salen las cuotas sueltas — corregido el 2026-08-16.** La primera versión de esta ficha lo
+atribuía a la carga inicial de datos por script. Es **una** de las fuentes, pero la importante es
+otra y está en el código: **desinscribir a un alumno borra la fila de `Enrollment`**, y como la clave
+foránea es `ON DELETE SET NULL`, todas sus cuotas quedan sueltas de golpe. Eso es
+[FIN-23](#fin-23).
+
+Con eso el caso reportado se reconstruye entero, y ya no hace falta suponer nada: al alumno lo sacan
+del curso viejo —se le sueltan las cuotas, incluidas las de meses ya cobrados— y lo inscriben en el
+nuevo; la siguiente corrida del generador no ve las sueltas y emite otra vez la del mes. Nunca
+existieron dos inscripciones, que es lo que la consulta contra producción mostró y lo que hacía
+incomprensible el reporte.
+
+**Cambio.** Que la corrida traiga también las cuotas sueltas —`enrollmentId: null`, mismo período y
+tipo— de los alumnos alcanzados, y que el alumno que tenga una **quede afuera de la generación**, con
+su cuenta aparte en el resultado para que el operador lo vea.
+
+**Y que no las vincule al pasar.** Es la decisión de fondo de esta ficha, y va en contra de lo que
+parece más servicial:
+
+- Con dos inscripciones activas legítimas —que desde la decisión del 2026-08-15 en
+  [FIN-20](#fin-20) puede tener cualquier instituto— **no hay forma de saber de cuál de las dos es
+  la cuota suelta**. Vincularla sería adivinar, y con plata cobrada adentro.
+- Un generador masivo que reescribe el historial mientras corre es exactamente la forma del incidente
+  del 13/08. El generador tiene que dejar de duplicar y avisar; **vincular es normalizar**, y eso se
+  hace una vez, mirando las filas, fuera de una corrida masiva.
+
+**No lleva migración.** El índice de FIN-06 se queda como está.
+
+**Relacionado.** [FIN-20](#fin-20) (de donde salió, y que queda reducida a la interfaz de mover vs.
+agregar), [FIN-16](#fin-16) (los otros huecos de la misma función), [FIN-06](#fin-06) (el patrón
+"consultar y después crear", del que esto es otro caso), [FIN-18](#fin-18) (las matrículas sueltas,
+que son el mismo desprendimiento del lado de la matrícula).
+
+### Hecho — 2026-08-16 · `6889995`
+
+La corrida trae también las cuotas sueltas del período y deja afuera a esos alumnos, devolviendo
+`skipped` para que el botón de generar lo muestre en un aviso aparte. No las vincula.
+
+**Verificado contra la base de producción** simulando la lógica nueva sobre los datos reales, antes y
+después: volver a generar cualquier mes de marzo a julio creaba **2** cuotas duplicadas —Aylen Zunda
+y Benjamin Rivero— y con el cambio crea **0**. Agosto y septiembre daban 0 en los dos casos.
+
+**Y verificado en stage con el botón, sobre el código desplegado — 2026-08-16.** La consulta no puede
+ejercitar la server action, así que se armó el caso a mano:
+
+| Paso | Qué se hizo |
+|---|---|
+| Control | Generar Agosto 2026 con todo normal → *"Se generaron 0 cuotas"*, sin aviso |
+| Preparación | A una de las 5 cuotas de agosto se le puso `enrollmentId = NULL` por SQL, que es lo que provoca hoy desinscribir a un alumno |
+| Predicción | Medida antes de correr: el código **viejo** crearía **1** duplicada; el nuevo dejaría **1** alumno afuera |
+| Resultado | **5** cuotas de agosto y **0** alumnos con duplicado — corriendo el generador **dos veces**. Con el código viejo habrían sido 6 y 1 |
+| Aviso | El cartel amarillo *"1 alumno quedó afuera…"* aparece. Confirmado en pantalla |
+| Restauración | La cuota volvió a su `enrollmentId` original. Stage quedó idéntico a antes: 2/6/6/6/5 cuotas por mes, 0 sueltas, 0 duplicados |
+
+**De paso quedó a la vista algo que no es de esta ficha:** el `confirm()` pelado del botón de generar
+bloquea el hilo de la página. Además de impedir que la confirmación explique nada, cuelga cualquier
+automatización del navegador hasta que una persona lo acepta a mano.
+
+**Queda pendiente y no es de esta ficha:** las cuotas sueltas siguen sueltas. Normalizarlas es
+trabajo de datos, no de código — ver «Aparecido durante el lote» en
+[`tareas/lote-finde-2026-08-15.md`](../tareas/lote-finde-2026-08-15.md).
+
+---
+
+<a id="fin-23"></a>
+## FIN-23 · Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas · **P1**
+
+**Es de dónde salen las cuotas sueltas de [FIN-22](#fin-22)**, y explica el caso que el instituto no
+podía reconstruir: por qué aparecían duplicados sin que ningún alumno tuviera dos inscripciones.
+
+[`removeStudentFromCourseAction`](../src/app/courses/actions.ts) —el botón de desinscribir del
+listado del curso— **borra la fila de `Enrollment`**:
+
+```ts
+// Hard-delete: used for errors
+await prisma.enrollment.delete({ where: { id: enrollmentId } });
+```
+
+Y la clave foránea de `Fee` es `ON DELETE SET NULL` — verificado el 2026-08-16 sobre la base de
+producción, no sólo en el schema:
+
+```
+Fee_enrollmentId_fkey → SET NULL
+Fee_studentId_fkey    → RESTRICT
+```
+
+**Al borrar la inscripción, todas sus cuotas quedan con `enrollmentId` en `null`.** Las impagas y las
+pagas por igual, en silencio, sin aviso ni confirmación. Las cuotas sobreviven —eso lo garantiza el
+`RESTRICT` de `studentId`— pero **pierden de qué curso eran**.
+
+**Qué se pierde con la fila.** No es sólo el vínculo: la inscripción tiene `billingMode`,
+`customMonthlyPrice`, `customEnrollmentPrice`, `customExamPrice`, `customFullCoursePrice` y
+`takesExam`. Al alumno con beca o precio propio, desinscribirlo le borra la beca sin dejar rastro.
+
+**Y después duplica.** Con las cuotas sueltas, el generador mensual las creaba de nuevo — eso es
+[FIN-22](#fin-22), ya arreglado en `6889995`, así que **el duplicado ya no ocurre**. Lo que sigue
+ocurriendo es el desprendimiento: mover un alumno de curso por desinscribir + inscribir le suelta el
+historial, y desde FIN-22 además lo deja **afuera de la generación** hasta que alguien normalice sus
+cuotas a mano. El síntoma cambió de "cuota duplicada" a "cuota que no se generó", que es mejor pero
+no es correcto.
+
+**Contradice la regla del proyecto**, que es **borrado lógico siempre**. Y el camino lógico ya
+existe: `Enrollment.status` admite `ACTIVE`, `FINISHED` e `INCOMPLETE`, y
+[`markEnrollmentIncompleteAction`](../src/app/courses/actions.ts) —en el mismo archivo, treinta
+líneas más abajo— hace exactamente eso sin borrar nada. El `delete` quedó de cuando la acción era
+para deshacer un error de carga, que es lo que dice su comentario; pero es el botón que tiene el
+operador para sacar a un alumno de un curso, y lo usa para mover gente.
+
+**Y no es sólo el `delete`: los dos caminos no compiten de igual a igual.** Verificado el 2026-08-16.
+El permiso no es el problema —las dos acciones admiten `ADMIN` y `SECRETARY`, y la secretaria, que es
+quien más mueve alumnos, ve las dos—. El problema es dónde están y cómo se ven:
+
+| | «Cambiar curso» (el bueno) | «Eliminar inscripción» (el que rompe) |
+|---|---|---|
+| **Pantalla** | Ficha del alumno, tarjeta de la inscripción | Listado del curso, fila del alumno |
+| **Aspecto** | Un ícono de lápiz de 14 px, **sin etiqueta** | Ícono de tacho rojo, **oculto hasta pasar el mouse** en escritorio |
+| **Qué anuncia** | Sólo el `title="Cambiar de curso"` | `title="Eliminar inscripción (Error de carga)"` |
+| **Confirmación** | Modal con curso actual y destino | "¿Eliminar? / Confirmar" en línea, **sin decir qué se lleva** |
+
+Quien piensa "muevo a este alumno del curso x al z" abre **el curso**, que es donde está la lista de
+alumnos — y ahí el único botón que saca a alguien es el que borra. El camino bueno está en otra
+pantalla y no se anuncia. El resultado es el que se vio en producción.
+
+**Lo barato de esto**, y conviene hacerlo aunque el `delete` se arregle: ponerle etiqueta al botón de
+cambiar curso, para que el camino sano se encuentre. **Hecho el 2026-08-16**, y **verificado en
+stage**: el botón se lee «✏️ Cambiar curso» debajo del badge de estado, en la tarjeta de la
+inscripción, sin romper el ancho de la tarjeta.
+
+**Lo que NO se hace: avisar en la confirmación de eliminar que las cuotas quedan sin curso.** Se
+descartó a propósito. Un cartel que advierte sobre una consecuencia contable le traslada la decisión
+al operador, y esa decisión no es suya: la secretaria saca a un alumno de un curso, no elige qué pasa
+con la caja. Documentar el defecto no es arreglarlo. El criterio está escrito en [FIN-24](#fin-24), y
+lo que corresponde acá es que el borrado deje de perder cosas — que es esta ficha.
+
+**Y lo que lo cierra de verdad, para más adelante (pedido el 2026-08-16):** llevar el botón de
+cambiar curso **también al listado del curso**, al lado del de eliminar. Es la pantalla donde el
+operador ya está parado cuando piensa "muevo a este alumno", y hoy es la única de las dos que no le
+ofrece el camino bueno. Con los dos botones juntos, la decisión se toma mirando las dos opciones en
+vez de eligiendo la única que hay a mano. El modal
+([`ChangeCourseModal`](../src/app/students/[id]/components/ChangeCourseModal.tsx)) ya es un componente
+cliente autónomo: recibe `enrollmentId`, el curso actual y la lista de cursos, así que se monta ahí
+sin tocar su lógica. Lo que hay que resolver es de dónde saca la lista de cursos disponibles esa
+página, que hoy no la carga.
+
+### Por qué la cuota no debería quedar suelta, y cuál de los tres caminos — 2026-08-16
+
+Una cuota suelta no es sólo una cuota sin curso: es una cuota **sin dueño**. No sale en el listado del
+curso, el recibo no puede nombrar de qué curso era, el generador la saltea desde [FIN-22](#fin-22)
+—mejor que duplicarla, pero tampoco correcto— y si el alumno tenía precio propio, ese precio se fue
+con la inscripción y no se puede reconstruir.
+
+| | Qué hace | Costo |
+|---|---|---|
+| **A · No borrar la inscripción** | Se le pone un estado. La cuota sigue colgada de ella y la inscripción del curso | Chico: el camino ya existe |
+| **B · Guardar el curso en la cuota** | Un `courseId` propio en `Fee` | Migración, backfill y un dato duplicado que puede contradecir a la inscripción |
+| **C · Que la base no deje borrar** | La clave foránea pasa de `SET NULL` a `RESTRICT` | Migración chica, pero hay que reordenar el purgado |
+
+**Va A, y B se descarta.** La inscripción **es** el vínculo con el curso: mientras exista, la cuota
+sabe de qué curso es, a qué precio y con qué condiciones. Un `courseId` en `Fee` guarda dos veces el
+mismo dato, y se contradicen solos en cuanto alguien cambie de curso —`changeStudentCourseAction`
+reasigna el `courseId` de la inscripción y el de las cuotas viejas no—, con lo que habría que decidir
+a cuál creerle. Es más deuda, no menos.
+
+**A arrastra una decisión, y es la que muerde.** `Enrollment` tiene `@@unique([studentId, courseId])`.
+Si la inscripción deja de borrarse, el día que el alumno **vuelva al mismo curso** el alta falla con
+*"El estudiante ya se encuentra inscripto en este curso"*. Hoy no pasa porque el borrado la hace
+desaparecer. La salida limpia: que [`createEnrollmentAction`](../src/app/enrollments/actions.ts)
+**reactive** la inscripción cerrada en vez de crear otra. Es lo correcto además de lo cómodo —mismo
+alumno y mismo curso es la misma inscripción— y así se conservan sus cuotas.
+
+**C sirve como red mientras A se decide**, y encima codifica en la base la regla que se quería: sólo
+se puede borrar una inscripción sin cuotas.
+
+**Ojo con la purga, que hoy depende de este mismo defecto.**
+[`hardDeleteStudentAction`](../src/app/students/[id]/actions.ts) borra las inscripciones **antes** que las
+cuotas, y le funciona **porque** el `SET NULL` las desvincula sola en el camino. Con `RESTRICT` ese
+paso empieza a fallar; el arreglo es mover una línea, borrar las cuotas primero. Esa función además
+ya está rota por otros tres `RESTRICT` que no contempla — ver [ARQ-14](#arq-14), que salió de acá.
+
+**Cambio.** Que desinscribir marque la inscripción en vez de borrarla. Hay que decidir dos cosas:
+
+- **Qué estado le corresponde** a "lo saqué del curso": `INCOMPLETE` es el que más se le parece, pero
+  hoy significa "no terminó el curso", que no es lo mismo que "lo movimos".
+- **Qué pasa con el error de carga real** —inscribí al alumno equivocado hace cinco minutos, sin
+  cuotas emitidas—, que es para lo que la acción se escribió. Puede seguir borrando si la inscripción
+  no tiene ninguna cuota asociada, que es verificable en el momento, y que es exactamente lo que
+  impone el camino **C**.
+
+**El otro `delete` no es este problema.**
+[`hardDeleteStudentAction`](../src/app/students/[id]/actions.ts) también borra inscripciones, pero borra
+además las cuotas y al alumno, detrás de un permiso propio: es una purga deliberada, no un efecto
+colateral.
+
+### Hecho — 2026-08-16 · con un punto abierto
+
+Entró el camino **A + C** completo:
+
+- `Fee.enrollment` pasa a `onDelete: Restrict`, con su migración
+  (`20260816120000_restrict_fee_enrollment_delete`). **No toca ninguna fila**: `RESTRICT` sólo actúa
+  sobre borrados futuros, y las cuotas ya sueltas no lo violan.
+- `removeStudentFromCourseAction` verifica antes y explica qué hacer en su lugar, para que el
+  operador no se coma el error crudo de la base.
+- `hardDeleteStudentAction` borra las cuotas **antes** que las inscripciones, que es lo que ese orden
+  necesitaba para sobrevivir al cambio (ver [ARQ-14](#arq-14)).
+- `createEnrollmentAction` **reactiva** la inscripción cerrada en lugar de fallar contra el índice
+  único, así el alumno puede volver a un curso del que salió — y vuelve con sus cuotas, su precio
+  propio y su modalidad. Si la inscripción reactivada ya tiene la matrícula del año, no se le emite
+  otra.
+
+**El punto abierto, que salió al medir el efecto sobre datos reales.** La regla quedó en "no se borra
+si tiene **alguna** cuota", y eso **deja sin salida al error de carga**, que era el caso para el que
+la acción existía:
+
+- Las **206** inscripciones de producción tienen cuotas. Ninguna se puede borrar más. Correcto y
+  buscado.
+- Pero **27 de los 31 cursos activos** tienen matrícula mayor a cero, y `createEnrollmentAction`
+  emite esa cuota **en el mismo acto de inscribir**. O sea que una inscripción cargada por error nace
+  con una cuota y ya no se puede deshacer, ni un minuto después.
+
+Dos salidas, y es decisión de negocio:
+
+1. **Dejarlo así.** El error de carga se resuelve marcando la inscripción, no borrándola. Queda una
+   inscripción cerrada y una matrícula impaga que hay que anular aparte. Es lo más conservador y no
+   pierde nada, pero deja basura visible por cada error.
+2. **Afinar la regla a "no se borra si tiene cuotas con pagos".** Si las cuotas están todas en cero,
+   se borran junto con la inscripción en la misma transacción. Es lo que de verdad significa deshacer
+   un error de carga —no hay plata de por medio— y el criterio es el mismo de [FIN-06](#fin-06) y
+   `deleteFeeAction`. **Contra:** borra cuotas físicamente, y eso choca con la política de borrado
+   lógico, salvo que se lo entienda como lo que es: deshacer, dentro de la misma operación, algo que
+   el sistema acababa de crear solo.
+
+**Recomendación: la 2**, y que el borrado deje su rastro por [FEAT-10](#feat-10) cuando esa pantalla
+exista.
+
+### Verificado en stage — 2026-08-16
+
+La migración se aplicó sola con el despliegue, a las 20:13 UTC, **sin rollback y sin tocar ninguna
+fila**: 7 alumnos, 6 inscripciones, 38 cuotas, 0 sueltas y 9 pagos, antes y después. Las tres claves
+foráneas quedaron como se buscaba:
+
+```
+Fee_enrollmentId_fkey → ON DELETE RESTRICT   (era SET NULL)
+Fee_studentId_fkey    → ON DELETE RESTRICT
+Payment_feeId_fkey    → ON DELETE RESTRICT
+```
+
+**Probado el rechazo, que es la mitad importante.** Sobre una inscripción con 7 cuotas y 5 pagos, el
+tacho del listado del curso **no borró nada**: la inscripción y sus cuotas siguen enteras. Es la
+garantía que se buscaba — con plata cobrada de por medio, no hay camino que suelte ni borre.
+
+**Y probado el borrado que sí procede.** Sobre una inscripción con 6 cuotas —5 mensuales y la
+matrícula— y **ningún pago**, con el resultado anotado antes de apretar:
+
+| | Daría el código viejo | Predicción del nuevo | Resultado |
+|---|---|---|---|
+| Inscripciones | 5 | 5 | **5** |
+| Cuotas totales | 38 | 32 | **32** |
+| **Cuotas sueltas** | **6** | **0** | **0** |
+| Pagos | 9 | 9 | **9** |
+
+La inscripción y sus seis cuotas se borraron juntas y **no quedó ninguna cuota huérfana**, que es
+justamente lo que el `SET NULL` habría producido. Las dos mitades de la regla quedan verificadas
+sobre el código desplegado: con pagos no se borra, sin pagos se borra entero y limpio.
+
+### Resuelto el punto abierto — 2026-08-16 · va la opción 2
+
+El corte pasa a ser **el pago, no la cuota**: se rechaza si alguna cuota tiene filas de `Payment`, y
+si no, las cuotas se borran junto con la inscripción en una transacción. Se pregunta por filas de
+`Payment` y no por `paidAmount` porque es el criterio de [FIN-06](#fin-06) y porque un pago anulado
+deja la cuota en cero con la fila viva, que es justo lo que haría fallar a `Payment_feeId_fkey`.
+
+**Y queda un riesgo abierto que conviene mirar de frente**, porque la regla es más ancha de lo que
+sugiere el nombre "error de carga":
+
+> Un alumno **deudor** —cinco cuotas impagas, ningún pago— cumple la condición. Apretar el tacho le
+> borra la inscripción **y la deuda**, en silencio. No es lo que la acción quiere hacer, pero es lo
+> que permite.
+
+Marcar la inscripción como incompleta es lo correcto en ese caso y ya existe, pero **nada obliga a
+elegirlo**. Tres formas de cerrarlo, para decidir más adelante:
+
+- **Que deje rastro.** Cuando exista [FEAT-10](#feat-10), que este borrado escriba en `FeeDeletion`
+  igual que `deleteFeeAction`, con motivo obligatorio. Es lo más barato y lo que más sirve: no
+  impide, pero nada se pierde sin dejar quién y por qué. **Es la salida recomendada.**
+- **Acotar por antigüedad o por tipo** —por ejemplo, permitir sólo si la inscripción no tiene cuotas
+  `MONTHLY`—, con lo que el error de carga sigue funcionando y el deudor queda afuera. Más estrecho,
+  pero la regla se vuelve difícil de explicar.
+- **Restringir quién puede.** Hoy la acción admite `ADMIN` y `SECRETARY`. Borrar una deuda es una
+  decisión de plata; se cruza con [SEC-03](#sec-03).
+
+No se cerró ahora porque las tres dependen de decisiones que exceden esta ficha, y porque **el daño
+grave ya está tapado**: nada con plata cobrada se puede borrar, ni por este camino ni por ninguno.
+
+**Relacionado.** [FIN-22](#fin-22) (el duplicado que esto causaba), [FIN-20](#fin-20) (el diagnóstico
+que buscaba dos inscripciones donde en realidad había una borrada), [ARQ-05](#arq-05) (interfaz para
+restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento),
+[FIN-24](#fin-24) (qué pasa con las cuotas al mover de curso, que es la decisión que el sistema
+todavía no toma).
+
+---
+
+<a id="fin-24"></a>
+## FIN-24 · Cambiar de curso no define qué pasa con las cuotas · **P2**
+
+> **El criterio que abre esta ficha, y que vale más allá de ella (2026-08-16).** Las consecuencias
+> contables las tiene que contemplar el sistema —permitiéndolas o limitándolas—, no quien aprieta el
+> botón. La secretaria mueve alumnos; no decide sobre la caja del instituto. Cuando un texto de
+> interfaz le pide a un operador que entienda una consecuencia contable, lo que falta no es el texto:
+> **es la regla.** Un cartel que avisa de un efecto raro es un defecto documentado, no resuelto.
+
+[`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) hace exactamente una cosa:
+
+```ts
+await prisma.enrollment.update({ where: { id: enrollmentId }, data: { courseId: newCourseId } });
+```
+
+Está bien que no borre nada —es el camino sano, y el que [FIN-23](#fin-23) quiere que se use—, pero
+**no decide nada sobre la plata**, y hay cuatro consecuencias que hoy ocurren solas:
+
+1. **Las cuotas ya emitidas quedan con el precio del curso viejo.** Mover a alguien de un curso de
+   $42.000 a uno de $65.000 a mitad de mes deja ese mes cobrado al precio viejo. Nadie eligió eso.
+2. **Y encima pasan a mostrarse como del curso nuevo.** La cuota cuelga de la inscripción, y la
+   inscripción ahora apunta al otro curso: una cuota de marzo del curso x aparece como del curso z.
+   El importe no miente, pero la etiqueta sí.
+3. **El precio propio se muda con el alumno.** `customMonthlyPrice` está en la inscripción, no en el
+   curso: una beca acordada para el curso x se le aplica al z en silencio, sin que nadie la vuelva a
+   aprobar.
+4. **`billingMode` también.** Una inscripción `FULL_COURSE` —el alumno pagó el curso x entero por
+   adelantado— movida al curso z sigue diciendo que está paga entera. Es el caso más caro de los
+   cuatro y el menos visible.
+
+**Ninguna de las cuatro tiene hoy una regla.** Son el resultado de que la acción actualiza un campo y
+nada más.
+
+**Qué hay que decidir**, y es de negocio:
+
+- **Las cuotas pagas no se tocan nunca.** Eso no debería estar en discusión: son historia y hay un
+  recibo emitido. Lo que sí falta es que la cuota recuerde de qué curso era, para que el punto 2 deje
+  de pasar.
+- **La cuota impaga del mes del movimiento**: ¿se reprecia al curso nuevo o se respeta la emitida? Las
+  dos son defendibles. Respetar la emitida es más predecible —lo que se comunicó se cobra— y
+  repreciarla es más exacto. **Recomendación: respetar la emitida, y que el cambio rija desde la
+  generación siguiente**, que es la regla más fácil de explicarle a un padre.
+- **El precio propio y el `billingMode`**: al mover de curso, el sistema tiene que **preguntar o
+  limpiar**, no arrastrar. Arrastrar es la única de las tres opciones que nadie eligió.
+
+**Recomendación de forma.** Que el modal de cambiar curso muestre el efecto ya resuelto —"las cuotas
+emitidas se conservan; desde el mes que viene se cobra $X"— en vez de advertir sobre consecuencias.
+La diferencia con un cartel de advertencia es que acá el sistema ya decidió y sólo informa.
+
+### Decidido — 2026-08-16
+
+**1 · La cuota emitida no se toca, venga del curso que venga.** El motivo cierra la discusión mejor
+que cualquier argumento de diseño: **se factura en un país con inflación**, y las cuotas de un mismo
+curso ya cambian de valor cada dos o tres meses. El precio de una cuota **nunca** fue "el precio
+actual del curso": es el precio del momento en que se emitió. Repreciarla al mover de curso sería
+inconsistente con cómo funcionan los precios desde siempre. Que el importe venga del curso anterior o
+del actual no es el eje.
+
+**2 · Que la cuota recuerde su curso — decidido, va.** Es la consecuencia directa de la
+decisión 1: si la cuota es la foto de lo que se acordó, tiene que ser la foto **completa**. Hoy
+congela el importe pero el curso se lo pide prestado a la inscripción, que es justamente el dato que
+cambia; por eso una cuota de marzo del curso x pasa a mostrarse como del curso z.
+
+> **Confirmado el 2026-08-16, y con la forma que se quiere ver:** al mover un alumno de curso, en su
+> ficha tiene que poder verse que **la matrícula y las primeras cuotas son de un curso y las nuevas
+> de otro**. No es sólo corregir una etiqueta equivocada: es que el historial cuente la trayectoria
+> del alumno por el instituto, que es lo que alguien busca cuando abre esa ficha.
+>
+> El campo va en `Fee` y se escribe **al emitir**; los cambios de curso posteriores no lo tocan. La
+> matrícula anticipada nace sin curso —todavía no se sabe cuál— y lo recibe cuando la inscripción la
+> consume. **De paso cierra [FIN-19](#fin-19)**, que es el mismo problema visto desde las dos
+> matrículas del mismo año que se ven idénticas.
+
+> **Corrección a lo escrito en [FIN-23](#fin-23):** ahí se descartó guardar el curso en `Fee` por
+> considerarlo un dato duplicado. Con la decisión 1 adelante, **no lo es**: son dos hechos distintos.
+> La inscripción dice *dónde está el alumno hoy*; la cuota tiene que decir *qué se cobró y por qué
+> curso*. Lo que sigue valiendo de FIN-23 es lo otro: la inscripción no se borra. Las dos cosas
+> conviven.
+
+**3 · La beca se muda con el alumno, y está bien — pero tiene que verse.** `customMonthlyPrice`
+**no se muestra hoy en ninguna pantalla**: sólo se usa para calcular. Un alumno con beca es
+indistinguible de uno sin beca para quien está frente a la pantalla, y depende de que alguien se
+acuerde. Va badge → [FIN-25](#fin-25).
+
+**4 · `FULL_COURSE` también se mantiene al mover, y también tiene que verse.** Que el alumno que pagó
+el curso entero lo siga teniendo pago es lo correcto. El badge `💎 Pago Único 100%` existe, pero
+**sólo en la ficha del alumno**: no está en el listado del curso, ni en deudores, ni en cobros →
+[FIN-25](#fin-25).
+
+Lo que queda abierto de este punto es la plata: mover a alguien de un curso pago entero a otro de
+distinto precio deja una diferencia a favor o en contra, y hoy no hay dónde resolverla →
+[FIN-26](#fin-26).
+
+**Cómo apareció (2026-08-16).** Al etiquetar el botón de cambiar curso en [FIN-23](#fin-23), el
+tooltip decía "conservando sus cuotas". Se sacó: le pedía a la secretaria que entendiera una
+consecuencia contable que el sistema no contempla. La ficha es el otro lado de ese texto borrado.
+
+**Relacionado.** [FIN-23](#fin-23) (de donde salió), [FIN-19](#fin-19) (dos matrículas del mismo año
+se ven idénticas — el mismo problema de que la cuota no dice de qué curso es), [FIN-20](#fin-20) (que
+ya anotaba el precio del curso viejo como "otra discusión": es esta), [FIN-25](#fin-25) y
+[FIN-26](#fin-26), que salieron de sus decisiones.
+
+---
+
+<a id="fin-25"></a>
+## FIN-25 · Las condiciones especiales de una inscripción no se ven · **P2**
+
+Sale de las decisiones 3 y 4 de [FIN-24](#fin-24). Una inscripción puede tener condiciones que
+cambian lo que el alumno paga, y **quien está frente a la pantalla no las ve**: dependen de que
+alguien se acuerde.
+
+| Condición | Dónde vive | Dónde se ve hoy |
+|---|---|---|
+| **Beca / precio propio** | `Enrollment.customMonthlyPrice` | **En ningún lado.** Verificado el 2026-08-16: sólo se lee en [`billingActions.ts`](../src/app/payments/billingActions.ts) para calcular. Ninguna pantalla la muestra |
+| **Curso completo pago** | `Enrollment.billingMode = FULL_COURSE` | Sólo en la ficha del alumno (`💎 Pago Único 100%`, [`students/[id]/page.tsx`](../src/app/students/[id]/page.tsx)). No en el listado del curso, ni en deudores, ni en cobros |
+| Matrícula propia, examen propio | `customEnrollmentPrice`, `customExamPrice` | En ningún lado |
+
+**Por qué importa más desde [FIN-24](#fin-24).** Las dos condiciones **se mudan con el alumno** cuando
+cambia de curso, y se decidió que está bien que así sea. Pero una condición que viaja sola y no se ve
+es una condición que nadie vuelve a aprobar: la beca acordada para un curso termina aplicada a otro
+sin que aparezca en ninguna pantalla.
+
+**Cambio.** Un badge en la inscripción, con el mismo criterio que el de `FULL_COURSE` que ya existe, y
+llevarlo a **las pantallas donde se decide sobre plata**: el listado del curso, el reporte de
+deudores y el selector de cobro. En la beca, el badge tiene que decir el importe —"Beca $X"—, porque
+saber que tiene beca sin saber de cuánto no alcanza para cobrar.
+
+**Cuidado con quién lo ve.** El precio propio de un alumno es un dato sensible entre compañeros. El
+badge va en las pantallas administrativas; conviene revisar que no se filtre a las del alumno o el
+tutor antes de sumarlo en cualquier lado.
+
+**Relacionado.** [FIN-24](#fin-24) (de donde sale), [FIN-13](#fin-13) (no se ve quién aplicó un
+descuento ni por qué — el mismo hueco, del lado del cobro puntual).
+
+---
+
+<a id="fin-26"></a>
+## FIN-26 · No hay dónde conciliar una diferencia de plata a favor del alumno · **P2**
+
+**Pedido (2026-08-16).** Sale de la decisión 4 de [FIN-24](#fin-24), y el caso que lo dispara es
+mover a un alumno que pagó el curso completo a otro curso de distinto precio: queda una diferencia, y
+hoy **no hay ninguna pantalla donde resolverla**.
+
+La diferencia puede ir para cualquiera de los dos lados y tiene tres salidas posibles, todas
+legítimas y todas decisión del instituto:
+
+1. **Devolverle la plata** al alumno.
+2. **Que pague la diferencia** para completar el curso nuevo.
+3. **Bonificársela**, aplicando la diferencia como descuento.
+
+Ninguna de las tres existe hoy como operación. La única herramienta cercana es el saldo a favor, que
+resuelve el caso 1 a medias —y cuya anulación recién se destraba con [FIN-11](#fin-11)—, pero no
+contempla ni la bonificación ni el cobro de la diferencia como concepto propio.
+
+**Qué hay que definir antes de programar nada.**
+
+- **Dónde vive.** El pedido es que se haga **desde finanzas**, no desde la ficha del alumno: es una
+  decisión de plata, y es del dueño. Encaja con el criterio de [FIN-24](#fin-24).
+- **Qué deja escrito.** Las tres salidas mueven plata y por lo tanto tienen que dejar asiento en el
+  libro mayor, con el motivo. Una bonificación sin motivo registrado es un descuento que nadie puede
+  explicar después — es el mismo problema que anota [FIN-13](#fin-13).
+- **Quién puede.** Bonificar y devolver plata no es lo mismo que cobrar. Se cruza con
+  [SEC-03](#sec-03), que ya separó qué puede hacer una secretaria en lo financiero.
+
+**No es sólo el cambio de curso.** La misma carencia aparece cada vez que hay que devolver o
+compensar: un alumno que se va a mitad de año habiendo pagado de más, un cobro duplicado, una cuota
+emitida de más. Conviene resolverlo como "conciliación", no como "el caso del cambio de curso".
+
+**Un cuarto caso, agregado el 2026-08-16: perdonar la deuda del que vuelve.** El alumno que se fue
+debiendo va a la papelera con su deuda; cuando vuelve y se lo restaura, la deuda reaparece y el
+instituto **decide si se la perdona o se la cobra** (ver [FIN-09](#fin-09)). Perdonarla es la salida
+3 de esta ficha —bonificar— aplicada a cuotas viejas, y hoy la única forma de hacerlo es borrar las
+cuotas, que borra también el registro de que existieron. Es el caso que más claramente necesita que
+la operación deje asiento y motivo.
+
+**Relacionado.** [FIN-24](#fin-24) (de donde sale), [FIN-11](#fin-11) (anular una aplicación de saldo
+a favor, la herramienta más cercana que existe), [FIN-13](#fin-13) (descuentos sin motivo
+registrado), [SEC-03](#sec-03) (qué puede hacer la secretaría con la plata).
+
+---
+
+<a id="fin-27"></a>
+## FIN-27 · «Usar Saldo» deja el formulario armado para un cobro que nadie hizo · **P1**
+
+**Apareció el 2026-08-17**, reproduciendo [FIN-11](#fin-11) en stage. No lo encontró una auditoría del
+código: lo pisó el operador, en el segundo intento de seguir un instructivo.
+
+**El hueco.** Al aplicar un saldo a favor,
+[`RegisterFeeForm.tsx`](../src/app/payments/components/RegisterFeeForm.tsx) hacía tres cosas mal
+seguidas: mostraba **«Pago registrado exitosamente»** —reusa el estado `success` del cobro normal, así
+que afirma algo que no pasó—, recargaba las cuotas pendientes y **auto-seleccionaba la siguiente**, con
+el `useEffect` cargándole el importe adeudado. El formulario quedaba completo bajo un botón que dice
+**«Confirmar Ingreso (+)»**.
+
+**Un clic de más asienta un cobro en efectivo que nunca ocurrió.** Pasó exactamente así: diez segundos
+después de aplicar el saldo había **$15.000 de ingreso inventado** sobre una cuota de junio que nadie
+había pagado. Se detectó por la base, no por la pantalla — porque en la pantalla se ve como un cobro
+normal y correcto.
+
+**Es peor que el problema que estaba reproduciendo.** [FIN-11](#fin-11) traba al operador; esto le
+fabrica plata en la caja, en silencio, y el error queda indistinguible de un cobro legítimo salvo que
+alguien recuerde que ese alumno no pagó.
+
+**Cambio.** Un estado propio para la aplicación de saldo, con su mensaje: qué importe y a qué cuota,
+más la aclaración de que **no ingresó dinero** porque ese saldo ya se había cobrado, y dónde se anula.
+Y soltar al alumno: el formulario queda vacío, no armado sobre otra cuota. De paso, el armado de la
+etiqueta de una cuota salió a una función (`feeLabel`), que el `<select>` y el mensaje comparten.
+
+**Commit.** `3b27801`.
+
+**Verificado en stage el 2026-08-17.** El cartel es el nuevo y el formulario queda vacío.
+
+### Pendiente — 2026-08-17 · el arreglo se pasó de seguro, y hay un punto medio
+
+Al vaciar el formulario, pagar **lo que falta** de una cuota que el saldo cubrió sólo en parte obliga a
+**volver a buscar al alumno**. Reportado por el instituto al ejercitar el caso mixto: aplicó $10.000 de
+saldo a una cuota de $15.000 y tuvo que rehacer la búsqueda para cobrar los $5.000.
+
+**El peligro nunca fue que el formulario quedara cargado: era que quedaba cargado sobre *otra* cuota**,
+una que nadie pensaba pagar. Que quede cargado sobre **la misma cuota que se acaba de tocar**, con el
+saldo restante, no tiene ese problema — se confirma exactamente lo que se está mirando.
+
+**Cambio propuesto**, unas seis líneas: si el saldo **cubrió** la cuota, limpiar todo como ahora; si
+quedó **parcial**, conservar alumno y cuota, con el importe en lo que falta y el cartel diciendo
+*"aplicado $10.000, quedan $5.000"*. `getStudentPendingFeesAction` ya devuelve las `PARTIAL` y el
+importe se recalcula solo como deuda menos pagado: lo único que falta es que `loadFees` pueda conservar
+la cuota elegida en vez de saltar siempre a la primera.
+
+**No entró el 17/08** por agenda: quedaban T5, T6 y T7 del lote.
+
+**Relacionado.** [FIN-11](#fin-11) (de donde salió), [FIN-01](#fin-01) y [FIN-02](#fin-02) (la
+mecánica del saldo a favor), [FEAT-14](#feat-14) (el carrito, que se lleva puesto todo este flujo).
+
+---
+
+<a id="fin-28"></a>
+## FIN-28 · La fecha de inicio del curso es opcional, y sin ella el curso no tiene año · **P3 hoy · P1 en noviembre**
+
+**Apareció el 2026-08-17**, al terminar [FIN-14](#fin-14). Salió de una pregunta del dueño y no de una
+auditoría: *"¿el administrador puede en diciembre crear los cursos del año próximo, si los cursos que
+cree en diciembre van a ser de este año?"*
+
+**Puede**, y esa parte está bien: el año del curso lo da el campo **Fecha de Inicio** del alta
+([`CourseForm.tsx:163`](../src/app/courses/new/CourseForm.tsx)), no el momento en que se crea. Un curso
+dado de alta en diciembre de 2026 con fecha 09/03/2027 es un curso de 2027.
+
+**El hueco es que ese campo es opcional.** Arranca vacío, no tiene `required`, no lo valida el
+formulario ni la acción del servidor —[`courses/actions.ts:41`](../src/app/courses/actions.ts) hace
+`startDateStr ? new Date(startDateStr) : null`—, y la etiqueta no dice "Opcional" como sí lo dice la de
+Fecha de Fin. El mismo patrón está en el alta y en la edición
+([`EditCourseModal.tsx:77`](../src/app/courses/components/EditCourseModal.tsx)).
+
+**Dos consecuencias, y la segunda es la de fondo:**
+
+1. **El caso puntual.** Si en diciembre se crean los cursos de 2027 sin fecha, la generación masiva de
+   matrículas de 2027 no los alcanza y muestra *"Todavía no hay cursos que empiecen en 2027"* con los
+   cursos recién creados en pantalla. El operador no tiene forma de entender por qué.
+2. **Un curso sin fecha no tiene año propio: tiene el año de hoy.** Todo el sistema lo trata como del
+   año en curso —[`createEnrollmentAction`](../src/app/enrollments/actions.ts) para el año lectivo de
+   la matrícula, y el filtro de FIN-14—, así que **el 1 de enero cambia de año solo**, sin que nadie lo
+   toque. Una matrícula emitida en diciembre y una emitida en enero para el mismo curso caen en años
+   distintos.
+
+**Cambio, decidido con el dueño el 2026-08-17: hacer obligatoria la fecha de inicio.** Es lo que le da
+año propio al curso y cierra las dos consecuencias de raíz. La alternativa —dejarla opcional y que la
+pantalla de matrículas avise cuántos cursos sin fecha está dejando afuera— tapa el síntoma y deja la
+deriva de enero intacta.
+
+Falta resolver, y es lo que lo hace más que una validación de una línea: **qué se hace con los cursos
+sin fecha que ya existan** cuando la validación entre. Es la misma pregunta que frena la otra mitad de
+[FIN-16](#fin-16) —qué se espera de un curso sin fechas— y conviene contestarla una sola vez.
+
+### Prioridad — 2026-08-17 · hoy no, en noviembre sí
+
+**Hoy no hay ni un caso** y no urge. Verificado contra la base de **producción** el 17/08: **31
+cursos, los 31 con fecha de inicio cargada, todos de 2026**. (Uno no tiene fecha de fin, que es otro
+campo y sí está marcado como opcional.) O sea que el instituto viene cargándola siempre, por costumbre,
+sin que nada se lo exija.
+
+**Sube a P1 en noviembre o diciembre de 2026**, que es cuando se arman los cursos del año siguiente y
+la costumbre deja de alcanzar: es el único momento del año en que un curso se crea para un año que no
+es el corriente, y es exactamente cuando olvidarse la fecha hace daño.
+
+**Relacionado.** [FIN-14](#fin-14) (de donde salió, y quien consume el año del curso),
+[FIN-16](#fin-16) (comparte la decisión sobre los cursos sin fechas), [FIN-18](#fin-18) (la inscripción
+tampoco tiene año propio, que es el otro lado de esta carencia).
 
 ---
 
@@ -1633,6 +2952,109 @@ inválida y `getActiveRole` devuelve `SECRETARY`.
 entre sesiones. Si sigue pasando, la causa no era ninguna de las dos y hay que mirar la cookie en el
 navegador.
 
+### Reabierto — 2026-08-13 · 🗣️ vuelve a reportarse
+
+Sigue pasando, así que la causa no era ninguna de las dos anteriores. **Esta vez sí está
+identificada, y es una tercera, independiente de las otras.**
+
+**La cookie es `httpOnly` y el `Navbar` intenta leerla desde JavaScript.**
+[`switchRoleAction`](../src/app/actions/roles.ts) guarda `lingua_current_role` con `httpOnly: true`,
+que es exactamente lo que impide que el navegador la exponga a `document.cookie`. Y
+[`Navbar.tsx:46`](../src/components/layout/Navbar.tsx) hace justamente eso:
+
+```ts
+const roleCookie = document.cookie.split("; ").find((row) => row.startsWith("lingua_current_role="))
+```
+
+Ese `find` devuelve `undefined` **siempre**, en todos los navegadores, desde el día uno. No es una
+falla intermitente ni depende de los datos.
+
+**Qué pasa entonces.** Ese camino sólo corre cuando la página no le pasa `currentActiveRole` al
+`Navbar`. En ese caso el rol mostrado queda en el valor inicial: `userRoles[0]` — **el primer
+elemento del array, sin ninguna prioridad aplicada**. La auditoría anotada más arriba dice que la
+usuaria tiene `roles = ['TEACHER', 'SECRETARY']`, así que `userRoles[0]` es `TEACHER`. El menú la
+muestra como profesora aunque su cookie diga secretaria.
+
+**Por qué lo ve tanto.** Son 11 pantallas las que renderizan `<Navbar />` sin la prop, contra 30 que
+sí la pasan. Las 11 son, casi exactamente, el trabajo de una secretaria:
+
+`/payments`, `/payments/debtors`, `/payments/payroll`, `/payments/tour`, `/enrollments/new`,
+`/students/new`, `/guardians/[id]`, `/courses/new`, `/courses/classrooms`, `/courses/levels`.
+
+Entra a Finanzas o a inscribir un alumno y el menú se le pasa a profesora; vuelve a una pantalla que
+sí manda la prop y aparece de nuevo como secretaria. Descripto por quien lo sufre, eso es
+"siempre se me cambia a profesora".
+
+**Alcance: es la interfaz, no los permisos.** Las acciones del servidor resuelven el rol con
+`requireRole`/`getAuthContext`, que leen la base y la cookie real. La secretaria no pierde
+atribuciones — pierde el menú, que en esas pantallas pasa a ser el de profesora y le esconde
+Finanzas e Informes.
+
+**Cambio.**
+
+1. Pasar `currentActiveRole` en las 11 pantallas, como ya hacen las otras 30.
+2. Borrar el bloque que lee `document.cookie` en `Navbar`: no puede funcionar y disimula el olvido de
+   la prop. Sin rol activo no hay que adivinar uno.
+3. Que el valor inicial deje de ser `userRoles[0]`. Si hace falta un rol por defecto, tiene que salir
+   de la prioridad de [`roles.ts`](../src/lib/roles.ts) —donde `SECRETARY` va antes que `TEACHER`—,
+   que es el criterio que ya usa el servidor.
+
+**Lección para la ficha.** Los tres intentos fallaron por lo mismo: se buscó la causa en la sesión y
+en los datos, y estaba en la pantalla. El síntoma "el sistema me cambia el rol" describía un cartel,
+no un permiso.
+
+### Verificado en stage — 2026-08-16
+
+Con un usuario en `roles = {TEACHER, SECRETARY}` —la forma exacta de la usuaria del reporte, con
+`TEACHER` primero, que es lo que hacía que `userRoles[0]` diera profesora—, en modo Secretaría:
+
+- **Las ocho pantallas que la secretaria puede abrir muestran «Modo Secretaría»**, y Finanzas e
+  Informes siguen en el menú: `/payments`, `/payments/debtors`, `/payments/tour`, `/enrollments/new`,
+  `/students/new`, `/courses/new`, `/courses/classrooms`, `/courses/levels`.
+- **Sin parpadeo al ir y volver**: `/payments` → `/courses` → `/payments` → `/students` →
+  `/payments`, con navegación de cliente. El modo no cambia en ningún salto. Era exactamente lo que
+  ella describía como "siempre se me cambia a profesora".
+- **El selector cambia a Profesora y se mantiene**, y ahí Finanzas e Informes desaparecen, que es lo
+  correcto. Sirve de comprobación de que sacarle el estado local al `Navbar` no rompió el cambio de
+  rol: ahora depende del redirect de `switchRoleAction`.
+
+**Dos de las diez pantallas que lista esta ficha no son verificables con una secretaria, y conviene
+corregirlo acá:** `/payments/payroll` y `/guardians/[id]` son las dos `requireRole(["ADMIN"])` y la
+redirigen al dashboard. La ficha las agrupa como "casi exactamente el trabajo de una secretaria" y en
+esas dos no lo es. Que `/guardians/[id]` sea sólo de admin **es una pregunta abierta para el
+instituto**, no un defecto de este ítem: la secretaría es quien trata con los tutores.
+
+**Falta todavía la confirmación con la usuaria**, que es la única que cierra la ficha — los tres
+intentos anteriores también pasaban las pruebas de quien los escribía.
+
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**La prop pasó a ser obligatoria.** `currentActiveRole` era opcional y ese era el fondo del asunto:
+olvidarla no costaba nada y once pantallas la olvidaron. Ahora es `currentActiveRole: string`, así
+que **la próxima pantalla que se olvide no compila**. Es el único de los tres puntos que impide la
+recaída; los otros dos arreglan lo que ya estaba roto.
+
+Las 11 renderizaciones que faltaban ya la pasan: ocho salen de `auth.activeRole` —el mismo
+`requireRole` que esas páginas ya llamaban—, dos de `payments/debtors` y `payments/tour` que **ya
+calculaban `activeRole` con `getActiveRole` y no lo estaban usando**, y `students/new`, la única que
+no tenía rol a mano, ahora lo pide con `getActiveRole`.
+
+**El bloque de `document.cookie` se borró.** Con la prop obligatoria no hay caso en que haga falta
+adivinar. De paso desaparecieron el `useState` y el `useEffect` que lo sostenían: el rol activo es
+ahora una lectura directa de la prop, sin estado propio. El cambio de rol sigue funcionando porque
+`switchRoleAction` escribe la cookie en el servidor y redirige, así que vuelve por una renderización
+nueva con la prop ya actualizada — nunca dependió del estado del cliente.
+
+**`userRoles[0]` no se reemplazó por nada.** El punto 3 del cambio pedía que el valor inicial saliera
+de la prioridad de [`roles.ts`](../src/lib/roles.ts) en vez del primer elemento del array. Al hacer
+la prop obligatoria el valor inicial dejó de existir: el servidor ya resolvió el rol con
+`getActiveRole`, que es exactamente esa prioridad. Poner un segundo criterio en el cliente habría
+sido una forma nueva de que los dos lados discrepen.
+
+**Verificado:** `tsc --noEmit` limpio y build completo. **Falta la verificación con la usuaria**, que
+es la única que cierra la ficha: entrar a `/payments` y a `/enrollments/new` y confirmar que el menú
+sigue diciendo "Modo Secretaría" y que Finanzas e Informes no desaparecen.
+
 ---
 
 <a id="bug-05"></a>
@@ -1682,6 +3104,9 @@ de modo que la profesora y el tutor vean que se incorporó.
 **Estado: resuelto.** Corregido en `72fbdca` y `7782037`, verificado en stage el 2026-08-09: el
 admin abre el hilo, responde, y queda listado entre los participantes.
 
+**Verificado en producción el 2026-08-14.** La administradora del instituto abre los hilos que antes
+le daban 404. Lo reportó ella, sin que se lo preguntáramos.
+
 `7782037` cerró un hueco detectado durante esa prueba: la vista guardaba en estado sólo los
 mensajes, así que tras responder el contador de participantes y el aviso de "estás viendo como
 administración" seguían mostrando el estado previo hasta recargar la página.
@@ -1724,6 +3149,177 @@ baja. Es previo a [BUG-05](#bug-05), pero se nota más ahora que el admin puede 
 
 Recomiendo la 3, y revisar con el cliente si el admin espera enterarse de mensajes nuevos en hilos
 que no son suyos.
+
+---
+
+<a id="bug-07"></a>
+## BUG-07 · No se pueden guardar las asistencias de la clase · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-08-13).** Los profesores dicen que no pueden guardar el parte de asistencia. Sin
+detalle de en qué clases, con cuántos alumnos, ni con qué mensaje en pantalla.
+
+**Lo que descarté.** El formulario está bien:
+[`AttendanceForm`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx) arma el
+payload con los alumnos que tienen estado marcado, llama a la acción y muestra el error que reciba.
+El problema está del lado del servidor, en
+[`saveLessonAttendanceAction`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts).
+
+**Causa más probable: se agota la transacción.** La acción abre una `$transaction` interactiva y
+adentro hace **una consulta por alumno**, en serie: un `findMany` y después un `update` o un `create`
+por cada uno. Contra una base remota, con 25 o 30 alumnos son 30 viajes de ida y vuelta dentro de una
+transacción cuyo tope por defecto en Prisma son 5 segundos. Al pasarse, se cae **todo el guardado**,
+no una fila.
+
+Encaja con el reporte: intermitente, peor en los cursos más numerosos y en los horarios de más uso,
+y sin patrón claro para quien lo sufre. Y es el mismo problema que [FIN-06](#fin-06) ya documenta
+haber sufrido en producción con la generación de cuotas y de notas — ahí la solución no fue agrandar
+el tope sino colapsar todo a una sola query. Es el tercer lugar con el mismo patrón.
+
+**Segunda causa posible: choque con el kiosco de QR.** La acción decide entre `update` y `create`
+mirando una lectura previa, y no hay nada que impida que entre la lectura y la escritura el kiosco
+([`scanAttendanceQRAction`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts)) cree
+la fila del mismo alumno. El modelo tiene `@@unique([studentId, lessonId])`, así que el `create`
+falla y arrastra la transacción entera. Es más raro, pero explicaría una falla puntual en una clase
+donde se usó el escáner.
+
+**Cambio propuesto.** Reemplazar el bucle por un `upsert` por alumno sobre la clave
+`studentId_lessonId`, agrupados en un `$transaction([...])` en su forma de arreglo: es un solo lote
+en vez de treinta viajes, elimina la carrera con el kiosco por construcción, y sigue siendo atómico.
+
+**Hueco de permisos que aparece de paso.** La acción sólo verifica que haya sesión con email
+(`if (!session || !session.user?.email)`). No comprueba rol ni instituto: cualquiera con sesión
+—incluido un tutor— puede escribir asistencia de cualquier clase de cualquier instituto, si conoce
+los ids. No es la causa de este bug, pero es del mismo tipo que [SEC-03](#sec-03) y quedó fuera de
+aquel barrido. Corregirlo en el mismo pase.
+
+**Antes de tocar código: pedir el mensaje exacto.** La acción devuelve `error.message` crudo de
+Prisma al cliente, así que la profesora **está viendo el texto del error**. Un `P2028` (transacción
+cerrada) confirma la causa 1; un `P2002` (restricción única) confirma la 2. Una captura de pantalla
+decide entre las dos en un minuto y evita adivinar.
+
+Que haga falta pedir una captura para saber qué se rompió es, en sí, [ARQ-09](#arq-09): los errores
+no se registran en ningún lado.
+
+### Resuelto — 2026-08-13 · pendiente de verificar en stage
+
+**La captura terminó siendo innecesaria.** El cambio cubre las dos causas candidatas a la vez, así
+que no hacía falta distinguirlas para arreglarlo. El bucle de un `findMany` más un `update` o
+`create` por alumno dentro de una `$transaction` interactiva pasó a **dos sentencias masivas**: un
+`UPDATE ... FROM (VALUES ...)` para los alumnos que ya tenían fila y un
+`createMany({ skipDuplicates: true })` para los que no.
+
+**Medido, no estimado.** Contra Postgres local, con 25 alumnos —el curso más grande del cliente—,
+contando las sentencias que Prisma manda de verdad:
+
+| Forma de guardar | Alta | Regrabado |
+|---|---|---|
+| Bucle en `$transaction` interactiva (código viejo) | 53 | **78** |
+| Un `upsert` por alumno en `$transaction([...])` | 27 | 27 |
+| `UPDATE ... FROM (VALUES)` + `createMany` (lo que quedó) | **4** | **4** |
+
+**El regrabado es el caso común y era el peor**: el profesor corrige y vuelve a guardar. Daba 78
+sentencias porque el `update` de Prisma hace un `SELECT` antes de cada `UPDATE`. Con la base en otra
+región (~65 ms de ida y vuelta) eso son ~5 segundos, que es **exactamente** el tope por defecto de la
+transacción interactiva. El reporte no necesitaba más explicación que esa aritmética.
+
+**Un `$transaction([...])` de upserts no alcanzaba, y conviene que quede escrito por qué.** La forma
+de arreglo no colapsa a una sola query: manda el lote al motor de Prisma en una llamada, pero el
+motor sigue emitiendo una sentencia por alumno. Son 27 en vez de 78 —suficiente para que deje de
+fallar— pero mantienen la conexión tomada ~27 viajes. Con un pool de 5, mientras un profesor guarda
+los demás esperan, y el final de hora es justo cuando guardan todos juntos. Es la misma razón por la
+que se sacaron las transacciones de las notas de los informes — que quedaron con su propio costo,
+medido de paso y anotado en [ARQ-11](#arq-11).
+
+**La transacción que quedó no es la que se sacó en los informes.** Aquella mantenía la conexión a lo
+largo de N viajes con el control volviendo a JS en el medio; ésta son dos sentencias en un solo lote.
+Y **sale gratis**: medido, `createMany` abre su propio `BEGIN`/`COMMIT` igual, así que envolver las
+dos no agrega ni una sentencia y a cambio el parte queda atómico.
+
+**Por qué no `updateMany`, y por qué SQL crudo.** Cada alumno lleva su propio estado y su propia
+nota, y `updateMany` aplica **un** valor a todas las filas que matchean. El `VALUES` es la forma de
+mandar 25 valores distintos en una sentencia; va parametrizado con `Prisma.sql`. Es la única
+sentencia cruda de este módulo, y el módulo de pagos ya tenía precedente.
+
+**Se descartó `INSERT ... ON CONFLICT` en una sola sentencia** (medido: 1 sentencia, contra 4).
+Obliga a generar `id` y `updatedAt` a mano, porque no hay defaults en la base para ninguno de los
+dos, y no hay librería de cuid entre las dependencias: los ids quedarían con otro formato que el
+resto de la tabla. Ahorra ~3 viajes; no paga el precio.
+
+**Verificado contra la base local**, 15 comprobaciones: escribe las 25 filas con sus estados y notas,
+el regrabado no duplica ni pierde `id` ni `createdAt`, limpia la nota que se vació, pisa las filas
+que había dejado el kiosco de QR sin chocar contra la restricción única, no toca las filas de otra
+clase, y funciona con un solo alumno. **Falta la verificación en stage**, que es donde se ve la
+latencia real.
+
+**Si aparece lentitud, el lugar a mirar no es esta acción** sino la región de la base contra la de
+Vercel. Sin `vercel.json` las funciones corren en `iad1` (us-east-1) y de las dos bases configuradas
+una está en us-east-1 y la otra en us-west-2. Esa diferencia la paga **cada** consulta de la
+aplicación, no sólo el parte de asistencia.
+
+**El error crudo dejó de viajar al cliente.** Antes se devolvía `error.message` de Prisma tal cual y
+la profesora leía un `P2028` en pantalla. Ahora el detalle va a `console.error` con `lessonId` y
+`courseId`, y a la pantalla va un mensaje en castellano. No resuelve [ARQ-09](#arq-09) —sigue sin
+haber registro centralizado— pero deja el rastro en el log de Vercel, que es donde hay que mirar si
+esto reaparece.
+
+**El hueco de permisos, cerrado con la política que ya aplicaban las pantallas.** Las dos acciones
+del archivo pasan por un helper común, `authorizeLessonAttendance`: `requireRole(INSTITUTE_STAFF)`,
+la clase tiene que ser del `courseId` recibido y de un curso del instituto propio, y **un docente
+sólo entra al curso que dicta** —los roles administrativos siguen pasando a cualquier curso—. Con
+eso queda cubierto el punto 3 de [FEAT-07](#feat-07) para asistencia; **notas y práctica siguen
+pendientes**, que es donde vive el resto de ese alcance.
+
+Tres cosas más que salieron del mismo pase, todas por el mismo criterio de que el servidor sostenga
+lo que la pantalla ya muestra:
+
+- **`scanAttendanceQRAction` tenía el hueco idéntico** treinta líneas más abajo y quedaba abierto si
+  se arreglaba sólo la acción del enunciado. Usa el mismo helper. Su lógica de escaneo no se tocó.
+- **El curso finalizado es de lectura también del lado del servidor.** La pantalla ya lo mostraba en
+  modo lectura y el kiosco redirigía; la acción lo aceptaba igual.
+- **Sólo se escribe asistencia de alumnos matriculados** (`ACTIVE` o `FINISHED`, lo mismo que lista
+  la pantalla). Se **filtra** en vez de rechazar el parte entero: si a alguien le dieron de baja la
+  matrícula con la pantalla abierta, el profesor no pierde la clase por eso. Lo descartado queda en
+  el log.
+
+**Qué falta verificar en stage:** guardar un parte en el curso más numeroso que haya, y guardar con
+el escáner de QR corriendo en paralelo sobre la misma clase.
+
+### Verificado en stage — 2026-08-16 · con 25 alumnos
+
+**El curso más numeroso de stage tenía 5 alumnos, así que no servía**: el defecto era de cantidad de
+sentencias y con 5 no se acerca al tope. Se crearon 20 alumnos de prueba por SQL —sin pasar por
+`createEnrollmentAction`, así que sin cuotas— hasta llegar a **25 inscriptos activos**, que es el
+curso más grande del cliente. Al terminar se borraron los tres niveles (asistencias, inscripciones,
+alumnos) y stage quedó como estaba: 7 alumnos, 5 inscriptos, 0 sobrantes.
+
+Sobre la clase del 27/08, por pantalla y contra el código desplegado, recargando la página entre cada
+paso para leer del servidor y no del estado del formulario:
+
+| | Qué se hizo | Resultado |
+|---|---|---|
+| **Alta** | Los 25 marcados | 25 filas |
+| **Regrabado 1** | 3 estados cambiados + una nota nueva | Persistió. Siguen 25 filas |
+| **Regrabado 2** | Esa nota vaciada | La nota quedó en `null`. Siguen 25 filas |
+
+**La prueba de que fueron las dos sentencias masivas está en las marcas de tiempo**, y es más directa
+de lo que se esperaba: las 25 filas comparten `createdAt` **idéntico al milisegundo** (22:05:55.320),
+porque salieron de un solo `INSERT`, y comparten `updatedAt` idéntico (22:18:22.493), porque el
+regrabado fue un solo `UPDATE` con `NOW()`. Con el bucle viejo —o incluso con un `upsert` por
+alumno— las marcas diferirían fila por fila. De paso descarta el borrar-y-recrear: el `createdAt` del
+alta sobrevivió a los dos regrabados.
+
+**Las notas vacías quedan en `null`, no en cadena vacía:** 25 filas, 25 `null`, 0 `''`.
+
+**Un detalle útil para quien verifique esta pantalla:** el formulario **no** arranca con todos en
+Presente. Un alumno sin registro previo queda en `status: null`, sin ningún botón encendido
+([`AttendanceForm.tsx:42`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx)).
+Por eso los estados marcados al abrir la página son datos guardados y no un valor por defecto. El
+comentario de la línea 33 dice lo contrario y quedó viejo.
+
+**Sigue sin probarse el escáner de QR en paralelo** sobre la misma clase, que es el otro escenario
+que pedía esta ficha.
+
+**De acá salió [FEAT-13](#feat-13)**, la idea de que cada marca escriba sola.
 
 ---
 
@@ -1879,7 +3475,741 @@ en [TODO.md](./TODO.md). Si se hace la opción 2, conviene resolverlo junto con 
 
 ---
 
-# Arquitectura
+<a id="feat-05"></a>
+## FEAT-05 · Recuperar la contraseña por correo · **P1** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que el usuario pueda recuperar su contraseña por correo electrónico.
+
+**Hoy no existe ninguna recuperación**: si alguien se olvida la contraseña, la única salida es que
+el instituto se la restablezca a mano, y el reset la deja en una contraseña fija escrita en el código
+— [SEC-06](#sec-06) las lista todas. Los dos ítems son la misma conversación desde dos puntas:
+mientras no haya recuperación, sacar las contraseñas por defecto obliga al instituto a repartir
+claves aleatorias a mano. **Conviene hacer este primero**, y SEC-06 pasa a ser fácil.
+
+**El proyecto no manda correos.** No hay ninguna dependencia de envío ni configuración de SMTP: no es
+que falte la pantalla, falta el canal entero. Eso implica elegir proveedor, cargar sus variables de
+entorno y **verificar el dominio del remitente** (SPF y DKIM en el DNS). El trabajo de DNS y de
+reputación del remitente es real y no es de programación: sin eso los correos entran en spam, que
+para una funcionalidad de recuperación es lo mismo que no funcionar.
+
+**Tres cosas propias de este sistema que hay que resolver antes de copiar un flujo estándar:**
+
+1. **Muchos alumnos no tienen correo, y es a propósito.** El instituto tiene chicos de 6, 7 y 8 años;
+   el identificador obligatorio es el **DNI** y con eso entran ([BUG-01](#bug-01)). Un flujo "poné tu
+   email" no los cubre, y no es un caso de borde: es una franja entera de usuarios. Para ellos la
+   recuperación tiene que ir por el **tutor** o por el instituto. Diseñarlo como si todos tuvieran
+   correo deja a los más chicos afuera.
+2. **El correo no identifica a una persona sola.** `User.email` es único global
+   ([`schema.prisma:71`](../prisma/schema.prisma)), pero `Student.email` es opcional y único **por
+   instituto** (`@@unique([email, instituteId])`): la misma dirección puede existir en dos
+   institutos. El flujo tiene que resolver a qué cuenta corresponde el pedido, igual que hace el
+   login, que ya recibe `instituteId`.
+3. **El enlace tiene que llevar el instituto**, porque la pantalla de login es por instituto.
+
+**Forma del cambio.**
+
+- Modelo `PasswordResetToken` con el mismo patrón que ya existe en
+  [`StudentDataToken`](../prisma/schema.prisma) —token, vencimiento, `consumed`—, que conviene copiar
+  en vez de inventar. Dos diferencias: guardar el **hash** del token y no el token, porque queda en
+  la base y viaja por correo; y darle una vida corta (30 o 60 minutos, no días).
+- Invalidar el token al usarlo y al cambiar la contraseña por cualquier otra vía.
+- **La respuesta no debe revelar si la dirección existe.** Siempre el mismo mensaje: "si la dirección
+  está registrada, te llega un correo". Si no, el formulario es una forma de averiguar quién es
+  usuario del instituto.
+- **Límite de pedidos** por dirección y por IP. El proyecto ya tiene un contador por ventana en la
+  base para la IA ([`AiUsage`](../prisma/schema.prisma) y
+  [`quota.ts`](../src/lib/practice/quota.ts)); el mecanismo sirve igual acá y evita que el formulario
+  se use para inundar de correos a alguien.
+
+**Por qué P1.** Es el pedido con más volumen escondido: hoy cada olvido de contraseña es una llamada
+al instituto y un reset manual. Y desbloquea SEC-06, que es P1 de seguridad.
+
+**Relacionado.** [SEC-06](#sec-06) (contraseñas por defecto) y [FEAT-04](#feat-04) (saber quién entró
+alguna vez) tocan lo mismo desde otro ángulo: hoy nadie sabe cuántos tutores nunca pudieron entrar,
+que es probablemente donde está el problema real.
+
+---
+
+<a id="feat-06"></a>
+## FEAT-06 · Que tutores y docentes puedan escribirle al docente del curso · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que los tutores y los docentes puedan **iniciar** conversaciones con el
+docente del curso del alumno.
+
+**Hoy no pueden, y es una decisión explícita del código, no un olvido.**
+[`createThread`](../src/app/actions/messages.ts) corta así:
+
+```ts
+// Fase 1: sólo ADMIN, SECRETARY y TEACHER pueden iniciar hilos
+if (isStudent || (!isAdmin && senderRole !== "TEACHER")) throw new Error(...)
+```
+
+El tutor puede **responder** un hilo donde lo metieron, pero no abrir uno. Levantar ese corte es la
+mitad del trabajo; la otra mitad es que hoy no existe la lista de a quién podría escribirle.
+
+**Son dos permisos distintos, con dificultad distinta:**
+
+1. **El tutor.** Es el caso nuevo de verdad. Hay que construirle una lista de destinatarios que hoy
+   no existe: sus alumnos vinculados → inscripciones activas → docente de cada curso. Y hay que
+   **hacerla cumplir en el servidor**, no sólo dibujarla: si el destinatario llega en el body, un
+   tutor podría escribirle a cualquiera del instituto.
+2. **El docente.** Ya puede iniciar hilos, pero
+   [`getCoursesWithRecipientsForUser`](../src/app/actions/messages.ts) sólo le arma como
+   destinatarios a los alumnos y tutores **de sus propios cursos**: la lista de profesores
+   (`allTeachers`) se completa **únicamente para administradores**. Alcanza con extendérsela, acotada
+   al alcance que se decida.
+
+**Lo que hay que definir con el cliente antes de codificar:**
+
+- **¿De qué alumno se está hablando?** `MessageThread` guarda `courseId` pero **no** `studentId`
+  ([`schema.prisma`](../prisma/schema.prisma)). Un tutor con dos hijos escribe sobre uno; el docente
+  necesita saber cuál. Sin ese campo, el asunto queda como único contexto — que es exactamente cómo
+  se pierden las conversaciones.
+- **¿Hasta dónde llega el alcance del docente?** ¿Sólo los docentes de los otros cursos de sus
+  alumnos, o cualquier docente del instituto? Lo segundo es más simple y probablemente lo que
+  esperan; lo primero es más prolijo y más código.
+- **¿El tutor puede escribirle a la administración también, o sólo al docente?** Si sólo al docente,
+  la secretaría se entera de nada y va a terminar pidiéndolo después.
+
+**Relacionado.** [BUG-06](#bug-06) (el contador de no leídos del admin) y [FEAT-01](#feat-01)
+(adjuntos en el primer mensaje) tocan la misma pantalla; si se va a abrir el módulo, conviene
+mirarlos juntos. Y abrir el canal a los tutores multiplica el volumen de hilos, así que BUG-06 pasa
+de molestia a problema.
+
+---
+
+<a id="feat-07"></a>
+## FEAT-07 · Ver en el calendario las clases de los pares del mismo nivel · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que un docente pueda ver —**y sólo ver**, en gris— las clases de otros
+docentes en el calendario, limitado a los cursos **del mismo nivel** que los suyos. El objetivo es
+concreto: saber en qué tema van sus pares que dan el mismo nivel.
+
+**La mitad ya está hecha.** El calendario **ya muestra el tema de la clase**:
+[`schedule/page.tsx:338`](../src/app/schedule/page.tsx) renderiza `schedule.lessons[0].topic`, y las
+tarjetas ya distinguen visualmente la clase cargada de la que no lo está (gris y borde punteado
+cuando no hay `Lesson`). No hay que traer datos nuevos ni inventar una vista: hay que **ensanchar un
+filtro**.
+
+Hoy el filtro es:
+
+```ts
+...(isTeacher ? { teacherId: session.user.id } : {})
+```
+
+El cambio es incluir además los cursos cuyo `level` coincida con el de alguno de los suyos, y
+marcarlos como ajenos para pintarlos distinto.
+
+**El problema está en cómo se guarda el nivel.** `Course.level` es un `String?`
+([`schema.prisma:182`](../prisma/schema.prisma)), y `Level` es una tabla aparte
+([`schema.prisma:280`](../prisma/schema.prisma)) **sin clave foránea que las una**. El formulario de
+curso elige de la lista de niveles, así que en general el texto va a coincidir, pero nada lo
+garantiza: renombrar un nivel no actualiza los cursos, y un curso viejo puede tener un nombre que ya
+no existe. "Mismo nivel" comparando strings funciona hasta que alguien renombra algo. Es la misma
+deuda de [ARQ-01](#arq-01) (claves foráneas faltantes) y conviene decidir si se arregla acá o se
+asume.
+
+**Definir también:** qué ve un docente cuyo curso tiene `level` en `null` — hoy es un valor
+permitido. Lo razonable es que no vea pares, pero hay que decirlo.
+
+**"Sólo ver" es un requisito, no una preferencia visual (confirmado 2026-08-13).** El docente ajeno
+tiene que poder ver por dónde va su par y **no poder editar nada**. Eso saca el problema del color de
+la tarjeta y lo lleva al servidor, porque las pantallas de destino no siempre distinguen al docente
+propio del ajeno. Esta ficha no lo empeora, pero lo pone a un clic de distancia, así que hay que
+cerrarlo en el mismo pase.
+
+Alcance del cierre, para no quedarse a mitad de camino:
+
+1. Las tarjetas ajenas del calendario no navegan; muestran el tema y nada más.
+2. Las pantallas de clase —asistencia, notas, práctica— exigen ser el docente del curso, no
+   cualquier miembro del instituto. Los roles administrativos siguen entrando: el corte es entre
+   docentes, no contra la conducción.
+3. `saveLessonAttendanceAction` y las acciones equivalentes chequean lo mismo del lado del servidor.
+   Es donde de verdad se decide: esconder el botón no protege un server action, que es un POST como
+   cualquier otro.
+
+**Asistencia ya está hecha (2026-08-13, en [BUG-07](#bug-07)).** Corrección de lo que decía esta
+ficha: [`attendance/page.tsx`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx) **sí**
+exigía ser el docente del curso — quien no lo era no podía abrir la pantalla. Lo que no lo exigía era
+el server action, así que el docente ajeno no podía abrirla pero sí guardar mandando los ids. Ese
+lado quedó cerrado, para asistencia y para el kiosco de QR. **Queda pendiente el punto 1 (las
+tarjetas del calendario) y las pantallas y acciones de notas y práctica**, que hay que revisar una
+por una: la de asistencia no prueba nada sobre las otras.
+
+`AttendanceForm` ya tiene una prop `readOnly` que hoy nadie usa para esto: es el lugar natural para
+la vista del par.
+
+**Por qué está bueno el pedido.** Es coordinación pedagógica real entre docentes que dan el mismo
+nivel, y sale casi gratis sobre lo que ya existe. Es de las pocas cosas del backlog donde el valor
+es alto y el trabajo chico.
+
+---
+
+<a id="feat-08"></a>
+## FEAT-08 · Columna de novedades: plataforma, instituto y curso · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Una columna de novedades donde se comunican temas, en tres niveles:
+nosotros anunciamos funcionalidades nuevas, el instituto comunica por ejemplo una salida, y el curso
+comunica una tarea puntual. Las novedades deben poder firmarse — eso es [FEAT-09](#feat-09), que
+depende de esta.
+
+**No existe nada parecido**: no hay modelo de novedades ni de anuncios en el schema.
+
+**Tres emisores con tres alcances, y no son simétricos:**
+
+| Emisor | Destinatarios | Particularidad |
+|---|---|---|
+| Nosotros (SUPERADMIN) | **Sólo el personal**: ADMIN, SECRETARY y TEACHER, de todos los institutos | **Cruza el límite de instituto**, cosa que hasta ahora ninguna funcionalidad hace a propósito |
+| El instituto | Su gente — a definir si todos, o por rol | Es el caso de la salida, y el que va a querer firma |
+| El curso | Alumnos y tutores de ese curso | Lo más parecido a lo que ya existe |
+
+**Decisión (2026-08-13): como plataforma no nos comunicamos con tutores ni con alumnos.** Nuestras
+novedades —funcionalidades nuevas, avisos del producto— son para el personal del instituto y nadie
+más. Eso acota bastante el caso raro: el alcance que cruza institutos tiene un público chico,
+conocido y sin menores adentro, así que no arrastra las consideraciones de datos de terceros que
+tendría un anuncio masivo a familias.
+
+Aun así el primer emisor merece atención: todo el sistema está construido sobre "cada cosa pertenece
+a un instituto" ([ARQ-01](#arq-01), [`tenant.ts`](../src/lib/tenant.ts)). Una novedad de plataforma
+es la primera excepción deliberada, así que el modelo tiene que admitir `instituteId` nulo con un
+significado claro —"es de la plataforma"— y todas las consultas tienen que contemplarlo, filtrando
+además por rol para que no se le escape a un tutor. Si se resuelve creando una fila por instituto se
+evita la excepción, a costa de duplicar el texto.
+
+**Cuidado con terminar con dos bandejas.** El módulo de mensajería ya hace "uno a muchos dentro de un
+curso" con los hilos `COURSE_BLAST`, y ya tiene su propio contador de no leídos —que hoy está roto
+para el admin, [BUG-06](#bug-06)—. Si las novedades nacen como un segundo sistema de mensajes, el
+usuario termina con dos lugares donde mirar y dos badges que no coinciden.
+
+Conviene decidirlo de entrada. La distinción sana es: **una novedad no es una conversación**. Es de
+una sola dirección, ordenada por fecha, y lo que importa es quién la leyó o la firmó, no quién
+respondió. Con ese criterio va un modelo propio, reutilizando la resolución de destinatarios de
+mensajería en vez de duplicarla.
+
+**A definir con el cliente:**
+
+- ¿La novedad del instituto le llega a todos —docentes, tutores, alumnos— o se elige el público?
+- ¿Caducan? Una salida del mes pasado no debería seguir arriba de la columna.
+- ¿Quién puede publicar en nombre del instituto: sólo ADMIN, o también la secretaría?
+
+---
+
+<a id="feat-09"></a>
+## FEAT-09 · Firma de conformidad de las novedades · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Que las novedades sean "firmadas digitalmente por sus destinatarios".
+Depende de [FEAT-08](#feat-08): sin novedades no hay qué firmar.
+
+**Decisión (2026-08-13): es firma electrónica, y el objetivo es saber quién vio.** No se busca una
+autorización con valor probatorio sino que el instituto sepa si los tutores y los alumnos vieron la
+novedad o el informe. Eso baja la exigencia de golpe: no hace falta certificador licenciado ni las
+formalidades de la *firma digital* de la Ley 25.506, que es un término legal distinto y con
+presunción de autoría. Lo que se construye es un acuse de lectura con conformidad explícita.
+
+Conviene que la interfaz diga eso mismo —"confirmo que lo leí"— y no "firma digital", por dos
+razones: es lo que realmente hace, y evita que dentro de un año alguien lo invoque como si fuera lo
+otro.
+
+**Dónde sí importa la fortaleza del login.** Un acuse de lectura tolera bien que las credenciales
+sean flojas: si la secretaría conoce la contraseña del tutor ([SEC-06](#sec-06)) y no hay
+recuperación ([FEAT-05](#feat-05)), lo que se degrada es la confianza del dato, no la exposición
+legal. Con este alcance, esos dos ítems **dejan de ser requisitos previos**.
+
+Pero conviene tener marcada la frontera: el ejemplo de la salida es una **autorización**, no un
+aviso. Si el día de mañana el instituto empieza a apoyarse en estas firmas para permisos —que es la
+deriva natural, porque el mecanismo ya va a estar ahí—, entonces sí vuelven a pesar SEC-06 y
+FEAT-05, porque "el tutor autorizó" no se sostiene si la contraseña la sabe la oficina. Vale
+decidirlo cuando pase, no ahora, pero sabiendo que va a pasar.
+
+**Se firma un texto, no una fila.** Hay que guardar el **hash del contenido exacto** al momento de
+firmar. Si después alguien edita la novedad, la firma no puede seguir apareciendo como válida sobre
+un texto que el firmante nunca vio. Las dos salidas razonables: congelar la novedad al publicarla, o
+versionarla y volver a pedir firma. Cualquiera sirve; no decidirlo es lo que no sirve.
+
+**Quién firma cuando el destinatario es menor.** El instituto tiene alumnos de 6, 7 y 8 años
+([BUG-01](#bug-01)). Para una autorización de salida el firmante tiene que ser **el tutor**, no el
+alumno. Cada novedad necesita decir a quién le exige firma, y no puede ser "todos los destinatarios"
+por defecto.
+
+**Lo que el instituto realmente necesita no es la firma: es la lista de quién falta.** Ante una
+salida, la pregunta operativa es "¿qué chicos pueden ir?". La vista de firmas pendientes por novedad,
+con nombre y curso, es el valor de esta ficha; la firma es el mecanismo. Conviene construir esa vista
+desde el principio y no como agregado.
+
+**Qué guardar, con cuidado.** Quién firmó, cuándo, y el hash de lo firmado. Sobre IP y dispositivo
+hay una tensión real: [FEAT-04](#feat-04) tomó la posición de **no** guardarlos sin necesidad
+concreta, porque son datos personales y hay menores. Acá sí hay necesidad —son parte de la prueba—,
+así que la decisión es deliberada y hay que anotarla con la política de retención, no arrastrarla por
+inercia. Es el mismo terreno de [ARQ-10](#arq-10) (auditoría de acciones del panel), que también
+advierte sobre no copiar datos personales de más.
+
+**Los informes entran desde el día uno.** El pedido nombra "la novedad **o el informe**", así que no
+es un alcance futuro: son dos objetos firmables desde el arranque. El modelo no puede colgar de
+`Announcement` — necesita apuntar a "un documento" de tipo variable, y el módulo de informes
+([`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx),
+[`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx)) es el segundo caso a
+cubrir. Que el reglamento o una autorización se sumen después sale gratis si esto se diseña así.
+
+---
+
+<a id="feat-10"></a>
+## FEAT-10 · Seguimiento visual de las cuotas eliminadas · **P2**
+
+**Origen.** Sale de [SEC-03](#sec-03), al definir que la secretaría puede borrar cuotas. Ahí se le
+agregó a `deleteFeeAction` el rastro que le faltaba, pero quedó **invisible**: se escribe como asiento
+de importe 0 en `Transaction` y la tabla del libro mayor filtra esos movimientos — filtro que
+[FIN-11](#fin-11) decidió mantener, porque esa pantalla es la caja. Hoy el registro sólo se consulta
+desde la base.
+
+**Lo que falta es que el instituto lo pueda mirar sin entrar a Supabase.**
+
+**Decidido con el cliente el 2026-08-13:**
+
+| | |
+|---|---|
+| **Motivo** | **Obligatorio.** Sin motivo queda una lista de fechas, no un rastro. Es más exigente que las anulaciones, donde el motivo es opcional — y es a propósito: acá no queda la fila original para mirar |
+| **Dónde** | **Pantalla propia.** No en la ficha del alumno: el seguimiento es para revisar el conjunto, no para resolver un caso puntual |
+| **Quién** | **Sólo ADMIN.** La secretaría borra, pero el seguimiento es herramienta de control del dueño |
+
+**El registro necesita su propia tabla, no la fila en `Transaction`.** Esa fila fue un rodeo: era el
+único lugar del sistema con `operatorId`. Para sostener una pantalla no alcanza, por tres razones:
+
+- El libro mayor son movimientos de dinero y una cuota impaga borrada no lo es.
+- Listarla obligaría a filtrar por el **texto** de la descripción (`like 'Cuota eliminada%'`), que es
+  una base frágil para una pantalla.
+- No tiene dónde guardar el motivo, que es justamente lo que se decidió pedir.
+
+**Forma propuesta.** Una tabla `FeeDeletion` con la **foto** de la cuota —la fila original ya no
+existe cuando esto se escribe—: instituto, alumno (id y nombre), tipo, año, mes, importe, curso si la
+cuota tenía inscripción, más `reason`, `deletedById` y `deletedAt`. Índice por
+`[instituteId, deletedAt]`, que es como lo lista la pantalla.
+
+**Alcance del cambio:**
+
+1. La migración y el modelo.
+2. `deleteFeeAction` pasa a recibir `reason` y a escribir en `FeeDeletion` en vez de en
+   `Transaction`. Sigue compartiendo transacción con el `delete`.
+3. [`PendingFeeActions`](../src/app/payments/debtors/PendingFeeActions.tsx) —el único lugar desde
+   donde se borra, en la pantalla de deudores— pide el motivo. Hoy usa un `confirm()` pelado; el
+   componente ya tiene un modo de edición en línea del que copiar la forma.
+4. La pantalla, con fecha, alumno, cuota, importe, operador y motivo, filtrable por período.
+5. El acceso a la pantalla desde `/payments`, visible sólo para admin.
+
+**Deuda que deja el orden en que se hizo.** El rastro en `Transaction` sale con
+[SEC-03](#sec-03) y se reemplaza acá. Si se llega a borrar alguna cuota entre un despliegue y el
+otro, esos registros quedan en `Transaction` y **no van a aparecer en la pantalla nueva**. Son pocos
+o ninguno, y se pueden migrar a mano con el `like` de la descripción — pero hay que acordarse, o
+mirar primero si hay alguno.
+
+**Relacionado.** [ARQ-10](#arq-10) (auditoría de las acciones del panel) es este mismo problema
+generalizado. Esta ficha es el primer caso concreto y conviene mirarla como el primer ladrillo: si
+ARQ-10 se encara después, `FeeDeletion` debería poder absorberse en el modelo general en vez de
+quedar como una isla.
+
+### Resuelto — 2026-08-17 · `75fc4d7`
+
+Los cinco puntos del alcance, con la migración `20260817120000_add_fee_deletion`, que **sólo crea la
+tabla**: no borra ni modifica ninguna fila.
+
+| | |
+|---|---|
+| **El modelo** | `FeeDeletion`, la foto: instituto, alumno (id **y** nombre), tipo, año, mes, importe, curso si la cuota tenía inscripción, `reason`, `deletedById` y `deletedAt`. Índice `[instituteId, deletedAt]` |
+| **La acción** | `deleteFeeAction(feeId, reason)` escribe en `FeeDeletion` **en vez de** en `Transaction`, en la misma transacción que el `delete`. Motivo obligatorio, tope de 200 caracteres |
+| **El motivo** | Se pide **en la tarjeta de la cuota**, con la forma del modo de edición en línea que el componente ya tenía |
+| **La pantalla** | `/payments/deletions`, `requireRole(["ADMIN"])` con `redirect("/dashboard")` — el mismo patrón de `/payments/payroll`, que es el que SEC-03 verificó. Filtra por período sobre `deletedAt`, y arranca **sin filtro** a propósito: borrar una cuota es raro y un mes vacío no se distingue de una pantalla que no anduvo |
+| **El acceso** | Botón «Cuotas Eliminadas» en `/payments`, escondido para la secretaría |
+
+**Sin claves foráneas, a propósito.** Ni a `Student`, ni a `Course`, ni a `User`. La fila tiene que
+sobrevivir a que después se borre o se purgue lo que nombra, que es exactamente el caso para el que
+se escribe — y `purgeStudentAction` borra alumnos de verdad. Por eso el alumno va con su id y con su
+nombre: el id para llegar a la ficha, el nombre para que la pantalla siga diciendo algo si el id ya
+no lleva a ningún lado.
+
+**El `confirm()` no se reemplazó sólo por el campo.** El cartel del navegador decía *"¿Eliminar esta
+cuota/matrícula no pagada permanentemente?"*, sin nombrar al alumno, el período ni el importe: no
+confirmaba nada, porque no dejaba ver cuál se estaba por borrar. El formulario nuevo vive dentro de
+la tarjeta, con esos tres datos a la vista arriba del campo.
+
+**Verificado por pantalla el 17/08**, contra la base de desarrollo y con el resultado anotado antes
+de apretar:
+
+- Con el campo **vacío**, el botón de confirmar **no borra**: sale «Escribí el motivo: sin él queda
+  una fecha, no un rastro» y la cuota sigue en la lista.
+- Borrada la **Matrícula 2026 de `estudiante uno 2233`, $15.000** con motivo *"duplicada con la carga
+  inicial de febrero"*: `Fee` pasó de 10 a 9, `FeeDeletion` de 0 a 1 con la foto completa —curso
+  `Adolescents+ M-J` incluido— y el operador correcto.
+- **Los asientos `'Cuota eliminada%'` en `Transaction` siguieron en cero**, que es la mitad que
+  comprueba que el rodeo viejo dejó de escribirse. En el libro mayor de `/payments` no apareció nada.
+- La pantalla mostró **«1 cuota eliminada · $15.000 de deuda dada de baja»** con fecha, alumno,
+  cuota, curso, importe, operador y motivo. Filtrada por **2026 · Julio** queda vacía con su cartel;
+  por **2026 · Agosto** vuelve la fila.
+- **Como secretaría** —cambiándole los roles al usuario de prueba en la base de desarrollo, y
+  restaurados al terminar—, `/payments/deletions` **escribiendo la URL redirige al dashboard**, y en
+  `/payments` el botón no está.
+
+**La base de desarrollo quedó como estaba** después de la primera tanda: la cuota se restauró con su
+mismo id y la fila de `FeeDeletion` de la prueba se borró. De las pruebas del dueño quedaron dos
+cuotas borradas —la matrícula de `abril dukard98` y la de `pilar melczarski`, $10.000 cada una— con
+sus dos registros. **Son sólo de la base de desarrollo.**
+
+**Las dos guardas que faltaban, ejercitadas por el dueño el mismo 17/08.** Ninguna de las dos la tocó
+este cambio, pero pasan por la función que sí se tocó:
+
+- **Una cuota con pagos se rechaza.** Sobre la Cuota Abril 2026 de `zoe grimalt`, que tiene
+  `paidAmount = 0` y **una fila de `Payment` anulada** —así que la interfaz sí le muestra el tacho y
+  el único que la frena es el servidor—: salió «No se puede eliminar una cuota que ya tiene pagos.
+  Anule los pagos primero.» y la cuota siguió en la lista. Es el criterio de [FIN-06](#fin-06): un
+  pago anulado deja la fila viva.
+- **La secretaría borra, y el dueño ve quién fue.** Con `secretaria@test.com` —una secretaria de
+  verdad, no un usuario con los roles cambiados a mano— se borró la Cuota Abril 2026 de
+  `pilar melczarski` con motivo «beca de agosto», y `/payments/deletions` escribiendo la URL la
+  mandó al dashboard. Entrando después como admin, la fila figura con **`Secretaria Uno`** en la
+  columna «Eliminó». Es el punto entero de esta ficha, ejercitado de punta a punta.
+
+**Desplegado en stage el 17/08.** La migración se aplicó sola con el build, a las 01:06 UTC, y **la
+base de producción no se enteró**: su última migración sigue siendo `20260811183000_add_ai_usage`,
+del 13/08, y `FeeDeletion` no existe ahí. Es la tercera vez que el freno de `vercel.json` aguanta un
+push con una migración adentro.
+
+**La ventana de huérfanos quedó en cero, como se buscaba.** La consulta 5 del lote midió el 16/08
+contra producción: cero filas `'Cuota eliminada%'`. Y en producción [SEC-03](#sec-03) todavía no
+está —sale con T1—, así que el asiento viejo nunca llegó a escribirse ahí. Si alguna cuota se borra
+en stage entre este commit y el despliegue, ese registro queda en `Transaction` y **no aparece en la
+pantalla nueva**; se migra a mano con el `like` de la descripción.
+
+**Lo que no entró.** [FIN-23](#fin-23) deja anotado que `removeStudentFromCourseAction` también borra
+cuotas físicamente y que, cuando exista esta tabla, ese borrado debería escribir acá con motivo
+obligatorio. Es la salida recomendada de aquella ficha y sigue abierta: son tres decisiones que
+exceden ésta.
+
+---
+
+<a id="feat-11"></a>
+## FEAT-11 · Métricas de uso de la plataforma para el administrador · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-15).** Que el administrador del instituto pueda ver métricas de usabilidad de la
+aplicación.
+
+**Esto y [FEAT-04](#feat-04) son la misma pregunta con dos alcances**, y conviene decidirlos juntos o
+fusionarlos. FEAT-04 pide saber **quiénes entraron**, sobre todo los tutores, y es un pedido concreto
+con una respuesta concreta. Esto es más amplio: qué se usa, cuánto y por quién. Hacer FEAT-04 por su
+cuenta y después esto significa construir dos veces el mismo registro.
+
+**Lo que hay que definir antes de tocar código, y no es técnico.** "Métricas de usabilidad" no es una
+funcionalidad: son N funcionalidades hasta que alguien dice cuáles tres o cuatro preguntas quiere
+contestar. Las candidatas, por lo que ya pidió el instituto:
+
+- ¿Qué tutores no entraron nunca? (es literalmente FEAT-04)
+- ¿Cuántos alumnos practican, y con qué frecuencia?
+- ¿Qué docentes cargan asistencia y notas al día?
+- ¿Qué pantallas no usa nadie?
+
+Las tres primeras se contestan con datos que **ya existen** en la base — sesiones de práctica,
+`Attendance`, `Grade` — y no necesitan registro nuevo, sólo consultas y una pantalla. La última exige
+instrumentar la aplicación, que es otro trabajo y otro costo. **Conviene separar las dos mitades**: la
+primera es barata y es la que el cliente pidió; la segunda es un proyecto.
+
+**Relacionado.** [ARQ-09](#arq-09) anota que las métricas y el registro de errores son cosas
+distintas y no conviene mezclarlas: "cuántos errores hubo" sale del registro, "cuánto se usa la
+plataforma" no. Comparten, eso sí, las mismas tres decisiones caras — dónde se guarda, cuánto tiempo
+y quién lo ve. También hay un ítem viejo en [TODO.md](./TODO.md) que pide mostrar uso real del
+instituto en el dashboard, y es esto.
+
+---
+
+<a id="feat-12"></a>
+## FEAT-12 · Aviso por correo cuando llega un formulario de inscripción · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-15).** Que llegue un correo al instituto avisando que entró un formulario de
+pre-inscripción.
+
+**El problema real es que hoy el instituto no se entera.** La pre-inscripción pública
+([`inscription/actions.ts`](../src/app/inscription/actions.ts)) crea el registro y ahí queda: alguien
+tiene que acordarse de mirar. Un aspirante puede quedar sin respuesta durante días sin que nadie lo
+sepa.
+
+**El costo no está en el aviso, está en que no hay correo en el proyecto.** No hay ninguna librería
+de envío en `package.json` — ni nodemailer, ni Resend, ni SendGrid. Este ítem es, en realidad, la
+decisión de **cómo manda correo esta aplicación**, y esa decisión no es de este ítem solo:
+
+- [FEAT-05](#feat-05) (recuperar la contraseña por correo) es **P1 y pedido del cliente**, y necesita
+  exactamente la misma infraestructura.
+- [SEC-06](#sec-06) (contraseñas por defecto hardcodeadas) se resuelve de verdad mandando un enlace de
+  alta, que también es correo.
+- El formulario de contacto del landing, anotado en [TODO.md](./TODO.md), es el tercer caso.
+
+**Por eso conviene que el primero que se haga sea FEAT-05**, que es el más urgente, y que deje el
+helper de envío montado. Los otros tres pasan a ser una plantilla y una llamada. Hacer este primero
+sería resolver el problema chico y dejar el caro para después.
+
+**Decisiones que arrastra.** Proveedor y dominio remitente (un correo que sale de un dominio sin SPF
+y DKIM cae en spam, que es peor que no mandarlo); a qué dirección se avisa —¿la del instituto,
+configurable por instituto?—; y qué lleva el cuerpo, teniendo presente que **hay datos de menores**:
+conviene que el correo avise que llegó una inscripción y mande a la aplicación, no que copie los
+datos del aspirante.
+
+**Alternativa más barata, mientras tanto.** Un contador de pre-inscripciones sin atender en el
+dashboard del instituto resuelve buena parte del problema sin infraestructura nueva. No reemplaza al
+correo —no avisa a quien no entró—, pero es de horas y no de días.
+
+---
+
+<a id="feat-13"></a>
+## FEAT-13 · Guardar la asistencia sola, sin botón de guardar · **P3**
+
+**Idea (2026-08-16)**, surgida al verificar [BUG-07](#bug-07) en stage: que cada marca de presente sea
+un `insert` o un `update` inmediato, en vez de un parte que se manda entero al apretar Guardar.
+
+**El argumento a favor es real pero engaña, y conviene dejarlo escrito.** Es cierto que con este
+enfoque BUG-07 no habría pasado: no hay transacción grande que se pase de los 5 segundos. Pero la
+causa de BUG-07 no era el tamaño del parte, era **cuántas sentencias se emitían por guardado** — y en
+esa cuenta el guardado por clic es **peor que lo que quedó**, no mejor:
+
+| Forma de guardar 25 alumnos | Requests | Sentencias |
+|---|---|---|
+| Bucle en `$transaction` interactiva (el código que falló) | 1 | 78 |
+| `UPDATE ... FROM (VALUES)` + `createMany` (lo que hay hoy) | 1 | **4** |
+| Un guardado por clic | **25** | ~75 |
+
+Los ~75 salen de que cada clic es un request completo: `getAuthContext` lee el usuario de la base
+para autorizar, la acción verifica la matrícula, y recién ahí escribe. **Y el pool es de 5**
+([ARQ-02](#arq-02)), así que el final de hora —cuando todos los docentes guardan a la vez— es
+exactamente el peor momento para multiplicar los requests por 25. Se cambia una conexión tomada cinco
+segundos por veinticinco conexiones peleándose.
+
+**Lo que sí resuelve, y es su verdadero valor: el trabajo que se pierde.** Hoy, si el docente marca a
+los 25 y se va sin apretar Guardar, o si se le corta la conexión antes, **no queda nada**. Eso BUG-07
+no lo cubre, y es un problema distinto que este enfoque ataca de verdad. El argumento a favor está
+bien; lo que hay que corregir es el motivo.
+
+**Las contras a analizar.**
+
+1. **El parte deja de ser atómico.** Hoy se guarda entero o no se guarda. Por clic, un parte a medias
+   pasa a ser un estado legítimo, y «sin marcar» deja de distinguirse de «no se llegó a guardar».
+2. **Los errores pasan a ser por fila.** Si falla el alumno 12, ¿qué ve el docente? Hace falta estado
+   y reintento por fila, no el cartel único que hay hoy.
+3. **Las notas no pueden ir por tecla.** Necesitan su propio mecanismo de espera, aparte del de los
+   estados.
+4. **El aula con wifi flojo empeora.** Un guardado único se reintenta; veinticinco sueltos dejan la
+   lista a mitad de camino, y hay que saber cuál es cuál.
+5. `revalidatePath` por clic sería desperdicio puro.
+
+**El punto medio, que probablemente es lo que conviene evaluar primero:** guardado automático con
+espera. Se juntan los cambios de unos segundos y se mandan con **la misma sentencia masiva que ya
+existe**. Gana el «no se pierde el trabajo» sin multiplicar los requests, y no toca la acción del
+servidor: es todo del lado del formulario.
+
+**Relacionado.** [BUG-07](#bug-07) (de donde sale), [ARQ-02](#arq-02) (el pool de conexiones),
+[ARQ-11](#arq-11) (el mismo patrón de muchas sentencias, en las notas de los informes).
+
+---
+
+<a id="feat-14"></a>
+## FEAT-14 · Carrito de pagos: cobrar varias cuotas en una sola operación · **P2 · 🗣️ cliente**
+
+**Pedido por el instituto el 2026-08-17**, al ejercitar [FIN-11](#fin-11) en stage.
+
+**El hueco.** Cada cobro es una cuota. Un padre con **dos hijos y cuatro cuotas** obliga a repetir el
+recorrido entero cuatro veces —buscar alumno, elegir cuota, importe, método, confirmar— y se lleva
+**cuatro comprobantes** por una sola entrega de plata. Lo mismo pasa en chico cuando una cuota se paga
+mitad con saldo a favor y mitad en efectivo: son dos pasadas por el formulario.
+
+**Forma pedida.** Un carrito donde se acumulan los movimientos —cuotas de uno o varios alumnos, con su
+importe, método, recargo o descuento, y las aplicaciones de saldo— y **se confirman todos juntos, una
+sola vez**.
+
+**Tres decisiones antes de estimar, y ninguna es de programación.**
+
+1. **El recibo es el argumento más fuerte, más que los clics.** Quien paga $60.000 quiere **un**
+   comprobante, no cuatro. `generatePaymentReceipt` ya acepta **varios conceptos** —hoy los usa para
+   separar recargo y descuento—, así que el PDF combinado está más cerca de lo que parece. Lo que falta
+   es **algo que agrupe los pagos** para poder reimprimirlo después, y eso es cambio de modelo: un
+   `PaymentBatch`, o un id de lote en `Payment`.
+2. **Todo junto o nada.** Cuatro cuotas tienen que confirmarse en **una** transacción: si la tercera
+   falla no puede quedar cobrada la primera. [`actions.ts`](../src/app/payments/actions.ts) ya tiene
+   una disciplina de bloqueos escrita para evitar deadlocks —`Fee`, después `Payment`, después
+   `Enrollment`—; con N cuotas hay que **tomarlos en orden determinístico**. Es la parte con filo.
+3. **Entre hermanos hay una pregunta de negocio.** El saldo a favor es **por alumno**
+   (`Student.creditBalance`). Si el padre paga de más, ¿el excedente queda a favor del hijo cuya cuota
+   se estaba cobrando, o del grupo familiar? ¿Y el saldo de un hermano puede pagar la cuota del otro?
+   Eso decide si el carrito **cruza alumnos** o es uno por alumno, que es la diferencia de tamaño más
+   grande de toda la ficha. Roza [ARQ-06](#arq-06) y la relación tutor–alumno.
+
+**Lo que no cambia.** Cada línea sigue siendo su propio `Payment` con su asiento `PAYMENT`: la caja
+sigue viendo un movimiento por cuota, y ningún KPI cambia. El carrito es de la interfaz y de la
+transacción, no del libro mayor.
+
+**No entra en el lote del 15/08**, que es para cerrar los huecos del release accidental. Esto es
+funcionalidad nueva.
+
+**Relacionado.** [FIN-27](#fin-27) (el punto medio del formulario, que es el parche mientras esto no
+exista), [FIN-11](#fin-11) (de donde salió la conversación), [FIN-01](#fin-01) (el excedente y a quién
+pertenece).
+
+---
+
+<a id="bug-08"></a>
+## BUG-08 · La preinscripción no tiene reglas: duplica alumnos y se la puede inscribir a un curso · **P1** · 🗣️ Pedido del cliente
+
+**Qué es la preinscripción (definido el 2026-08-16).** Es **el que llenó el formulario público y el
+instituto todavía no aceptó**. No es un alumno: es un aspirante esperando respuesta. De ahí salen dos
+reglas que hoy no existen.
+
+### 1 · Crea alumnos duplicados, y le rompe el acceso al que ya existía
+
+[`createPreEnrollmentAction`](../src/app/inscription/actions.ts) **no verifica nada** antes de
+crear: no hay `findFirst` ni `findUnique` en la función. Llama directo a `student.create` con
+`status: "PRE_INSCRIBED"`.
+
+Entonces un alumno que **ya existe** —activo, o en la papelera— que vuelve a llenar el formulario
+genera una **segunda fila `Student` con el mismo DNI**. Y `Student.dni` no tiene `@unique` en el
+schema, así que la base lo acepta.
+
+**No es sólo un registro repetido: le rompe el ingreso.** El DNI es el identificador obligatorio del
+alumno y su forma de entrar al sistema —hay chicos de 6 a 8 años sin correo—, así que con dos filas
+del mismo DNI el login pasa a depender de cuál encuentre primero. El alumno puede terminar entrando a
+una ficha vacía, sin sus cursos ni sus cuotas.
+
+**Qué tiene que pasar en su lugar.** Detectar que ese DNI ya existe y **avisar a los dos lados**:
+
+- **Al que está llenando el formulario**, para que sepa que ya está registrado y no vuelva a
+  intentarlo pensando que no funcionó.
+- **Al instituto**, porque es información: alguien que ya es alumno se está queriendo anotar de
+  nuevo, o alguien que está en la papelera quiere volver. Las dos cosas piden una acción humana.
+
+El mensaje al aspirante tiene que ser cuidadoso: confirmarle que **su solicitud llegó**, sin revelar
+datos de la ficha existente ni si está activo o dado de baja. Del otro lado, el instituto sí necesita
+saber cuál de los dos casos es.
+
+**Se apoya en [FEAT-12](#feat-12)** para el aviso por correo, y esa ficha explica por qué el correo
+es una decisión más grande que este ítem. **La detección no espera al correo**: bloquear el duplicado
+y mostrarlo en la aplicación se puede hacer ya.
+
+### 2 · La regla "sólo un activo se inscribe" no está en el servidor · **P3**
+
+> **Corregido el 2026-08-16, el mismo día**, al intentar reproducirlo en stage. La primera versión de
+> esta ficha decía que a un preinscripto **se lo podía inscribir desde la pantalla**. Es falso, y la
+> prueba lo mostró enseguida: el buscador no lo encuentra.
+> [`enrollments/new/page.tsx`](../src/app/enrollments/new/page.tsx) lista los alumnos con
+> `where: { status: "ACTIVE" }`, así que un aspirante nunca aparece para elegir.
+
+**Regla, y esto sí vale:** sólo un alumno **activo** se inscribe a un curso. Aceptar la
+preinscripción —pasarlo a activo— es el paso que lo habilita, y es una decisión del instituto.
+
+**Lo que falta es que el servidor la sostenga.**
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts) no mira `student.status` en ningún
+momento: la regla vive sólo en la consulta que arma el desplegable. Es defensa en profundidad, no un
+agujero que el operador pueda pisar sin querer, y por eso es **P3** y no P1 como la mitad de arriba.
+
+Vale la pena igual, porque el estado del alumno ya decide otras cosas del mismo circuito: desde
+[FIN-22](#fin-22) los dos generadores facturan sólo a alumnos activos, así que si alguna vez entrara
+una inscripción de un preinscripto por otro camino, **ocuparía lugar en el curso sin que se le
+facture nada**, en silencio.
+
+**Relacionado.** [FEAT-12](#feat-12) (el aviso por correo y la decisión de infraestructura que
+arrastra), [SEC-06](#sec-06) (el alta del alumno y sus credenciales), [FIN-16](#fin-16) (el filtro de
+estado en los generadores, que es la otra mitad de la incoherencia).
+
+---
+
+<a id="bug-09"></a>
+## BUG-09 · Los meses salen en inglés en la liquidación de sueldos · **P3**
+
+**Visto el 2026-08-16** verificando [SEC-03](#sec-03) en stage. En `/payments/payroll` el selector de
+período ofrece `January … December`, y el comprobante que se genera queda con el mes en inglés: el
+gasto de la prueba se guardó como **"Pago de Haberes - July 2026"**, y el modal de confirmación dice
+*"Período: July 2026"*. El resto de la aplicación está en castellano, incluida la pantalla de
+finanzas de al lado.
+
+**No es sólo la etiqueta: queda escrito en la base.** La descripción del `Expense` se arma con el
+nombre del mes, así que el historial de liquidaciones del instituto queda mezclado —lo viejo en
+inglés, lo nuevo en castellano el día que se arregle—. Conviene decidir si se normaliza lo ya
+escrito o se deja como está; son pocas filas.
+
+**Causa probable.** Un `toLocaleString`/`Intl` sin locale, o un array de meses en inglés escrito a
+mano. Es el mismo tipo de olvido que [FIN-10](#fin-10), que también sale de no fijar el locale: en
+Vercel el idioma por defecto del servidor es inglés, así que **esto no se ve corriendo en local** —
+que es probablemente por qué llegó hasta acá.
+
+**P3 porque es cosmético y no afecta ningún importe.** Pero es de la pantalla del dueño, y el dueño
+es quien mira los sueldos.
+
+---
+
+<a id="bug-10"></a>
+## BUG-10 · Un concepto largo empuja el importe fuera de la pantalla · **P2**
+
+**Visto el 2026-08-17**, provocado por un texto que agregó [FIN-11](#fin-11) y revertido ahí mismo —
+pero **la fragilidad es anterior y sigue**.
+
+La tabla del libro mayor es `whitespace-nowrap`
+([`TransactionTable.tsx`](../src/app/payments/components/TransactionTable.tsx)) y de la columna
+*Concepto / Referencia* **sólo trunca el título** (`max-w-[350px] truncate`). La segunda línea —la que
+lleva la etiqueta, el *"Anula a: …"*, el ticket y el badge de anulado— **no trunca nunca**, así que
+crece con su contenido y empuja *Fecha*, *Monto* y *Acciones* fuera del `overflow-x-auto`.
+
+**Se ve como si los importes hubieran desaparecido de todos los movimientos**, no sólo del que tiene el
+texto largo: la columna sigue ahí, hay que arrastrar la tabla en horizontal para encontrarla. Es un
+susto grande para algo que no perdió ningún dato — el reporte fue literalmente *"desaparecieron todos
+los montos de todos los movimientos"*.
+
+**Hoy no se dispara con los datos de prueba, que son cortos.** Pero el texto de esa línea incluye
+nombres de alumno y de curso: *"Anulación de Pago de Cuota #abc123 · Anula a: Cuota Septiembre 2026 -
+María Fernanda Gutiérrez Rodríguez"* con un nombre real y un curso de nombre largo llega igual. En
+producción hay 181 usuarios y nadie miró los largos.
+
+**P2 y no P3** porque la pantalla es la caja: una columna de importes que parece vacía es de las cosas
+que hacen desconfiar del sistema entero.
+
+### Resuelto — 2026-08-17 · `170f888`
+
+El tope de ancho quedó en el `div` y **no en el `<td>`**: la tabla es de layout automático, donde el
+`max-width` de una celda es apenas una sugerencia que el navegador puede ignorar, y el de un div se
+respeta siempre. La segunda línea ahora **envuelve** (`flex-wrap` + `whitespace-normal`) en vez de
+estirarse: la fila se hace más alta, que es barato, y las columnas de la derecha no se mueven.
+
+Entró **dentro del lote y no después**, a pedido del instituto, con un argumento que vale anotar: *"a
+primera vista no se van a dar cuenta de lo que pasó, como me pasó a mí"*. Un error que se presenta como
+"desaparecieron todos los importes" no admite quedar en la cola.
+
+---
+
+<a id="bug-11"></a>
+## BUG-11 · El saldo a favor del formulario queda viejo si se anula desde la tabla · **P3**
+
+**Visto el 2026-08-17**, cerrando la verificación de [FIN-11](#fin-11) en stage.
+
+**El hueco.** El saldo que muestra el formulario de cobro
+([`RegisterFeeForm.tsx`](../src/app/payments/components/RegisterFeeForm.tsx)) es estado del navegador:
+se carga con `loadFees` al elegir al alumno y no se vuelve a leer. Anular un pago desde la **tabla** es
+otro componente; `revalidatePath` redibuja la tabla —que es servidor— pero **el formulario conserva su
+estado**. Queda mostrando el saldo de antes de la anulación, con su botón «Usar Saldo».
+
+**La plata no corre riesgo, y conviene dejar escrito por qué.** `applyCreditToFeeAction` no descuenta
+leyendo y después escribiendo: la condición viaja dentro del `UPDATE`
+(`where: { creditBalance: { gte: creditAmount } }`, [`actions.ts:1002`](../src/app/payments/actions.ts)),
+evaluada contra la fila real y con la cuota bloqueada. Aplicar un saldo que ya no existe devuelve
+**«Saldo insuficiente»**. Lo mismo protege contra dos pestañas abiertas.
+
+**El caso al revés es el que molesta de verdad.** Si el saldo **aparece** por una anulación hecha en la
+tabla, el formulario sigue en cero y **ni siquiera dibuja el bloque azul**: la secretaría no ve un
+saldo que existe y le cobra en efectivo al alumno. No se pierde plata —vuelve a quedar a favor— pero es
+un cobro que no había que hacer, y nadie tiene motivo para sospecharlo.
+
+**Dos arreglos posibles.**
+
+1. **Barato:** que `handleApplyCredit` relea antes de aplicar. Tapa el caso que se vio, no el inverso.
+2. **De fondo:** que el importe lo decida el servidor. La acción recibiría la cuota y un "aplicá lo que
+   haya hasta cubrir la deuda", y calcularía `min(saldo real, deuda)` sobre la fila ya bloqueada. El
+   cliente deja de tener autoridad sobre el número, que es de donde sale todo este problema. Reemplaza
+   el `gte: creditAmount` por el cálculo desde la fila leída dentro de la transacción — hay que
+   conservar la atomicidad que ese chequeo aporta hoy.
+
+**P3** porque no hay plata en juego y el back rechaza lo inválido. Sube si el instituto reporta cobros
+en efectivo a alumnos que tenían saldo.
+
+**Relacionado.** [FIN-27](#fin-27) (el mismo formulario mostrando un estado que ya no corresponde),
+[FIN-11](#fin-11) (de donde salió), [FEAT-14](#feat-14) (el carrito rehace este flujo entero).
 
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
@@ -2221,6 +4551,209 @@ hace falta, y decidir la retención **antes** de empezar a escribir filas.
 
 ---
 
+<a id="arq-11"></a>
+## ARQ-11 · Guardar las notas de un informe cuesta 250 sentencias · **P2**
+
+**De dónde sale.** Al resolver [BUG-07](#bug-07) el 2026-08-13 se midió, de paso, la carga de notas
+de los informes. No hay una falla abierta: se reportaron fallas en su momento y el lote de 5 de
+[`entries/route.ts`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts) las hizo
+desaparecer. Esto es el costo que quedó abajo.
+
+**Medido** contra Postgres local, 25 alumnos × 4 categorías, contando las sentencias que Prisma manda
+de verdad:
+
+| | Sentencias | Resultado |
+|---|---|---|
+| Actual, en lotes de 5 | **250** | 25 informes, 75 entradas |
+| Colapsada en sentencias masivas | **13** | 25 informes, 75 entradas |
+
+Mismo resultado, 19× menos sentencias. Escala con alumnos **por** categorías, así que una plantilla
+de 8 categorías duplica el número.
+
+**El lote de 5 no alivia el pool: lo consume entero.** El comentario del código explica que procesa
+de a 5 para que la cola de Prisma no llegue al timeout buscando conexiones libres, y como remedio del
+síntoma funcionó. Pero el pool **es** de 5: un profesor guardando notas se lleva todas las conexiones
+que hay, y lo que pase en simultáneo —otro profesor, una pantalla cargando— espera. Es un techo, no
+un alivio. Relacionado con [ARQ-02](#arq-02).
+
+**Por qué no se colapsó en su momento, que es una razón buena.** No es el caso de
+[BUG-07](#bug-07): las `ReportEntry` cuelgan del `id` del `StudentReport` padre, que no existe hasta
+crearlo, así que la operación *parece* inherentemente secuencial — hay que crear el padre de cada
+alumno antes de poder tocar sus entradas.
+
+**Cambio propuesto.** Resolver todos los ids de una sola vez, con una lectura en el medio:
+
+1. `createMany({ skipDuplicates: true })` de los `StudentReport` que falten, más un `UPDATE ... FROM
+   (VALUES ...)` masivo para los comentarios del docente.
+2. **Un** `findMany` que traiga los 25 pares `id`/`studentId`. Es la sentencia que rompe la
+   secuencialidad aparente.
+3. Las entradas en tres sentencias masivas: `UPDATE ... FROM (VALUES ...)` para las que ya existían,
+   `createMany({ skipDuplicates: true })` para las nuevas, y un `deleteMany` con los pares
+   `reportId`/`categoryId` de las que el docente vació.
+4. Una lectura final para devolver el resultado, en vez de un `findUnique` por alumno.
+
+Con eso desaparece el lote de 5 y la operación pasa a retener una conexión, no cinco.
+
+**El caso borde que hay que preservar, y es el que más fácil se rompe.** Hoy
+`teacherComments: undefined` significa **"no toques el comentario"**, distinto de `null`, que
+significa "borralo". Un `createMany` que mande `teacherComments || null` a ciegas pisa con `null` lo
+que había. La versión medida filtra esos casos del `UPDATE`, pero la medición comprobó el resultado
+agregado —25 informes, 75 entradas—, **no cada caso borde**. Antes de dar esto por bueno hay que
+verificarlo como se verificó [BUG-07](#bug-07): payloads parciales, comentario ausente, entrada
+vaciada, y alumno sin informe previo.
+
+**Por qué P2 y no más.** No está roto y el cliente no lo está sufriendo. Es deuda de la misma familia
+que [FIN-06](#fin-06) y [BUG-07](#bug-07) —el tercer y ahora cuarto lugar con el mismo patrón— y
+conviene hacerlo cuando se toque ese módulo por otra razón, no como interrupción.
+
+---
+
+<a id="arq-12"></a>
+## ARQ-12 · Versionar el proyecto y mostrar la versión en la app · **P2**
+
+**Pedido (2026-08-15).** Poder versionar el proyecto, y decidir dónde se muestra el número de versión
+dentro de la aplicación.
+
+**Estado actual.** `package.json` dice `"version": "1.0.2"` y **nada lo lee**: no aparece en ninguna
+pantalla, no se registra en ningún lado y no se toca al desplegar. Es un número que quedó ahí. No hay
+tags de git ni notas de release.
+
+**Por qué esto no es cosmético, y cuál es su mejor argumento.** El 13/08, con producción caída, la
+pregunta que había que contestar era *"¿qué código está sirviendo ahora mismo?"* — y la única forma de
+contestarla era mirar commits en Vercel. Una versión visible en la app convierte esa pregunta en algo
+que puede contestar **el cliente por teléfono**, sin acceso al dashboard. Con dos proyectos de Vercel
+sobre el mismo repositorio y dos bases, saber qué está desplegado dónde no es un lujo.
+
+**Tres decisiones, en orden:**
+
+1. **Qué numera.** Semver a mano en `package.json` es lo más simple y lo que ya está empezado, pero
+   se olvida. La alternativa es derivar la versión del despliegue: Vercel expone
+   `VERCEL_GIT_COMMIT_SHA`, que no se olvida nunca pero no le dice nada a una persona. La combinación
+   —versión semver para humanos, sha corto al lado para diagnóstico— es la que sirve para las dos
+   cosas.
+2. **Cuándo sube.** Si se numera a mano, hace falta el hábito o un paso en el flujo de promoción a
+   `main`. Conviene atarlo a lo que ya existe: la promoción `stage` → `main` es el momento natural, y
+   es el único release real que tiene el proyecto.
+3. **Dónde se muestra.** Candidatos: el pie del panel, la pantalla de configuración del instituto, o
+   sólo el panel del superadmin. Mostrarlo a todo el mundo tiene un costo bajo y una ventaja concreta
+   —el cliente puede leerlo cuando reporta algo—, así que probablemente el pie del panel alcance, con
+   el sha visible sólo para el superadmin.
+
+**Nota técnica.** Leer `package.json` desde el código del cliente no funciona en Next; hay que
+inyectarlo como variable de entorno en tiempo de build (`env` en `next.config`) o generar un módulo
+con el valor. Es la parte fácil, pero conviene decidirlo antes para no leerlo de dos formas distintas.
+
+**Relacionado.** [ARQ-13](#arq-13) es la continuación natural: una vez que existe el número, saber
+quién lo está usando. Y esto es también lo que le falta a `tareas/config-pendiente.md` para poder
+afirmar qué quedó desplegado después de cada incidente.
+
+---
+
+<a id="arq-13"></a>
+## ARQ-13 · Saber qué versión está usando cada usuario · **P3**
+
+**Pedido (2026-08-15).** Métricas de qué versión de la aplicación tienen los usuarios.
+
+**Depende de [ARQ-12](#arq-12)**: sin número de versión no hay nada que medir.
+
+**Ojo con la analogía móvil, porque acá la pregunta es otra.** En una app de celular tiene sentido
+preguntar qué versión tiene instalada cada usuario, porque las instalaciones quedan atrás durante
+meses. Esto es una aplicación web: en el próximo refresco, todos están en la última. La distribución
+de versiones sería casi siempre una sola barra, y no vale un desarrollo.
+
+**Lo que sí tiene valor es la variante corta de esa pregunta: los clientes rancios.** Alguien con una
+pestaña abierta desde antes del despliegue sigue ejecutando JavaScript viejo contra un servidor nuevo,
+y eso **sí** produce errores reales — es primo del problema del 13/08, donde el desajuste fue entre
+base y código. También es lo que explica el reporte "a mí no me anda" de la persona que no cerró el
+navegador en tres días.
+
+**Forma barata.** Que el cliente mande su versión en las peticiones (una cabecera) y que el servidor
+compare con la suya; si no coinciden, avisarle al usuario que recargue. Eso resuelve el problema real
+sin construir métricas, y es lo que conviene hacer primero.
+
+**Forma cara.** Registrar la versión de cada sesión para poder graficar la distribución. Sólo tiene
+sentido si antes existe [FEAT-11](#feat-11) o [ARQ-09](#arq-09), porque comparte las mismas
+decisiones —dónde se guarda, cuánto tiempo, quién lo ve— y no vale la pena construir un registro
+propio para un solo dato.
+
+**Recomendación.** Hacer la forma barata como parte de ARQ-12, y dejar la métrica para cuando exista
+un lugar donde ya se guarden métricas.
+
+---
+
+<a id="arq-14"></a>
+## ARQ-14 · La purga de un alumno no puede borrar a ningún alumno real · **P3**
+
+**Cómo apareció (2026-08-16).** Mirando las claves foráneas de verdad en la base de producción
+mientras se analizaba [FIN-23](#fin-23). No lo reportó nadie, y es probable que nunca se haya
+intentado usar.
+
+[`hardDeleteStudentAction`](../src/app/students/[id]/actions.ts) es el borrado **físico** de un alumno, con
+su propio permiso ("Sin permisos para eliminar permanentemente"). Borra en una transacción:
+
+```ts
+attendance → grade → enrollment → fee → student
+```
+
+**Falla con casi cualquier alumno real**, porque hay tres claves foráneas `RESTRICT` que esa lista no
+contempla — verificadas sobre la base de producción, no leídas del schema:
+
+| Tabla | Apunta a | Al borrar el padre | Consecuencia |
+|---|---|---|---|
+| `Payment` | `Fee` | **RESTRICT** | La transacción borra las cuotas pero **no los pagos**: un alumno que alguna vez pagó algo no se puede purgar |
+| `GuardianStudentLink` | `Student` | **RESTRICT** | Un alumno con tutor vinculado tampoco |
+| `PracticeSession` | `Student` | **RESTRICT** | Ni uno que haya practicado |
+
+Sólo pasa un alumno sin ningún historial. Como la transacción se revierte entera, el operador ve
+"Error al purgar los datos del estudiante" y nada más: ni qué lo impidió ni que en realidad no se
+borró nada.
+
+**Y hay una dependencia oculta con [FIN-23](#fin-23), que es por donde salió esto.** El paso que borra
+las inscripciones funciona hoy **sólo porque** `Fee_enrollmentId_fkey` es `ON DELETE SET NULL`: en ese
+momento las cuotas todavía existen y todavía apuntan a esas inscripciones, y Postgres las desvincula
+sola antes de borrar. Es decir, **la purga se apoya en el mismo desprendimiento silencioso que FIN-23
+quiere eliminar**. Si esa clave foránea pasa a `RESTRICT`, este paso empieza a fallar también, y el
+arreglo es mover una línea: borrar las cuotas **antes** que las inscripciones.
+
+**Qué decidir, y es antes de programar nada.** Desde que los borrados pasaron de físicos a lógicos
+—para que lo que se borra sin querer se pueda recuperar—, esta función es la excepción, y hay que
+decidir si sigue existiendo:
+
+- **Sacarla.** Si la política es borrado lógico, un botón que borra de verdad y para siempre es
+  justamente lo que se quiso evitar. El alumno ya se marca `DELETED` desde la ficha.
+- **Arreglarla.** Si se quiere conservar para el caso real de tener que eliminar los datos de una
+  persona —un pedido de baja de datos personales, por ejemplo—, hay que agregar los pagos y los
+  vínculos que faltan, y decidir qué pasa con la plata: borrar los pagos de un alumno **cambia la
+  caja histórica del instituto**, y eso no puede ser un efecto colateral silencioso de borrar una
+  ficha.
+
+**Recomendación.** Sacarla, y si algún día hace falta la baja de datos personales, resolverla como lo
+que es —anonimizar la ficha conservando los asientos contables—, que no es lo mismo que borrar filas.
+
+### Decidido — 2026-08-16 · se saca
+
+**Ningún alumno se borra de forma permanente. Todos los estados son lógicos.** La razón es la misma
+que llevó a pasar los borrados físicos a lógicos: lo que se borra sin querer —o queriendo— tiene que
+poder recuperarse, y esta función es la única que no lo permite.
+
+Y el caso de negocio que parecía justificarla tampoco la necesita: el alumno que se va del instituto
+**va a la papelera con su deuda intacta**, y si vuelve, se restaura y la deuda reaparece para que el
+instituto decida (ver [FIN-09](#fin-09)). Borrarlo de verdad no resuelve nada de eso: lo rompe.
+
+Queda entonces sacar `hardDeleteStudentAction` y su acceso en la interfaz, en vez de arreglar los
+tres `RESTRICT` que hoy la hacen fallar. **La baja de datos personales, si alguna vez hace falta, es
+otra cosa** —anonimizar la ficha conservando los asientos— y merece su propia ficha el día que se
+pida.
+
+**Ojo al sacarla:** es el único lugar del código que borra filas de `Fee` en masa. Conviene verificar
+que ninguna pantalla dependa de ella antes de quitarla.
+
+**Relacionado.** [FIN-23](#fin-23) (de donde salió, y de cuyo `SET NULL` depende hoy),
+[ARQ-05](#arq-05) (la interfaz para restaurar lo borrado, que es el otro lado de la política de
+borrado lógico).
+
+---
+
 # Módulo pedagógico
 
 > **Tesis.** El diferencial no es "tenemos IA" — eso lo replica cualquiera en un fin de semana. El
@@ -2246,7 +4779,12 @@ justamente para eso).
 **Por qué es P1.** Convierte el diferencial de "depende de la disciplina del docente" a "sale gratis".
 Si hay que elegir **una sola cosa** de este módulo, es esta.
 
-### Resuelto — 2026-08-11 · pendiente de verificar en stage
+### Resuelto — 2026-08-11 · **verificado en producción el 2026-08-14**
+
+**Verificado por uso real, no por prueba.** El instituto trabajó con el botón y lo mencionó como algo
+que les gustó. Nunca pasó por stage: llegó a producción con la promoción de emergencia del 13/08 y se
+confirmó usándolo. Vale como cierre — es la evidencia más fuerte que hay, aunque haya llegado por el
+camino equivocado.
 
 **Un botón en el modal de clase, y nada que se guarde solo.** "Generar práctica con IA" vive dentro
 de la sección de práctica de
@@ -2465,6 +5003,91 @@ efecto y cada reproducción vuelve a generar el audio.
 
 **Cambio.** Pasar a `GET` con el texto hasheado en la URL, o cachear el audio del lado del servidor
 (Supabase Storage) con clave `hash(texto + voz + velocidad)`. Relevante si se usa un TTS pago.
+
+---
+
+<a id="ped-09"></a>
+## PED-09 · Generar recursos extra de la clase para el docente · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-13).** Un generador de contenido de recursos extra para la clase, para uso del
+docente.
+
+**Qué lo distingue de [PED-01](#ped-01).** PED-01 genera lo que practica **el alumno** solo, en su
+casa, y por eso tiene una forma fija: tres secciones que `LessonPractice` sabe guardar y que la app
+del alumno sabe ejecutar. Esto es otra cosa: material para **la profesora**, para dar la clase
+siguiente o reforzar la que dio. No lo consume la aplicación, lo consume una persona.
+
+Esa diferencia es la que hay que resolver antes de escribir código, y no es técnica:
+
+**Qué es un "recurso extra" hay que definirlo con el cliente.** Puede ser una guía de ejercicios para
+imprimir, una actividad de 10 minutos para arrancar la clase, un juego para el aula, ejemplos
+adicionales de un punto gramatical, o un texto de lectura. Cada una tiene una forma distinta, y "todo
+eso" no es una funcionalidad, es cinco. Conviene que la profesora diga cuáles pide de verdad y con
+qué frecuencia, antes de decidir qué genera el sistema.
+
+**Dos preguntas que cambian el diseño por completo:**
+
+1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
+   (`LessonResource`) y decidir quién lo ve — ¿sólo quien lo generó, todo el instituto, los alumnos?
+   Si es de un solo uso, alcanza con generarlo y ofrecer copiarlo o bajarlo en PDF, y no hay
+   migración.
+2. **¿En qué formato sale?** Texto para copiar y pegar es lo más barato. Un PDF armado ya es otro
+   trabajo, aunque el proyecto tiene `jspdf` y lo usa para recibos e informes, así que hay de dónde
+   agarrarse.
+
+**Lo que ya está construido y sirve.** El circuito completo de PED-01 es reutilizable tal cual: el
+patrón de providers (`IAIProvider`), el guard de personal sobre una clase
+([`guardPracticeDraft`](../src/lib/practice/guard.ts)), la cuota, y la validación de que la clase
+tenga tema y contenidos ([`draft.ts`](../src/lib/practice/draft.ts)). Un método nuevo en el provider
+y un endpoint que devuelva texto es la versión mínima, y es chica.
+
+**Prioridad.** P2 y no P1: es un pedido nuevo, no algo roto, y el diferencial del producto —el
+circuito aula → práctica → aula— pasa por [PED-02](#ped-02), no por acá. Pero es barato sobre lo que
+ya existe, y es el tipo de cosa que la profesora nota todos los días.
+
+**Riesgo a tener presente.** Cada generación cuesta cuota, y a diferencia de la práctica del alumno
+—que la usa un curso entero— esto lo dispara una sola persona para su propio uso. Si se vuelve
+frecuente, entra antes de lo previsto la discusión de [PED-07](#ped-07) (topes por plan).
+
+---
+
+<a id="ped-10"></a>
+## PED-10 · Consumo de IA por instituto, visible para el superadmin · **P2**
+
+**Pedido (2026-08-15).** Que el superadmin pueda ver cuántos tokens se gastan por instituto.
+
+**Buena parte del andamiaje ya está**, y salió de [SEC-07](#sec-07): la tabla
+[`AiUsage`](../prisma/schema.prisma) ya cuenta consumo por instituto y por usuario, en ventanas de
+tiempo, y ya la escribe cada llamada a IA a través de
+[`consumeAiQuota`](../src/lib/practice/quota.ts). Nadie la lee: `AiUsage` aparece en **un solo
+archivo** de todo `src`, que es el que la escribe.
+
+**Pero hay tres huecos entre lo que existe y lo que el pedido dice, y los tres importan:**
+
+1. **Cuenta llamadas, no tokens.** `AiUsage.count` se incrementa de a uno por request, sin mirar el
+   tamaño. Para el tope de cuota eso alcanza y es deliberado. Para "cuánto gasta este instituto" no:
+   una evaluación de una frase y la generación de una práctica entera cuentan igual, y la factura no
+   las cobra igual. Medir tokens de verdad requiere leer el uso que devuelve cada proveedor —Gemini
+   lo trae en `usageMetadata`— y guardarlo aparte del contador de cuota.
+2. **No hay historia.** `pruneOldWindows` borra las ventanas de más de **2 días**
+   ([`quota.ts`](../src/lib/practice/quota.ts)), a propósito: es un contador de cuota, no un registro.
+   Cualquier reporte mensual necesita una tabla o una agregación que sobreviva a la poda.
+3. **Las filas de usuario no se pueden agregar por instituto.** `AiUsage` guarda `subjectId` sin
+   `instituteId` y sin clave foránea, así que sólo agregan las filas `INSTITUTE`. Alcanza para el
+   total del instituto; no para ver **quién** dentro del instituto consume.
+
+**Camino sugerido, de menor a mayor.** Una pantalla en el panel del superadmin que muestre las filas
+`INSTITUTE` de los últimos días es de horas y ya contesta "quién está usando esto". Recién si hace
+falta el costo real conviene agregar el registro de tokens, que es donde está el trabajo.
+
+**Decidir antes: qué pregunta se contesta.** No es lo mismo *controlar el gasto* (necesita tokens y
+costo por proveedor), que *ver quién usa el módulo pedagógico* (alcanza con llamadas), que *cobrar por
+consumo* (necesita las dos cosas y además ser exacto). La tercera es [PED-07](#ped-07).
+
+**Relacionado.** [PED-07](#ped-07) (límites por plan) se apoya en la misma tabla y su ficha ya anota
+que lo que falta ahí es la decisión comercial, no el mecanismo. Si el consumo se va a facturar, los
+dos son el mismo trabajo y conviene mirarlos juntos. [FEAT-11](#feat-11) es la versión de esta
+pregunta para el administrador del instituto en vez del superadmin.
 
 ---
 

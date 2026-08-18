@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
@@ -16,6 +17,9 @@ async function getAuthAndInstitute() {
  * Genera las cuotas mensuales para todos los alumnos inscriptos en cursos activos.
  * Evita duplicados para el mismo mes/año/inscripción.
  * Optimizado para ejecuciones en masa de alto rendimiento (1 single SQL bulk insert).
+ *
+ * Devuelve además `skipped`: los alumnos que quedaron afuera por tener una cuota
+ * suelta del período (ver FIN-22, abajo).
  */
 export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const user = await getAuthAndInstitute();
@@ -27,10 +31,17 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
 
     try {
         // 1. Obtener todas las inscripciones activas del instituto (solo modalidad cuotas mensuales)
+        //
+        // El filtro por `student.status` es de FIN-16: un alumno dado de baja cuya
+        // inscripción quedó activa seguía generando cuotas. El generador anual ya lo
+        // filtraba desde FIN-12; este se había quedado atrás.
         const enrollments = await prisma.enrollment.findMany({
             where: {
                 status: "ACTIVE",
                 billingMode: "MONTHLY",
+                student: {
+                    status: "ACTIVE"
+                },
                 course: {
                     instituteId: user.instituteId as string,
                     status: "ACTIVE"
@@ -42,7 +53,7 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
         });
 
         if (enrollments.length === 0) {
-            return { success: true, count: 0 };
+            return { success: true, count: 0, skipped: 0 };
         }
 
         // 2. Traer en 1 sola query todas las cuotas ya existentes para este periodo
@@ -63,10 +74,44 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
             existingFees.map(f => f.enrollmentId).filter((id): id is string => id !== null)
         );
 
+        // 2b. Las cuotas **sueltas** del período: mismo alumno, mismo mes, sin
+        // inscripción. La consulta de arriba no las trae —no están en el `in` de
+        // `enrollmentId`— y el índice único de FIN-06 tampoco las alcanza, porque
+        // Postgres no considera iguales dos NULL. Sin esto, cada corrida le crea al
+        // alumno una segunda cuota del mismo mes: es FIN-22, y es lo que le pasó a
+        // los dos alumnos que reportó el instituto.
+        //
+        // Las hay sobre todo porque **desinscribir a un alumno borra la fila de
+        // `Enrollment`** y la clave foránea de `Fee` es ON DELETE SET NULL: le suelta
+        // todas las cuotas de golpe, incluidas las pagas (FIN-23, sin arreglar). Mover
+        // a alguien de curso por desinscribir + inscribir pasa por ahí. La otra fuente,
+        // menor, es la carga inicial de datos por script.
+        const looseFees = await prisma.fee.findMany({
+            where: {
+                instituteId: user.instituteId as string,
+                month: targetMonth,
+                year: targetYear,
+                type: "MONTHLY",
+                enrollmentId: null,
+                studentId: {
+                    in: enrollments.map(e => e.studentId)
+                }
+            },
+            select: { studentId: true }
+        });
+
+        const studentsWithLooseFee = new Set(looseFees.map(f => f.studentId));
+
         // 3. Filtrar en memoria las inscripciones que necesitan nueva cuota
         const feesToCreate = enrollments
             .filter(enrollment => {
                 if (existingEnrollmentIds.has(enrollment.id)) return false;
+                // El alumno ya tiene la cuota del mes, suelta. No se la generamos de
+                // nuevo y **tampoco la vinculamos acá**: si tuviera dos inscripciones
+                // activas no hay forma de saber de cuál es, y una corrida masiva no es
+                // lugar para reescribir el historial. Queda para normalizar aparte, y
+                // el operador se entera por el conteo que devolvemos (FIN-22).
+                if (studentsWithLooseFee.has(enrollment.studentId)) return false;
                 const finalPrice = enrollment.customMonthlyPrice !== null 
                     ? enrollment.customMonthlyPrice 
                     : enrollment.course.monthlyPrice;
@@ -104,10 +149,81 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
         }
 
         revalidatePath("/payments");
-        return { success: true, count: feesToCreate.length };
+        return {
+            success: true,
+            count: feesToCreate.length,
+            // Alumnos, no inscripciones: es el número que el operador tiene que ir a
+            // mirar. Si un alumno con cuota suelta tuviera dos inscripciones, las dos
+            // quedaron afuera y sigue siendo un solo caso para revisar.
+            skipped: studentsWithLooseFee.size
+        };
     } catch (e: any) {
         console.error("Error al generar cuotas masivas:", e);
         return { success: false, error: "Error al generar cuotas" };
+    }
+}
+
+/**
+ * Las inscripciones que alcanza la matrícula de un año lectivo (FIN-14).
+ *
+ * El año lo da `course.startDate`, que es el criterio que ya usa
+ * `createEnrollmentAction`, y se lee en UTC porque las fechas se guardan a
+ * medianoche UTC: un curso que arranca el 1 de enero, leído en hora local, cae
+ * en diciembre del año anterior.
+ *
+ * Los cursos **sin fecha** entran únicamente cuando el año pedido es el de
+ * calendario. Si entraran siempre, pedir 2027 volvería a alcanzar a las
+ * inscripciones de 2026 — que es exactamente la regresión que esto cierra.
+ *
+ * Lo usan la corrida y el conteo que la pantalla muestra antes de apretar. Va en
+ * un solo lugar a propósito: si el conteo y la corrida usaran criterios
+ * distintos, la pantalla prometería un número y el botón haría otro.
+ */
+function yearlyEnrollmentTargetsWhere(instituteId: string, year: number): Prisma.EnrollmentWhereInput {
+    const startsInAcademicYear = {
+        startDate: {
+            gte: new Date(Date.UTC(year, 0, 1)),
+            lt: new Date(Date.UTC(year + 1, 0, 1))
+        }
+    };
+
+    const courseOfTheYear = year === new Date().getFullYear()
+        ? { OR: [startsInAcademicYear, { startDate: null }] }
+        : startsInAcademicYear;
+
+    return {
+        status: "ACTIVE",
+        student: { status: "ACTIVE" },
+        course: {
+            instituteId,
+            status: "ACTIVE",
+            ...courseOfTheYear
+        }
+    };
+}
+
+/**
+ * Cuántas inscripciones alcanza la matrícula de un año, para que la pantalla lo
+ * diga **antes** de apretar (FIN-14). Con cero, el botón se deshabilita: un
+ * botón que se aprieta y no hace nada se lee como una falla del sistema.
+ *
+ * Es sólo el alcance del año lectivo, no la cuenta de lo que se va a emitir: de
+ * esas inscripciones, las que ya tienen su matrícula quedan afuera igual.
+ */
+export async function countYearlyEnrollmentTargetsAction(year: number) {
+    const user = await getAuthAndInstitute();
+    if (!user) return { success: false, error: "No autorizado" };
+
+    if (!year) return { success: false, error: "Año inválido" };
+
+    try {
+        const reached = await prisma.enrollment.count({
+            where: yearlyEnrollmentTargetsWhere(user.instituteId as string, year)
+        });
+        return { success: true, reached };
+    } catch (e: any) {
+        console.error("Error al contar inscripciones del año lectivo:", e);
+        return { success: false, error: "Error al contar inscripciones" };
     }
 }
 
@@ -131,16 +247,16 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
     }
 
     try {
-        // 1. Inscripciones activas de alumnos activos, en cursos activos del instituto
+        // 1. Inscripciones activas de alumnos activos, en cursos activos del
+        //    instituto **que pertenezcan al año lectivo pedido** (FIN-14).
+        //
+        //    Sin ese último filtro, pedir 2027 en diciembre de 2026 creaba
+        //    matrículas 2027 atadas a las inscripciones de 2026. Después, al
+        //    armar los cursos de 2027 e inscribir al alumno,
+        //    `createEnrollmentAction` busca una anticipada **sin vincular**, no
+        //    encuentra esta porque ya está vinculada, y emite otra: doble cobro.
         const enrollments = await prisma.enrollment.findMany({
-            where: {
-                status: "ACTIVE",
-                student: { status: "ACTIVE" },
-                course: {
-                    instituteId: user.instituteId as string,
-                    status: "ACTIVE"
-                }
-            },
+            where: yearlyEnrollmentTargetsWhere(user.instituteId as string, year),
             select: { id: true, studentId: true, customEnrollmentPrice: true },
             orderBy: { enrolledAt: "asc" }
         });
@@ -270,17 +386,51 @@ export async function getDebtorsReportAction() {
     }
 }
 
+/** Tope del motivo. El `input` de la pantalla lleva el mismo número. */
+const DELETION_REASON_MAX = 200;
+
 /**
  * Elimina fisicamente una cuota PENDIENTE. Sólo si no tiene pagos asociados.
+ *
+ * **Deja la foto de lo que borró, con motivo.** Es la única acción de plata que
+ * no dejaba rastro: anular un pago, un gasto o un ingreso escribe su
+ * contra-asiento con `operatorId`, pero acá la fila desaparecía y no quedaba
+ * nada. No borra plata cobrada —se niega si la cuota tiene pagos— pero **borra
+ * una deuda**, y eso hay que poder reconstruirlo. Ver SEC-03.
+ *
+ * SEC-03 lo resolvió con un asiento de importe 0 en `Transaction`, que fue un
+ * puente y no la forma definitiva: quedaba **invisible** en la tabla del libro
+ * mayor, que filtra los movimientos en cero —filtro que FIN-11 decidió mantener,
+ * porque esa pantalla es la caja—, y no tenía dónde guardar el motivo. Desde
+ * FEAT-10 el registro va a `FeeDeletion`, que es su propia tabla y tiene
+ * pantalla: `/payments/deletions`.
+ *
+ * El motivo es **obligatorio**. Es más exigente que el de las anulaciones, que
+ * es opcional, y es a propósito: al anular queda la fila original para mirar, y
+ * acá no queda nada.
  */
-export async function deleteFeeAction(feeId: string) {
+export async function deleteFeeAction(feeId: string, reason: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
+
+    const cleanReason = (reason ?? "").trim();
+    if (!cleanReason) {
+        return { success: false, error: "Escribí el motivo: sin él queda una fecha, no un rastro." };
+    }
+    if (cleanReason.length > DELETION_REASON_MAX) {
+        return { success: false, error: `El motivo no puede pasar de ${DELETION_REASON_MAX} caracteres.` };
+    }
 
     try {
         const fee = await prisma.fee.findUnique({
             where: { id: feeId },
-            include: { payments: true }
+            include: {
+                payments: true,
+                student: { select: { id: true, name: true } },
+                // El curso es parte de la foto: la inscripción sigue existiendo,
+                // pero la cuota que la nombraba no va a estar para preguntarle.
+                enrollment: { select: { course: { select: { name: true } } } }
+            }
         });
 
         if (!fee || fee.instituteId !== user.instituteId) {
@@ -291,11 +441,29 @@ export async function deleteFeeAction(feeId: string) {
             return { success: false, error: "No se puede eliminar una cuota que ya tiene pagos. Anule los pagos primero." };
         }
 
-        await prisma.fee.delete({
-            where: { id: feeId }
-        });
+        // El registro y el borrado van juntos: si falla el borrado no queremos el
+        // registro de una cuota que sigue existiendo, ni al revés — una cuota
+        // borrada sin su motivo es exactamente el agujero que esto cierra.
+        await prisma.$transaction([
+            prisma.feeDeletion.create({
+                data: {
+                    instituteId: fee.instituteId,
+                    studentId: fee.student.id,
+                    studentName: fee.student.name,
+                    type: fee.type,
+                    year: fee.year,
+                    month: fee.month,
+                    amount: fee.originalAmount,
+                    courseName: fee.enrollment?.course.name ?? null,
+                    reason: cleanReason,
+                    deletedById: user.id,
+                }
+            }),
+            prisma.fee.delete({ where: { id: feeId } }),
+        ]);
 
         revalidatePath("/payments/debtors");
+        revalidatePath("/payments/deletions");
         revalidatePath("/students");
         return { success: true };
     } catch (e: any) {

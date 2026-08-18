@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
-import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
+import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -17,6 +17,24 @@ import { ENROLLMENT_FEE_MONTH, formatFeeLabel } from "@/lib/utils";
  */
 async function getAuthAndInstitute() {
     const auth = await requireRole(["ADMIN", "SECRETARY"]);
+    if (!auth) return null;
+    return { id: auth.userId, instituteId: auth.instituteId };
+}
+
+/**
+ * Igual que `getAuthAndInstitute`, pero sólo para ADMIN.
+ *
+ * El corte que definió el instituto (SEC-03): la secretaría entra a todo lo que
+ * es plata que **entra** —cuotas, matrículas e ingresos varios, que son el libro
+ * o la fotocopia que vende el instituto— y no toca lo que **sale**. Los gastos y
+ * los sueldos son del dueño.
+ *
+ * La pantalla de finanzas ya le escondía el formulario de egresos, el acceso a
+ * sueldos y los KPI que los muestran, pero eso no alcanzaba: un server action es
+ * un POST como cualquier otro y esconder el formulario no protege nada.
+ */
+async function getAdminAndInstitute() {
+    const auth = await requireRole(["ADMIN"]);
     if (!auth) return null;
     return { id: auth.userId, instituteId: auth.instituteId };
 }
@@ -123,7 +141,7 @@ export async function createPaymentAction(formData: FormData) {
                     surcharge,
                     discount,
                     method,
-                    notes: surplus > 0 ? `${notes || ""} (Excedente de $${surplus.toLocaleString()} acreditado a saldo)`.trim() : notes,
+                    notes: surplus > 0 ? `${notes || ""} (Excedente de $${formatCurrency(surplus)} acreditado a saldo)`.trim() : notes,
                     date: new Date()
                 }
             });
@@ -413,7 +431,9 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
 }
 
 export async function createExpenseAction(formData: FormData) {
-    const user = await getAuthAndInstitute();
+    // Sólo ADMIN: cubre también los sueldos, que entran por acá con
+    // `category === "Payroll"`. Ver SEC-03.
+    const user = await getAdminAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
     const description = formData.get("description") as string;
@@ -466,7 +486,8 @@ export async function createExpenseAction(formData: FormData) {
 }
 
 export async function voidExpenseAction(expenseId: string, reason?: string) {
-    const user = await getAuthAndInstitute();
+    // Sólo ADMIN, igual que darlo de alta. Ver SEC-03.
+    const user = await getAdminAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
     try {
@@ -717,10 +738,30 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
 
                     if (!student) throw new Error("Alumno no encontrado");
 
+                    // Decir "anulá primero los pagos hechos con ese saldo" sin decir cuáles
+                    // deja al operador buscándolos, y no están en el libro mayor: el asiento
+                    // de una aplicación de saldo es de $0 y la tabla filtra los $0 (FIN-11).
+                    // Nombrar las cuotas lo manda derecho al bloque de la ficha del alumno.
+                    const creditPayments = await tx.payment.findMany({
+                        where: {
+                            method: "SALDO",
+                            status: "VALID",
+                            fee: { studentId: fee.studentId }
+                        },
+                        select: { fee: { select: { type: true, month: true, year: true } } }
+                    });
+
+                    // Dos aplicaciones sobre la misma cuota son un solo nombre para quien lee.
+                    const heldBy = [...new Set(
+                        creditPayments.map(p => formatFeeLabel(p.fee.type, p.fee.month, p.fee.year))
+                    )];
+
                     throw new Error(
-                        `No se puede anular: hay que devolver $${(-creditDelta).toLocaleString()} de saldo a favor ` +
-                        `y el alumno sólo tiene $${student.creditBalance.toLocaleString()}. ` +
-                        `Anulá primero los pagos hechos con ese saldo.`
+                        `No se puede anular: hay que devolver $${formatCurrency(-creditDelta)} de saldo a favor ` +
+                        `y el alumno sólo tiene $${formatCurrency(student.creditBalance)}. ` +
+                        (heldBy.length > 0
+                            ? `Anulá primero, desde la ficha del alumno, los pagos hechos con ese saldo: ${heldBy.join(", ")}.`
+                            : `Anulá primero los pagos hechos con ese saldo.`)
                     );
                 }
             }

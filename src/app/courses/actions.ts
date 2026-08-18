@@ -230,10 +230,42 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
             return { success: false, error: "Curso no encontrado o sin acceso" };
         }
 
-        // Hard-delete: used for errors
-        await prisma.enrollment.delete({
-            where: { id: enrollmentId }
+        // Borrado físico, y sólo para lo que dice el comentario original: deshacer
+        // un error de carga. Una inscripción con cuotas emitidas **no se borra**.
+        //
+        // Antes se borraba siempre, y como la clave foránea era ON DELETE SET NULL,
+        // eso le sacaba el curso a todas las cuotas del alumno —las pagas incluidas—
+        // sin avisar. Es como se generaron las cuotas duplicadas que reportó el
+        // instituto: se soltaban acá y el generador volvía a emitirlas (FIN-23, y su
+        // consecuencia, FIN-22).
+        //
+        // El corte es **el pago, no la cuota**. Inscribir emite la matrícula en el
+        // mismo acto —27 de los 31 cursos tienen matrícula mayor a cero—, así que
+        // exigir "ninguna cuota" dejaba sin salida al error de carga: la inscripción
+        // nacía imposible de deshacer. Con plata cobrada de por medio, en cambio, no
+        // hay error de carga que valga: eso se marca, no se borra.
+        //
+        // El criterio de "sin pagos" se pregunta por filas de `Payment` y no por
+        // `paidAmount`, que es el mismo de FIN-06 y `deleteFeeAction`, y además el
+        // único que evita chocar contra `Payment_feeId_fkey`, que es RESTRICT: un
+        // pago anulado deja la cuota en cero pero la fila sigue ahí.
+        const feesWithPayments = await prisma.fee.count({
+            where: { enrollmentId, payments: { some: {} } }
         });
+
+        if (feesWithPayments > 0) {
+            return {
+                success: false,
+                error: "Esta inscripción tiene cuotas con pagos registrados, así que no se puede eliminar sin perderlos. Si el alumno dejó el curso, marcá la inscripción como incompleta. Si pasa a otro curso, usá «Cambiar curso» desde su ficha: se lleva las cuotas con él."
+            };
+        }
+
+        // Las cuotas se borran junto con la inscripción y en la misma transacción.
+        // Van primero por el RESTRICT de FIN-23, igual que en `hardDeleteStudentAction`.
+        await prisma.$transaction([
+            prisma.fee.deleteMany({ where: { enrollmentId } }),
+            prisma.enrollment.delete({ where: { id: enrollmentId } })
+        ]);
 
         revalidatePath(`/courses/${courseId}`);
         revalidatePath("/courses");

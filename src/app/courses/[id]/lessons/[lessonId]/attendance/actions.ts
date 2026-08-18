@@ -1,55 +1,171 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+
+/** Estados de matrícula que la pantalla de asistencia lista como alumnos del curso. */
+const ENROLLED_STATUSES = ["ACTIVE", "FINISHED"];
+
+/**
+ * Autoriza a escribir asistencia sobre una clase, con la **misma política que ya
+ * aplican las pantallas**: personal del instituto, la clase tiene que ser de un
+ * curso del instituto propio, y un docente sólo entra al curso que dicta. Los
+ * roles administrativos pasan a cualquier curso.
+ *
+ * Hasta acá las acciones sólo miraban que hubiera sesión, así que cualquiera con
+ * una —incluido un tutor— podía escribir la asistencia de cualquier clase de
+ * cualquier instituto mandando los ids. Un server action es un POST como
+ * cualquier otro: esconder el botón no protege nada.
+ */
+async function authorizeLessonAttendance(lessonId: string, courseId: string) {
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) return { error: "No autorizado" as const };
+
+    // `courseId` va en el `where` y no en un `if` posterior: una clase de otro
+    // curso simplemente no existe para esta acción.
+    const lesson = await prisma.lesson.findFirst({
+        where: { id: lessonId, courseId: courseId, status: "ACTIVE" },
+        select: {
+            id: true,
+            course: { select: { instituteId: true, teacherId: true, status: true } }
+        }
+    });
+
+    if (!lesson || lesson.course.instituteId !== auth.instituteId) {
+        return { error: "No autorizado" as const };
+    }
+
+    if (auth.activeRole === "TEACHER" && lesson.course.teacherId !== auth.userId) {
+        return { error: "No autorizado (no dictás este curso)" as const };
+    }
+
+    // La pantalla muestra los cursos terminados en modo lectura; el servidor
+    // tiene que sostener lo mismo.
+    if (lesson.course.status === "FINISHED") {
+        return { error: "El curso está finalizado: la asistencia es sólo de lectura." as const };
+    }
+
+    return { auth };
+}
 
 export async function saveLessonAttendanceAction(
     lessonId: string,
     courseId: string,
     records: { studentId: string; status: "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED"; notes?: string }[]
 ) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
+    const authorized = await authorizeLessonAttendance(lessonId, courseId);
+    if ("error" in authorized) {
+        return { success: false, error: authorized.error };
+    }
+
+    if (records.length === 0) {
+        return { success: true };
     }
 
     try {
-        await prisma.$transaction(async (tx) => {
-            const existingAttendances = await tx.attendance.findMany({
-                where: { lessonId: lessonId }
-            });
-
-            for (const record of records) {
-                const existing = existingAttendances.find(a => a.studentId === record.studentId);
-
-                if (existing) {
-                    await tx.attendance.update({
-                        where: { id: existing.id },
-                        data: {
-                            status: record.status,
-                            notes: record.notes || null,
-                        }
-                    });
-                } else {
-                    await tx.attendance.create({
-                        data: {
-                            studentId: record.studentId,
-                            lessonId: lessonId,
-                            status: record.status,
-                            notes: record.notes || null,
-                        }
-                    });
-                }
-            }
+        // Sólo se escribe asistencia de alumnos matriculados en el curso. Se
+        // filtra en lugar de rechazar el parte entero: si a alguien le dieron de
+        // baja la matrícula mientras el profesor tenía la pantalla abierta, se
+        // guarda el resto igual en vez de perderle la clase.
+        const enrolled = await prisma.enrollment.findMany({
+            where: {
+                courseId: courseId,
+                studentId: { in: records.map(r => r.studentId) },
+                status: { in: ENROLLED_STATUSES }
+            },
+            select: { studentId: true }
         });
+
+        const enrolledIds = new Set(enrolled.map(e => e.studentId));
+        const validRecords = records.filter(r => enrolledIds.has(r.studentId));
+
+        if (validRecords.length === 0) {
+            return { success: false, error: "Ninguno de los alumnos enviados está matriculado en el curso." };
+        }
+
+        if (validRecords.length < records.length) {
+            console.warn("Asistencia: se descartaron alumnos no matriculados", {
+                lessonId, courseId, descartados: records.length - validRecords.length
+            });
+        }
+
+        // El parte entero se escribe en **dos sentencias masivas**, no en una por
+        // alumno. Lo que importa acá no es el tiempo total sino **cuánto tiempo se
+        // retiene una conexión del pool**, que es de 5: mientras un profesor
+        // guarda, los demás esperan.
+        //
+        // Medido contra Postgres local con 25 alumnos (el curso más grande del
+        // cliente), contando las sentencias que Prisma manda de verdad:
+        //
+        //   bucle en `$transaction` interactiva (código viejo)   53 alta / 78 regrabado
+        //   un `upsert` por alumno en `$transaction([...])`      27 / 27
+        //   estas dos sentencias                                  4 / 4
+        //
+        // El regrabado del código viejo era el peor caso y es el caso común —el
+        // profesor corrige y vuelve a guardar—: 78 sentencias, porque el `update`
+        // de Prisma hace un SELECT antes de cada UPDATE. Con la base en otra
+        // región (~65 ms de ida y vuelta) eso da ~5 s, que es exactamente el tope
+        // de la transacción interactiva. Ahí se caía el parte entero (BUG-07).
+        //
+        // La transacción que queda **no es la que se sacó en los informes**: aquella
+        // mantenía la conexión tomada a lo largo de N viajes con el control
+        // volviendo a JS en el medio. Ésta son dos sentencias en un solo lote. Y
+        // sale gratis: `createMany` abre su propio BEGIN/COMMIT igual, así que
+        // envolver las dos no agrega ni una sentencia y a cambio el parte queda
+        // atómico.
+        //
+        // Por qué un UPDATE crudo y no `updateMany`: cada alumno lleva su propio
+        // estado y su propia nota, y `updateMany` aplica **un** valor a todas las
+        // filas que matchean. El `VALUES` es la forma de mandar 25 valores
+        // distintos en una sentencia. Va parametrizado.
+        const values = Prisma.join(
+            validRecords.map(record => Prisma.sql`(
+                ${record.studentId}::text,
+                ${record.status}::"AttendanceStatus",
+                ${record.notes || null}::text
+            )`)
+        );
+
+        await prisma.$transaction([
+            // Los que ya tenían fila. Conserva `id` y `createdAt`: no se borra y
+            // se recrea, así que sigue constando cuándo se tomó la asistencia por
+            // primera vez.
+            prisma.$executeRaw`
+                UPDATE "Attendance" a
+                   SET "status" = v."status",
+                       "notes" = v."notes",
+                       "updatedAt" = NOW()
+                  FROM (VALUES ${values}) AS v("studentId", "status", "notes")
+                 WHERE a."studentId" = v."studentId"
+                   AND a."lessonId" = ${lessonId}
+            `,
+            // Los que no la tenían. `skipDuplicates` se apoya en
+            // `@@unique([studentId, lessonId])`, y ahí muere la carrera con el
+            // kiosco de QR: si el escáner creó la fila en el medio, ésta se saltea
+            // en vez de chocar y arrastrar todo. Es el mismo recurso que FIN-06.
+            prisma.attendance.createMany({
+                data: validRecords.map(record => ({
+                    studentId: record.studentId,
+                    lessonId: lessonId,
+                    status: record.status,
+                    notes: record.notes || null,
+                })),
+                skipDuplicates: true
+            })
+        ]);
 
         revalidatePath(`/courses/${courseId}`);
         revalidatePath(`/courses/${courseId}/lessons/${lessonId}/attendance`);
+
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message || "Error al guardar el parte de asistencia." };
+        // El error crudo de Prisma queda en el log del servidor, no en la
+        // pantalla de la profesora. Antes se devolvía `error.message` tal cual:
+        // le llegaba un `P2028` a quien sólo quería guardar la lista.
+        console.error("Error guardando asistencia:", { lessonId, courseId, error });
+        return { success: false, error: "Error al guardar el parte de asistencia." };
     }
 }
 
@@ -58,9 +174,9 @@ export async function scanAttendanceQRAction(
     courseId: string,
     studentId: string
 ) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return { success: false, error: "No autenticado" };
+    const authorized = await authorizeLessonAttendance(lessonId, courseId);
+    if ("error" in authorized) {
+        return { success: false, error: authorized.error };
     }
 
     try {

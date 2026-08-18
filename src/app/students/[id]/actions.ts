@@ -232,11 +232,21 @@ export async function hardDeleteStudentAction(studentId: string) {
         }
 
         // Transaction to delete relations
+        //
+        // Las cuotas van **antes** que las inscripciones. Al revés funcionaba sólo
+        // porque la clave foránea era ON DELETE SET NULL y desvinculaba las cuotas
+        // en el camino; desde la migración de FIN-23 es RESTRICT, y borrar una
+        // inscripción con cuotas vivas aborta la transacción entera.
+        //
+        // Esta función además sigue rota para cualquier alumno con historial: no
+        // borra los pagos (Payment → Fee es RESTRICT), ni los vínculos con tutores,
+        // ni las sesiones de práctica. Ver ARQ-14, donde está la discusión de si
+        // corresponde arreglarla o sacarla.
         await prisma.$transaction([
             prisma.attendance.deleteMany({ where: { studentId } }),
             prisma.grade.deleteMany({ where: { studentId } }),
-            prisma.enrollment.deleteMany({ where: { studentId } }),
             prisma.fee.deleteMany({ where: { studentId } }),
+            prisma.enrollment.deleteMany({ where: { studentId } }),
             prisma.student.delete({ where: { id: studentId } })
         ]);
 

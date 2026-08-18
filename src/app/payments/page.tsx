@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import dayjs from "dayjs";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
-import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles, Percent, Coins } from "lucide-react";
+import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles, Percent, Coins, Trash2 } from "lucide-react";
 
 import { RegisterIncomesForm } from "./components/RegisterIncomesForm";
 import { RegisterOutgoingsForm } from "./components/RegisterOutgoingsForm";
@@ -259,6 +259,22 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     // Combinar y Sortear desde el Ledger
     const allTransactionsRaw = filteredLedger.map(t => {
+        // La aplicación de saldo a favor se asienta en $0 —la plata entró antes,
+        // cuando se cobró de más— pero es el único movimiento en $0 sobre el que
+        // hay algo que hacer: mientras exista, el pago original no se puede
+        // anular. Se muestra por eso, y se reconoce por estructura y no por el
+        // texto de la descripción. Los otros dos ajustes en $0 quedan afuera: la
+        // cuota borrada de SEC-03 no tiene pago asociado, y el contra-asiento de
+        // anular una aplicación comparte pago, tipo e importe con el original —se
+        // distinguen porque al anular, el original queda VOIDED y el
+        // contra-asiento nace VALID—. No se muestra el contra-asiento: el
+        // original tachado ya dice que se anuló, y no hubo plata de por medio.
+        // Ver FIN-11.
+        const isCreditApplication =
+            t.type === "ADJUSTMENT" &&
+            t.payment?.method === "SALDO" &&
+            !(t.payment?.status === "VOIDED" && t.status === "VALID");
+
         let title = t.description || "";
         let note = null;
         let recipientName = null;
@@ -281,6 +297,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             if (t.payment.notes) {
                 note = t.payment.notes;
             }
+        } else if (isCreditApplication && t.payment?.fee?.student) {
+            const fee = t.payment.fee;
+            title = `Saldo aplicado: ${formatFeeLabel(fee.type, fee.month, fee.year)} - ${fee.student.name}`;
         } else if (t.type === "EXPENSE" && t.expense) {
             title = `${t.expense.category}: ${t.expense.description}`;
             recipientName = t.expense.recipient?.name || null;
@@ -301,7 +320,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             ticketNumber = mi.ticketNumber || null;
         }
 
-        const relatedTitle = (t.type === "ADJUSTMENT" || t.type === "REFUND") ? voidedTitlesMap.get(entityId || "") : null;
+        // La aplicación de saldo comparte `paymentId` con su propio contra-asiento,
+        // así que al anularla el mapa le devolvía su propio título y la fila decía
+        // "Anula a: <ella misma>". No es un contra-asiento de nada: es el original.
+        const relatedTitle = !isCreditApplication && (t.type === "ADJUSTMENT" || t.type === "REFUND")
+            ? voidedTitlesMap.get(entityId || "")
+            : null;
 
         return {
             id: t.id,
@@ -311,7 +335,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             note,
             recipientName,
             ticketNumber,
-            amount: Math.abs(t.amount),
+            // En la aplicación de saldo el asiento vale $0, pero el importe que se
+            // usó es el del pago. Se muestra sin signo y etiquetado aparte: no es
+            // plata que entró ni salió, y la tabla es la caja.
+            amount: isCreditApplication ? (t.payment?.amount ?? 0) : Math.abs(t.amount),
+            isCreditApplication,
             type: t.amount >= 0 ? "INCOME" as const : "EXPENSE" as const,
             status: t.status,
             method: t.method,
@@ -319,7 +347,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema",
             relatedTitle
         };
-    }).filter(t => t.amount > 0);
+    }).filter(t => t.amount > 0 || t.isCreditApplication);
 
     const normalizeString = (str: string) => {
         return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -354,7 +382,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={user.activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -377,6 +405,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                 <Button variant="outline" className="flex items-center gap-2 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
                                     <DollarSign size={16} />
                                     Pago de Sueldos
+                                </Button>
+                            </Link>
+                        )}
+                        {/* Seguimiento de lo que la secretaría dio de baja: es control
+                            del dueño, así que el acceso no se le muestra a ella. La
+                            pantalla lo verifica por su cuenta con `requireRole`. */}
+                        {!isSecretary && (
+                            <Link href="/payments/deletions">
+                                <Button variant="outline" className="flex items-center gap-2 border-rose-500/30 text-rose-600 hover:bg-rose-50">
+                                    <Trash2 size={16} />
+                                    Cuotas Eliminadas
                                 </Button>
                             </Link>
                         )}

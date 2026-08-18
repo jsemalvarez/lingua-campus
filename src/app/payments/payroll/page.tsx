@@ -2,13 +2,16 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { PayrollClient } from "./PayrollClient";
-import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
+import { requireRole } from "@/lib/authz";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function PayrollPage() {
-    // Solo ADMIN y SECRETARY pueden ver esta página
-    const user = await requireRole(INSTITUTE_ADMINS);
+    // Sólo ADMIN: los sueldos son del dueño del instituto (SEC-03). La pantalla
+    // de finanzas ya escondía el botón que trae acá, pero el link escondido no
+    // es un permiso: hasta ahora la secretaría entraba escribiendo la URL y veía
+    // lo que cobra cada profesor.
+    const user = await requireRole(["ADMIN"]);
     if (!user) redirect("/dashboard");
 
     const activeRole = user.activeRole;
@@ -31,7 +34,7 @@ export default async function PayrollPage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar currentActiveRole={user.activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="mb-8">

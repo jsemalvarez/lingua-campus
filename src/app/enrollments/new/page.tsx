@@ -39,7 +39,7 @@ export default async function NewEnrollmentPage({ searchParams }: { searchParams
     if (courses.length === 0) {
         return (
             <div className="min-h-screen bg-background">
-                <Navbar />
+                <Navbar currentActiveRole={user.activeRole} />
                 <main className="container mx-auto px-4 py-12 text-center">
                     <h2 className="text-2xl font-bold mb-4">No tienes cursos creados</h2>
                     <p className="text-muted-foreground mb-6">Necesitas al menos un curso activo para poder inscribir a un alumno.</p>
@@ -53,7 +53,7 @@ export default async function NewEnrollmentPage({ searchParams }: { searchParams
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
+            <Navbar currentActiveRole={user.activeRole} />
 
             <main className="container mx-auto px-4 sm:px-6 py-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <header className="space-y-4 mb-4">

@@ -71,18 +71,26 @@ export function ChangeCourseModal({
 
     if (!isOpen || !mounted) {
         return (
+            // Con etiqueta y no sólo el ícono: es el camino sano para mover un alumno
+            // de curso, y como lápiz pelado no se lo encontraba. El otro camino
+            // —desinscribir del listado del curso y volver a inscribir— le suelta las
+            // cuotas al alumno (FIN-23). Si esto no se anuncia, gana el que sí.
+            //
+            // El texto habla de mover un alumno y nada más. Lo que pase con las cuotas
+            // es responsabilidad del sistema, no de quien aprieta el botón: la
+            // secretaria mueve alumnos, no toma decisiones contables. Ver FIN-24.
             <Button
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                 onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     setIsOpen(true);
                 }}
-                title="Cambiar de curso"
+                title="Mover este alumno a otro curso"
             >
-                <Edit2 size={14} />
+                <Edit2 size={14} /> Cambiar curso
             </Button>
         );
     }
