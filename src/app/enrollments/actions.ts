@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
-import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
+import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -158,7 +158,6 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
         }
 
         const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth() + 1;
 
         // Start transaction for consistency
         await prisma.$transaction(async (tx) => {
@@ -175,7 +174,12 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
                     : enrollment.course.examPrice;
 
                 if (finalExamPrice > 0) {
-                    // Check if fee already exists
+                    // El chequeo previo busca por inscripción y año, **ignorando el
+                    // mes**, que es lo correcto: el derecho de examen es uno por año.
+                    // Hasta FIN-17 esa regla vivía sólo acá —la restricción única
+                    // incluye el mes, y la cuota se guardaba con el mes en que se
+                    // tocaba el interruptor, así que dos meses distintos no chocaban—.
+                    // Con `EXAM_FEE_MONTH` la base dice lo mismo que esta consulta.
                     const existingFee = await tx.fee.findFirst({
                         where: {
                             studentId: enrollment.studentId,
@@ -194,7 +198,7 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
                                 originalAmount: finalExamPrice,
                                 paidAmount: 0,
                                 status: "PENDING",
-                                month: currentMonth,
+                                month: EXAM_FEE_MONTH,
                                 year: currentYear,
                                 instituteId: user.instituteId as string
                             }

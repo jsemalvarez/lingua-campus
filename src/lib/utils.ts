@@ -23,6 +23,23 @@ export function cn(...inputs: ClassValue[]) {
 export const ENROLLMENT_FEE_MONTH = 0;
 
 /**
+ * Mes con el que se guardan las cuotas de examen. Mismo caso que la matrícula:
+ * el derecho de examen es anual y por inscripción, y el mes que llevaba era el
+ * día en que alguien tocó el interruptor.
+ *
+ * Con el mes de creación, la restricción única —`[enrollmentId, type, year, month]`—
+ * **no las alcanzaba**: dos cuotas de examen de la misma inscripción y año en
+ * meses distintos no chocan. Lo único que las cuidaba era el "consultar y después
+ * crear" de `toggleExamRegistrationAction`, que es el patrón de FIN-06 sin red
+ * debajo. Con el mes fijo, la regla la hace cumplir la base. Ver FIN-17.
+ *
+ * Comparte el valor con `ENROLLMENT_FEE_MONTH` y no hay ambigüedad: `type` está
+ * dentro de la restricción, así que la matrícula y el examen de la misma
+ * inscripción y año siguen siendo dos filas distintas.
+ */
+export const EXAM_FEE_MONTH = 0;
+
+/**
  * Importes en pesos, con el locale del negocio y no el del proceso.
  *
  * `toLocaleString()` pelado usa el locale de donde corre: en Vercel es `en-US`,

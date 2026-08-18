@@ -529,8 +529,9 @@ model Fee {
   paidAmount     Float    @default(0) // Suma de todos los pagos realizados
   
   year        Int
-  month       Int      // 1-12. Las matrículas van siempre en 0: son anuales y el
-                       // mes no significa nada (ENROLLMENT_FEE_MONTH, ver FIN-12).
+  month       Int      // 1-12. Las matrículas y los derechos de examen van siempre
+                       // en 0: son anuales y el mes no significa nada
+                       // (ENROLLMENT_FEE_MONTH en FIN-12, EXAM_FEE_MONTH en FIN-17).
   status      PaymentStatus @default(PENDING)
   datePaid    DateTime?
   
@@ -547,7 +548,9 @@ model Fee {
   //
   // Para las matrículas significa "una por inscripción y año", porque van todas
   // con el mismo `month` (FIN-12). Antes llevaban el mes de creación y dos
-  // generaciones en meses distintos pasaban de largo.
+  // generaciones en meses distintos pasaban de largo. Lo mismo vale desde FIN-17
+  // para los derechos de examen, que arrastraban ese mismo mes administrativo y
+  // por eso quedaban fuera de la regla.
   //
   // Lo único que sigue afuera es la matrícula anticipada, que se crea sin
   // `enrollmentId` y en Postgres los NULL no chocan entre sí. Ahí la regla la

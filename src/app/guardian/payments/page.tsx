@@ -22,7 +22,10 @@ import { getMonthName, cn } from "@/lib/utils";
 
 function getFeeLabel(fee: { type: string; month: number; year: number }) {
     if (fee.type === "ENROLLMENT") return `Matrícula ${fee.year}`;
-    if (fee.type === "EXAM") return `Examen ${getMonthName(fee.month)} ${fee.year}`;
+    // Sin el mes, igual que `formatFeeLabel`. El derecho de examen es anual, y
+    // desde FIN-17 su mes es fijo (`EXAM_FEE_MONTH`): imprimirlo daría
+    // "Examen Mes 0 2026" en la pantalla que ve el tutor.
+    if (fee.type === "EXAM") return `Derecho de Examen ${fee.year}`;
     return `Cuota ${getMonthName(fee.month)} ${fee.year}`;
 }
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
