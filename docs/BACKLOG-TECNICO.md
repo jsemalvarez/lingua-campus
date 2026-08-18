@@ -3825,6 +3825,11 @@ este cambio, pero pasan por la función que sí se tocó:
   mandó al dashboard. Entrando después como admin, la fila figura con **`Secretaria Uno`** en la
   columna «Eliminó». Es el punto entero de esta ficha, ejercitado de punta a punta.
 
+**Desplegado en stage el 17/08.** La migración se aplicó sola con el build, a las 01:06 UTC, y **la
+base de producción no se enteró**: su última migración sigue siendo `20260811183000_add_ai_usage`,
+del 13/08, y `FeeDeletion` no existe ahí. Es la tercera vez que el freno de `vercel.json` aguanta un
+push con una migración adentro.
+
 **La ventana de huérfanos quedó en cero, como se buscaba.** La consulta 5 del lote midió el 16/08
 contra producción: cero filas `'Cuota eliminada%'`. Y en producción [SEC-03](#sec-03) todavía no
 está —sale con T1—, así que el asiento viejo nunca llegó a escribirse ahí. Si alguna cuota se borra
