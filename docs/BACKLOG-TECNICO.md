@@ -219,7 +219,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [x] |
 | [FIN-15](#fin-15) | P2 | La matrícula anticipada no tiene restricción única en la base | [ ] |
 | [FIN-16](#fin-16) | P2 | El generador mensual ignora el período lectivo y a los alumnos de baja | [ ] |
-| [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [ ] |
+| [FIN-17](#fin-17) | P2 | Las cuotas de examen quedaron fuera de la normalización del mes | [x] |
 | [FIN-18](#fin-18) | P3 | La matrícula anticipada del que sigue en el mismo curso queda sin curso | [ ] |
 | [FIN-19](#fin-19) | P3 | Dos matrículas del mismo año se ven idénticas fuera del cobro | [ ] |
 | [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
@@ -1861,6 +1861,47 @@ exactamente el "consultar y después crear" de [FIN-06](#fin-06), sin red debajo
 **Cambio.** Mismo tratamiento que la matrícula: un mes fijo para las `EXAM` —conviene una constante
 al lado de `ENROLLMENT_FEE_MONTH` ([`utils.ts`](../src/lib/utils.ts))— y una migración que normalice
 las existentes con el criterio de [FIN-12](#fin-12). Es chico y cierra el patrón entero.
+
+### Resuelto — 2026-08-17 · `c463844`
+
+`EXAM_FEE_MONTH = 0` en [`utils.ts`](../src/lib/utils.ts), al lado de `ENROLLMENT_FEE_MONTH`, y
+`toggleExamRegistrationAction` ([`enrollments/actions.ts`](../src/app/enrollments/actions.ts)) la
+usa en vez del mes del calendario. Comparte el valor con la matrícula y no hay ambigüedad: `type`
+está dentro de la restricción, así que la matrícula y el examen de la misma inscripción y año
+siguen siendo dos filas distintas. Migración `20260817130000_normalize_exam_fee_month`, nombrada
+por encima de la de [FEAT-10](#feat-10), que era la otra migración del mismo fin de semana.
+
+**Cero filas afectadas, y medido antes de escribir la migración:** no existe ninguna cuota `EXAM`
+en producción ni en stage. El interruptor de examen no se usó todavía, así que el `DELETE` y el
+`UPDATE` no tocan nada en ninguna de las dos bases. Es preventivo a propósito: después de la
+primera cuota emitida deja de ser gratis.
+
+**Un lugar más del que decía el enunciado.** Arriba dice que `formatFeeLabel` no muestra el mes, y
+es cierto — pero el portal del tutor
+([`guardian/payments/page.tsx`](../src/app/guardian/payments/page.tsx)) tiene **su propia** función
+de etiqueta y era el único punto del sistema que imprimía el mes de una cuota de examen. Con el mes
+fijo habría dicho «Examen Mes 0 2026» en la pantalla que ve la familia. Quedó como el resto:
+«Derecho de Examen 2026».
+
+**Lo que cambia en los números, y es lo mismo que ya pasó con las matrículas.** Las cuotas de
+examen salen de las dos vistas de devengado que filtran por mes exacto —«Progreso de Cobro» en
+[`payments/page.tsx`](../src/app/payments/page.tsx) e «Ingresos del Mes» del
+[`dashboard`](../src/app/dashboard/page.tsx)— y **siguen contando enteras** en «Deuda Total» y en
+el reporte de deudores, cuyo filtro es `month <= mes actual`, computadas como mora histórica. Nada
+que vaya por fecha de asiento se mueve. Es el hueco que arregla de fondo [FIN-08](#fin-08) con
+`dueDate`; el mapa completo de qué KPI mira cada cosa está en esa ficha.
+
+**Verificado por pantalla el 2026-08-17** contra la base de desarrollo, con los números anotados
+antes de abrir el navegador. Prender el interruptor sobre `sofia sanabria` emitió la cuota con
+**mes 0** y apagarlo la borró por impaga; sobre `catalina gonzalez rossi`, cuya cuota está **paga**,
+apagar **no** la borró y volver a prender **no la duplicó** —mismo id—. En deudores se lee «Derecho
+de Examen 2026 (Adolescents+ M-J)», sin mes, bajo «Vencido (histórico)» y no bajo «Agosto», que es
+exactamente lo previsto.
+
+**Y la restricción se probó de las dos maneras**, con dos `INSERT` directos dentro de una
+transacción revertida: con el mes fijo la base **rechaza** la segunda cuota de examen de la misma
+inscripción y año (`P2002`); con un mes cualquiera —lo que escribía el código hasta acá— **la
+aceptaba**. Ese era el hueco, y no había restricción que lo atajara.
 
 ---
 
