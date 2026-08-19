@@ -4269,7 +4269,7 @@ importa: **un mes que todavía no llegó no dice "sin deudas"**. Septiembre 2026
 por $45.000 que el reporte excluye por no vencidas —`month <= mes actual`—, así que decir "sin deudas
 de septiembre" sería falso. Dice **"Septiembre 2026 todavía no venció"**.
 
-### Resuelto — 2026-08-19 · pendiente de verificar en stage
+### Resuelto — 2026-08-19 · verificado en desarrollo, pendiente de verificar en stage
 
 Tres archivos, sin migración y sin tocar `getDebtorsReportAction`: el reporte ya se traía entero y el
 recorte es de interfaz. El estado vive en el cliente, junto al buscador, el orden y la paginación que
@@ -4294,6 +4294,20 @@ ya eran de cliente — el costo es que el filtro no se comparte por link.
 
 **Lo que no se tocó.** `getDebtorsReportAction` sigue trayendo lo mismo y con el mismo criterio de
 vencido, así que la deuda que la pantalla puede mostrar no cambió: cambió cómo se la recorta.
+
+**Verificado por pantalla el 2026-08-19** contra la base de desarrollo, con los números anotados antes
+de abrir el navegador. Sin filtro: mora histórica **$85.000**, pendiente de agosto **$0**, **6
+deudores**. Con **Abril 2026**: `$60.000 · 5 deudores`, y **`estudiante uno 2233` desaparece de la
+lista** porque sólo debe matrícula — que es el filtro fuerte funcionando. El caso que lo muestra
+entero es `alex ibragin sánchez fernández`: sin filtro debe **$25.000** (cuota de abril $15.000 +
+matrícula $10.000) y con abril puesto su tarjeta dice **$15.000**, sin la matrícula en ningún lado.
+**Junio 2026** —un mes sin ninguna cuota— da "Sin deudas de Junio 2026", y **Septiembre 2026**,
+"todavía no venció". Los dos carteles, que son la diferencia entre "no debe nadie" y "no llegó".
+
+> **Al margen, y anotado para no repetirlo:** durante la prueba la pantalla mostró la 404 y la sesión
+> no arrancaba. No era la funcionalidad: se había corrido `next build` con el `next dev` levantado, y
+> los dos escriben en el mismo `.next/`. El síntoma es `/api/auth/session` devolviendo 404 con HTML en
+> vez de JSON, y NextAuth sin poder armar la sesión. Se arregla con `rm -rf .next && npm run dev`.
 
 **Relacionado.** [FIN-09](#fin-09), que agrega a esta misma pantalla un filtro por estado del alumno
 —activos, papelera, todos— y va en la misma barra: conviene diseñarla una sola vez.
