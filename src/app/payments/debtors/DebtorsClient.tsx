@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import {
     AlertTriangle, Phone, Calendar, User, Clock,
     Search, X, ChevronLeft, ChevronRight, FileDown,
-    ArrowUpDown, ArrowUp, ArrowDown,
+    ArrowUpDown, ArrowUp, ArrowDown, CalendarCheck, CalendarClock,
 } from "lucide-react";
 import { PendingFeeActions } from "./PendingFeeActions";
 import { getMonthName } from "@/lib/utils";
@@ -18,6 +18,8 @@ type DebtorMonth = {
     isCurrent: boolean;
     amount: number;
     isPaid: boolean;
+    month: number;
+    year: number;
 };
 
 type DebtorSummary = {
@@ -33,14 +35,39 @@ type Props = {
     summaryList: DebtorSummary[];
     currentMonthLabel: string;
     currentMonth: number;
+    currentYear: number;
 };
 
-export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: Props) {
+export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, currentYear }: Props) {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [exporting, setExporting] = useState(false);
     const [sortField, setSortField] = useState<"name" | "debt">("debt");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+    // ── Filtro por período ────────────────────────────────────────────────────
+    // `null` es "todos los períodos" y es el estado de entrada a propósito: es la
+    // única vista donde se ven las matrículas y los derechos de examen, que van
+    // con `month = 0` (FIN-12, FIN-17) y no caen en ningún mes del selector.
+    // Arrancar con el mes actual puesto dejaría esa deuda invisible para quien
+    // trabaje siempre filtrando.
+    const [filterMonth, setFilterMonth] = useState<number | null>(null);
+    const [filterYear, setFilterYear] = useState<number>(currentYear);
+
+    const period = filterMonth ? { month: filterMonth, year: filterYear } : null;
+    const periodLabel = period ? `${getMonthName(period.month)} ${period.year}` : "";
+    // Un mes que todavía no llegó no es un mes sin deuda: puede tener cuotas
+    // emitidas que no se pueden reclamar. La pantalla lo dice distinto.
+    const isFuturePeriod = !!period && (period.year > currentYear || (period.year === currentYear && period.month > currentMonth));
+
+    const changePeriod = (month: number | null, year: number) => {
+        setFilterMonth(month);
+        setFilterYear(year);
+        setPage(1);
+    };
+
+    // Sólo hasta el año en curso: en un año futuro no puede haber deuda vencida.
+    const years = Array.from({ length: 3 }, (_, i) => currentYear - 2 + i);
 
     const toggleSort = (field: "name" | "debt") => {
         if (sortField === field) {
@@ -75,7 +102,9 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(15);
             doc.setTextColor(255, 255, 255);
-            doc.text("Reporte de Deudores", 14, 10);
+            // El título dice el recorte. Un PDF filtrado por junio que se llame
+            // "Reporte de Deudores" se lee como el reporte completo del instituto.
+            doc.text(period ? `Deudores de ${periodLabel}` : "Reporte de Deudores", 14, 10);
             doc.setFontSize(8);
             doc.setFont("helvetica", "normal");
             doc.text(`Lingua Campus · Generado el ${dateStr}`, 14, 17);
@@ -91,53 +120,90 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
             doc.setTextColor(30, 30, 30);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
-            doc.text("Resumen de deudas", 14, 30);
+            doc.text(period ? `Resumen de ${periodLabel}` : "Resumen de deudas", 14, 30);
 
             autoTable(doc, {
                 startY: 33,
-                head: [["Mora Histórica", `Pendiente ${getMonthName(currentMonth)}`, "Deuda Total Global"]],
-                body: [[
-                    `$${totalHistorical.toLocaleString()}`,
-                    `$${totalCurrent.toLocaleString()}`,
-                    `$${totalAll.toLocaleString()}`,
-                ]],
+                head: period
+                    ? [[`Deuda de ${periodLabel}`, "Deudores"]]
+                    : [["Mora Histórica", `Pendiente ${getMonthName(currentMonth)}`, "Deuda Total Global"]],
+                body: period
+                    ? [[`$${totalAll.toLocaleString()}`, `${filtered.length}`]]
+                    : [[
+                        `$${totalHistorical.toLocaleString()}`,
+                        `$${totalCurrent.toLocaleString()}`,
+                        `$${totalAll.toLocaleString()}`,
+                    ]],
                 theme: "grid",
                 headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: "bold", fontSize: 8 },
                 bodyStyles: { fontSize: 9, fontStyle: "bold" },
-                columnStyles: { 2: { textColor: [220, 38, 38] } },
+                columnStyles: period ? { 0: { textColor: [220, 38, 38] } } : { 2: { textColor: [220, 38, 38] } },
                 margin: { left: 14, right: 14 },
             });
 
+            // Con período elegido el PDF no lleva la deuda total del alumno, igual
+            // que la pantalla. Dicho en el papel para que nadie lo lea como el
+            // saldo completo.
+            if (period) {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7);
+                doc.setTextColor(110);
+                doc.text(
+                    `Sólo las cuotas de ${periodLabel}. Estos alumnos pueden tener deuda de otros períodos.`,
+                    14,
+                    (doc as any).lastAutoTable.finalY + 4
+                );
+                doc.setTextColor(30, 30, 30);
+            }
+
             // ── Listado de deudores ───────────────────────────────────────────
-            const afterSummary = (doc as any).lastAutoTable.finalY + 8;
+            const afterSummary = (doc as any).lastAutoTable.finalY + (period ? 12 : 8);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
             doc.text(`Detalle por alumno (${filtered.length} ${filtered.length === 1 ? "deudor" : "deudores"})`, 14, afterSummary);
 
-            const rows = filtered.map((s) => [
-                s.name,
-                s.phone || "—",
-                `$${s.previousMonthsOwed.toLocaleString()}`,
-                `$${s.currentMonthOwed.toLocaleString()}`,
-                `$${s.totalOwed.toLocaleString()}`,
-                s.months.map((m) => `${m.label}: $${m.amount.toLocaleString()}`).join("\n"),
-            ]);
+            // Las columnas de mora, mes en curso y total no aplican al recorte por
+            // período: ahí cada alumno tiene un solo número, el de su cuota.
+            const rows = period
+                ? filtered.map((s) => [
+                    s.name,
+                    s.phone || "—",
+                    s.months.map((m) => m.label).join("\n"),
+                    `$${s.totalOwed.toLocaleString()}`,
+                ])
+                : filtered.map((s) => [
+                    s.name,
+                    s.phone || "—",
+                    `$${s.previousMonthsOwed.toLocaleString()}`,
+                    `$${s.currentMonthOwed.toLocaleString()}`,
+                    `$${s.totalOwed.toLocaleString()}`,
+                    s.months.map((m) => `${m.label}: $${m.amount.toLocaleString()}`).join("\n"),
+                ]);
 
             autoTable(doc, {
                 startY: afterSummary + 3,
-                head: [["Alumno", "Teléfono", "Mora histórica", getMonthName(currentMonth), "Deuda total", "Cuotas pendientes"]],
+                head: period
+                    ? [["Alumno", "Teléfono", "Cuota", "Importe"]]
+                    : [["Alumno", "Teléfono", "Mora histórica", getMonthName(currentMonth), "Deuda total", "Cuotas pendientes"]],
                 body: rows,
                 theme: "striped",
                 headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
                 bodyStyles: { fontSize: 7.5, valign: "top" },
-                columnStyles: {
-                    0: { fontStyle: "bold", cellWidth: 36 },
-                    1: { cellWidth: 24 },
-                    2: { cellWidth: 22, textColor: [190, 18, 60] },
-                    3: { cellWidth: 22 },
-                    4: { cellWidth: 22, fontStyle: "bold", textColor: [190, 18, 60] },
-                    5: { cellWidth: "auto" },
-                },
+                columnStyles: period
+                    ? {
+                        0: { fontStyle: "bold", cellWidth: 45 },
+                        1: { cellWidth: 30 },
+                        2: { cellWidth: "auto" },
+                        3: { cellWidth: 26, fontStyle: "bold", textColor: [190, 18, 60] },
+                    }
+                    : {
+                        0: { fontStyle: "bold", cellWidth: 36 },
+                        1: { cellWidth: 24 },
+                        2: { cellWidth: 22, textColor: [190, 18, 60] },
+                        3: { cellWidth: 22 },
+                        4: { cellWidth: 22, fontStyle: "bold", textColor: [190, 18, 60] },
+                        5: { cellWidth: "auto" },
+                    },
                 margin: { left: 14, right: 14 },
                 didDrawPage: (data: any) => {
                     // Pie de página
@@ -154,26 +220,49 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                 },
             });
 
-            doc.save(`deudores_${now.toISOString().slice(0, 10)}.pdf`);
+            doc.save(
+                period
+                    ? `deudores_${getMonthName(period.month).toLowerCase()}-${period.year}_${now.toISOString().slice(0, 10)}.pdf`
+                    : `deudores_${now.toISOString().slice(0, 10)}.pdf`
+            );
         } finally {
             setExporting(false);
         }
     };
 
+    // ── Recorte por período ───────────────────────────────────────────────────
+    // El filtro es fuerte: con un mes elegido, el alumno queda listado sólo si
+    // debe *ese* mes, y lo que se muestra es lo que debe de ese mes, no su deuda
+    // total. La lista contesta "a quién le reclamo junio"; la deuda completa se
+    // ve volviendo a "Todos los períodos".
+    const viewList = useMemo(() => {
+        if (!period) return summaryList;
+        return summaryList.reduce<DebtorSummary[]>((acc, s) => {
+            const months = s.months.filter((m) => m.month === period.month && m.year === period.year);
+            if (months.length === 0) return acc;
+            const owed = months.reduce((a, m) => a + m.amount, 0);
+            acc.push({ ...s, months, totalOwed: owed, currentMonthOwed: 0, previousMonthsOwed: 0 });
+            return acc;
+        }, []);
+    }, [summaryList, period?.month, period?.year]);
+
     // ── Filtrado + Ordenamiento ───────────────────────────────────────────────
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
-        const list = q ? summaryList.filter((s) => s.name.toLowerCase().includes(q)) : [...summaryList];
+        const list = q ? viewList.filter((s) => s.name.toLowerCase().includes(q)) : [...viewList];
         list.sort((a, b) => {
             if (sortField === "name") {
                 return sortDir === "asc"
                     ? a.name.localeCompare(b.name, "es")
                     : b.name.localeCompare(a.name, "es");
             }
+            // Con un período elegido, `totalOwed` es lo que se debe de ese mes:
+            // el orden es por el valor de esa cuota, que no es el mismo en todos
+            // los cursos.
             return sortDir === "asc" ? a.totalOwed - b.totalOwed : b.totalOwed - a.totalOwed;
         });
         return list;
-    }, [search, summaryList, sortField, sortDir]);
+    }, [search, viewList, sortField, sortDir]);
 
     // Resetear a página 1 cuando cambia la búsqueda
     const handleSearch = (value: string) => {
@@ -203,8 +292,43 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
 
     return (
         <>
+            {/* ── Resumen del período elegido ───────────────────────────────── */}
+            {/* Con filtro puesto, las tres tarjetas no aplican: las dos primeras
+                se calculan contra el mes en curso y la tercera es la deuda total,
+                que esta vista no muestra. Una sola tarjeta, con otro título y
+                otra forma, es la señal de que se está mirando un recorte. */}
+            {summaryList.length > 0 && period && (
+                <Card className="p-5 mb-6 border-primary/30 bg-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 text-primary rounded-lg">
+                            <Calendar size={20} />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                                Deuda de {periodLabel}
+                            </span>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                                Sólo las cuotas de este mes. No incluye lo que estos alumnos deban de otros períodos.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div>
+                            <h2 className="text-2xl font-black text-primary">${totalAll.toLocaleString()}</h2>
+                            <p className="text-[10px] text-muted-foreground">Total del mes</p>
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-foreground">{filtered.length}</h2>
+                            <p className="text-[10px] text-muted-foreground">
+                                {filtered.length === 1 ? "deudor" : "deudores"}
+                            </p>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             {/* ── Summary cards ─────────────────────────────────────────────── */}
-            {summaryList.length > 0 && (
+            {summaryList.length > 0 && !period && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     <Card className="p-5 border-rose-200 dark:border-rose-900/30 bg-rose-50/30 dark:bg-rose-950/10">
                         <div className="flex items-center gap-3 mb-2 text-rose-600">
@@ -240,6 +364,57 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                         <h2 className="text-2xl font-black">${totalAll.toLocaleString()}</h2>
                         <p className="text-[10px] text-rose-100/70 mt-1">Suma total de deudas en el instituto</p>
                     </Card>
+                </div>
+            )}
+
+            {/* ── Filtro de período ─────────────────────────────────────────── */}
+            {/* Los doce meses, tengan deuda o no: un mes que falta en la lista se
+                lee como una pantalla rota, y uno vacío que contesta "sin deudas"
+                contesta la pregunta. */}
+            {summaryList.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-border/60 rounded-xl px-3 py-2 shadow-sm font-semibold text-sm">
+                        <Calendar size={15} className="text-muted-foreground shrink-0" />
+                        <select
+                            value={filterMonth ?? ""}
+                            onChange={(e) => changePeriod(e.target.value ? parseInt(e.target.value, 10) : null, filterYear)}
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer text-foreground pr-1"
+                            aria-label="Filtrar por mes"
+                        >
+                            <option value="" className="bg-white dark:bg-zinc-900 text-foreground font-semibold">
+                                Todos los períodos
+                            </option>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                <option key={m} value={m} className="bg-white dark:bg-zinc-900 text-foreground font-semibold">
+                                    {getMonthName(m)}
+                                </option>
+                            ))}
+                        </select>
+                        <span className="text-border">|</span>
+                        <select
+                            value={filterYear}
+                            disabled={!period}
+                            onChange={(e) => changePeriod(filterMonth, parseInt(e.target.value, 10))}
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer text-foreground pr-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Filtrar por año"
+                        >
+                            {years.map((y) => (
+                                <option key={y} value={y} className="bg-white dark:bg-zinc-900 text-foreground font-semibold">
+                                    {y}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {period && (
+                        <button
+                            onClick={() => changePeriod(null, currentYear)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                        >
+                            <X size={13} />
+                            Ver todos los períodos
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -303,7 +478,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                         }`}
                     >
                         <SortIcon field="debt" />
-                        Monto de deuda
+                        {period ? `Valor de la cuota de ${getMonthName(period.month)}` : "Monto de deuda"}
                     </button>
                 </div>
             )}
@@ -316,7 +491,9 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                             ? "Sin resultados para esa búsqueda."
                             : search
                                 ? `${filtered.length} ${filtered.length === 1 ? "deudor encontrado" : "deudores encontrados"}`
-                                : `${filtered.length} ${filtered.length === 1 ? "deudor" : "deudores"} en total`}
+                                : period
+                                    ? `${filtered.length} ${filtered.length === 1 ? "deudor" : "deudores"} de ${periodLabel}`
+                                    : `${filtered.length} ${filtered.length === 1 ? "deudor" : "deudores"} en total`}
                     </p>
                     {filtered.length > 0 && (
                         <p className="text-xs text-muted-foreground">
@@ -336,6 +513,33 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                         <h2 className="text-xl font-bold">Sin deudas pendientes</h2>
                         <p className="text-muted-foreground mt-2 max-w-xs">¡Excelente! Todos los alumnos están al día con sus pagos.</p>
                     </Card>
+                ) : period && viewList.length === 0 ? (
+                    /* Un mes sin deuda y un mes que todavía no llegó no son lo
+                       mismo, y no pueden decir lo mismo: el segundo puede tener
+                       cuotas emitidas que no se reclaman todavía. */
+                    isFuturePeriod ? (
+                        <Card className="p-16 text-center flex flex-col items-center justify-center border-dashed bg-muted/10">
+                            <div className="h-14 w-14 bg-muted rounded-full flex items-center justify-center mb-4">
+                                <CalendarClock size={26} className="text-muted-foreground" />
+                            </div>
+                            <h2 className="text-lg font-bold">{periodLabel} todavía no venció</h2>
+                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                                Puede haber cuotas emitidas para ese mes, pero no son deuda hasta que el mes llegue.
+                                Este reporte sólo lista lo que ya se puede reclamar.
+                            </p>
+                        </Card>
+                    ) : (
+                        <Card className="p-16 text-center flex flex-col items-center justify-center border-dashed bg-muted/10">
+                            <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+                                <CalendarCheck size={26} />
+                            </div>
+                            <h2 className="text-lg font-bold">Sin deudas de {periodLabel}</h2>
+                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                                Ningún alumno debe la cuota de ese mes. Puede haber deuda de otros períodos:
+                                mirala en «Todos los períodos».
+                            </p>
+                        </Card>
+                    )
                 ) : filtered.length === 0 ? (
                     <Card className="p-16 text-center flex flex-col items-center justify-center border-dashed bg-muted/10">
                         <div className="h-14 w-14 bg-muted rounded-full flex items-center justify-center mb-4">
@@ -367,7 +571,17 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                                     </div>
 
                                     <div className="flex flex-wrap gap-3">
-                                        {s.previousMonthsOwed > 0 && (
+                                        {/* Con período elegido, las tres cajas serían el mismo
+                                            número: lo que este alumno debe de ese mes. */}
+                                        {period && (
+                                            <div className="bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-lg shadow-rose-200 dark:shadow-rose-900/20 text-center min-w-[160px]">
+                                                <p className="text-[10px] uppercase font-black text-rose-100 tracking-tighter mb-1">
+                                                    Debe de {periodLabel}
+                                                </p>
+                                                <h4 className="text-xl font-black">${s.totalOwed.toLocaleString()}</h4>
+                                            </div>
+                                        )}
+                                        {!period && s.previousMonthsOwed > 0 && (
                                             <div className="bg-rose-50 dark:bg-rose-950/20 px-4 py-3 rounded-2xl border border-rose-200 dark:border-rose-900/40 text-center min-w-[140px]">
                                                 <p className="text-[10px] uppercase font-black text-rose-600 dark:text-rose-400 tracking-tighter mb-1">
                                                     Vencido (Histórico)
@@ -375,23 +589,29 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth }: 
                                                 <h4 className="text-lg font-black text-rose-600">${s.previousMonthsOwed.toLocaleString()}</h4>
                                             </div>
                                         )}
-                                        <div className="bg-amber-50 dark:bg-amber-950/20 px-4 py-3 rounded-2xl border border-amber-200 dark:border-amber-900/40 text-center min-w-[140px]">
-                                            <p className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-tighter mb-1">
-                                                {getMonthName(currentMonth)}
-                                            </p>
-                                            <h4 className="text-lg font-black text-amber-600">${s.currentMonthOwed.toLocaleString()}</h4>
-                                        </div>
-                                        <div className="bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-lg shadow-rose-200 dark:shadow-rose-900/20 text-center min-w-[140px]">
-                                            <p className="text-[10px] uppercase font-black text-rose-100 tracking-tighter mb-1">Deuda Total</p>
-                                            <h4 className="text-xl font-black">${s.totalOwed.toLocaleString()}</h4>
-                                        </div>
+                                        {!period && (
+                                            <div className="bg-amber-50 dark:bg-amber-950/20 px-4 py-3 rounded-2xl border border-amber-200 dark:border-amber-900/40 text-center min-w-[140px]">
+                                                <p className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-tighter mb-1">
+                                                    {getMonthName(currentMonth)}
+                                                </p>
+                                                <h4 className="text-lg font-black text-amber-600">${s.currentMonthOwed.toLocaleString()}</h4>
+                                            </div>
+                                        )}
+                                        {!period && (
+                                            <div className="bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-lg shadow-rose-200 dark:shadow-rose-900/20 text-center min-w-[140px]">
+                                                <p className="text-[10px] uppercase font-black text-rose-100 tracking-tighter mb-1">Deuda Total</p>
+                                                <h4 className="text-xl font-black">${s.totalOwed.toLocaleString()}</h4>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="mt-8">
                                     <div className="flex items-center gap-2 mb-4">
                                         <Calendar size={16} className="text-primary" />
-                                        <h5 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Desglose de Cuotas</h5>
+                                        <h5 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                                            {period ? `Cuota de ${periodLabel}` : "Desglose de Cuotas"}
+                                        </h5>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {s.months.map((m, idx) => (

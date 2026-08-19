@@ -63,6 +63,12 @@ export default async function DebtorsPage() {
             isCurrent,
             amount: owed,
             isPaid: fee.paidAmount > 0,
+            // El período crudo, además de la etiqueta ya armada: es con lo que
+            // filtra por mes la pantalla. Ojo con las matrículas y los derechos
+            // de examen, que van con `month = 0` a propósito (FIN-12, FIN-17) y
+            // por eso no caen en ningún mes del selector.
+            month: fee.month,
+            year: fee.year,
         });
         return acc;
     }, {});
@@ -87,6 +93,7 @@ export default async function DebtorsPage() {
                     summaryList={summaryList}
                     currentMonthLabel={`${getMonthName(currentMonth)} ${currentYear}`}
                     currentMonth={currentMonth}
+                    currentYear={currentYear}
                 />
             </main>
         </div>
