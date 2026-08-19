@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { requireCourseWriteAccess } from "@/lib/lessonAccess";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
 export async function createLessonAction(formData: FormData) {
@@ -25,23 +25,13 @@ export async function createLessonAction(formData: FormData) {
     }
 
     try {
-        const user = await requireRole(INSTITUTE_STAFF);
-        if (!user) {
-            return { success: false, error: "No autorizado" };
+        const authorized = await requireCourseWriteAccess(courseId);
+        if ("error" in authorized) {
+            return { success: false, error: authorized.error };
         }
 
         // Store as UTC noon to avoid timezone shift on the date boundary anywhere in the world
         const date = new Date(`${dateStr}T12:00:00Z`);
-
-        // Verify course belongs to same institute
-        const course = await prisma.course.findUnique({
-            where: { id: courseId },
-            select: { instituteId: true }
-        });
-
-        if (!course || course.instituteId !== user.instituteId) {
-            return { success: false, error: "No autorizado (El curso no pertenece a tu instituto)" };
-        }
 
         // Parse speaking phrases: split by newline, trim, remove empty lines
         const speakingPhrases = speakingPhrasesRaw
@@ -101,20 +91,24 @@ export async function editLessonAction(formData: FormData) {
     }
 
     try {
-        const user = await requireRole(INSTITUTE_STAFF);
-        if (!user) {
-            return { success: false, error: "No autorizado" };
+        const authorized = await requireCourseWriteAccess(courseId);
+        if ("error" in authorized) {
+            return { success: false, error: authorized.error };
         }
 
         const date = new Date(`${dateStr}T12:00:00Z`);
 
-        const lesson = await prisma.lesson.findUnique({
-            where: { id: lessonId },
-            include: { course: { select: { instituteId: true } } }
+        // `courseId` va en el `where`: la clase que se edita tiene que ser del
+        // curso que se autorizó. Antes se autorizaba contra el instituto de la
+        // clase y `courseId` sólo servía para revalidar, así que el par de ids
+        // podía no tener nada que ver entre sí.
+        const lesson = await prisma.lesson.findFirst({
+            where: { id: lessonId, courseId: courseId },
+            select: { id: true, status: true }
         });
 
-        if (!lesson || lesson.course.instituteId !== user.instituteId) {
-            return { success: false, error: "No autorizado (La clase no pertenece a tu instituto)" };
+        if (!lesson) {
+            return { success: false, error: "No autorizado (la clase no pertenece a este curso)" };
         }
 
         if (lesson.status !== "ACTIVE") {
@@ -189,18 +183,17 @@ export async function editLessonAction(formData: FormData) {
 export async function deleteLessonAction(lessonId: string, courseId: string) {
 
     try {
-        const user = await requireRole(INSTITUTE_STAFF);
-        if (!user) {
-            return { success: false, error: "No autorizado" };
+        const authorized = await requireCourseWriteAccess(courseId);
+        if ("error" in authorized) {
+            return { success: false, error: authorized.error };
         }
 
-        // Verify lesson belongs to same institute
-        const lesson = await prisma.lesson.findUnique({
-            where: { id: lessonId },
-            include: { course: { select: { instituteId: true } } }
+        const lesson = await prisma.lesson.findFirst({
+            where: { id: lessonId, courseId: courseId },
+            select: { id: true, status: true }
         });
 
-        if (!lesson || lesson.course.instituteId !== user.instituteId || lesson.status !== "ACTIVE") {
+        if (!lesson || lesson.status !== "ACTIVE") {
             return { success: false, error: "No autorizado" };
         }
 
@@ -225,9 +218,9 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
 export async function generateLessonsAction(courseId: string, startDate: Date, endDate: Date) {
 
     try {
-        const user = await requireRole(INSTITUTE_STAFF);
-        if (!user) {
-            return { success: false, error: "No autorizado" };
+        const authorized = await requireCourseWriteAccess(courseId);
+        if ("error" in authorized) {
+            return { success: false, error: authorized.error };
         }
 
         const course = await prisma.course.findUnique({
@@ -235,7 +228,7 @@ export async function generateLessonsAction(courseId: string, startDate: Date, e
             include: { schedules: true }
         });
 
-        if (!course || course.instituteId !== user.instituteId) {
+        if (!course) {
             return { success: false, error: "Curso no encontrado" };
         }
 

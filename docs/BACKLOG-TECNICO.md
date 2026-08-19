@@ -213,7 +213,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
-| [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [ ] |
+| [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [x] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
 | [FIN-14](#fin-14) | P1 | La generación masiva de matrículas ignora el año lectivo | [x] |
@@ -225,7 +225,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-20](#fin-20) | P1 | 🗣️ Cuotas duplicadas al cambiar de curso: la regla única es por inscripción | [ ] |
 | [FIN-21](#fin-21) | P2 | No se puede registrar un pago con fecha pasada | [ ] |
 | [FIN-22](#fin-22) | P1 | 🗣️ El generador mensual no ve las cuotas sin inscripción y las duplica | [x] |
-| [FIN-23](#fin-23) | P1 | Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas | [ ] |
+| [FIN-23](#fin-23) | P1 | Desinscribir a un alumno le suelta todas las cuotas, incluidas las pagas | [x] |
 | [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
 | [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
@@ -248,7 +248,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
 | [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
 | [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
-| [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [ ] |
+| [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [x] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
 | [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
 | [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [x] |
@@ -3642,6 +3642,181 @@ la vista del par.
 **Por qué está bueno el pedido.** Es coordinación pedagógica real entre docentes que dan el mismo
 nivel, y sale casi gratis sobre lo que ya existe. Es de las pocas cosas del backlog donde el valor
 es alto y el trabajo chico.
+
+### Hecho — 2026-08-18 · pendiente de verificar en stage
+
+**La ficha decía "no navega"; se decidió lo contrario, y por una razón.** La tarjeta del par **sí**
+lleva a la ficha del curso, en modo lectura. El motivo es que
+[`courses/[id]/page.tsx`](../src/app/courses/[id]/page.tsx) **ya dejaba entrar a cualquiera del
+instituto a cualquier curso** —sólo validaba `instituteId`—, así que no poner el enlace habría sido
+un cartel: el docente ajeno entraba igual escribiendo la URL, y ahí veía la lista de alumnos con sus
+teléfonos y el acceso a sus fichas. Peor todavía, por ahí entraba también un **tutor**, que es
+`User` con instituto. El listado `/courses` ya exigía ser personal; esta página se había quedado
+atrás.
+
+Ahora la página exige `INSTITUTE_STAFF` y decide entre tres casos: el docente del curso y la
+conducción entran como siempre; un docente de otro curso del **mismo nivel** entra en modo lectura
+—libro de temas y horarios, sin alumnos, sin informes y sin ninguna acción—; y el que no es ninguna
+de las dos cosas va a `/courses`.
+
+**El calendario.** El filtro del docente pasó de `teacherId: yo` a `yo` ∪ `mismo nivel`
+([`lib/peers.ts`](../src/lib/peers.ts), compartido con la ficha del curso para que el alcance se
+defina en un solo lugar). Las tarjetas ajenas van en gris —sin el color del curso, tengan tema
+cargado o no— con la etiqueta «Otro docente», y su acción es «Ver Temas», nunca «Asistencia».
+
+**El interruptor.** Filtro «Ver a mis pares» en la barra, en la URL como los demás (`pares=0`) y
+arrastrado por la navegación de semanas. Aparece sólo si el docente dicta algún nivel. Con varios
+cursos por nivel la vista semanal se llena de tarjetas ajenas, y a veces uno sólo quiere ver lo suyo.
+El desplegable de cursos lista lo mismo que muestra la agenda: si ve a sus pares, puede filtrar por
+el curso de un par.
+
+**Lo que se cerró del lado del servidor**, que era el punto 3 de la ficha y resultó más grande de lo
+que decía:
+
+| | Cómo estaba |
+|---|---|
+| `saveLessonGradesAction` | **Sin autorización de ninguna clase**: alcanzaba con tener sesión. Un tutor, un alumno o un docente de otro instituto escribía las notas de cualquier clase mandando los ids. Ahora usa el mismo control que asistencia y sólo acepta alumnos matriculados en el curso. |
+| `createLessonAction`, `editLessonAction`, `deleteLessonAction`, `generateLessonsAction` | Chequeaban personal e instituto pero no de quién era el curso: un docente le borraba las clases a otro por POST. Ahora exigen dictar el curso. `editLessonAction` y `deleteLessonAction`, además, no verificaban que la clase fuera del curso que venía en el mismo pedido: el par de ids podía no tener nada que ver entre sí. |
+| `practice-preview/page.tsx` | Buscaba la práctica **sólo por `lessonId`**: cualquier personal, de cualquier instituto, veía la práctica de cualquier clase. No miraba instituto ni que la clase fuera del curso de la URL. |
+
+El chequeo que vivía adentro de la acción de asistencia se mudó a
+[`lib/lessonAccess.ts`](../src/lib/lessonAccess.ts) sin cambiarlo, porque las notas necesitaban
+exactamente el mismo. Los roles administrativos siguen entrando a todo: el corte es entre docentes.
+
+**Lo que quedó afuera, a propósito.** Las acciones del libro de temas **no** chequean que el curso
+esté finalizado, aunque la pantalla esconde los botones cuando lo está. Es la misma clase de hueco
+que se cerró en asistencia, pero es una regla distinta de la que trae esta ficha y no la toqué para
+no arrastrar un cambio de comportamiento sin mirar. **Anotarlo como pendiente.**
+
+### Lo que dijo producción, y una regla que se corrigió por eso — 2026-08-18
+
+Antes de sembrar nada se miró la forma de los cursos en producción, que es la pregunta de fondo:
+**¿esto muestra algo en la realidad?** Sí.
+
+- **Todos los cursos activos tienen docente y tienen horarios.** No hay cursos sueltos.
+- **Cinco niveles tienen más de un docente**, que son los que se van a ver entre sí: Adults Level 2
+  (tres docentes), y Children 4, Upper-intermediate, Pre-adolescents 2 y Pre-intermediate (dos cada
+  uno). El resto de los niveles los dicta una sola persona y no cambia nada para ellos.
+- El typo **`"Adolesnts 1"` está en producción**, no sólo en la base local: un curso con el nivel mal
+  escrito, aislado de cualquier «Adolescents 1». Es exactamente el modo en que la comparación por
+  texto falla, y ya está pasando — no es hipotético. Mientras `Course.level` sea texto suelto
+  ([ARQ-01](#arq-01)), «no veo a mi par» se diagnostica mirando ese campo.
+
+**La corrección: un curso sin docente no es la clase de un par.** La primera versión tomaba como par
+a cualquier curso del mismo nivel, incluidos los que no dicta nadie, y los rotulaba «Otro docente» —
+que es falso. En producción no cambia nada porque todos los cursos tienen docente asignado; lo que
+evita es una etiqueta mentirosa el día que quede uno sin asignar, que es justo cuando alguien mira.
+
+### Verificación — 2026-08-18 · la base local quedó sembrada para esto
+
+La base de desarrollo tiene información parcial de producción y **ningún curso de par tenía horarios
+cargados**, así que el calendario no mostraba nada nuevo: el calendario dibuja `Schedule`. Se sembró
+a mano lo que faltaba, imitando la forma de producción — tres cursos Upper-intermediate con dos
+docentes distintos, igual que allá:
+
+| Curso | Nivel | Docente | Para qué está |
+|---|---|---|---|
+| Adolescents+ M-J | Upper-intermediate | profe roxana | El curso propio |
+| Children 2 Lu-Mie | *(null)* | profe roxana | Curso propio **sin nivel**: no aporta pares |
+| Upper-intermediate M-V | Upper-intermediate | profe hugo | Par |
+| Upper-intermediate M-J early shift | Upper-intermediate | mama prueba | Segundo par |
+| Upper-intermediate M-J late shift | Upper-intermediate | *(sin docente)* | Mismo nivel pero **no es par** |
+| Children 1 | Children 1 | *(sin docente)* | Ni propio ni par |
+
+Predicción para `profe roxana`, calculada antes de mirar la pantalla:
+
+| | Pares encendidos | Pares apagados |
+|---|---|---|
+| Plantillas de clases | **7** | **3** |
+| Desplegable de cursos | **4** | **2** |
+
+Y la semana en curso le tiene que quedar así — martes y jueves con tres tarjetas, la propia en el
+medio y una de cada par a los costados:
+
+| Día | Hora | | Curso |
+|---|---|---|---|
+| Lun | 10:00 | propio | Children 2 Lu-Mie |
+| Mar | 16:00 | **par** | Upper-intermediate M-J early shift · mama prueba |
+| Mar | 18:00 | propio | Adolescents+ M-J |
+| Mar | 20:00 | **par** | Upper-intermediate M-V · profe hugo |
+| Jue | 16:00 | **par** | Upper-intermediate M-J early shift · mama prueba |
+| Jue | 18:00 | propio | Adolescents+ M-J |
+| Jue | 20:00 | **par** | Upper-intermediate M-V · profe hugo |
+
+**El martes 21:30 no tiene que aparecer**: es «Upper-intermediate M-J late shift», mismo nivel pero
+sin docente. Si aparece, la regla del docente no está andando.
+
+En la semana en curso **todas** las tarjetas, propias y ajenas, tienen que decir «Tema de la clase:
+sin registrar»: las clases de hoy en adelante están en «Clase Programada» porque nadie escribió
+todavía qué se dio. Si alguna dice «Clase Programada» tal cual, el rótulo se está mostrando como si
+fuera un tema. Una semana atrás todas tienen tema propio.
+
+Y entrando a `/courses/cmnkwnffi0001dli0m8iod5ji` (el curso de hugo) el libro de temas de agosto
+tiene que mostrar **8 clases**: las cuatro de antes del 18 con su tema y su contenido **completo** —
+las del 11 y el 13 tienen varias líneas a propósito, para ver que no se recorta—, y las cuatro
+siguientes en «Clase Programada» sin contenido.
+
+**Las clases se sembraron para todo el período de vigencia** (9/3 al 18/12), no sólo para la semana
+en curso: con una sola semana cargada, cualquier otra sale punteada y parece que la función no anda.
+Son 465 clases generadas desde los horarios, con la misma regla que `generateLessonsAction` —no se
+pisa una clase que ya existe para ese curso, fecha y horario— y **sin prácticas**: `LessonPractice`
+no se tocó.
+
+**Y se sembraron como se ven en la realidad, que no es lo mismo:** las clases anteriores a hoy tienen
+tema y contenido cargados —es lo que el docente registró—, y las de hoy en adelante están en «Clase
+Programada» sin contenido. Los cursos avanzan desfasados entre sí, así que dos cursos del mismo nivel
+nunca están en el mismo tema.
+
+### 🗣️ El plan del curso no es lo que pasó en el aula — 2026-08-18
+
+**Lo que el cliente pide es lo segundo, y la primera versión mostraba lo primero.** La distinción ya
+existía en el modelo y se había perdido de vista: `generateLessonsAction` crea todas las clases del
+período con el tema en `SCHEDULED_LESSON_TOPIC` —la constante vale literalmente `"Clase Programada"`—
+y sin contenido, y **el docente después edita cada clase y escribe qué dio**. Una clase con el rótulo
+puesto no quiere decir «el tema es Clase Programada»: quiere decir **que todavía nadie escribió nada**.
+
+El calendario mostraba ese rótulo como si fuera el tema. Para el docente propio es apenas feo; para
+el par es el pedido incumplido, porque mira la tarjeta y no se entera de nada. Ahora la tarjeta
+distingue tres estados: tema registrado, clase creada pero sin registrar, y sin clase.
+
+**El problema de fondo, que no es de datos: el calendario abre en la semana en curso, que es
+justamente la que nadie llenó todavía.** El docente escribe qué dio después de dar la clase, así que
+en la pantalla que el cliente va a abrir por defecto la tarjeta del par casi siempre iba a estar en
+blanco. La información que contesta «¿por dónde va mi par?» vive en las clases **pasadas**.
+
+**Decidido el 2026-08-18, después de probarlo y descartarlo: la respuesta está en la ficha del
+curso, no en la tarjeta.**
+
+Se llegó a implementar que la tarjeta del par mostrara su última clase registrada con fecha,
+contenido recortado y todo. **Se sacó.** La tarjeta del calendario tiene que ser la misma para todos:
+meterle lo que dio un colega la vuelve incómoda de leer, mete información de curso en un objeto que
+es de horario, y ensancha una grilla que ya tiene siete columnas. El calendario es una agenda; sirve
+para ver que la clase del par existe y para entrar. Lo que dio se lee adentro.
+
+Queda entonces un solo camino, y es el que ya estaba: **clic en la tarjeta → libro de temas del par**,
+mes a mes, con tema y contenido de cada clase, en sólo lectura.
+
+Lo que sí se sumó en esa pantalla: **el contenido de cada clase se muestra entero** en la vista del
+par, no recortado a dos líneas como lo ve el docente del curso. El docente del curso recorta porque
+puede abrir la clase y leerla completa; el par no puede, y leer qué dio su colega es exactamente a lo
+que vino. Es lo único que faltaba para que la ficha conteste el pedido.
+
+**Un defecto viejo que apareció en el camino.** La vista diaria decidía si había clase mirando dos
+lugares —las clases del horario y las del curso— pero después leía `schedule.lessons[0]` a secas. Una
+clase cargada **sin horario asociado** —el modal lo permite: `scheduleId` es opcional— en un día que
+sí tiene horario dejaba la primera lista vacía y la segunda llena, y ahí `[0]` es `undefined`: se
+cae la pantalla del calendario entera, no la tarjeta. Corregido en el mismo pase.
+
+Para probar por pantalla, entrando como `profe@test.com`:
+
+1. `/schedule` → 7 plantillas y el interruptor «Ver a mis pares». Apagarlo deja 3, y `pares=0`
+   sobrevive al cambiar de semana.
+2. `/courses/cmnkwnffi0001dli0m8iod5ji` (Upper-intermediate M-V, par de hugo) → modo lectura, con el
+   aviso arriba, sin columna de alumnos y sin la sección de informes.
+3. `/courses/cmnkwnfkw000ndli035rowsy9` (Upper-intermediate M-J late shift, mismo nivel **sin
+   docente**) → rebota a `/courses`.
+4. `/courses/cmnkwnfn9000zdli0240b2dmp` (Children 1, otro nivel) → rebota a `/courses`. **Antes de
+   este cambio entraba y veía los alumnos con sus teléfonos.**
 
 ---
 

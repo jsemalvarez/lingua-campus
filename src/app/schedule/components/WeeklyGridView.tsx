@@ -1,10 +1,11 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { Clock, MapPin, User, BookOpen, ClipboardCheck } from "lucide-react";
+import { Clock, MapPin, User, BookOpen, ClipboardCheck, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
 interface Schedule {
     id: string;
@@ -32,7 +33,10 @@ interface Schedule {
         id: string;
         date: string | Date;
         topic: string;
+        content?: string | null;
     }[];
+    /** Clase de otro docente del mismo nivel: se ve, no se toca (FEAT-07). */
+    isPeer?: boolean;
 }
 
 interface WeeklyGridViewProps {
@@ -99,15 +103,27 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                             dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
                                         );
 
-                                        const cardColor = linkedLesson ? schedule.course.color : "#94a3b8";
+                                        // «Clase Programada» es el rótulo con el que nacen las clases
+                                        // generadas en tanda: quiere decir que todavía nadie escribió
+                                        // qué se dio. Mostrarlo como si fuera el tema es lo que hace
+                                        // que el par no se entere de nada. La clase igual existe, así
+                                        // que el botón sigue llevando a donde llevaba.
+                                        const registeredTopic = linkedLesson && linkedLesson.topic !== SCHEDULED_LESSON_TOPIC
+                                            ? linkedLesson.topic
+                                            : null;
+
+                                        // La clase de un par va siempre en gris, tenga tema cargado
+                                        // o no: el color del curso es de quien lo dicta (FEAT-07).
+                                        const isPeer = !!schedule.isPeer;
+                                        const cardColor = (linkedLesson && !isPeer) ? schedule.course.color : "#94a3b8";
 
                                         return (
-                                            <Card 
-                                                key={schedule.id} 
-                                                className={`p-3 border-l-4 transition-all duration-300 hover:scale-[1.03] hover:shadow-md cursor-pointer group ${!linkedLesson ? 'border-dashed opacity-80' : ''}`}
-                                                style={{ 
+                                            <Card
+                                                key={schedule.id}
+                                                className={`p-3 border-l-4 transition-all duration-300 hover:scale-[1.03] hover:shadow-md cursor-pointer group ${!linkedLesson ? 'border-dashed opacity-80' : ''} ${isPeer ? 'opacity-75' : ''}`}
+                                                style={{
                                                     borderLeftColor: cardColor,
-                                                    backgroundColor: linkedLesson ? `${cardColor}10` : 'transparent'
+                                                    backgroundColor: (linkedLesson && !isPeer) ? `${cardColor}10` : 'transparent'
                                                 }}
                                             >
                                                 <div className="space-y-2">
@@ -130,6 +146,12 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                                         {schedule.course.name}
                                                     </h4>
 
+                                                    {isPeer && (
+                                                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
+                                                            <Eye size={9} /> Otro docente
+                                                        </span>
+                                                    )}
+
                                                     {/* Teacher & Lesson info */}
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
@@ -139,17 +161,17 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                                             </span>
                                                         </div>
                                                         
-                                                        {linkedLesson ? (
+                                                        {registeredTopic ? (
                                                             <div className="flex items-center gap-1.5 text-[10px] text-primary/70 font-bold shrink-0">
                                                                 <BookOpen size={10} className="shrink-0" />
                                                                 <span className="truncate italic">
-                                                                    {linkedLesson.topic}
+                                                                    {registeredTopic}
                                                                 </span>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 font-bold shrink-0">
                                                                 <span className="truncate italic">
-                                                                    Pendiente
+                                                                    {linkedLesson ? "Sin registrar" : "Pendiente"}
                                                                 </span>
                                                             </div>
                                                         )}
@@ -157,13 +179,18 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
 
                                                     {/* Quick Action */}
                                                     <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Link 
-                                                            href={linkedLesson
+                                                        {/* Al par no se le ofrece tomar asistencia: la
+                                                            pantalla lo rechazaría, y ofrecerlo sería
+                                                            prometer algo que no va a pasar. */}
+                                                        <Link
+                                                            href={(linkedLesson && !isPeer)
                                                                 ? `/courses/${schedule.course.id}/lessons/${linkedLesson.id}/attendance`
                                                                 : `/courses/${schedule.course.id}`}
                                                         >
                                                             <Button variant="ghost" className="w-full h-7 text-[9px] font-black uppercase tracking-wider bg-white/50 dark:bg-black/20 hover:bg-primary hover:text-white">
-                                                                {linkedLesson ? (
+                                                                {isPeer ? (
+                                                                    <><Eye size={12} className="mr-1" /> Ver Temas</>
+                                                                ) : linkedLesson ? (
                                                                     <><ClipboardCheck size={12} className="mr-1" /> Asistencia</>
                                                                 ) : (
                                                                     <><BookOpen size={12} className="mr-1" /> Ver Curso</>

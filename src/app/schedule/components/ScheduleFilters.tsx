@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Filter, X, BookOpen, User, MapPin } from "lucide-react";
+import { Filter, X, BookOpen, User, MapPin, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 import { FilterOption, ScheduleFiltersProps } from "../types";
@@ -11,6 +11,8 @@ export function ScheduleFilters({
     allTeachers,
     allClassrooms,
     userRole,
+    canSeePeers = false,
+    showPeers = true,
     currentFilters
 }: ScheduleFiltersProps) {
     const router = useRouter();
@@ -100,6 +102,25 @@ export function ScheduleFilters({
                                 ))}
                             </select>
                         </div>
+                    )}
+
+                    {/* Ver a mis pares (FEAT-07) — sólo el docente que dicta algún nivel.
+                        Va en la URL como los demás filtros: si apagó a sus pares,
+                        cambiar de semana no se los tiene que devolver. */}
+                    {canSeePeers && (
+                        <button
+                            type="button"
+                            onClick={() => updateFilter("pares", showPeers ? "0" : "")}
+                            aria-pressed={showPeers}
+                            title="Ver, sólo de lectura, las clases de los docentes que dan tu mismo nivel"
+                            className={`h-10 px-4 rounded-2xl border text-xs font-bold flex items-center gap-2 transition-all ${showPeers
+                                ? "bg-primary/10 border-primary/30 text-primary"
+                                : "bg-background/60 border-border/40 text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            {showPeers ? <Eye size={14} /> : <EyeOff size={14} />}
+                            Ver a mis pares
+                        </button>
                     )}
 
                     {/* Limpiar Filtros */}

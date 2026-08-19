@@ -8,6 +8,10 @@ export interface ScheduleFiltersProps {
     allTeachers: FilterOption[];
     allClassrooms: FilterOption[];
     userRole: string;
+    /** El docente dicta algún nivel, así que puede tener pares (FEAT-07). */
+    canSeePeers?: boolean;
+    /** Si hoy está viendo las clases de sus pares. */
+    showPeers?: boolean;
     currentFilters: {
         courseId?: string;
         teacherId?: string;

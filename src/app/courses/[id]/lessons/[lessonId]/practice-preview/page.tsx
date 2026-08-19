@@ -1,24 +1,24 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-import { getActiveRole } from "@/lib/roles";
+import { requireLessonReadAccess } from "@/lib/lessonAccess";
 import { StudentPracticeView } from "@/app/dashboard/components/StudentPracticeView";
 import prisma from "@/lib/prisma";
 
 export default async function TeacherPracticePreviewPage(props: { params: Promise<{ id: string; lessonId: string }> }) {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) redirect("/login");
 
-    const sessionUser = session.user;
-    const userRoles = sessionUser.roles ?? [];
-    const activeRole = await getActiveRole(userRoles);
-
-    // Only allow teachers, admins or secretaries to view this preview
-    if (activeRole !== "TEACHER" && activeRole !== "ADMIN" && activeRole !== "SUPERADMIN" && activeRole !== "SECRETARY") {
-        redirect("/dashboard");
+    // Antes acá sólo se miraba el rol: cualquier miembro del personal —de
+    // cualquier instituto— veía la práctica de cualquier clase con sólo tener el
+    // `lessonId`, y el `courseId` de la URL no se verificaba contra la clase.
+    //
+    // Los pares van con la lista vacía a propósito: la vista de par llega hasta
+    // el tema de la clase, y la práctica es material del docente que la armó.
+    const access = await requireLessonReadAccess(params.lessonId, params.id, []);
+    if ("error" in access) {
+        redirect(`/courses/${params.id}`);
     }
+
+    const activeRole = access.auth.activeRole;
 
     // Get the specific practice for this lesson
     const practiceItem = await prisma.lessonPractice.findFirst({
