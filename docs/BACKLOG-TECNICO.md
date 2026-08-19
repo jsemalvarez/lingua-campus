@@ -256,6 +256,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
 | [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
 | [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
+| [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -1183,6 +1184,15 @@ comparaciones `<=`, así que las matrículas cuentan como deuda desde el arranqu
 cobrar del mes" pasó a ser sólo cuotas. **Este ítem es lo que lo arregla de verdad**: con `dueDate`,
 la matrícula tiene dónde decir cuándo vence y los agregados por período pueden usarlo. Hasta
 entonces, no hay dónde poner el vencimiento de algo anual.
+
+### Ya son tres los lugares que dejan el mes 0 afuera — 2026-08-19
+
+El filtro por mes del reporte de deudores ([FEAT-15](#feat-15)) se suma a los dos agregados de arriba:
+elegir junio deja fuera las matrículas y los derechos de examen, que en stage son **$40.000 de
+$385.000**. No es un problema nuevo —es este, otra vez— y por eso la pantalla **entra sin filtro**:
+«Todos los períodos» es el único lugar donde esa deuda se ve, y arrancar filtrado la haría invisible
+para quien trabaje siempre por mes. Es un cuidado en la interfaz, no un arreglo; el arreglo es
+`dueDate`. Sigue valiendo que **nada en el código bifurca sobre `month === 0`**.
 
 ### Evaluado y descartado — 2026-08-16 · mover el mes de la matrícula a febrero
 
@@ -4220,6 +4230,73 @@ funcionalidad nueva.
 **Relacionado.** [FIN-27](#fin-27) (el punto medio del formulario, que es el parche mientras esto no
 exista), [FIN-11](#fin-11) (de donde salió la conversación), [FIN-01](#fin-01) (el excedente y a quién
 pertenece).
+
+---
+
+<a id="feat-15"></a>
+## FEAT-15 · Filtrar los deudores por mes · **P2 · 🗣️ cliente**
+
+**Pedido por el instituto el 2026-08-19.** "Los deudores de junio": poder recortar
+[`/payments/debtors`](../src/app/payments/debtors/page.tsx) a un mes.
+
+**Qué significa, definido antes de escribir nada.** La pantalla contesta **quién debe la cuota de ese
+mes** —filtro por el período de la cuota— y no "cuánto se debía al cierre de junio", que es una foto
+histórica y es otro informe.
+
+**El filtro es fuerte, y fue una decisión del dueño.** Con un mes elegido se lista sólo al que debe
+*ese* mes y se muestra sólo *esa* cuota: **la deuda total del alumno no aparece**. Se planteó la
+contra —en stage los 5 deudores de junio deben $77.000 promedio y sólo $15.000 son de junio, así que
+quien llame por la lista de junio reclama el mes y no lo que el alumno arrastra— y se decidió igual,
+porque la pregunta que la secretaría quiere contestar es "a quién le reclamo junio". **La deuda
+completa sigue estando a un clic**, en «Todos los períodos».
+
+**Se entra sin filtro, y eso no es una preferencia de arranque: es lo que sostiene el punto de
+abajo.** «Todos los períodos» es el estado inicial y la única vista donde se ven las matrículas y los
+derechos de examen.
+
+**Este filtro es el tercer agregado por mes exacto que deja afuera al mes 0.** Las matrículas y los
+derechos de examen van con `month = 0` a propósito ([FIN-12](#fin-12), [FIN-17](#fin-17)) y no caen en
+ningún mes del selector: en stage son **$40.000 de $385.000, el 10% de la mora**. Ya estaban afuera
+del "a cobrar del mes" de [`/payments`](../src/app/payments/page.tsx) y de los "Ingresos del Mes" del
+[dashboard](../src/app/dashboard/page.tsx); ahora son tres. **No se toca el `0`** —está evaluado y
+descartado dos veces, ver [FIN-08](#fin-08)—, y lo que lo arregla de fondo sigue siendo `dueDate`.
+Mientras tanto, lo que evita que esa deuda quede invisible es que la pantalla **no arranque
+filtrada**.
+
+**Los doce meses se ofrecen siempre, tengan deuda o no.** Un mes que falta del selector se lee como
+una pantalla rota; uno vacío que contesta "sin deudas" contesta la pregunta. Con una distinción que
+importa: **un mes que todavía no llegó no dice "sin deudas"**. Septiembre 2026 tiene 3 cuotas emitidas
+por $45.000 que el reporte excluye por no vencidas —`month <= mes actual`—, así que decir "sin deudas
+de septiembre" sería falso. Dice **"Septiembre 2026 todavía no venció"**.
+
+### Resuelto — 2026-08-19 · pendiente de verificar en stage
+
+Tres archivos, sin migración y sin tocar `getDebtorsReportAction`: el reporte ya se traía entero y el
+recorte es de interfaz. El estado vive en el cliente, junto al buscador, el orden y la paginación que
+ya eran de cliente — el costo es que el filtro no se comparte por link.
+
+- [`page.tsx`](../src/app/payments/debtors/page.tsx) agrega `month` y `year` crudos a cada cuota del
+  desglose, que sólo llevaba la etiqueta ya formateada.
+- [`DebtorsClient.tsx`](../src/app/payments/debtors/DebtorsClient.tsx) hace el resto: el selector, el
+  recorte (`viewList`), y **tres reencuadres que el filtro obliga**, porque lo que quedaba en pantalla
+  decía cosas que ya no eran ciertas:
+  1. **Las tres tarjetas de arriba** —"Mora Histórica / Pendiente de *mes actual* / Deuda Total"— se
+     calculan contra el mes en curso y la tercera es la deuda total, que esta vista no muestra. Con
+     filtro se reemplazan por **una sola, ancha**: `Deuda de Junio 2026 · $75.000 · 5 deudores`.
+  2. **Las tres cajas de cada alumno** serían el mismo número: se colapsan a una, `Debe de Junio 2026`.
+  3. **El PDF.** Clavaba `getMonthName(currentMonth)` en los encabezados y sólo declaraba el filtro de
+     nombre. Un PDF filtrado que se llame "Reporte de Deudores" se lee como el reporte completo del
+     instituto: ahora el título dice el recorte, las columnas se reducen a
+     `Alumno · Teléfono · Cuota · Importe`, y una línea al pie avisa que esos alumnos pueden deber de
+     otros períodos.
+- El orden por monto pasa a ser por **el valor de la cuota del mes**, que no es el mismo en todos los
+  cursos.
+
+**Lo que no se tocó.** `getDebtorsReportAction` sigue trayendo lo mismo y con el mismo criterio de
+vencido, así que la deuda que la pantalla puede mostrar no cambió: cambió cómo se la recorta.
+
+**Relacionado.** [FIN-09](#fin-09), que agrega a esta misma pantalla un filtro por estado del alumno
+—activos, papelera, todos— y va en la misma barra: conviene diseñarla una sola vez.
 
 ---
 
