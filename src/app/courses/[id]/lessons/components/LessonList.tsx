@@ -46,9 +46,16 @@ interface LessonListProps {
     /** Texto del estado vacío. Con el listado paginado por mes, "no hay clases en
      *  este mes" no es lo mismo que "el curso no tiene clases". */
     emptyMessage?: string;
+    /**
+     * Muestra el contenido completo de cada clase en vez de las dos primeras
+     * líneas. Es para la vista del par (FEAT-07): el docente del curso recorta
+     * porque puede abrir la clase para leerla entera, y el par no puede — leer
+     * qué dio su colega es exactamente a lo que vino.
+     */
+    showFullContent?: boolean;
 }
 
-export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, courseStatus, startDate, endDate, emptyMessage }: LessonListProps) {
+export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, courseStatus, startDate, endDate, emptyMessage, showFullContent = false }: LessonListProps) {
     const isFinished = courseStatus === "FINISHED";
 
     return (
@@ -116,7 +123,7 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
                                             )}
                                         </div>
                                         {lesson.content && (
-                                            <p className="text-sm text-foreground/70 mt-1 line-clamp-2">
+                                            <p className={`text-sm text-foreground/70 mt-1 ${showFullContent ? "whitespace-pre-line" : "line-clamp-2"}`}>
                                                 {lesson.content}
                                             </p>
                                         )}

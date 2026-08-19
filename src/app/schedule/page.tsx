@@ -7,13 +7,15 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye } from "lucide-react";
 import { format, addDays, subDays, addWeeks, subWeeks, startOfWeek, isSameDay, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
 import { ScheduleFilters } from "./components/ScheduleFilters";
 import { getActiveRole } from "@/lib/roles";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { getPeerLevels, isPeerCourse, visibleCoursesFilter } from "@/lib/peers";
+import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -91,17 +93,37 @@ export default async function SchedulePage(props: PageProps) {
         instituteId = user.instituteId;
     }
 
+    const currentUserId = session.user.id;
     const isTeacher = role === "TEACHER";
     const isStudentOrGuardian = role === "STUDENT" || role === "GUARDIAN";
-    const effectiveTeacherId = isTeacher ? session.user.id : (params.teacherId as string);
+    const effectiveTeacherId = isTeacher ? currentUserId : (params.teacherId as string);
+
+    // ── Los pares del mismo nivel (FEAT-07) ──────────────────────────────────
+    // El docente ve además, en gris, las clases de los otros docentes que dan su
+    // mismo nivel: es para saber por dónde van sus pares. Se puede apagar, porque
+    // en un instituto con varios cursos por nivel la semana se llena de tarjetas
+    // ajenas y a veces uno sólo quiere ver lo suyo.
+    const peerLevels = isTeacher ? await getPeerLevels(currentUserId, instituteId) : [];
+    const canSeePeers = peerLevels.length > 0;
+    const showPeers = params.pares !== "0";
+
+    // Alcance de cursos del docente: los suyos, más los de sus pares si la vista
+    // está encendida. Para el resto de los roles sigue mandando el filtro de
+    // profesor de la barra, que sólo ven los administrativos.
+    const teacherCourseScope = visibleCoursesFilter(currentUserId, peerLevels, showPeers);
+    const courseScope = isTeacher
+        ? teacherCourseScope
+        : (effectiveTeacherId ? { teacherId: effectiveTeacherId } : {});
 
     // Obtenemos los cursos, profesores y aulas para los filtros
     const [allCourses, allTeachers, allClassrooms] = await Promise.all([
         prisma.course.findMany({
-            where: { 
-                instituteId: instituteId, 
+            where: {
+                instituteId: instituteId,
                 status: "ACTIVE",
-                ...(isTeacher ? { teacherId: session.user.id } : {}),
+                // El desplegable lista lo que la agenda muestra: si el docente ve
+                // a sus pares, también puede filtrar por el curso de un par.
+                ...(isTeacher ? teacherCourseScope : {}),
                 ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             },
             orderBy: { name: "asc" }
@@ -142,13 +164,13 @@ export default async function SchedulePage(props: PageProps) {
         ? { status: "ACTIVE", date: { gte: dayStartUTC, lte: dayEndUTC } }
         : { status: "ACTIVE", date: { gte: weekStartUTC, lte: weekEndUTC } };
 
-    const allSchedules = await prisma.schedule.findMany({
+    const scheduleRows = await prisma.schedule.findMany({
         where: {
             course: {
                 instituteId: instituteId,
                 status: "ACTIVE",
                 ...(activeCourseId ? { id: activeCourseId } : {}),
-                ...(activeTeacherId ? { teacherId: activeTeacherId } : {}),
+                ...courseScope,
                 ...(activeClassroomId ? { classroomId: activeClassroomId } : {}),
                 ...(isStudentOrGuardian ? { id: { in: studentEnrollments } } : {})
             }
@@ -172,6 +194,18 @@ export default async function SchedulePage(props: PageProps) {
         ]
     });
 
+    // La tarjeta ajena se pinta distinto y no ofrece ninguna acción de la clase,
+    // pero **muestra lo mismo que cualquier otra**: el calendario es una agenda,
+    // no el lugar donde se lee lo que dio un colega. Eso se lee entrando al libro
+    // de temas del curso, que está a un clic.
+    //
+    // El corte real no está acá sino en el servidor de cada pantalla: esto es
+    // sólo para que se note de quién es la clase.
+    const allSchedules = scheduleRows.map(schedule => ({
+        ...schedule,
+        isPeer: isTeacher && isPeerCourse(schedule.course, currentUserId, peerLevels)
+    }));
+
     const schedules = view === "day"
         ? allSchedules.filter(s => {
             const isCorrectDay = s.dayOfWeek === displayDayIndex;
@@ -193,7 +227,9 @@ export default async function SchedulePage(props: PageProps) {
         })
         : allSchedules;
 
-    const filterParams = `${activeCourseId ? `&courseId=${activeCourseId}` : ""}${activeTeacherId ? `&teacherId=${activeTeacherId}` : ""}${activeClassroomId ? `&classroomId=${activeClassroomId}` : ""}`;
+    // `pares=0` viaja con el resto de los filtros: si el docente apagó a sus
+    // pares, cambiar de semana no se los tiene que devolver.
+    const filterParams = `${activeCourseId ? `&courseId=${activeCourseId}` : ""}${activeTeacherId ? `&teacherId=${activeTeacherId}` : ""}${activeClassroomId ? `&classroomId=${activeClassroomId}` : ""}${canSeePeers && !showPeers ? "&pares=0" : ""}`;
 
     const prevDate = view === "day" ? subDays(displayDateNoon, 1) : subWeeks(displayDateNoon, 1);
     const nextDate = view === "day" ? addDays(displayDateNoon, 1) : addWeeks(displayDateNoon, 1);
@@ -241,11 +277,13 @@ export default async function SchedulePage(props: PageProps) {
                     </div>
                 </header>
 
-                <ScheduleFilters 
+                <ScheduleFilters
                     allCourses={allCourses}
                     allTeachers={allTeachers}
                     allClassrooms={allClassrooms}
                     userRole={role}
+                    canSeePeers={canSeePeers}
+                    showPeers={showPeers}
                     currentFilters={{
                         courseId: activeCourseId,
                         teacherId: activeTeacherId,
@@ -303,16 +341,29 @@ export default async function SchedulePage(props: PageProps) {
                             ) : (
                                 <div className="space-y-4">
                                     {schedules.map((schedule) => {
-                                        const hasLesson = (schedule.lessons && schedule.lessons.length > 0) || (schedule.course.lessons && schedule.course.lessons.length > 0);
-                                        const cardColor = hasLesson ? schedule.course.color : "#94a3b8";
+                                        // La clase del día puede estar colgada del horario o sólo del
+                                        // curso —una clase suelta, sin `scheduleId`—. Antes se miraban
+                                        // las dos para decidir si había clase pero después se leía
+                                        // `schedule.lessons[0]` a secas, que en ese caso es `undefined`
+                                        // y voltea la pantalla entera.
+                                        const lesson = schedule.lessons?.[0] ?? schedule.course.lessons?.[0];
+                                        const hasLesson = !!lesson;
+                                        // «Clase Programada» es el rótulo con el que nacen las clases
+                                        // generadas en tanda: quiere decir que **todavía nadie escribió
+                                        // qué se dio**. Mostrarlo como si fuera el tema es lo que hace
+                                        // que el par no se entere de nada.
+                                        const registeredTopic = lesson && lesson.topic !== SCHEDULED_LESSON_TOPIC ? lesson.topic : null;
+                                        // La clase de un par va siempre en gris, tenga tema cargado o
+                                        // no: el color del curso es de quien lo dicta.
+                                        const cardColor = (hasLesson && !schedule.isPeer) ? schedule.course.color : "#94a3b8";
 
                                         return (
-                                            <Card 
-                                                key={schedule.id} 
-                                                className={`p-0 overflow-hidden border-l-4 transition-all hover:scale-[1.01] hover:shadow-lg group shadow-sm sm:shadow-md cursor-pointer ${!hasLesson ? 'border-dashed opacity-80' : ''}`}
-                                                style={{ 
+                                            <Card
+                                                key={schedule.id}
+                                                className={`p-0 overflow-hidden border-l-4 transition-all hover:scale-[1.01] hover:shadow-lg group shadow-sm sm:shadow-md cursor-pointer ${!hasLesson ? 'border-dashed opacity-80' : ''} ${schedule.isPeer ? 'opacity-75' : ''}`}
+                                                style={{
                                                     borderLeftColor: cardColor,
-                                                    backgroundColor: hasLesson ? `${cardColor}08` : 'transparent'
+                                                    backgroundColor: (hasLesson && !schedule.isPeer) ? `${cardColor}08` : 'transparent'
                                                 }}
                                             >
                                                 <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -328,20 +379,28 @@ export default async function SchedulePage(props: PageProps) {
                                                                     <MapPin size={10} /> {schedule.room || "Sin Aula"}
                                                                 </span>
                                                             </div>
-                                                            <h3 className="text-lg font-bold tracking-tight text-foreground/90">{schedule.course.name} <span className="text-muted-foreground font-medium text-sm ml-1">({schedule.course.level || "General"})</span></h3>
-                                                            
-                                                            {hasLesson ? (
+                                                            <h3 className="text-lg font-bold tracking-tight text-foreground/90">
+                                                                {schedule.course.name}
+                                                                <span className="text-muted-foreground font-medium text-sm ml-1">({schedule.course.level || "General"})</span>
+                                                                {schedule.isPeer && (
+                                                                    <span className="ml-2 align-middle inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
+                                                                        <Eye size={10} /> Otro docente
+                                                                    </span>
+                                                                )}
+                                                            </h3>
+
+
+                                                            {registeredTopic ? (
                                                                 <div className="flex flex-col gap-1 mt-1">
                                                                     <p className="text-sm font-bold text-foreground flex items-center gap-2">
                                                                         <BookOpen size={14} className="text-primary" />
-                                                                        {/* @ts-ignore */}
-                                                                        {schedule.lessons[0].topic}
+                                                                        {registeredTopic}
                                                                     </p>
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1.5 -mt-0.5">
                                                                     <AlertTriangle size={14} className="text-amber-500/50" />
-                                                                    Programación: Pendiente de registro
+                                                                    {hasLesson ? "Tema de la clase: sin registrar" : "Programación: Pendiente de registro"}
                                                                 </p>
                                                             )}
                                                             
@@ -353,7 +412,9 @@ export default async function SchedulePage(props: PageProps) {
                                                     <div className="sm:text-right w-full sm:w-auto flex sm:flex-col gap-2">
                                                         <Link href={`/courses/${schedule.course.id}`} className="flex-1 sm:flex-none">
                                                             <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-all flex items-center justify-center gap-1.5">
-                                                                <BookOpen size={14} /> Ver Curso
+                                                                {schedule.isPeer
+                                                                    ? <><Eye size={14} /> Ver Temas</>
+                                                                    : <><BookOpen size={14} /> Ver Curso</>}
                                                             </Button>
                                                         </Link>
                                                     </div>

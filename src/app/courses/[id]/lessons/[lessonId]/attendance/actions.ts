@@ -3,51 +3,18 @@
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { requireLessonWriteAccess } from "@/lib/lessonAccess";
 
 /** Estados de matrícula que la pantalla de asistencia lista como alumnos del curso. */
 const ENROLLED_STATUSES = ["ACTIVE", "FINISHED"];
 
 /**
- * Autoriza a escribir asistencia sobre una clase, con la **misma política que ya
- * aplican las pantallas**: personal del instituto, la clase tiene que ser de un
- * curso del instituto propio, y un docente sólo entra al curso que dicta. Los
- * roles administrativos pasan a cualquier curso.
- *
- * Hasta acá las acciones sólo miraban que hubiera sesión, así que cualquiera con
- * una —incluido un tutor— podía escribir la asistencia de cualquier clase de
- * cualquier instituto mandando los ids. Un server action es un POST como
- * cualquier otro: esconder el botón no protege nada.
+ * El chequeo que estaba acá pasó a `requireLessonWriteAccess` sin cambios: las
+ * notas necesitaban exactamente el mismo, y tenerlo dos veces es tenerlo una vez
+ * y media (FEAT-07).
  */
-async function authorizeLessonAttendance(lessonId: string, courseId: string) {
-    const auth = await requireRole(INSTITUTE_STAFF);
-    if (!auth) return { error: "No autorizado" as const };
-
-    // `courseId` va en el `where` y no en un `if` posterior: una clase de otro
-    // curso simplemente no existe para esta acción.
-    const lesson = await prisma.lesson.findFirst({
-        where: { id: lessonId, courseId: courseId, status: "ACTIVE" },
-        select: {
-            id: true,
-            course: { select: { instituteId: true, teacherId: true, status: true } }
-        }
-    });
-
-    if (!lesson || lesson.course.instituteId !== auth.instituteId) {
-        return { error: "No autorizado" as const };
-    }
-
-    if (auth.activeRole === "TEACHER" && lesson.course.teacherId !== auth.userId) {
-        return { error: "No autorizado (no dictás este curso)" as const };
-    }
-
-    // La pantalla muestra los cursos terminados en modo lectura; el servidor
-    // tiene que sostener lo mismo.
-    if (lesson.course.status === "FINISHED") {
-        return { error: "El curso está finalizado: la asistencia es sólo de lectura." as const };
-    }
-
-    return { auth };
+function authorizeLessonAttendance(lessonId: string, courseId: string) {
+    return requireLessonWriteAccess(lessonId, courseId, "la asistencia");
 }
 
 export async function saveLessonAttendanceAction(

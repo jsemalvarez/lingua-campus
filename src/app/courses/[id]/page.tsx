@@ -1,11 +1,9 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange, AlertTriangle } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, Users, GraduationCap, MapPin, ClipboardCheck, CalendarRange, AlertTriangle, Eye } from "lucide-react";
 import { ScheduleList } from "./ScheduleList";
 import { LessonList } from "./lessons/components/LessonList";
 import { LessonMonthNav } from "./lessons/components/LessonMonthNav";
@@ -15,7 +13,8 @@ import { RemoveStudentButton } from "../components/RemoveStudentButton";
 import { DeleteCourseButton } from "../components/DeleteCourseButton";
 import { FinishCourseButton } from "../components/FinishCourseButton";
 import { BadgeCheck, Info } from "lucide-react";
-import { getActiveRole } from "@/lib/roles";
+import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { getPeerLevels, isPeerCourse } from "@/lib/peers";
 import { CourseReportsPanel } from "@/features/courses/CourseReportsPanel";
 
 
@@ -63,21 +62,15 @@ export default async function CourseDetailPage({
     params: Promise<{ id: string }>;
     searchParams: Promise<{ mes?: string }>;
 }) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) redirect("/login");
+    // Antes esta página sólo pedía tener sesión y un instituto: entraba cualquier
+    // usuario del instituto —un tutor incluido— a cualquier curso, y veía la lista
+    // de alumnos con sus teléfonos. El listado `/courses` ya exigía ser personal;
+    // acá faltaba.
+    const auth = await requireRole(INSTITUTE_STAFF);
+    if (!auth) redirect("/dashboard");
 
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true, roles: true, instituteId: true }
-    });
-
-    const sessionUser = session.user;
-    const userRoles = sessionUser.roles ?? [];
-    const activeRole = await getActiveRole(userRoles);
-
-    if (!user || activeRole === "SUPERADMIN" || !user.instituteId) {
-        redirect("/dashboard");
-    }
+    const activeRole = auth.activeRole;
+    const user = { id: auth.userId, instituteId: auth.instituteId };
 
     const { id } = await params;
 
@@ -100,6 +93,21 @@ export default async function CourseDetailPage({
         redirect("/courses");
     }
 
+    // ── Vista de par (FEAT-07) ───────────────────────────────────────────────
+    // Un docente que no dicta este curso entra sólo si el curso es del mismo
+    // nivel que alguno de los suyos, y entra a mirar el libro de temas: sin
+    // alumnos, sin informes y sin ninguna acción. El que no es par no entra.
+    const isCourseTeacher = user.id === course.teacherId;
+    let isPeerView = false;
+
+    if (activeRole === "TEACHER" && !isCourseTeacher) {
+        const peerLevels = await getPeerLevels(user.id, user.instituteId);
+        if (!isPeerCourse(course, user.id, peerLevels)) {
+            redirect("/courses");
+        }
+        isPeerView = true;
+    }
+
     // Fetch available teachers for this institute (for admin teacher-edit dropdown)
     const instituteTeachers = (activeRole === "ADMIN" || activeRole === "SECRETARY") ? await prisma.user.findMany({
         where: { 
@@ -120,7 +128,7 @@ export default async function CourseDetailPage({
         orderBy: { name: 'asc' }
     });
 
-    const isTeacherOrAdmin = activeRole === "ADMIN" || activeRole === "SECRETARY" || user.id === course.teacher?.id;
+    const isTeacherOrAdmin = activeRole === "ADMIN" || activeRole === "SECRETARY" || isCourseTeacher;
     const isFinished = course.status === "FINISHED";
 
     // ── Navegación por mes del libro de temas ────────────────────────────────
@@ -281,6 +289,17 @@ export default async function CourseDetailPage({
 
                 </header>
 
+                {isPeerView && (
+                    <div className="flex items-start gap-3 p-4 rounded-2xl border border-border/60 bg-muted/30">
+                        <Eye size={18} className="text-muted-foreground shrink-0 mt-0.5" />
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            Estás viendo el <strong className="text-foreground">libro de temas</strong> de un curso
+                            de tu mismo nivel que dicta {course.teacher?.name || "otro docente"}. Es sólo lectura:
+                            no se muestran los alumnos ni se pueden registrar asistencias, notas ni cambios.
+                        </p>
+                    </div>
+                )}
+
                 <div className="space-y-6 lg:space-y-8">
 
                     {/* FILA SUPERIOR: Horarios */}
@@ -293,7 +312,7 @@ export default async function CourseDetailPage({
                     </Card>
 
                     {/* FILA INFERIOR: Clases vs Alumnos (50/50 estricto) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+                    <div className={`grid grid-cols-1 gap-6 lg:gap-8 items-stretch ${isPeerView ? "" : "lg:grid-cols-2"}`}>
 
                         {/* COLUMNA IZQUIERDA: Libro de Clases (Lessons) */}
                         <Card className="p-6 shadow-md border-border/40 overflow-hidden flex flex-col h-full bg-card/60 backdrop-blur-sm">
@@ -318,6 +337,7 @@ export default async function CourseDetailPage({
                                     lessons={lessons}
                                     schedules={course.schedules}
                                     isTeacherOrAdmin={isTeacherOrAdmin && !isFinished}
+                                    showFullContent={isPeerView}
                                     courseStatus={course.status}
                                     startDate={course.startDate || undefined}
                                     endDate={course.endDate || undefined}
@@ -330,8 +350,10 @@ export default async function CourseDetailPage({
                             </div>
                         </Card>
 
-                        {/* COLUMNA DERECHA: Alumnos Inscritos */}
-                        <div className="flex flex-col gap-6 lg:gap-8 min-h-0">
+                        {/* COLUMNA DERECHA: Alumnos Inscritos.
+                            El par no la ve: los alumnos —con sus teléfonos y el acceso a su
+                            ficha— son del curso de otro docente, y no hacen a "por dónde va". */}
+                        <div className={`flex-col gap-6 lg:gap-8 min-h-0 ${isPeerView ? "hidden" : "flex"}`}>
                             <Card className="p-6 shadow-md border-border/40 overflow-hidden flex flex-col h-full bg-card/60 backdrop-blur-sm">
                                 <div className="space-y-4 flex-1 flex flex-col min-h-0">
                                     <div className="flex items-center justify-between shrink-0">
@@ -436,7 +458,8 @@ export default async function CourseDetailPage({
                     )}
 
                     {/* ── SECCIÓN DE INFORMES ACADÉMICOS (Fase 1) ── */}
-                    <CourseReportsPanel courseId={course.id} userRole={activeRole} />
+                    {/* Los boletines son evaluación de alumnos ajenos: fuera de la vista del par. */}
+                    {!isPeerView && <CourseReportsPanel courseId={course.id} userRole={activeRole} />}
 
                     {/* ── SECCIÓN DE GESTIÓN Y PELIGRO (ANCHO COMPLETO) ── */}
                     <div className="space-y-6 lg:space-y-8 mt-12 pt-8 border-t border-border/40">
