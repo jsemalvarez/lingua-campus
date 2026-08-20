@@ -16,14 +16,25 @@ import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ReportSignatureBox } from "./ReportSignatureBox";
 
 interface StudentReportViewerProps {
   studentName: string;
   reports: any[];
   instituteName?: string;
+  /** Quién está mirando, para saber si le toca firmar (FEAT-09). */
+  viewer?: { id: string; isStudent: boolean };
+  /** Su firma de referencia, para mostrársela mientras firma. */
+  signatureReference?: any;
 }
 
-export function StudentReportViewer({ studentName, reports, instituteName }: StudentReportViewerProps) {
+export function StudentReportViewer({
+  studentName,
+  reports,
+  instituteName,
+  viewer,
+  signatureReference
+}: StudentReportViewerProps) {
   // Group reports by course
   const reportsByCourse = useMemo(() => {
     const groups: { [courseId: string]: any[] } = {};
@@ -95,6 +106,10 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
   const categories = displayedReport?.template?.categories || [];
   const entries = displayedReport?.entries || [];
   const specialFields = displayedReport?.template?.specialFields as any || {};
+
+  // Un firmante es un User (tutor) o un Student (el alumno de 20+ que firma solo).
+  const isViewer = (row: { userId: string | null; studentId: string | null }) =>
+    !viewer ? false : viewer.isStudent ? row.studentId === viewer.id : row.userId === viewer.id;
 
   const handleDownloadPDF = () => {
     if (!displayedReport) return;
@@ -386,6 +401,19 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
                 }
               </p>
             </div>
+          )}
+
+          {/* Firma de conformidad (FEAT-09) */}
+          {viewer && (
+            <ReportSignatureBox
+              reportId={displayedReport.id}
+              mustSign={(displayedReport.signers ?? []).some(isViewer)}
+              mySignedAt={
+                (displayedReport.signatures ?? []).find(isViewer)?.signedAt ?? null
+              }
+              alreadySignedByOther={(displayedReport.signatures ?? []).length > 0}
+              reference={signatureReference ?? null}
+            />
           )}
 
           {/* Footer Metadata */}

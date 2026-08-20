@@ -20,6 +20,7 @@ export default async function GuardianAcademicsPage() {
     }
 
     const guardianId = sessionUser.id;
+    if (!guardianId) redirect("/login");
 
     // Fetch master relation
     const guardianLinks = await prisma.guardianStudentLink.findMany({
@@ -86,7 +87,10 @@ export default async function GuardianAcademicsPage() {
                                 }
                             },
                             entries: true,
-                            course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } }
+                            course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } },
+                            // Firma de conformidad (FEAT-09): a quién le toca y quién ya firmó.
+                            signers: { select: { userId: true, studentId: true } },
+                            signatures: { select: { userId: true, studentId: true, signedAt: true } }
                         },
                         orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
                     }
@@ -101,10 +105,21 @@ export default async function GuardianAcademicsPage() {
 
     const students = guardianLinks.map(l => l.student);
 
+    // La firma de referencia es de la persona, no del alumno: un tutor con tres
+    // hijos tiene una sola y le sirve para los informes de los tres.
+    const signatureReference = await prisma.signatureReference.findUnique({
+        where: { userId: guardianId },
+        select: { strokeData: true }
+    });
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar currentActiveRole={role} />
-            <GuardianAcademicsView students={students} />
+            <GuardianAcademicsView
+                students={students}
+                viewerId={guardianId}
+                signatureReference={signatureReference?.strokeData ?? null}
+            />
         </div>
     );
 }

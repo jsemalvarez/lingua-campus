@@ -24,9 +24,16 @@ import { StudentReportViewer } from "@/components/reports/StudentReportViewer";
 
 interface GuardianAcademicsViewProps {
     students: any[];
+    /** Id del tutor que está mirando, para saber si le toca firmar (FEAT-09). */
+    viewerId: string;
+    signatureReference: any;
 }
 
-export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) {
+export function GuardianAcademicsView({
+    students,
+    viewerId,
+    signatureReference
+}: GuardianAcademicsViewProps) {
     const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || "");
 
     const currentStudent = students.find(s => s.id === selectedStudentId);
@@ -277,11 +284,13 @@ export function GuardianAcademicsView({ students }: GuardianAcademicsViewProps) 
             </div>
 
             {/* ROW 4: Boletín Institucional */}
-            <StudentReportViewer 
+            <StudentReportViewer
                 key={selectedStudentId}
-                studentName={currentStudent.name} 
-                reports={currentStudent.studentReports || []} 
-                instituteName={currentStudent.institute?.name} 
+                studentName={currentStudent.name}
+                reports={currentStudent.studentReports || []}
+                instituteName={currentStudent.institute?.name}
+                viewer={{ id: viewerId, isStudent: false }}
+                signatureReference={signatureReference}
             />
 
         </main>
