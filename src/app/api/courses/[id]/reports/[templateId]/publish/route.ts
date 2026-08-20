@@ -105,7 +105,21 @@ export async function PATCH(
             // Only on publish, and only for reports that were not frozen before:
             // re-publishing must not re-resolve signers, or a student turning 20
             // in August would change the signer of the report signed in March.
-            if (pubDate && needsSignature) {
+            //
+            // A report with zero signer rows is BOTH "sin firmante" and "not
+            // frozen yet", and that is deliberate: with no signers there are no
+            // signatures to protect, so re-resolving is safe. It also self-heals
+            // the common case — the student had no guardian loaded at publish
+            // time, someone loads one, and re-publishing makes the report
+            // signable. Do not "fix" this with an explicit frozen flag without
+            // replacing that recovery path.
+            // The hash is written on every publish, even when the template does
+            // not ask for a signature: it describes content, not policy. That
+            // makes `contentHash != null` mean "published by a version that knows
+            // about signatures", which is how the institute screen tells apart a
+            // report with nobody to sign it from one published before all this
+            // existed — the whole first term, for instance.
+            if (pubDate) {
                 const reportIds = reports.map(r => r.id);
 
                 const alreadyFrozen = new Set(
@@ -141,7 +155,7 @@ export async function PATCH(
                         }
                     });
 
-                    if (alreadyFrozen.has(rep.id)) continue;
+                    if (!needsSignature || alreadyFrozen.has(rep.id)) continue;
 
                     const student = studentsById.get(rep.studentId);
                     if (!student) continue;
