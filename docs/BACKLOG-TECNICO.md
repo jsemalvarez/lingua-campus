@@ -250,7 +250,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [x] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
-| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
+| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de informes y novedades | [ ] |
 | [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [x] |
 | [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
 | [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
@@ -271,6 +271,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-12](#arq-12) | P2 | Versionar el proyecto y mostrar la versión en la app | [ ] |
 | [ARQ-13](#arq-13) | P3 | Saber qué versión está usando cada usuario | [ ] |
 | [ARQ-14](#arq-14) | P3 | La purga de un alumno no puede borrar a ningún alumno real | [ ] |
+| [ARQ-15](#arq-15) | P2 | 🗣️ La identidad está partida en dos tablas: `User` y `Student` | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -3835,8 +3836,9 @@ Para probar por pantalla, entrando como `profe@test.com`:
 
 **Pedido (2026-08-13).** Una columna de novedades donde se comunican temas, en tres niveles:
 nosotros anunciamos funcionalidades nuevas, el instituto comunica por ejemplo una salida, y el curso
-comunica una tarea puntual. Las novedades deben poder firmarse — eso es [FEAT-09](#feat-09), que
-depende de esta.
+comunica una tarea puntual. Las novedades deben poder firmarse — eso es [FEAT-09](#feat-09), que ya
+**no depende de esta**: por la decisión del 2026-08-19 arranca por los informes, y las novedades son
+su segunda etapa.
 
 **No existe nada parecido**: no hay modelo de novedades ni de anuncios en el schema.
 
@@ -3880,10 +3882,21 @@ mensajería en vez de duplicarla.
 ---
 
 <a id="feat-09"></a>
-## FEAT-09 · Firma de conformidad de las novedades · **P2** · 🗣️ Pedido del cliente
+## FEAT-09 · Firma de conformidad de informes y novedades · **P2** · 🗣️ Pedido del cliente
 
 **Pedido (2026-08-13).** Que las novedades sean "firmadas digitalmente por sus destinatarios".
-Depende de [FEAT-08](#feat-08): sin novedades no hay qué firmar.
+
+**Ampliación (2026-08-19).** El pedido se concreta sobre los **informes**: que el tutor firme cuando
+ve las notas, y que esa firma sea la devolución al instituto de que efectivamente las vio. Y suma un
+requisito nuevo: la firma es un **trazo dibujado**, y tiene que parecerse entre informe e informe —
+que no valga un círculo en uno y un cuadrado en el otro.
+
+**Decisión (2026-08-19): arranca por los informes y no espera a [FEAT-08](#feat-08).** La ficha nacía
+colgada de las novedades —"sin novedades no hay qué firmar"—, pero los informes ya existen
+([`prisma\schema.prisma:862`](../prisma/schema.prisma), `StudentReport` con su `publishedAt`), así que
+esa dependencia no era real. Queda en dos etapas: **primero informes**, después novedades cuando
+FEAT-08 exista. El modelo se diseña igual apuntando a "un documento" de tipo variable, así que sumar
+novedades, el reglamento o una autorización más adelante sale gratis.
 
 **Decisión (2026-08-13): es firma electrónica, y el objetivo es saber quién vio.** No se busca una
 autorización con valor probatorio sino que el instituto sepa si los tutores y los alumnos vieron la
@@ -3893,12 +3906,63 @@ presunción de autoría. Lo que se construye es un acuse de lectura con conformi
 
 Conviene que la interfaz diga eso mismo —"confirmo que lo leí"— y no "firma digital", por dos
 razones: es lo que realmente hace, y evita que dentro de un año alguien lo invoque como si fuera lo
-otro.
+otro. **El trazo no cambia esto**: dibujar la firma le da al acto peso de acto, pero lo que queda
+registrado sigue siendo un acuse de lectura.
+
+### El trazo y el parecido entre firmas (2026-08-19)
+
+**Contra qué protege el parecido, y contra qué no.** Para el objetivo declarado —que el instituto
+sepa que el tutor vio las notas— la comparación no aporta nada: el login ya identifica al tutor. Lo
+que el parecido cuida es que el tutor no haga un palito para sacarse el cartel de encima. Es una
+**señal de seriedad, no de seguridad**, y de ahí sale todo lo que sigue: acá nadie está falsificando,
+el problema es el descuido.
+
+**Decisión: la firma de referencia se registra en la primera firma.** No hay un paso de enrolamiento
+aparte. La primera vez que el tutor firma, ese trazo queda guardado como referencia, y contra ese se
+comparan todos los siguientes.
+
+**Decisión (2026-08-19): la referencia vive en el perfil de quien firma.** No cuelga del informe ni
+del alumno, sino de la persona. Así "¿es la primera vez que firma?" es una pregunta sobre el
+firmante, y el caso de los dos tutores se resuelve solo: si el primer informe lo firma la madre y el
+segundo el padre, cada uno tiene su propio estreno y su propia referencia. De paso, un tutor con tres
+hijos registra la firma una vez y le sirve para los informes de los tres.
+
+**Pero el firmante no siempre es un `User`.** `Student` **no** es un `User`: tiene su propio `email` y
+`password` ([`prisma\schema.prisma:106`](../prisma/schema.prisma)), y los alumnos entran con DNI. Con
+los mayores de edad firmando por sí mismos, la referencia no puede colgar de `User`. El patrón ya
+existe en el proyecto y conviene copiarlo en vez de inventar otro: `ThreadParticipant` usa
+`userId?` / `studentId?` con *"exactamente uno de los dos debe estar poblado"*
+([`prisma\schema.prisma:739`](../prisma/schema.prisma)).
+
+**El primer trazo es el que nadie hace con cuidado.** Define todas las comparaciones futuras, y lo
+hace alguien que nunca firmó ahí y no sabe que cuenta. Dos cosas, entonces: avisar en esa primera vez
+que ese trazo queda como su firma, y dejar que la vuelva a registrar desde su propio perfil cuando
+quiera — él, no la secretaría. Las firmas ya hechas no se tocan: cada una guarda su propio trazo.
+
+**Decisión: no se bloquea nunca por parecido.** Se guarda el puntaje y se le muestra al instituto en
+la misma lista donde ve quién falta. El motivo es concreto: los tutores van a firmar con el dedo en
+un celular, donde la misma persona varía muchísimo. Un umbral que rechace le traba la firma a padres
+legítimos, y ahí no hay quién destrabe — la secretaría no puede firmar por ellos, y el sistema no
+puede dejar un callejón sin salida del lado de la familia.
+
+**Mostrarle al tutor su firma anterior mientras firma.** Resuelve el grueso del problema
+círculo-contra-cuadrado sin ningún algoritmo, y es lo más barato de todo el ítem. Conviene construir
+eso primero y ver cuánto queda por resolver después.
+
+**Guardar el trazo como secuencia de puntos con tiempos, no como PNG.** Comparar imágenes es flojo;
+lo que funciona para comparar firmas es la **dinámica** del trazo —el orden, la velocidad, las
+pausas—. Además ocupa menos, y la imagen se renderiza cuando se la necesita. Si se guarda sólo el
+PNG, esa puerta queda cerrada para siempre.
 
 **Dónde sí importa la fortaleza del login.** Un acuse de lectura tolera bien que las credenciales
 sean flojas: si la secretaría conoce la contraseña del tutor ([SEC-06](#sec-06)) y no hay
 recuperación ([FEAT-05](#feat-05)), lo que se degrada es la confianza del dato, no la exposición
 legal. Con este alcance, esos dos ítems **dejan de ser requisitos previos**.
+
+**Matiz agregado el 2026-08-20.** Sigue siendo cierto para que el mecanismo funcione, pero no para
+que el **porcentaje** signifique algo: desde que el instituto va a mirar ese número y actuar sobre
+él, [SEC-06](#sec-06) pasa a ser lo que lo hace creíble. Está desarrollado más abajo, en "El tutor
+que no entra nunca".
 
 Pero conviene tener marcada la frontera: el ejemplo de la salida es una **autorización**, no un
 aviso. Si el día de mañana el instituto empieza a apoyarse en estas firmas para permisos —que es la
@@ -3911,29 +3975,227 @@ firmar. Si después alguien edita la novedad, la firma no puede seguir aparecien
 un texto que el firmante nunca vio. Las dos salidas razonables: congelar la novedad al publicarla, o
 versionarla y volver a pedir firma. Cualquiera sirve; no decidirlo es lo que no sirve.
 
+**En informes esto ya es un agujero concreto (2026-08-19).** `StudentReport` tiene `publishedAt`,
+pero **nada impide seguir editando las notas después de publicado**
+([`prisma\schema.prisma:885`](../prisma/schema.prisma), `ReportEntry`). Hoy no molesta a nadie. Con
+firma sí: el tutor firma, el profesor corrige un 7 por un 5, y queda una firma "válida" sobre un
+informe que esa persona nunca vio. Hay que resolverlo en el mismo movimiento que la firma, no
+después.
+
+**Respuesta del instituto (2026-08-20): sí se puede editar, y sólo el ADMIN.** El razonamiento es que
+los informes virtuales reemplazan a los físicos y el error humano existe; obligar a refirmar por una
+nota mal cargada es desproporcionado. La edición posterior a la publicación queda restringida al
+administrador, y **la firma del tutor sigue valiendo**.
+
+**Por qué la restricción al ADMIN es lo que sostiene la firma.** Razonamiento del cliente, y es el
+correcto: si cada profesor pudiera modificar las notas después de publicadas, la firma **sí** sería
+un adorno. Que la corrección tenga que pasar por una sola persona es lo que la mantiene siendo un
+hecho raro y deliberado en vez de la operación normal. El costo operativo es real y aceptado: el
+profesor carga las notas pero no corrige su propio error una vez publicado, se lo pide al
+administrador.
+
+**Aun así hay que dejar el rastro.** Si el hash actual difiere del hash firmado, el informe se marca
+como *modificado después de la firma*, con la fecha y quién lo hizo. **En esta primera etapa esa
+marca se muestra sólo al instituto** (decisión del 2026-08-20); mostrársela al tutor se evalúa
+después, si al instituto le parece bien. Lo importante es que **el dato se registra desde el día
+uno** — lo que se posterga es la pantalla, no el registro, así que habilitarlo más adelante no exige
+reconstruir nada hacia atrás. Por lo mismo, en esta etapa **al tutor que ya firmó tampoco se le
+notifica** la modificación: el aviso que sí va es el de publicación.
+
 **Quién firma cuando el destinatario es menor.** El instituto tiene alumnos de 6, 7 y 8 años
 ([BUG-01](#bug-01)). Para una autorización de salida el firmante tiene que ser **el tutor**, no el
 alumno. Cada novedad necesita decir a quién le exige firma, y no puede ser "todos los destinatarios"
 por defecto.
 
 **Lo que el instituto realmente necesita no es la firma: es la lista de quién falta.** Ante una
-salida, la pregunta operativa es "¿qué chicos pueden ir?". La vista de firmas pendientes por novedad,
-con nombre y curso, es el valor de esta ficha; la firma es el mecanismo. Conviene construir esa vista
-desde el principio y no como agregado.
+salida, la pregunta operativa es "¿qué chicos pueden ir?"; ante un informe, "¿qué familias se
+enteraron de las notas?". Eso es exactamente la devolución al instituto que pide el cliente: la
+vista de firmas pendientes —por curso y período en informes, por novedad en el otro caso, con nombre
+y curso— es el valor de esta ficha; la firma es el mecanismo. Conviene construir esa vista desde el
+principio y no como agregado, y es donde aparece el aviso de que una firma no se parece a las
+anteriores.
 
-**Qué guardar, con cuidado.** Quién firmó, cuándo, y el hash de lo firmado. Sobre IP y dispositivo
-hay una tensión real: [FEAT-04](#feat-04) tomó la posición de **no** guardarlos sin necesidad
-concreta, porque son datos personales y hay menores. Acá sí hay necesidad —son parte de la prueba—,
-así que la decisión es deliberada y hay que anotarla con la política de retención, no arrastrarla por
-inercia. Es el mismo terreno de [ARQ-10](#arq-10) (auditoría de acciones del panel), que también
-advierte sobre no copiar datos personales de más.
+**Qué guardar, con cuidado.** Quién firmó, cuándo, el hash de lo firmado y el trazo. Sobre IP y
+dispositivo hay una tensión real: [FEAT-04](#feat-04) tomó la posición de **no** guardarlos sin
+necesidad concreta, porque son datos personales y hay menores. Acá sí hay necesidad —son parte de la
+prueba—, así que la decisión es deliberada y hay que anotarla con la política de retención, no
+arrastrarla por inercia. **El trazo sube ese escalón**: es un dato personal, y guardado con su
+dinámica se acerca bastante a un dato biométrico de los tutores. Es el mismo terreno de
+[ARQ-10](#arq-10) (auditoría de acciones del panel), que también advierte sobre no copiar datos
+personales de más.
 
-**Los informes entran desde el día uno.** El pedido nombra "la novedad **o el informe**", así que no
-es un alcance futuro: son dos objetos firmables desde el arranque. El modelo no puede colgar de
-`Announcement` — necesita apuntar a "un documento" de tipo variable, y el módulo de informes
-([`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx),
-[`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx)) es el segundo caso a
-cubrir. Que el reglamento o una autorización se sumen después sale gratis si esto se diseña así.
+**El modelo apunta a un documento, no a una novedad.** El pedido original nombra "la novedad **o el
+informe**", y con la decisión del 2026-08-19 el informe pasa a ser el primero de los dos. El modelo
+no puede colgar de `Announcement`: necesita apuntar a "un documento" de tipo variable. Las pantallas
+del módulo de informes son
+[`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx) (el docente
+carga) y [`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx) (el tutor mira, y
+es donde va la firma).
+
+**Con cuántas firmas alcanza un informe.** Un alumno puede tener **varios tutores**:
+[`GuardianStudentLink`](../prisma/schema.prisma) es de muchos a muchos y hasta guarda el vínculo
+(madre, padre, tío). Entonces "el tutor firmó el informe" es ambiguo: ¿alcanza con que firme uno, o
+el informe queda pendiente hasta que firmen todos? No es una sutileza — define qué significa
+"pendiente" en la lista, que es el entregable de esta ficha. Y del otro lado está el alumno **sin
+ningún tutor cargado**, para el que hoy no habría quién firme.
+
+**Respuesta del instituto (2026-08-20): alcanza con que firme un tutor.** Cada informe tiene que
+tener **al menos una** firma. Simplifica bastante: por informe el estado es binario —firmado o no—,
+la lista de pendientes son los informes con cero firmas, y el porcentaje se calcula por tanda (curso
+más período) y en general.
+
+**El alumno mayor firma su propio informe. El corte es a los 20 (2026-08-20).** Hasta 19 inclusive
+firma el tutor; de 20 en adelante firma el alumno y **no se le muestra la casilla del tutor**. El
+motivo, que conviene tener escrito porque es lo que habría que revisar si algún día cambia: a los 19
+el curso lo sigue pagando el tutor en la mayoría de los casos, así que la familia todavía está
+mirando. Como **quién debe firmar se congela al publicar**, el que cumple años a mitad de año no le
+cambia el estado a los informes ya publicados.
+
+Consecuencia menor: el alumno de 20 o más que igual tenga tutores cargados **les sigue avisando** la
+publicación —el aviso va al alumno y a los tutores—, sólo que la firma que cuenta es la de él.
+
+Arrastra un detalle: `Student.birthDate` es
+**opcional** ([`prisma\schema.prisma:129`](../prisma/schema.prisma)), así que hay alumnos sobre los
+que la regla no se puede evaluar. No hace falta volver obligatoria la fecha, pero la regla sí
+necesita una respuesta para ese caso: lo prudente es **tratarlo como menor** —firma el tutor— y que
+la fecha faltante se vea en la lista de pendientes, para que alguien la cargue.
+
+**Quién debe firmar se congela al publicar.** Mismo criterio que el hash del contenido, y por la
+misma razón. Si la lista de firmantes se calcula en vivo, se mueve sola: un alumno cumple 18 en junio
+y cambia quién le debía firmar el informe de marzo; se carga un tutor nuevo en agosto y aparece como
+pendiente en un informe de marzo que nunca pudo ver. Al publicar el informe se resuelve **a quiénes
+les toca firmar** y eso queda escrito.
+
+### La pantalla del instituto (definida el 2026-08-20)
+
+**Pantalla propia, para ADMIN y SECRETARY** —el grupo `INSTITUTE_ADMINS` que ya existe desde
+[SEC-03](#sec-03)—, con los informes entregados: porcentaje de firmas por tanda y porcentaje general,
+y desde ahí se entra al informe para ver quiénes faltan. Es el entregable de la ficha, no un
+agregado. Notar que **editar el informe sigue siendo sólo del ADMIN**: la secretaría mira y persigue,
+no corrige.
+
+Dos precisiones sobre qué significan esos números, ahora que alcanza con un tutor:
+
+- Por informe el estado es **binario**. El porcentaje sólo tiene sentido sobre un conjunto: "2º
+  período, Upper-Intermediate: 18 de 24 firmados".
+- Ahí van también las dos marcas que necesitan acción: informes **modificados después de la firma**, y
+  alumnos **sin fecha de nacimiento**, que son los que no dejan resolver a quién le toca firmar.
+
+**Al que no firma nunca lo persigue el instituto a mano, desde esta pantalla** (decisión del
+2026-08-20). No hay recordatorio automático; si más adelante lo quieren, es trabajo aparte.
+
+### Aviso de publicación (pedido el 2026-08-20)
+
+Cuando el profesor publica el informe, el aviso tiene que llegarle **al alumno y a los tutores**. Es
+barato: [`Notification`](../prisma/schema.prisma) ya existe con el mismo patrón `userId?` /
+`studentId?`, más `type`, `read` y `link`. Alcanza con un tipo nuevo y una fila por destinatario
+apuntando al informe. El mismo mecanismo sirve para avisar la modificación posterior a la firma.
+
+### Decisiones nuestras (2026-08-20)
+
+**No se guardan la IP ni el dispositivo.** Queda alineado con [FEAT-04](#feat-04) y saca del medio
+toda la discusión de retención de esos datos.
+
+**Retención del trazo.** Separar dos cosas que hoy suenan iguales: la **referencia** existe para
+comparar y sirve mientras la persona siga firmando; las **firmas hechas** son el registro de quién
+vio qué, y tienen que durar lo que dure el informe. Entonces: conservar siempre el hecho —quién,
+cuándo, hash— y **soltar el trazo cuando deja de tener función**, al cortarse el último vínculo con
+el instituto y con un año lectivo de gracia, para poder mostrar firmado un informe de diciembre
+durante el año siguiente. Encaja con el borrado lógico del proyecto ([ARQ-05](#arq-05)): no se borra
+la fila, se vacía el campo del trazo.
+
+**Umbral del aviso de parecido.** El cliente delegó el criterio (2026-08-20), así que queda tomado
+como sigue. El número no se puede elegir ahora sin inventarlo. Se guarda el
+puntaje desde el día uno **sin mostrar nada**, y se mira la distribución con firmas reales antes de
+fijar el corte. Dos criterios para cuando llegue el momento: comparar **contra el propio historial de
+la persona** y no contra un número global —hay gente consistentemente irregular, y un umbral fijo la
+castiga—, y **no marcar nada con menos de tres firmas previas**, porque no hay historia suficiente.
+
+Y una decisión de producto: se muestra **una marca, no un porcentaje**. Un "72% de parecido" es un
+número que se sobreinterpreta y sobre el que se empiezan a tomar decisiones que el dato no aguanta.
+Por lo mismo **no va en las métricas generales**: el porcentaje de firmas es operativo y sirve; el
+parecido promedio no significa nada y sólo invita a comparar familias.
+
+**Secuencia: los trazos se guardan desde el día uno, la comparación va en una segunda pasada.** Es la parte con más ingeniería y la de menos valor de toda la ficha —el instituto ya sabe
+quién vio, por el acuse—, y postergarla no cuesta nada porque la historia queda guardada igual. Lo
+que sí conviene tener desde el arranque es mostrarle al tutor su firma anterior mientras firma, que
+es lo que de verdad evita el círculo y el cuadrado.
+
+### Alcance de la etapa 1
+
+Con todo lo decidido entre el 2026-08-19 y el 2026-08-20, lo que entra es:
+
+1. **Un firmable genérico**, apuntando a un documento de tipo variable, con firmante de dos lados
+   (`userId?` / `studentId?`) y la firma de referencia colgada del perfil de quien firma.
+2. **La firma en el informe del tutor**: dibuja el trazo, se le muestra al lado su firma anterior, y
+   la primera vez se le avisa que ese trazo queda como su firma. Se guarda quién, cuándo, el hash del
+   contenido y el trazo como puntos con tiempos. **Sin IP ni dispositivo.**
+3. **Resolver y congelar al publicar** a quiénes les toca firmar: hasta 19 el tutor, de 20 el alumno,
+   sin fecha de nacimiento se trata como menor.
+4. **Tres estados por informe, no dos**: firmado, pendiente y **sin firmante** — este último para el
+   alumno sin tutor cargado o cuya cuenta no puede entrar. Está desarrollado más abajo, en "El tutor
+   que no entra nunca".
+5. **La pantalla del instituto** (ADMIN y SECRETARY): porcentaje de firmas por tanda y general
+   —calculado **sobre los que pueden firmar**, con los "sin firmante" contados al lado—, quién falta,
+   informes modificados después de la firma, y alumnos sin fecha de nacimiento.
+6. **"Entregado por otro medio"**, un estado propio que carga el instituto para la familia que no va
+   a entrar nunca. Aprobado por el cliente el 2026-08-20; **falta el visto bueno del instituto**, que
+   es quien lo va a usar.
+7. **Restringir al ADMIN** la edición del informe publicado, y marcarlo como modificado cuando el
+   hash deja de coincidir.
+8. **El aviso de publicación** al alumno y a los tutores, con `Notification`.
+9. **Guardar el puntaje de parecido sin mostrarlo**, para poder calibrar el umbral más adelante.
+
+Queda para la etapa 2: las novedades ([FEAT-08](#feat-08)), la comparación de firmas visible, la
+marca de modificación para el tutor, y los recordatorios automáticos a quien no firma.
+
+**Antes de empezar conviene medir cuántos tutores entraron alguna vez** — está el porqué más abajo.
+Es una consulta de una sola vez y cambia la expectativa sobre lo que el porcentaje va a mostrar el
+primer mes.
+
+### El tutor que no entra nunca (2026-08-20)
+
+El instituto respondió que el alumno sin tutor cargado se va a ver como no firmado y que ellos
+decidirán si insisten, y agregó un hecho: **hay tutores que no van a entrar nunca a la plataforma**.
+Eso obliga a separar dos situaciones que la respuesta trata igual:
+
+| | Qué significa | Qué se hace |
+|---|---|---|
+| **Sin tutor cargado** | No hay `GuardianStudentLink`. Nadie *puede* firmar | Cargar al tutor. Insistir no aplica: no hay a quién |
+| **Tutor cargado que no entra** | Hay quién puede firmar y no lo hace | Perseguirlo, que es lo que el instituto quiere hacer |
+
+**Por eso el estado es de tres valores, no de dos: firmado, pendiente y sin firmante.** El porcentaje
+se calcula **sobre los que pueden firmar**, y los "sin firmante" se muestran al lado, contados
+aparte: *"18 de 22 firmados (82%), 2 sin firmante"*. Si se mezclan, un curso al 60% no distingue
+entre cuarenta por ciento de familias desatentas y cuarenta por ciento de cuentas que no funcionan
+—que se resuelven con acciones distintas y de personas distintas—, y un número que no se puede
+accionar termina ignorado.
+
+**Antes de construir esto conviene medir cuántos tutores entraron alguna vez.** Es lo que decide si
+la ficha entrega lo que el instituto espera: con la mayoría de los tutores adentro, esto es una nota
+al pie; con una minoría, el porcentaje de la etapa 1 va a ser sobre todo ruido y la prioridad real
+pasa a ser que los tutores entren. Hoy el sistema no lo registra —eso es [FEAT-04](#feat-04)—, pero
+hay un atajo para medirlo una vez: **contar los tutores que todavía tienen la contraseña por defecto**
+`Modern2026` ([SEC-06](#sec-06)), que son exactamente los que nunca entraron a cambiarla.
+
+**Y el número crea un incentivo que antes no existía.** El tutor que nunca entró es justo el que
+sigue teniendo una contraseña que está escrita en el código y es igual en todos los institutos. Con
+una casilla de "leído" a nadie le importaba; con un porcentaje que el instituto mira, "le firmo yo
+que ya le avisé" es una tentación de cinco segundos y completamente indetectable. Dos consecuencias: **el
+porcentaje no debería convertirse en una meta con la que se mida a la secretaría** —es una lista
+operativa, no un indicador de desempeño—, y **[SEC-06](#sec-06) deja de ser sólo higiene**: es lo que
+hace creíble el número. No bloquea la etapa 1, pero sí conviene resolverlo antes de que alguien tome
+decisiones mirando ese porcentaje.
+
+**Opción para ofrecerle al instituto: registrar "entregado por otro medio".** Para la familia que no
+va a entrar nunca, el informe en papel o el aviso en la puerta sigue existiendo. Si el sistema no
+tiene dónde anotarlo, esos informes quedan en rojo para siempre —y el número se empieza a ignorar— o
+alguien termina firmando por el tutor. Un estado propio, cargado por el instituto y visible como lo
+que es, es más honesto que cualquiera de esas dos salidas. Queda a decisión de ellos.
+
+Las preguntas abiertas de [FEAT-08](#feat-08) —a quién le llega una novedad, si caduca, quién la
+publica— son sobre **novedades, no sobre informes**, y no bloquean nada de esto: son de la segunda
+etapa.
 
 ---
 
@@ -4093,6 +4355,49 @@ Las tres primeras se contestan con datos que **ya existen** en la base — sesio
 `Attendance`, `Grade` — y no necesitan registro nuevo, sólo consultas y una pantalla. La última exige
 instrumentar la aplicación, que es otro trabajo y otro costo. **Conviene separar las dos mitades**: la
 primera es barata y es la que el cliente pidió; la segunda es un proyecto.
+
+**Ampliación (2026-08-20): el cliente quiere un panel de "uso del sistema".** Es la pantalla que
+unifica lo que hoy está repartido en cuatro fichas —esta, [FEAT-04](#feat-04), [ARQ-12](#arq-12) y
+[ARQ-13](#arq-13)—, y confirma por el otro lado lo que ya decía arriba: conviene decidirlas juntas.
+Nombró dos métricas concretas:
+
+1. **Ingresos por día, separados en tutores, profesores y alumnos.** Es FEAT-04 con una dimensión de
+   tiempo. Hoy no se registra nada: hace falta un evento por ingreso. El lugar natural es el
+   `events.signIn` de NextAuth, uno solo para toda la aplicación. Y vuelve a aparecer el firmante de
+   dos lados: profesores y tutores son `User`, los alumnos son `Student`, así que el registro necesita
+   `userId?` / `studentId?` como ya hacen `Notification` y `ThreadParticipant`. **Sin IP ni
+   dispositivo**, por la posición de FEAT-04.
+2. **Cuántos usuarios tienen la app instalada y con qué versión.** Ver la nota de PWA en
+   [ARQ-13](#arq-13): la segunda mitad se puede, la primera tiene un límite que conviene conocer
+   antes de prometer el número.
+
+`recharts` ya está en el proyecto, así que los gráficos del panel no suman dependencia.
+
+**Notas prácticas para el panel (se trabaja el fin de semana del 2026-08-23).**
+
+**Un solo registro de ingreso resuelve las tres fichas.** Si el evento guarda, además de quién y
+cuándo, **el rol activo, si venía corriendo instalada y qué versión traía**, entonces FEAT-04,
+ARQ-13 y esta ficha salen todas del mismo lugar. Es exactamente lo que ARQ-13 pedía —"sólo tiene
+sentido si antes existe FEAT-11"— y evita construir dos registros paralelos. Campos: firmante de dos
+lados (`userId?` / `studentId?`), fecha, rol activo, modo de visualización, versión. **Sin IP ni
+dispositivo.**
+
+**Lo único que apura de verdad es empezar a registrar.** Las métricas de práctica, asistencia y notas
+salen de datos que ya están en la base y se pueden reconstruir hacia atrás el día que se haga la
+pantalla. Los ingresos no: lo que no se registre se pierde. Conviene enganchar `events.signIn` de
+NextAuth aunque el panel venga después.
+
+**Qué se puede saber de la instalación, y qué no.** Está desarrollado en [ARQ-13](#arq-13), pero el
+resumen para no prometer de más: **no se puede saber quién tiene la app instalada**. Se puede saber
+quién **entró desde la app instalada**, y contar instalaciones nuevas con el evento `appinstalled`.
+Las desinstalaciones son invisibles. La métrica hay que titularla por lo que mide.
+
+**La versión necesita [ARQ-12](#arq-12) antes**, aunque sea la parte mínima: hoy `package.json` dice
+`1.0.2` y nada lo lee, y desde el cliente no se puede leer — hay que inyectarla en tiempo de build.
+
+**Ojo con el par `userId?` / `studentId?` de este registro**: es uno de los cinco lugares que motivan
+[ARQ-15](#arq-15). Se construye igual —es una tabla de sólo agregar filas y migrarla después es
+cambiar una columna—, pero conviene saber que está en esa lista.
 
 **Relacionado.** [ARQ-09](#arq-09) anota que las métricas y el registro de errores son cosas
 distintas y no conviene mezclarlas: "cuántos errores hubo" sale del registro, "cuánto se usa la
@@ -4927,6 +5232,31 @@ preguntar qué versión tiene instalada cada usuario, porque las instalaciones q
 meses. Esto es una aplicación web: en el próximo refresco, todos están en la última. La distribución
 de versiones sería casi siempre una sola barra, y no vale un desarrollo.
 
+**Corrección (2026-08-20): esto ya es una PWA, y el párrafo de arriba lo daba por sentado sin
+mirarlo.** El proyecto tiene `@ducanh2912/next-pwa` y un service worker en `public/sw.js`, más
+`@khmyznikov/pwa-install` para el prompt de instalación. Cambia el diagnóstico en dos sentidos:
+
+- **El argumento "en el próximo refresco están todos en la última" se debilita.** Un service worker
+  sirve de su caché y una app instalada no se refresca como una pestaña: un cliente puede quedar
+  atrás bastante más que unas horas. La distribución de versiones sí puede tener más de una barra.
+- **Y por eso la forma barata vale más, no menos.** El cliente rancio deja de ser el que no cerró la
+  pestaña en tres días y pasa a ser cualquiera con la app instalada. Mandar la versión en una cabecera
+  y avisar que recargue es lo primero a hacer.
+
+**Sobre "cuántos tienen la app instalada" (pedido del 2026-08-20).** Hay un límite duro que conviene
+saber antes de prometer el número: **el servidor no puede saber quién la tiene instalada**. No existe
+registro de instalaciones; de un dispositivo te enterás sólo cuando se conecta, y las
+desinstalaciones son invisibles siempre. Lo que sí se puede:
+
+- Detectar en el cliente si corre instalada (`display-mode: standalone`) y mandarlo junto con el
+  evento de ingreso. Eso da **ingresos desde la app instalada contra ingresos desde el navegador**,
+  que es un dato honesto y probablemente más útil que un conteo de instalaciones.
+- Contar instalaciones nuevas con el evento `appinstalled`.
+
+Entonces la métrica real es *"cuántos entraron desde la app instalada en los últimos N días"*, no
+*"cuántos la tienen instalada"*. Conviene que la pantalla la llame por lo que mide: si dice
+"instalaciones: 47" y son 47 activos, alguien va a decidir algo con un número que significa otra cosa.
+
 **Lo que sí tiene valor es la variante corta de esa pregunta: los clientes rancios.** Alguien con una
 pestaña abierta desde antes del despliegue sigue ejecutando JavaScript viejo contra un servidor nuevo,
 y eso **sí** produce errores reales — es primo del problema del 13/08, donde el desajuste fue entre
@@ -4992,6 +5322,70 @@ decidir si sigue existiendo:
   vínculos que faltan, y decidir qué pasa con la plata: borrar los pagos de un alumno **cambia la
   caja histórica del instituto**, y eso no puede ser un efecto colateral silencioso de borrar una
   ficha.
+
+---
+
+<a id="arq-15"></a>
+## ARQ-15 · La identidad está partida en dos tablas · **P2**
+
+**Planteo (2026-08-20), y es la tercera vez.** El cliente ya había preguntado dos veces si tener
+`User` y `Student` como tablas separadas era lo correcto, y las dos veces se le respondió que sí.
+Vuelve a plantearlo ahora que los choques entre las dos aparecen seguido, y con un argumento de
+oportunidad que es correcto: **con un solo cliente, el momento más barato para cambiarlo es ahora**.
+
+**Pero la pregunta que se contestó "sí" probablemente no era esta.** Hay dos preguntas distintas
+adentro:
+
+1. *¿`Student` es una entidad propia?* **Sí, y sigue siendo sí.** Tiene inscripciones, cuotas, notas,
+   asistencias, saldo a favor. Colapsarla contra los profesores y los administradores sería el error
+   contrario.
+2. *¿Hay dos tablas de identidad?* **Sí, y ahí está el roce.** Un alumno y un tutor se autentican por
+   caminos distintos, y toda funcionalidad que cruce a los dos tiene que construirse dos veces.
+
+Las dos veces que se respondió "sí" se estaba respondiendo la primera. La que duele es la segunda.
+
+**Dónde duele, medido.** Hoy hay **tres modelos** con el par polimórfico `userId?` / `studentId?` —
+[`Notification`](../prisma/schema.prisma), `ThreadParticipant` y `Message`, que hasta lo dice en un
+comentario: *"Polimórfico: o un User (teacher, admin, guardian) o un Student"*. Con la firma de
+[FEAT-09](#feat-09) y el evento de ingreso de [FEAT-11](#feat-11) serían **cinco**. El costo no crece
+con el tamaño del negocio: crece con cada funcionalidad transversal que se agregue.
+
+**El número grande engaña, y conviene mirarlo antes de asustarse.** Hay 271 usos de `studentId` en 50
+archivos, pero la enorme mayoría son **de dominio** —una cuota es de un alumno, una nota es de un
+alumno— y no cambiarían con ninguna de las opciones sanas.
+
+**Tres opciones, no dos:**
+
+| | Qué es | Qué cuesta |
+|---|---|---|
+| Dejarlo como está | Cada funcionalidad transversal se construye con el par | Se paga de a poco y para siempre, y ya son 5 lugares |
+| Una sola tabla de usuarios con un tipo | Lo que plantea el cliente. Colapsa también la entidad de dominio | Toca los 271 usos, y `User` termina con las columnas de alumno —saldo a favor, tutores, nivel, fecha de ingreso— en nulo para cada profesor y cada admin |
+| **Separar identidad de entidad de dominio** ← recomendada | Una tabla de cuentas con **sólo** credenciales, estado e instituto. `Student` sigue existiendo entero y **apunta** a una cuenta, opcionalmente | Toca los 3 modelos polimórficos y la autenticación. Los 271 usos de dominio quedan intactos |
+
+La tercera es la que resuelve el problema real sin crear el opuesto: el par polimórfico desaparece
+porque todo lo transversal apunta a una sola tabla, `Student` conserva lo suyo, y el alumno de 6 años
+sin correo simplemente **no tiene cuenta** — que es lo que pasa hoy en la realidad y el schema ya
+admite con `email` y `password` opcionales.
+
+**Sobre el momento: el principio es correcto, el "ahora" tiene un pero concreto.** Este documento ya
+sostiene que las migraciones son baratas con un cliente y sólo se encarecen. Pero esta no es
+[FIN-05](#fin-05) (`Float` → `Decimal`): toca **autenticación**, que es justo donde acaba de aterrizar
+todo [SEC-01](#sec-01)/[SEC-02](#sec-02)/[SEC-03](#sec-03). Y sobre todo, **no hay backups**, y el
+`build` corre `migrate deploy` — la combinación que ya tumbó producción una vez. Hacer la migración
+más grande del proyecto sin backups es el bloqueante real, y resolver los backups es muchísimo más
+barato que la migración.
+
+**Secuencia recomendada:**
+
+1. **Backups primero.** No es una precaución genérica: es la condición para poder hacer esto.
+2. **Como trabajo propio y dedicado**, no mezclada con funcionalidades. Es la única forma de que si
+   sale mal se sepa qué la rompió.
+3. **No mientras haya otra cosa en curso.** Con el panel de uso y la firma en vuelo, no.
+
+**Qué hacer mientras tanto con lo que está en vuelo.** La firma y el evento de ingreso se construyen
+igual, con el par. Los dos son chicos y de sólo agregar filas, así que migrarlos después es cambiar
+una columna. No conviene frenar funcionalidades esperando esta decisión — pero sí conviene tenerla
+tomada antes de que el par aparezca en algo caro de mover.
 
 **Recomendación.** Sacarla, y si algún día hace falta la baja de datos personales, resolverla como lo
 que es —anonimizar la ficha conservando los asientos contables—, que no es lo mismo que borrar filas.
