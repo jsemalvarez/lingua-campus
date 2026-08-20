@@ -52,6 +52,8 @@ model Institute {
   levels        Level[]
   notifications Notification[]
   reportTemplates ReportTemplate[]
+  signatures    Signature[]
+  signatureReferences SignatureReference[]
 }
 
 // -----------------------------------------------------------------------------
@@ -94,7 +96,12 @@ model User {
   // Messaging
   threadParticipations ThreadParticipant[]
   sentMessages         Message[]           @relation("UserSentMessages")
-  
+
+  // Firmas de conformidad (FEAT-09)
+  signatureReference SignatureReference?
+  signatures         Signature[]
+  mustSign           ReportSigner[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -154,6 +161,11 @@ model Student {
   // Messaging
   threadParticipations ThreadParticipant[]
   sentMessages         Message[]           @relation("StudentSentMessages")
+
+  // Firmas de conformidad (FEAT-09) — el alumno de 20+ firma su propio informe
+  signatureReference SignatureReference?
+  signatures         Signature[]
+  mustSign           ReportSigner[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -873,7 +885,21 @@ model StudentReport {
   teacherComments String?        @db.Text
   publishedAt     DateTime?      // null = Borrador | Fecha = Publicado
 
+  // Hash del contenido actual. Si no coincide con el de una firma, el informe
+  // se tocó después de que esa persona lo firmó (FEAT-09).
+  contentHash     String?
+  lastEditedAt    DateTime?      // Última edición posterior a la publicación
+  lastEditedById  String?        // Id del ADMIN que la hizo (sin FK, como operatorId)
+
+  // El instituto registra que el informe llegó por fuera de la plataforma,
+  // para la familia que no va a entrar nunca. No es una firma.
+  deliveredOtherAt   DateTime?
+  deliveredOtherById String?
+  deliveredOtherNote String?
+
   entries         ReportEntry[]
+  signers         ReportSigner[]
+  signatures      Signature[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -888,12 +914,98 @@ model ReportEntry {
   report        StudentReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
   categoryId    String
   category      ReportCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
+
   value         String?        // Guardamos el valor como string ("8.5", "E", "A-", etc.)
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   @@unique([reportId, categoryId])
+}
+
+// -----------------------------------------------------------------------------
+// FIRMAS DE CONFORMIDAD (FEAT-09)
+// Es un acuse de lectura con conformidad explícita, no una firma digital de la
+// Ley 25.506. Sirve para que el instituto sepa quién vio las notas.
+// -----------------------------------------------------------------------------
+
+// La firma de referencia de una persona, contra la que se comparan las que
+// siguen. No hay paso de enrolamiento: se registra sola con la primera firma, y
+// la persona la puede volver a registrar desde su propio perfil. Una por
+// persona, no por alumno: un tutor con tres hijos registra una sola.
+model SignatureReference {
+  id          String   @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  // Polimórfico: o un User (tutor) o un Student (el alumno de 20+ que firma solo)
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId   String?  @unique
+  student     Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Secuencia de puntos con tiempos, no una imagen: la dinámica del trazo es lo
+  // que sirve para comparar. Se vacía al soltar el vínculo con el instituto.
+  strokeData  Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// A quién le toca firmar un informe. Se resuelve y se CONGELA al publicarlo:
+// nunca se recalcula, para que cumplir años o sumar un tutor no le cambie el
+// estado a un informe ya publicado. Cero filas = "sin firmante".
+model ReportSigner {
+  id        String        @id @default(cuid())
+  reportId  String
+  report    StudentReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([reportId, userId])
+  @@unique([reportId, studentId])
+  @@index([reportId])
+}
+
+// Un acto de firma. Alcanza con una para dar el informe por firmado.
+model Signature {
+  id          String    @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  // El documento firmado. Hoy sólo informes; una novedad suma otra columna
+  // opcional, en vez de un par tipo+id que perdería la integridad referencial
+  // que ARQ-01 ya viene reclamando.
+  reportId    String?
+  report      StudentReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  studentId   String?
+  student     Student?  @relation(fields: [studentId], references: [id])
+
+  signedAt    DateTime  @default(now())
+
+  // Hash del contenido exacto que se firmó. Si deja de coincidir con el del
+  // informe, alguien lo editó después y hay que mostrarlo así.
+  contentHash String
+
+  // El trazo de esta firma. Se vacía por retención; la fila queda siempre.
+  strokeData  Json?
+
+  // Parecido contra la referencia, de 0 a 100. Se guarda desde el día uno y no
+  // se muestra hasta calibrar el umbral con firmas reales. Nunca bloquea.
+  similarityScore Float?
+
+  @@index([reportId])
+  @@index([instituteId, signedAt])
 }
 

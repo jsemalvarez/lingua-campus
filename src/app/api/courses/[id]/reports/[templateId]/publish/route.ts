@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import {
+    reportContentHash,
+    resolveSigners,
+    templateRequiresSignature
+} from "@/lib/reports/signatures";
 
 export async function PATCH(
     req: NextRequest,
@@ -37,6 +42,15 @@ export async function PATCH(
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        const template = await prisma.reportTemplate.findFirst({
+            where: { id: templateId, instituteId: user.instituteId },
+            select: { specialFields: true }
+        });
+
+        if (!template) {
+            return NextResponse.json({ error: "Template not found" }, { status: 404 });
+        }
+
         // Get all active student enrollments for this course
         const enrollments = await prisma.enrollment.findMany({
             where: { courseId, status: "ACTIVE" },
@@ -45,6 +59,18 @@ export async function PATCH(
 
         const studentIds = enrollments.map(e => e.studentId);
         const pubDate = publishedAt ? new Date(publishedAt) : null;
+
+        // Needed to resolve who has to sign each report (FEAT-09)
+        const students = await prisma.student.findMany({
+            where: { id: { in: studentIds } },
+            select: {
+                id: true,
+                birthDate: true,
+                guardianLinks: { select: { guardianId: true } }
+            }
+        });
+        const studentsById = new Map(students.map(s => [s.id, s]));
+        const needsSignature = templateRequiresSignature(template.specialFields);
 
         // Perform upserts to guarantee report existence and update publishedAt
         const updated = await prisma.$transaction(async (tx) => {
@@ -74,6 +100,69 @@ export async function PATCH(
                 });
                 reports.push(rep);
             }
+
+            // Freeze who has to sign, and snapshot what they are signing.
+            // Only on publish, and only for reports that were not frozen before:
+            // re-publishing must not re-resolve signers, or a student turning 20
+            // in August would change the signer of the report signed in March.
+            if (pubDate && needsSignature) {
+                const reportIds = reports.map(r => r.id);
+
+                const alreadyFrozen = new Set(
+                    (await tx.reportSigner.findMany({
+                        where: { reportId: { in: reportIds } },
+                        select: { reportId: true },
+                        distinct: ["reportId"]
+                    })).map(s => s.reportId)
+                );
+
+                const entries = await tx.reportEntry.findMany({
+                    where: { reportId: { in: reportIds } },
+                    select: { reportId: true, categoryId: true, value: true }
+                });
+                const entriesByReport = new Map<string, typeof entries>();
+                for (const entry of entries) {
+                    const list = entriesByReport.get(entry.reportId) ?? [];
+                    list.push(entry);
+                    entriesByReport.set(entry.reportId, list);
+                }
+
+                const signerRows = [];
+                for (const rep of reports) {
+                    // The hash always tracks the current content, so an edit after
+                    // publishing shows up as a mismatch against the signed hash.
+                    await tx.studentReport.update({
+                        where: { id: rep.id },
+                        data: {
+                            contentHash: reportContentHash({
+                                teacherComments: rep.teacherComments,
+                                entries: entriesByReport.get(rep.id) ?? []
+                            })
+                        }
+                    });
+
+                    if (alreadyFrozen.has(rep.id)) continue;
+
+                    const student = studentsById.get(rep.studentId);
+                    if (!student) continue;
+
+                    // An empty list is a valid outcome: the student has no guardian
+                    // loaded, so nobody can sign. That is the "sin firmante" state.
+                    signerRows.push(
+                        ...resolveSigners({
+                            studentId: rep.studentId,
+                            birthDate: student.birthDate,
+                            guardianIds: student.guardianLinks.map(l => l.guardianId),
+                            publishedAt: pubDate
+                        }).map(signer => ({ reportId: rep.id, ...signer }))
+                    );
+                }
+
+                if (signerRows.length > 0) {
+                    await tx.reportSigner.createMany({ data: signerRows });
+                }
+            }
+
             return reports;
         });
 
