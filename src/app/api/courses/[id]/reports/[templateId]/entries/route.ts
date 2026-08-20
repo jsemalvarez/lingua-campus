@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
+import { reportContentHash } from "@/lib/reports/signatures";
 
 export async function GET(
     req: NextRequest,
@@ -114,6 +115,34 @@ export async function POST(
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        // Un informe publicado sólo lo toca un ADMIN (FEAT-09).
+        //
+        // Es lo que sostiene la firma: si cualquier docente pudiera cambiar las
+        // notas después de publicadas, el "confirmo que lo leí" del tutor no
+        // diría nada. Que la corrección tenga que pasar por una sola persona la
+        // mantiene siendo un hecho raro y deliberado.
+        const existing = await prisma.studentReport.findMany({
+            where: { courseId, templateId, year, periodIndex },
+            select: { studentId: true, publishedAt: true }
+        });
+        const publishedStudentIds = new Set(
+            existing.filter(r => r.publishedAt).map(r => r.studentId)
+        );
+
+        const touchesPublished = reports.some((rep: any) =>
+            publishedStudentIds.has(rep.studentId)
+        );
+
+        if (touchesPublished && user.activeRole !== "ADMIN") {
+            return NextResponse.json(
+                {
+                    error:
+                        "El informe ya está publicado. Sólo un administrador puede modificarlo."
+                },
+                { status: 403 }
+            );
+        }
+
         // Procesar en lotes (batches) para evitar saturar el pool de conexiones (que tiene un límite de 5).
         // En desarrollo local (Latinoamérica -> EE.UU.), la latencia de red hace que las conexiones
         // se mantengan ocupadas mucho tiempo. Procesar de a 5 alumnos a la vez asegura que la cola
@@ -193,6 +222,30 @@ export async function POST(
                     where: { id: studentReport.id },
                     include: { entries: true }
                 });
+
+                // Si el informe ya estaba publicado, el hash tiene que seguir al
+                // contenido: cuando deja de coincidir con el que guardó una firma,
+                // la pantalla del instituto lo muestra como editado después de
+                // firmado. Se compara antes de escribir para no dejar rastro de una
+                // edición que no cambió nada — abrir y guardar sin tocar no cuenta.
+                if (finalReport && publishedStudentIds.has(studentId)) {
+                    const newHash = reportContentHash({
+                        teacherComments: finalReport.teacherComments,
+                        entries: finalReport.entries
+                    });
+
+                    if (newHash !== finalReport.contentHash) {
+                        return prisma.studentReport.update({
+                            where: { id: finalReport.id },
+                            data: {
+                                contentHash: newHash,
+                                lastEditedAt: new Date(),
+                                lastEditedById: user.userId
+                            },
+                            include: { entries: true }
+                        });
+                    }
+                }
 
                 return finalReport;
             });

@@ -127,7 +127,7 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                 <Clock size={12} /> Pendientes
                             </p>
                             <p className="text-2xl font-black tabular-nums">{overall.pendientes}</p>
-                            <p className="text-xs text-muted-foreground">Hay a quién reclamarle</p>
+                            <p className="text-xs text-muted-foreground">Esperando que lo confirmen</p>
                         </Card>
 
                         <Card className="p-5 space-y-1">
@@ -138,7 +138,7 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                 {overall.sinFirmante}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                No tienen tutor cargado: no hay a quién reclamarle
+                                Todavía no tienen un tutor cargado en el sistema
                             </p>
                         </Card>
 

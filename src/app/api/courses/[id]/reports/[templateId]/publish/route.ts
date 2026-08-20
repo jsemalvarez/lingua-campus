@@ -60,6 +60,28 @@ export async function PATCH(
         const studentIds = enrollments.map(e => e.studentId);
         const pubDate = publishedAt ? new Date(publishedAt) : null;
 
+        // Despublicar un informe que ya tiene firmas lo saca de la vista de las
+        // familias que lo confirmaron, así que queda para el ADMIN (FEAT-09).
+        // Las firmas no se borran: si vuelve a publicarse sin cambios, el hash
+        // sigue coincidiendo y valen igual.
+        if (!pubDate && user.activeRole !== "ADMIN") {
+            const firmados = await prisma.signature.count({
+                where: {
+                    report: { courseId, templateId, year, periodIndex }
+                }
+            });
+
+            if (firmados > 0) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "Este informe ya tiene firmas. Sólo un administrador puede despublicarlo."
+                    },
+                    { status: 403 }
+                );
+            }
+        }
+
         // Needed to resolve who has to sign each report (FEAT-09)
         const students = await prisma.student.findMany({
             where: { id: { in: studentIds } },
