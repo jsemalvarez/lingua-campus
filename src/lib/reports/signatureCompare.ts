@@ -120,6 +120,30 @@ export function compareSignatures(a: StrokeData, b: StrokeData): number | null {
     return Math.round(shape * penalty * 100);
 }
 
+/**
+ * Cortes para traducir el puntaje a palabras.
+ *
+ * **Son provisionales.** Salieron de un solo caso real —dos firmas
+ * visiblemente distintas de la misma persona dieron 48—, no de mirar una
+ * distribución. Se mueven acá y en ningún otro lado; `scripts/check-similarity.ts`
+ * sirve para revisarlos cuando haya suficientes firmas.
+ */
+export const SIMILARITY_BANDS = { poco: 40, casi: 70 } as const;
+
+export type SimilarityBand = "SIN_REFERENCIA" | "POCO" | "CASI" | "SIMILAR";
+
+/**
+ * En qué banda cae un puntaje. `null` es la primera firma de esa persona: no
+ * hay contra qué compararla todavía, y decir "poco similar" ahí sería acusar a
+ * alguien de algo que no hizo.
+ */
+export function similarityBand(score: number | null): SimilarityBand {
+    if (score === null) return "SIN_REFERENCIA";
+    if (score <= SIMILARITY_BANDS.poco) return "POCO";
+    if (score <= SIMILARITY_BANDS.casi) return "CASI";
+    return "SIMILAR";
+}
+
 /** El trazo como path de SVG, para dibujar la firma guardada. */
 export function strokeToPath(data: StrokeData, width: number, height: number): string {
     return data.strokes

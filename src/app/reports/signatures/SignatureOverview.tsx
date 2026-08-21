@@ -16,7 +16,12 @@ import {
 import dayjs from "dayjs";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
-import { strokeToPath, type StrokeData } from "@/lib/reports/signatureCompare";
+import {
+    similarityBand,
+    strokeToPath,
+    type SimilarityBand,
+    type StrokeData
+} from "@/lib/reports/signatureCompare";
 
 export type ReportState = "FIRMADO" | "PENDIENTE" | "SIN_FIRMANTE";
 
@@ -330,33 +335,59 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
  * en pantalla se sobreinterpreta y se empiezan a tomar decisiones que el dato no
  * aguanta, así que el puntaje va sólo en el `title`.
  */
+const BANDS: Record<SimilarityBand, { label: string; className: string }> = {
+    SIN_REFERENCIA: {
+        label: "Primera firma",
+        className: "bg-muted/40 text-muted-foreground border-border/40"
+    },
+    POCO: { label: "Poco similar", className: "bg-red-500/10 text-red-700 border-red-500/20" },
+    CASI: { label: "Casi similar", className: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
+    SIMILAR: {
+        label: "Similar",
+        className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+    }
+};
+
 function SignatureThumb({ stroke, score }: { stroke: StrokeData; score: number | null }) {
     const W = 84;
     const H = 28;
+    const band = BANDS[similarityBand(score)];
 
     return (
-        <svg
-            width={W}
-            height={H}
-            viewBox={`0 0 ${W} ${H}`}
-            className="shrink-0 rounded border border-border/40 bg-muted/20 text-foreground"
-            role="img"
-            aria-label="Firma registrada"
-        >
-            <title>
-                {score === null
-                    ? "Primera firma registrada"
-                    : `Parecido con su firma de referencia: ${score} de 100`}
-            </title>
-            <path
-                d={strokeToPath(stroke, W, H)}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
+        <span className="flex items-center gap-2 shrink-0">
+            <svg
+                width={W}
+                height={H}
+                viewBox={`0 0 ${W} ${H}`}
+                className="shrink-0 rounded border border-border/40 bg-muted/20 text-foreground"
+                role="img"
+                aria-label="Firma registrada"
+            >
+                <path
+                    d={strokeToPath(stroke, W, H)}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            </svg>
+
+            <span
+                className={cn(
+                    "px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wide whitespace-nowrap",
+                    band.className
+                )}
+                title={
+                    score === null
+                        ? "Es la primera firma de esta persona: no hay otra con la cual compararla"
+                        : `Parecido con su firma de referencia: ${score} de 100`
+                }
+            >
+                {band.label}
+                {score !== null && <span className="hidden lg:inline"> · {score}</span>}
+            </span>
+        </span>
     );
 }
 
