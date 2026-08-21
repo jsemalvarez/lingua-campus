@@ -20,7 +20,7 @@ export async function PATCH(
 
         const course = await prisma.course.findUnique({
             where: { id: courseId },
-            select: { id: true, instituteId: true, teacherId: true }
+            select: { id: true, name: true, instituteId: true, teacherId: true }
         });
 
         if (!course || course.instituteId !== user.instituteId) {
@@ -44,7 +44,7 @@ export async function PATCH(
 
         const template = await prisma.reportTemplate.findFirst({
             where: { id: templateId, instituteId: user.instituteId },
-            select: { specialFields: true }
+            select: { specialFields: true, periodLabels: true }
         });
 
         if (!template) {
@@ -93,6 +93,16 @@ export async function PATCH(
         });
         const studentsById = new Map(students.map(s => [s.id, s]));
         const needsSignature = templateRequiresSignature(template.specialFields);
+
+        // Quiénes ya estaban publicados antes de esta llamada. Sirve para avisar
+        // sólo a las familias que todavía no se enteraron: despublicar y volver a
+        // publicar no tiene que mandarle la novedad de nuevo a todo el curso.
+        const previouslyPublished = new Set(
+            (await prisma.studentReport.findMany({
+                where: { courseId, year, periodIndex, templateId, publishedAt: { not: null } },
+                select: { studentId: true }
+            })).map(r => r.studentId)
+        );
 
         // Perform upserts to guarantee report existence and update publishedAt
         const updated = await prisma.$transaction(async (tx) => {
@@ -201,6 +211,59 @@ export async function PATCH(
 
             return reports;
         });
+
+        // Aviso de publicación al alumno y a sus tutores (FEAT-09).
+        //
+        // Sólo para publicaciones efectivas: una programada a futuro todavía no
+        // se ve, así que avisarla seria mentir. Esas quedan sin aviso hasta que
+        // exista algo que corra en la fecha programada.
+        if (pubDate && pubDate <= new Date()) {
+            const recienPublicados = studentIds.filter(id => !previouslyPublished.has(id));
+
+            if (recienPublicados.length > 0) {
+                try {
+                    const { createNotificationForStudents, createNotificationForUsers } =
+                        await import("@/app/actions/notifications");
+
+                    const periodLabel =
+                        (template.periodLabels as string[])[periodIndex] ??
+                        `Período ${periodIndex + 1}`;
+                    const title = "Se publicaron las notas del informe";
+                    const body = `Ya podés ver el ${periodLabel} de ${course.name}.`;
+
+                    await createNotificationForStudents({
+                        instituteId: user.instituteId,
+                        studentIds: recienPublicados,
+                        type: "REPORT_PUBLISHED",
+                        title,
+                        body,
+                        link: "/academics"
+                    });
+
+                    const guardianIds = [
+                        ...new Set(
+                            recienPublicados.flatMap(
+                                id => studentsById.get(id)?.guardianLinks.map(l => l.guardianId) ?? []
+                            )
+                        )
+                    ];
+
+                    await createNotificationForUsers({
+                        instituteId: user.instituteId,
+                        userIds: guardianIds,
+                        type: "REPORT_PUBLISHED",
+                        title,
+                        body: needsSignature
+                            ? `${body} Al final del informe podés confirmar que lo leíste.`
+                            : body,
+                        link: "/guardian/academics"
+                    });
+                } catch (notifErr) {
+                    // El aviso no puede tumbar una publicación que ya se hizo.
+                    console.error("Error creating report publication notification:", notifErr);
+                }
+            }
+        }
 
         return NextResponse.json({ success: true, count: updated.length, publishedAt: pubDate });
 
