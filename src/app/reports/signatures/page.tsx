@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 import { templateRequiresSignature } from "@/lib/reports/signatures";
+import type { StrokeData } from "@/lib/reports/signatureCompare";
 import { SignatureOverview, type Batch, type ReportRow } from "./SignatureOverview";
 
 /**
@@ -36,7 +37,14 @@ export default async function SignaturesPage() {
             course: { select: { id: true, name: true, level: true } },
             template: { select: { id: true, name: true, periodLabels: true, specialFields: true } },
             signers: { select: { userId: true, studentId: true } },
-            signatures: { select: { signedAt: true, contentHash: true } }
+            signatures: {
+                select: {
+                    signedAt: true,
+                    contentHash: true,
+                    strokeData: true,
+                    similarityScore: true
+                }
+            }
         },
         orderBy: [{ year: "desc" }, { periodIndex: "desc" }]
     });
@@ -78,6 +86,11 @@ export default async function SignaturesPage() {
                   ? "SIN_FIRMANTE"
                   : "PENDIENTE",
             signedAt: report.signatures[0]?.signedAt?.toISOString() ?? null,
+            // El trazo guardado, para que el instituto vea la firma y no un
+            // número: en un problema de criterio humano, mirarla dice más que
+            // cualquier puntaje.
+            signatureStroke: (report.signatures[0]?.strokeData as StrokeData) ?? null,
+            similarityScore: report.signatures[0]?.similarityScore ?? null,
             // El informe se editó después de que alguien lo firmó: el contenido
             // actual ya no es el que esa persona vio.
             editedAfterSignature: report.signatures.some(

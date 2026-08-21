@@ -16,6 +16,7 @@ import {
 import dayjs from "dayjs";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
+import { strokeToPath, type StrokeData } from "@/lib/reports/signatureCompare";
 
 export type ReportState = "FIRMADO" | "PENDIENTE" | "SIN_FIRMANTE";
 
@@ -24,6 +25,8 @@ export type ReportRow = {
     studentName: string;
     state: ReportState;
     signedAt: string | null;
+    signatureStroke: StrokeData | null;
+    similarityScore: number | null;
     editedAfterSignature: boolean;
     missingBirthDate: boolean;
     deliveredOther: boolean;
@@ -269,6 +272,12 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                                     </span>
 
                                                     <div className="flex items-center gap-2 shrink-0">
+                                                        {row.signatureStroke && (
+                                                            <SignatureThumb
+                                                                stroke={row.signatureStroke}
+                                                                score={row.similarityScore}
+                                                            />
+                                                        )}
                                                         {row.missingBirthDate && (
                                                             <Tag tone="amber" icon={<CalendarOff size={11} />}>
                                                                 sin fecha de nacimiento
@@ -310,6 +319,44 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                 </>
             )}
         </main>
+    );
+}
+
+/**
+ * La firma tal como la dibujó la persona.
+ *
+ * Es la comparación que sirve: viendo las firmas de un mismo tutor a lo largo de
+ * los informes, cualquiera nota si una no se parece a las otras. Un porcentaje
+ * en pantalla se sobreinterpreta y se empiezan a tomar decisiones que el dato no
+ * aguanta, así que el puntaje va sólo en el `title`.
+ */
+function SignatureThumb({ stroke, score }: { stroke: StrokeData; score: number | null }) {
+    const W = 84;
+    const H = 28;
+
+    return (
+        <svg
+            width={W}
+            height={H}
+            viewBox={`0 0 ${W} ${H}`}
+            className="shrink-0 rounded border border-border/40 bg-muted/20 text-foreground"
+            role="img"
+            aria-label="Firma registrada"
+        >
+            <title>
+                {score === null
+                    ? "Primera firma registrada"
+                    : `Parecido con su firma de referencia: ${score} de 100`}
+            </title>
+            <path
+                d={strokeToPath(stroke, W, H)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
     );
 }
 

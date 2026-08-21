@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getAuthContext } from "@/lib/authz";
 import { reportContentHash } from "@/lib/reports/signatures";
+import { compareSignatures, type StrokeData } from "@/lib/reports/signatureCompare";
 
 /**
  * Firma de conformidad de un informe (FEAT-09).
@@ -15,11 +16,12 @@ import { reportContentHash } from "@/lib/reports/signatures";
 /** Tope defensivo: una firma real no pasa de unos cientos de puntos. */
 const MAX_POINTS = 10_000;
 
-type StrokeData = { strokes: { x: number; y: number; t: number }[][] };
-
+/** El trazo llega del cliente, así que se valida entero antes de tocarlo. */
 function isValidStroke(data: unknown): data is StrokeData {
     if (!data || typeof data !== "object") return false;
-    const strokes = (data as StrokeData).strokes;
+
+    const { strokes, width, height } = data as StrokeData;
+    if (typeof width !== "number" || typeof height !== "number") return false;
     if (!Array.isArray(strokes) || strokes.length === 0) return false;
 
     let points = 0;
@@ -93,6 +95,23 @@ export async function signReportAction(reportId: string, strokeData: unknown) {
         entries: report.entries
     });
 
+    // La referencia se busca antes de firmar: contra ella se mide el parecido, y
+    // si no existe es porque ésta es la primera firma y va a pasar a serlo.
+    const reference = await prisma.signatureReference.findFirst({
+        where: asStudent ? { studentId: auth.userId } : { userId: auth.userId },
+        select: { id: true, strokeData: true }
+    });
+
+    // El puntaje se guarda pero no se muestra como veredicto: nunca bloquea, y
+    // el umbral a partir del cual avisarle a alguien sólo se puede fijar mirando
+    // firmas reales, que recién ahora se empiezan a juntar.
+    const similarityScore = reference?.strokeData
+        ? compareSignatures(
+              reference.strokeData as unknown as StrokeData,
+              strokeData as StrokeData
+          )
+        : null;
+
     await prisma.$transaction(async (tx) => {
         await tx.signature.create({
             data: {
@@ -100,21 +119,14 @@ export async function signReportAction(reportId: string, strokeData: unknown) {
                 reportId: report.id,
                 instituteId: report.student.instituteId,
                 contentHash,
-                strokeData: strokeData as object
-                // similarityScore queda en null: los trazos se guardan desde el
-                // día uno y la comparación va en una segunda pasada, cuando haya
-                // firmas reales con las que calibrar el umbral.
+                strokeData: strokeData as object,
+                similarityScore
             }
         });
 
         // No hay enrolamiento aparte: la primera firma es la que queda de
         // referencia. Si ya existe, no se toca — se cambia desde el perfil.
-        const existing = await tx.signatureReference.findFirst({
-            where: asStudent ? { studentId: auth.userId } : { userId: auth.userId },
-            select: { id: true }
-        });
-
-        if (!existing) {
+        if (!reference) {
             await tx.signatureReference.create({
                 data: {
                     ...owner,

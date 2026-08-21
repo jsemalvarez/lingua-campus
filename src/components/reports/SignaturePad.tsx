@@ -3,15 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Un punto del trazo. El tiempo va en milisegundos desde que arrancó la firma,
- * no como fecha absoluta: lo que sirve para comparar dos firmas es la dinámica
- * —el orden, la velocidad, las pausas—, no cuándo se hicieron.
- */
-export type StrokePoint = { x: number; y: number; t: number };
+import type { StrokePoint, StrokeData } from "@/lib/reports/signatureCompare";
 
-/** Una firma es una lista de trazos, y cada trazo una lista de puntos. */
-export type StrokeData = { strokes: StrokePoint[][]; width: number; height: number };
+// Los tipos viven en el lib, que es lo que también usa el servidor para comparar.
+export type { StrokePoint, StrokeData };
 
 export function isEmptyStroke(data: StrokeData | null): boolean {
     return !data || data.strokes.every((s) => s.length < 2);
