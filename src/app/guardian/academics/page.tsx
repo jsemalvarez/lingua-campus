@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { GuardianAcademicsView } from "./components/GuardianAcademicsView";
+import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
 
 export default async function GuardianAcademicsPage() {
     const session = await getServerSession(authOptions);
@@ -21,6 +22,17 @@ export default async function GuardianAcademicsPage() {
 
     const guardianId = sessionUser.id;
     if (!guardianId) redirect("/login");
+
+    // Leer las notas y las asistencias no deja ningún rastro en la base: sin
+    // esto, la pregunta del instituto —"¿los tutores las miran?"— no tiene
+    // respuesta posible (FEAT-11).
+    await recordActivity({
+        subjectType: "USER",
+        subjectId:   guardianId,
+        instituteId: sessionUser.instituteId,
+        roles:       userRoles,
+        section:     GUARDIAN_SECTIONS.ACADEMICS,
+    });
 
     // Fetch master relation
     const guardianLinks = await prisma.guardianStudentLink.findMany({

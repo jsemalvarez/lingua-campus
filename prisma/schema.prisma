@@ -428,6 +428,51 @@ model AiUsage {
   @@index([windowStart])
 }
 
+// Actividad diaria de cada persona, para el panel de uso (FEAT-11).
+//
+// **Una fila por persona y por día, no por evento.** Acota el crecimiento sin
+// depender de con qué frecuencia se escriba, y por eso no obliga a decidir la
+// retención antes de empezar a guardar. Cota con los números de hoy: 580
+// personas × 200 días lectivos ≈ 116.000 filas al año, y eso suponiendo que
+// entren todas todos los días.
+//
+// Sigue la forma de `AiUsage` —un contador con `subjectId` suelto, sin relación
+// con `User`/`Student`—, así que borrar a la persona no falla ni arrastra
+// historial, y la tabla **no se suma a la lista de ARQ-15**.
+//
+// A diferencia de `AiUsage`, sí guarda `instituteId`: es el hueco que PED-10 le
+// encontró a esa tabla, que no puede agregar sus filas de usuario por instituto.
+// Es nulo sólo para el SUPERADMIN, que no tiene instituto.
+//
+// **No se guardan ni IP ni dispositivo**, alineado con FEAT-04.
+model ActivityDay {
+  subjectType String   // "USER" | "STUDENT"
+  subjectId   String
+  instituteId String?
+  day         DateTime @db.Date
+
+  // Los roles que la persona tenía ese día. Desde SEC-01 una misma persona
+  // puede ser tutora y profesora: se guardan todos y el panel decide cómo
+  // agrupar, en vez de elegir uno acá y perder la otra mitad.
+  roles       String[]
+
+  // Veces que tipeó la contraseña. No es lo mismo que uso: el JWT dura 30 días,
+  // así que alguien que entra todos los días puede tener un solo login al mes.
+  // Lo que mide uso es `lastSeenAt`.
+  logins      Int      @default(0)
+
+  // Secciones del portal del tutor abiertas ese día. Es lo único que contesta
+  // "¿miran las asistencias y las notas?": leer una pantalla no deja ningún otro
+  // rastro en la base.
+  sections    String[]
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@id([subjectType, subjectId, day])
+  @@index([instituteId, day])
+}
+
 model Attendance {
   id          String   @id @default(cuid())
   studentId   String

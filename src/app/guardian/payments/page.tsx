@@ -30,6 +30,7 @@ function getFeeLabel(fee: { type: string; month: number; year: number }) {
 }
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
+import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,15 @@ export default async function GuardianPaymentsPage() {
     }
 
     const guardianId = sessionUser.id;
+
+    // Ver la cuenta corriente tampoco deja rastro por su cuenta (FEAT-11).
+    await recordActivity({
+        subjectType: "USER",
+        subjectId:   guardianId,
+        instituteId: sessionUser.instituteId,
+        roles:       userRoles,
+        section:     GUARDIAN_SECTIONS.PAYMENTS,
+    });
 
     const guardianLinks = await prisma.guardianStudentLink.findMany({
         where: { guardianId },

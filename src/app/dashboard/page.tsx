@@ -27,6 +27,7 @@ import { getActiveRole } from "@/lib/roles";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
+import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -44,6 +45,16 @@ export default async function DashboardPage() {
     // ─── GUARDIAN View ───
     if (activeRole === "GUARDIAN") {
         const guardianId = sessionUser.id;
+
+        // La portada del tutor. Es `/dashboard` y no `/guardian/dashboard`: el
+        // menú del tutor apunta acá (FEAT-11).
+        await recordActivity({
+            subjectType: "USER",
+            subjectId:   guardianId,
+            instituteId: sessionUser.instituteId,
+            roles:       userRoles,
+            section:     GUARDIAN_SECTIONS.HOME,
+        });
 
         const guardianLinks = await prisma.guardianStudentLink.findMany({
             where: { guardianId },
