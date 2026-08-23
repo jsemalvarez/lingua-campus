@@ -242,6 +242,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
 | [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
+| [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -4399,6 +4400,155 @@ Las desinstalaciones son invisibles. La métrica hay que titularla por lo que mi
 [ARQ-15](#arq-15). Se construye igual —es una tabla de sólo agregar filas y migrarla después es
 cambiar una columna—, pero conviene saber que está en esa lista.
 
+### Decisión (2026-08-22): las ocho métricas, cerradas
+
+**Lo que esta ficha pedía definir antes de tocar código quedó definido.** Ocho métricas, dos zonas,
+un selector de período y una fase previa de registro que es lo único que apura.
+
+**Lo primero que sale del alcance es la versión de la aplicación por usuario.** No es un pedido del
+cliente: salió de una idea nuestra. Entonces [ARQ-13](#arq-13) no entra en la primera versión del
+panel y [ARQ-12](#arq-12) deja de ser prerrequisito de nada de acá. Lo que el cliente sí quiere, y
+reemplaza a eso en la lista, es **ver los últimos ingresos de los tutores** para saber si miran las
+asistencias y las notas.
+
+**Las cinco primeras se calculan hacia atrás sin límite.** Es lo que hace que el panel no nazca
+vacío: el día que se abra por primera vez ya tiene todo 2026 adentro. Sólo las tres de actividad
+arrancan en cero.
+
+| # | Métrica | Definición exacta | Sale de | Zona |
+|---|---|---|---|---|
+| 1 | **Clases sin parte de asistencia** | Universo: `Lesson.status = ACTIVE`, `date <= hoy`, **de cursos con al menos una inscripción activa**, tipos `CLASS`, `TP` y `EXAM`. Tres estados: completa (filas ≥ inscriptos), **incompleta**, sin ningún registro | `Attendance` | Período |
+| 2 | **Marcas con el escáner QR** | % de filas `Attendance` con `source = QR` sobre el total del período, más cursos que lo usaron | `Attendance.source` (nueva) | Período |
+| 3 | **Cursos con práctica publicada** | `LessonPractice` con contenido en **al menos uno** de los tres campos y `isPublished`. Más el número que importa: **clases publicadas con cero `PracticeSession`** | `LessonPractice`, `PracticeSession` | Período |
+| 4 | **Alumnos y su tutor** | Cinco estados sobre alumnos `ACTIVE`: con cuenta vinculada · **con datos en la ficha y sin cuenta** · sin ningún dato · mayor de 20 (firma solo) · sin `birthDate` | `GuardianStudentLink`, `Student.guardian1*`, `birthDate` | Hoy |
+| 5 | **Tutores con cuenta** | `User` con rol `GUARDIAN` del instituto, partido en con alumno vinculado / **sin ninguno** | `User`, `GuardianStudentLink` | Hoy |
+| 6 | **Cuentas que nunca se usaron** | Las que conservan la contraseña inicial sin cambiar, separadas por tutores y alumnos | Pasada única + columna | Hoy |
+| 7 | **Personas activas por día** | Personas distintas con actividad ese día, por rol activo | Registro nuevo | Período |
+| 8 | **Últimos ingresos de los tutores** | Lista, no gráfico: tutor, alumnos, último ingreso, qué miró, y **"nunca"** como estado propio | Registro nuevo + portal del tutor | Período |
+
+#### Las trampas, una por métrica
+
+Todas verificadas contra el código el 2026-08-22, y cada una cambia el número:
+
+- **Un curso sin alumnos figura "sin parte" para siempre**, por eso el universo los excluye.
+- **`Attendance.createdAt` sobrevive al regrabado** a propósito (está comentado en
+  [`attendance/actions.ts`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts)), así
+  que sirve para medir la demora de carga y no sólo la existencia del parte.
+- **El escáner deja filas sueltas y sólo `PRESENT`.** Una clase escaneada y nunca cerrada por el
+  docente cae en "incompleta", que es el caso que más vale ver y con dos estados se pierde.
+- **La marca del QR hoy es un texto en `notes`** y no aguanta como fuente de la métrica — ver
+  [BUG-12](#bug-12). De ahí sale la columna `source`.
+- **`LessonPractice` puede existir vacía** (`speakingPhrases: []` y los otros dos en `null`). Contar
+  la fila es contar una práctica que no existe.
+- **El alumno de 20+ no necesita tutor** ([FEAT-09](#feat-09)). Contarlo como faltante inventa
+  trabajo, y el que no tiene `birthDate` no se puede clasificar: por eso son cinco estados.
+- **Una persona puede ser tutora y profesora** ([SEC-01](#sec-01)). Definir si el panel cuenta
+  personas o roles, y decirlo en el título.
+- **"Nunca usó la cuenta" no es una consulta SQL.** Las contraseñas por defecto se guardan con
+  `bcrypt.hash(password, 10)` y salt aleatoria ([`students/[id]/actions.ts:318`](../src/app/students/[id]/actions.ts)),
+  así que hay que comparar fila por fila: con ~181 usuarios son 10 a 20 segundos, imposible al cargar
+  la pantalla. Se resuelve con **una sola pasada** que deje el resultado en una columna y se apague
+  cuando la persona cambie la contraseña. Hay **tres** valores por defecto y no significan lo mismo:
+  `Modern2026` (tutores), `estudiante123` (alumnos) e `inscripcion123` (preinscriptos, que no
+  cuentan). La métrica muere el día que se resuelva [SEC-06](#sec-06): es un puente hasta que el
+  registro tenga historia, y el único que puede mirar el pasado.
+- **Mirar no deja rastro.** Ni la asistencia ni las notas escriben nada cuando el tutor las lee, así
+  que la pregunta del cliente no tiene respuesta con los datos de hoy. Ver la fase 0.
+
+#### La forma del panel
+
+- **Pantalla propia y sólo para el `ADMIN`.** No entra en
+  [`dashboard/page.tsx`](../src/app/dashboard/page.tsx), que ya son 775 líneas y siete consultas en
+  serie, y que además contesta otra pregunta —"cómo va el instituto"— que se mira en otro momento. La
+  secretaria queda afuera porque **aparece adentro de las métricas**, con el criterio de
+  [SEC-03](#sec-03).
+- **Dos zonas rotuladas, porque la mitad de las métricas no tiene período.** "Estado de hoy" no
+  obedece al selector y lo dice; "Actividad del período" sí. Si conviven bajo el mismo control, es el
+  problema de los dos relojes de finanzas otra vez.
+- **Un solo reloj.** "Últimos 30 días" es una opción del mismo selector que el mes, no un modo
+  aparte, y todos los mosaicos de la zona de abajo obedecen lo que esté elegido. El selector de mes
+  entra desde el principio: agregarlo después es reescribir todas las consultas.
+- **Fecha de piso por métrica, y "cero" nunca se muestra como dato.** Un mosaico sin historia dice
+  *"Midiendo desde el 22/8"*, no `0`. Mismo dato, impresión opuesta: uno se lee como un sistema que
+  empezó a medir y el otro como uno que no anda.
+
+  | Métrica | Hasta dónde llega hacia atrás |
+  |---|---|
+  | 1, 3, 4, 5 | Todo el historial |
+  | 6 | Todo el historial, vía la pasada única |
+  | 2 | Desde la migración. Lo anterior, aproximado |
+  | 7, 8 | Desde que se registre. Antes, nada |
+
+- **Cada número lleva a una lista de nombres.** Un número que no se puede clicar no se acciona y
+  termina ignorado — el mismo razonamiento que ya hizo [FEAT-09](#feat-09) con las firmas.
+- **Listas de pendientes, no puntajes de personas.** *"7 clases sin parte, la más vieja del 3/8"* se
+  convierte en un mensaje; *"profesor X: 72%"* se convierte en una discusión. Vale para todo el
+  panel, y generaliza lo que FEAT-09 ya decidió para el porcentaje de firmas.
+- **El gráfico diario de activos no se muestra el primer mes.** Va a subir solo mientras la gente
+  vuelve a iniciar sesión, y eso se lee como crecimiento de uso cuando es la instrumentación
+  llenándose. Hasta los 30 días, el contador con su fecha de piso.
+
+**Fuera del panel, y a propósito:** pantallas más visitadas —es la mitad que esta misma ficha llama
+"un proyecto", y con un instituto la respuesta ya se sabe—, tiempo de permanencia, y cualquier
+ranking de personas con porcentaje. El consumo de IA es de [PED-10](#ped-10) y es del superadmin;
+entra acá el día que el plan tenga tope y le afecte al instituto ([PED-07](#ped-07)).
+
+**El mockup** de las dos pantallas —el panel y el detalle de tutores— está en
+https://claude.ai/code/artifact/72db505b-75dd-4710-945f-17314f0dd408
+
+#### Fase 0 · lo único que apura, y no tiene pantalla
+
+**Lo que no se registre se pierde**; las otras cinco métricas se reconstruyen el día que se haga la
+pantalla. Cuatro cosas chicas, ninguna con interfaz, todas acumulando desde que se despliegan:
+
+1. **`lastSeenAt` dentro de la compuerta de 5 minutos que ya existe.** El callback `jwt` de
+   [`auth.ts:97`](../src/lib/auth.ts) relee los roles cada `ROLES_REFRESH_MS` mientras la persona usa
+   la aplicación: ahí ya hay una consulta con la frecuencia justa. Escribir la actividad en esa misma
+   compuerta cuesta **una sentencia cada 5 minutos por persona activa**, sin middleware, sin tocar
+   `getAuthContext` y sin instrumentar pantallas. Y mide **uso**, no inicios de sesión — que es lo
+   que arregla la trampa del JWT de 30 días de [FEAT-04](#feat-04). Dos límites: la compuerta
+   **excluye a los alumnos** a propósito (su rol no cambia nunca), así que necesitan su propio punto;
+   y no dice *qué* miró la persona.
+2. **Tres líneas en el portal del tutor** — [`guardian/dashboard`](../src/app/guardian/dashboard/page.tsx),
+   [`guardian/academics`](../src/app/guardian/academics/page.tsx) y
+   [`guardian/payments`](../src/app/guardian/payments/page.tsx) — que registren tutor, día y sección.
+   Es lo que contesta la pregunta literal del cliente, y **no es "instrumentar la aplicación"**: es
+   instrumentar las tres pantallas donde vive la pregunta.
+3. **La columna `Attendance.source`**, con el relleno del pasado desde `notes` y sacando esa marca
+   del campo, que es [BUG-12](#bug-12).
+4. **La pasada única de contraseñas por defecto**, que deja la métrica 6 disponible desde el día uno
+   y hacia atrás.
+
+**La forma del registro.** Una fila por persona y por día, no por evento: acota el crecimiento sin
+depender de con qué frecuencia se escriba, y no obliga a decidir la retención antes de empezar.
+
+```
+subjectType  "USER" | "STUDENT"
+subjectId    id suelto, como AiUsage
+instituteId  ← lo que a AiUsage le falta y le impide agregar por instituto (PED-10)
+day          fecha
+role         rol activo de ese día
+logins       contador
+lastSeenAt   última actividad de ese día
+@@unique([subjectType, subjectId, day])
+```
+
+Es la forma de `AiUsage` que el proyecto ya aceptó —un contador con `subjectId` suelto—, y por eso
+esquiva [ARQ-15](#arq-15) en vez de sumarse a su lista, al revés de lo que anotaba esta ficha más
+arriba. Cota superior con los números de hoy: 580 personas × 200 días lectivos ≈ 116.000 filas al
+año, y eso suponiendo que entren todos todos los días.
+
+**Sección aparte, y medir antes:** si además se quiere actividad más fina que la compuerta de 5
+minutos, eso sí cuesta una sentencia por request y hay que medirlo contra [ARQ-02](#arq-02) y
+[ARQ-11](#arq-11) antes de escribirlo, no suponerlo.
+
+#### Fase 1 · la pantalla
+
+Las ocho métricas, las dos zonas y el selector. `recharts` ya está en el proyecto. Las consultas son
+agregaciones por instituto: `groupBy` o SQL, no `findMany` con un `reduce` en memoria como hace hoy
+[`PlaygroundChartServer`](../src/app/dashboard/components/PlaygroundChartServer.tsx), que además trae
+dos veces las mismas sesiones de 30 días para calcular dos cosas distintas.
+
 **Relacionado.** [ARQ-09](#arq-09) anota que las métricas y el registro de errores son cosas
 distintas y no conviene mezclarlas: "cuántos errores hubo" sale del registro, "cuánto se usa la
 plataforma" no. Comparten, eso sí, las mismas tres decisiones caras — dónde se guarda, cuánto tiempo
@@ -4781,6 +4931,38 @@ en efectivo a alumnos que tenían saldo.
 
 **Relacionado.** [FIN-27](#fin-27) (el mismo formulario mostrando un estado que ya no corresponde),
 [FIN-11](#fin-11) (de donde salió), [FEAT-14](#feat-14) (el carrito rehace este flujo entero).
+
+---
+
+<a id="bug-12"></a>
+## BUG-12 · El escáner de QR pisa la observación que escribió la docente · **P3**
+
+**Visto el 2026-08-22**, definiendo la métrica de QR contra manual de [FEAT-11](#feat-11).
+
+**Qué pasa.** El kiosco de QR marca presente y escribe `notes: "Marcado vía QR Kiosk"`
+([`attendance/actions.ts:184`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts) y
+`:193`). En el camino de `update` —el alumno ya tenía fila con estado distinto de `PRESENT`— eso
+**reemplaza la observación que había**. Un *"faltó, avisó la madre"* desaparece cuando el chico
+escanea al llegar tarde, y nadie se entera de que había una nota.
+
+**Al revés no pasa**, y conviene dejarlo escrito para no volver a revisarlo: el guardado masivo de la
+docente **no** borra nada. El formulario precarga la observación existente
+([`AttendanceForm.tsx:40`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx))
+y la vuelve a mandar al guardar (`:78`), así que el `UPDATE` reescribe el mismo valor.
+
+**El problema de fondo es que `notes` es un campo del negocio usado como marca técnica.** Por eso la
+docente ve `Marcado vía QR Kiosk` escrito en el campo de observaciones de cada alumno escaneado: es
+basura visual, y está a una tecla de que alguien la borre.
+
+**Se resuelve junto con la métrica**, no aparte: la columna `Attendance.source` (`MANUAL` | `QR`) de
+la fase 0 de [FEAT-11](#feat-11) es la marca correcta. Con ella, el escáner deja de escribir en
+`notes` y el campo vuelve a ser de la docente. El relleno del pasado sale del mismo texto, sabiendo
+que es aproximado.
+
+**P3** porque no hay plata ni acceso en juego y el caso pide que coincidan un estado previo cargado a
+mano y un escaneo posterior. Pero es pérdida silenciosa de un dato que escribió una persona.
+
+---
 
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
@@ -5274,6 +5456,12 @@ propio para un solo dato.
 
 **Recomendación.** Hacer la forma barata como parte de ARQ-12, y dejar la métrica para cuando exista
 un lugar donde ya se guarden métricas.
+
+**Decisión (2026-08-22): esto no entra en el panel de uso.** Mostrarle al administrador qué versión
+tiene cada usuario **no es un pedido del cliente** — salió de una idea nuestra. Sale del alcance de
+[FEAT-11](#feat-11), y con eso [ARQ-12](#arq-12) deja de ser prerrequisito de ese panel. Lo que sí
+conserva valor es la **forma barata** de arriba —la cabecera de versión y el aviso de recargar—, que
+no depende de ninguna métrica y resuelve el problema del cliente rancio.
 
 ---
 
