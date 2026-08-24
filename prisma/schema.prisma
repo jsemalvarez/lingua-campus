@@ -309,6 +309,16 @@ enum AttendanceStatus {
   JUSTIFIED
 }
 
+// De dónde salió la marca (FEAT-11).
+//
+// Antes esto se deducía de un texto en `notes` que el propio escáner escribía, y
+// eso rompía dos cosas a la vez: le pisaba la observación a la docente (BUG-12) y
+// no aguantaba como fuente de una métrica, porque el campo es libre y editable.
+enum AttendanceSource {
+  MANUAL
+  QR
+}
+
 enum LessonType {
   CLASS
   TP
@@ -483,6 +493,13 @@ model Attendance {
   
   status      AttendanceStatus
   notes       String?
+
+  // Si el escáner intervino en esta marca. Lo escribe sólo el kiosco, y el
+  // parte de la docente **no lo pisa**: una vez que hubo escaneo, la fila queda
+  // en `QR` aunque después se corrija el estado. Es el mismo criterio con el que
+  // `createdAt` sobrevive al regrabado, y es lo que hace que la métrica conteste
+  // "¿se usa el escáner?" en vez de "¿quién guardó último?".
+  source      AttendanceSource @default(MANUAL)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

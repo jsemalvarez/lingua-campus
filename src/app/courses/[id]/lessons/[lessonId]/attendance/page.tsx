@@ -76,7 +76,8 @@ export default async function AttendancePage({
     for (const record of existingRecords) {
         formattedRecords[record.studentId] = {
             status: record.status,
-            notes: record.notes
+            notes: record.notes,
+            source: record.source
         };
     }
 
