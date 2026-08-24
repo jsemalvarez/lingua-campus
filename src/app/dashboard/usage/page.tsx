@@ -8,17 +8,12 @@ import { getMonthName } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import { Users, UserRound, KeyRound, CalendarClock, ClipboardCheck, QrCode, Sparkles, Info } from "lucide-react";
 import { PeriodSelector } from "./PeriodSelector";
+import { PISO_QR, PISO_REGISTRO, pisoCorto } from "./piso";
+import { cargarActividad, DIAS_PARA_GRAFICAR } from "./actividad";
+import { ActividadDiaria } from "./ActividadDiaria";
+import { TutoresList } from "./TutoresList";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Desde cuándo se puede confiar en cada métrica, y la razón de cada fecha.
- *
- * Un mosaico sin historia **no muestra un cero**: dice desde cuándo mide. Cero y
- * "no medido" son cosas distintas, y confundirlas es cómo el administrador
- * termina concluyendo que en marzo no entraba nadie.
- */
-const PISO_QR = new Date(Date.UTC(2026, 7, 23)); // la migración que creó `source`
 
 /** Un día de calendario del instituto, a medianoche UTC. */
 function diaUTC(anio: number, mes1: number, dia: number): Date {
@@ -303,6 +298,9 @@ export default async function UsagePage({
     const practicasPublicadas = practicasConContenido.length;
     const practicasSinUsar = practicasConContenido.filter((p) => p._count.sessions === 0).length;
     const cursosConPractica = new Set(practicasConContenido.map((p) => p.lesson.courseId)).size;
+
+    // ── Métricas 7 y 8 · lo que sale del registro de actividad ──
+    const actividad = await cargarActividad(instituteId, periodo);
 
     const porcentaje = (valor: number) =>
         totalAlumnos === 0 ? 0 : (valor / totalAlumnos) * 100;
@@ -618,8 +616,8 @@ export default async function UsagePage({
                                     {qrEsAproximado ? (
                                         <>
                                             El origen se distingue desde el{" "}
-                                            <strong className="text-foreground">23/8</strong>. Lo anterior se dedujo de
-                                            un texto que se podía editar, así que es aproximado.
+                                            <strong className="text-foreground">{pisoCorto(PISO_QR)}</strong>. Lo
+                                            anterior se dedujo de un texto que se podía editar, así que es aproximado.
                                         </>
                                     ) : (
                                         "El origen de cada marca se registra en la propia asistencia."
@@ -667,39 +665,20 @@ export default async function UsagePage({
                             </p>
                         </Card>
 
-                        {/* Lo que trae el registro de actividad, todavía sin historia */}
-                        <Card variant="bordered" className="flex flex-col gap-5">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">
-                                        Personas activas y últimos ingresos
-                                    </p>
-                                    <h3 className="text-xl font-semibold text-muted-foreground mt-2">
-                                        Midiendo desde el 23/8
-                                    </h3>
-                                </div>
-                                <div className="bg-muted/60 text-muted-foreground p-3 rounded-xl shrink-0">
-                                    <CalendarClock size={24} />
-                                </div>
-                            </div>
-
-                            <div className="flex-1 flex items-end gap-1.5 min-h-[88px] opacity-30">
-                                {Array.from({ length: 13 }).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex-1 rounded-sm bg-border"
-                                        style={{ height: i === 12 ? 22 : 8 }}
-                                    />
-                                ))}
-                            </div>
-
-                            <p className="text-xs text-muted-foreground leading-relaxed pt-3 border-t border-border/60 mt-auto">
-                                Antes de esa fecha no se registraba ningún ingreso, así que{" "}
-                                <strong className="text-foreground">no hay nada que mostrar hacia atrás</strong>. El
-                                gráfico diario aparece cuando haya un mes de historia.
-                            </p>
-                        </Card>
+                        <ActividadDiaria
+                            dias={actividad.dias}
+                            diasConDatos={actividad.diasConDatos}
+                            piso={PISO_REGISTRO}
+                            diasNecesarios={DIAS_PARA_GRAFICAR}
+                        />
                     </div>
+
+                    <TutoresList
+                        tutores={actividad.tutores}
+                        sinRastro={actividad.tutoresSinRastro}
+                        total={actividad.totalTutores}
+                        piso={PISO_REGISTRO}
+                    />
                 </section>
             </main>
         </div>
