@@ -13,7 +13,8 @@ import {
     GraduationCap,
     Clock,
     Plus,
-    ClipboardCheck
+    ClipboardCheck,
+    Activity
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -691,6 +692,20 @@ export default async function DashboardPage() {
                             Bienvenido/a de nuevo, {user.name.split(" ")[0]}. Esto está pasando hoy.
                         </p>
                     </div>
+
+                    {/* El panel de uso es secundario —seguimiento, no trabajo diario—
+                        así que entra por acá y no por el menú, con la misma forma que
+                        los accesos de Finanzas (FEAT-11). */}
+                    {!isSecretary && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Link href="/dashboard/usage">
+                                <Button variant="outline" className="flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5">
+                                    <Activity size={16} />
+                                    Uso del sistema
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats Grid */}
