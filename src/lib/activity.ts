@@ -51,8 +51,12 @@ const INSTITUTE_TIME_ZONE = "America/Argentina/Buenos_Aires";
  * La fecha del calendario del instituto, a medianoche UTC — que es como
  * Postgres guarda un `@db.Date`. `en-CA` da directamente `YYYY-MM-DD`, así que
  * no hace falta una librería de fechas para esto.
+ *
+ * Se exporta para que el panel de uso recorte sus períodos con **el mismo hoy**
+ * con el que se escribe la actividad. Si cada lado calculara el suyo, el último
+ * día del rango podría no coincidir con el último día registrado.
  */
-function instituteToday(): Date {
+export function instituteToday(): Date {
     const ymd = new Intl.DateTimeFormat("en-CA", {
         timeZone: INSTITUTE_TIME_ZONE,
         year: "numeric",
