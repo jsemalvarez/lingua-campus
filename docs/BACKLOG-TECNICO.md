@@ -4563,7 +4563,28 @@ año, y eso suponiendo que entren todos todos los días.
 minutos, eso sí cuesta una sentencia por request y hay que medirlo contra [ARQ-02](#arq-02) y
 [ARQ-11](#arq-11) antes de escribirlo, no suponerlo.
 
-#### Fase 1 · la pantalla
+#### Fase 1 · la pantalla · **hecha** (2026-08-24)
+
+`/dashboard/usage`, sólo `ADMIN`, con entrada por un botón en el encabezado del Resumen y no por el
+menú: es seguimiento, no trabajo diario. Commits `e2ac4d4` (estado de hoy), `5a0f2d4` (actividad del
+período y el selector) y `a860fd8` (las dos del registro). Cada mosaico se verificó contra una
+consulta de control formulada distinta de la de la pantalla.
+
+**El selector es mes + año, no una lista de meses.** Una sola lista crece con el tiempo —doce
+opciones el primer año, treinta y seis al tercero—; partido, el mes son siempre doce y el año crece
+de a uno. Los años salen de la clase más vieja del instituto.
+
+**Simplificación conocida, con el cliente al tanto (2026-08-24): el gráfico diario agrupa a la
+persona multi-rol por lo que *es* y no por lo que *hizo*.** La precedencia es alumno → staff → tutor,
+y elige **uno solo** porque es un conteo de personas: contarla dos veces haría que la barra sume más
+gente de la que entró. Las listas no eligen — quien tiene rol `GUARDIAN` aparece en ellas igual.
+
+Se puede afinar sin migración: `sections` ya guarda si esa persona abrió el portal del tutor ese día,
+así que el `CASE` de la consulta podría contarla como tutor los días que va a mirar las notas de su
+hijo y como staff los días que va a trabajar. **Hoy en producción son dos personas**, medido el
+2026-08-24, así que no paga hacerlo todavía.
+
+#### Lo que quedó afuera de la fase 1
 
 Las ocho métricas, las dos zonas y el selector. `recharts` ya está en el proyecto. Las consultas son
 agregaciones por instituto: `groupBy` o SQL, no `findMany` con un `reduce` en memoria como hace hoy
