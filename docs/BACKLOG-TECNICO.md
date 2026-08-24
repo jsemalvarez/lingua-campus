@@ -4524,6 +4524,22 @@ pantalla. Cuatro cosas chicas, ninguna con interfaz, todas acumulando desde que 
 4. **La pasada única de contraseñas por defecto**, que deja la métrica 6 disponible desde el día uno
    y hacia atrás.
 
+**Decisión (2026-08-24): el punto 4 se posterga, y no es por fecha sino por dependencia.** Su reloj
+corre mucho más lento que el de los otros tres: la evidencia de que una cuenta nunca se usó es que
+conserva la contraseña inicial, y eso sólo se pierde cuando alguien la cambia. Hoy nada obliga a
+cambiarla —no hay vencimiento, ni aviso, ni recuperación—, así que se pierden de a una.
+
+**Pero hay que correrla antes de que salga [FEAT-05](#feat-05) o [SEC-06](#sec-06).** Cualquiera de
+las dos hace que la gente cambie contraseñas en masa —FEAT-05 porque recién ahí pueden recuperarlas
+solas, SEC-06 porque saca las que están escritas en el código— y ese día la evidencia se borra de
+golpe. Después de eso, "nunca entró" sólo se contesta hacia adelante, con el registro. Ninguna de las
+dos está cerca: FEAT-05 arrastra elegir proveedor de correo y verificar SPF y DKIM en el DNS, y
+SEC-06 va después.
+
+**Lo que cuesta postergarla:** el mosaico de la métrica 6 arranca vacío en vez de lleno. La fase 1 se
+hace igual —el diseño ya contempla los mosaicos que dicen desde cuándo miden— y ese se completa
+entero, hacia atrás, el día que la pasada corra.
+
 **La forma del registro.** Una fila por persona y por día, no por evento: acota el crecimiento sin
 depender de con qué frecuencia se escriba, y no obliga a decidir la retención antes de empezar.
 
