@@ -242,7 +242,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
 | [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
-| [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [ ] |
+| [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -4501,6 +4501,11 @@ https://claude.ai/code/artifact/72db505b-75dd-4710-945f-17314f0dd408
 **Lo que no se registre se pierde**; las otras cinco métricas se reconstruyen el día que se haga la
 pantalla. Cuatro cosas chicas, ninguna con interfaz, todas acumulando desde que se despliegan:
 
+> **Estado al 2026-08-23.** Los puntos 1, 2 y 3 están hechos y verificados en desarrollo — `9a8e02a`
+> (el registro de actividad) y `6e5f560` (la columna `source`). **Nada de esto acumula todavía**: el
+> registro junta datos recién cuando está desplegado, así que el reloj sigue corriendo hasta que
+> llegue a producción. Falta el punto 4.
+
 1. **`lastSeenAt` dentro de la compuerta de 5 minutos que ya existe.** El callback `jwt` de
    [`auth.ts:97`](../src/lib/auth.ts) relee los roles cada `ROLES_REFRESH_MS` mientras la persona usa
    la aplicación: ahí ya hay una consulta con la frecuencia justa. Escribir la actividad en esa misma
@@ -4961,6 +4966,18 @@ que es aproximado.
 
 **P3** porque no hay plata ni acceso en juego y el caso pide que coincidan un estado previo cargado a
 mano y un escaneo posterior. Pero es pérdida silenciosa de un dato que escribió una persona.
+
+**Resuelto el 2026-08-23** (`6e5f560`), junto con la columna `source` de la fase 0 de
+[FEAT-11](#feat-11), como estaba previsto. El escáner escribe `source` y no toca `notes`; el `UPDATE`
+masivo del parte no toca `source`; y un distintivo `QR` al lado del nombre reemplaza al texto que se
+sacó, para no dejar a la docente sin forma de ver qué marcas vinieron del kiosco.
+
+**Verificado en desarrollo** sembrando la forma vieja sobre una clase real: las tres filas con la
+marca pasaron a `QR` con la observación vacía, la observación de la docente quedó intacta, y después
+de regrabar el parte entero las tres siguieron en `QR`.
+
+**Lo que falta ejercitar, y necesita cámara:** el escaneo sobre un alumno que ya tiene observación
+cargada. Es el caso original de la ficha. Queda para stage.
 
 ---
 
