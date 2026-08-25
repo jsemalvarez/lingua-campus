@@ -203,6 +203,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-08](#sec-08) | P2 | Permisos rancios en el JWT | [x] |
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
+| [SEC-11](#sec-11) | P1 | 🗣️ Obligar a cambiar la contraseña por defecto en el primer ingreso | [ ] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
@@ -638,13 +639,22 @@ Todas fijas en el código, iguales para todos los institutos:
 | `docente1234` | [`teachers/actions.ts:169`](../src/app/teachers/actions.ts) | Reset de profesor |
 | `inscripcion123` | [`inscription/actions.ts:52`](../src/app/inscription/actions.ts) | Pre-inscripción pública |
 | `admin123` | [`PrismaUserRepository.ts:13`](../src/features/superadmin/infrastructure/prisma/PrismaUserRepository.ts) | Admin de instituto nuevo |
-| `student.dni` | [`students/[id]/actions.ts:148`](../src/app/students/[id]/actions.ts) | Reset de alumno (DNI como contraseña) |
+| `student.dni` | [`students/[id]/actions.ts:138`](../src/app/students/[id]/actions.ts) | Reset de alumno (DNI como contraseña) |
+| `lingua1234` | [`students/[id]/actions.ts:138`](../src/app/students/[id]/actions.ts) | Reset de alumno **sin DNI** |
 
 Combinado con [SEC-01](#sec-01), `Modern2026` era acceso efectivo de administrador.
+
+**`lingua1234` se encontró el 2026-08-24** midiendo la métrica 6 de [FEAT-11](#feat-11): es el
+respaldo del reset de alumno cuando no hay DNI que usar, y faltaba en esta lista. Cae exactamente
+sobre los alumnos con la ficha incompleta, que son los que menos mira nadie.
 
 **Cambio.** Generar contraseña aleatoria por usuario y forzar cambio en el primer ingreso. Ya existe
 el mecanismo de `StudentDataToken` — se puede reutilizar el patrón de token de un solo uso para el
 alta de credenciales. Eliminar el DNI como contraseña.
+
+**La mitad de forzar el cambio se separó en [SEC-11](#sec-11)**, y conviene hacerla primero: no
+necesita correo, así que no espera a [FEAT-05](#feat-05) como sí lo hace la contraseña aleatoria —que
+hay que poder entregarle a la persona de alguna forma.
 
 ---
 
@@ -801,6 +811,50 @@ Los server actions leen `formData.get("x") as string` y confían. `parseFloat("a
 solo algunos campos se validan.
 
 **Cambio.** Esquemas `zod` por acción. Empezar por las financieras y por las que crean usuarios.
+
+---
+
+<a id="sec-11"></a>
+## SEC-11 · Obligar a cambiar la contraseña por defecto en el primer ingreso · **P1** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-24)**, saliendo de la métrica 6 de [FEAT-11](#feat-11).
+
+**Hoy no hay nada que empuje a cambiarla.** Verificado el 2026-08-24: no existe `mustChangePassword`,
+ni vencimiento, ni aviso, ni recuperación. Una cuenta creada con `Modern2026` puede seguir con
+`Modern2026` dos años después, y el sistema no se entera ni le avisa a nadie. Eso convierte a cada
+contraseña de [SEC-06](#sec-06) en un acceso permanente y compartido: la sabe quien la repartió, está
+escrita en el código, y con [SEC-01](#sec-01) ya fue acceso efectivo de administrador.
+
+**Es la mitad de [SEC-06](#sec-06) que se puede hacer ya, y ese es todo el punto de separarla.**
+SEC-06 propone dos cosas: generar contraseñas aleatorias por usuario **y** forzar el cambio en el
+primer ingreso. La primera necesita una forma de hacerle llegar la contraseña a la persona, o sea
+correo, o sea [FEAT-05](#feat-05). **La segunda no necesita nada**: la persona ya tiene la contraseña
+—se la dieron en mano—, y lo único que se agrega es que el sistema no la deje seguir hasta cambiarla.
+Sin proveedor de correo, sin SPF ni DKIM, sin esperar a nada.
+
+**Forma del cambio.**
+
+- Una marca por cuenta que diga que la contraseña vigente es una de las que reparte el sistema. Es
+  **la misma columna** que necesita la métrica 6 de [FEAT-11](#feat-11), y conviene hacerlas juntas:
+  una la enciende y la otra la apaga.
+- La encienden los seis lugares que escriben una contraseña por defecto, que ya saben cuál están
+  escribiendo. La apaga el cambio de contraseña. **Ninguno necesita comparar hashes**: comparar sólo
+  hace falta una vez, en la pasada que llena el pasado.
+- Una compuerta después del login que mande a cambiarla y no deje pasar a otra pantalla.
+
+**Dos trampas que conviene mirar antes de escribir la compuerta.**
+
+1. **Los alumnos de 6 a 8 años.** El identificador obligatorio es el DNI y muchos no tienen correo
+   ([BUG-01](#bug-01)). Una compuerta que los obligue a inventar y recordar una contraseña propia les
+   corta el acceso al módulo de práctica, y no hay recuperación que los rescate hasta que exista
+   [FEAT-05](#feat-05). **Conviene empezar por tutores y profesores**, que son los que tienen algo que
+   perder, y decidir a los alumnos aparte.
+2. **El reset del instituto vuelve a dejar la contraseña por defecto.** Si la compuerta no se
+   reactiva con el reset, alcanza con pedir un restablecimiento para volver al estado de antes.
+
+**Relacionado.** [SEC-06](#sec-06) es la otra mitad y va después. [FEAT-11](#feat-11) aporta el
+número: cuántas cuentas siguen con la contraseña por defecto, partido en alumnos, tutores y
+profesores, que es la barra de avance de este despliegue y termina en cero.
 
 ---
 
@@ -3540,6 +3594,17 @@ al instituto y un reset manual. Y desbloquea SEC-06, que es P1 de seguridad.
 alguna vez) tocan lo mismo desde otro ángulo: hoy nadie sabe cuántos tutores nunca pudieron entrar,
 que es probablemente donde está el problema real.
 
+**Al 2026-08-24 no hay nada esperando adelante de esto.** Se evaluó si la métrica 6 de
+[FEAT-11](#feat-11) obligaba a correr algo antes —la lógica era que este ítem hace que la gente
+cambie contraseñas en masa y borre la evidencia de quién nunca entró— y **la dependencia se cayó** al
+redefinir esa métrica: mide contraseñas por defecto, no ingresos, y tiene que bajar cuando alguien
+cambia la suya. También conviene mirar [SEC-11](#sec-11), que resuelve la parte del riesgo que no
+necesita correo y por eso no espera a este ítem.
+
+**Y la pregunta de "quién nunca pudo entrar" ya tiene quien la conteste**, aunque sólo hacia
+adelante: el registro de actividad de [FEAT-11](#feat-11), desplegado el 2026-08-23. Cuando este ítem
+salga, va a haber historia real para saber a quién le sirvió.
+
 ---
 
 <a id="feat-06"></a>
@@ -4422,7 +4487,7 @@ arrancan en cero.
 | 3 | **Cursos con práctica publicada** | `LessonPractice` con contenido en **al menos uno** de los tres campos y `isPublished`. Más el número que importa: **clases publicadas con cero `PracticeSession`** | `LessonPractice`, `PracticeSession` | Período |
 | 4 | **Alumnos y su tutor** | Cinco estados sobre alumnos `ACTIVE`: con cuenta vinculada · **con datos en la ficha y sin cuenta** · sin ningún dato · mayor de 20 (firma solo) · sin `birthDate` | `GuardianStudentLink`, `Student.guardian1*`, `birthDate` | Hoy |
 | 5 | **Tutores con cuenta** | `User` con rol `GUARDIAN` del instituto, partido en con alumno vinculado / **sin ninguno** | `User`, `GuardianStudentLink` | Hoy |
-| 6 | **Cuentas que nunca se usaron** | Las que conservan la contraseña inicial sin cambiar, separadas por tutores y alumnos | Pasada única + columna | Hoy |
+| 6 | **Cuentas con la contraseña por defecto** | Las que conservan una de las contraseñas que reparte el sistema, separadas en alumnos, tutores y profesores | Pasada única + columna, sostenida en cada escritura de contraseña | Hoy |
 | 7 | **Personas activas por día** | Personas distintas con actividad ese día, por rol activo | Registro nuevo | Período |
 | 8 | **Últimos ingresos de los tutores** | Lista, no gráfico: tutor, alumnos, último ingreso, qué miró, y **"nunca"** como estado propio | Registro nuevo + portal del tutor | Período |
 
@@ -4444,14 +4509,11 @@ Todas verificadas contra el código el 2026-08-22, y cada una cambia el número:
   trabajo, y el que no tiene `birthDate` no se puede clasificar: por eso son cinco estados.
 - **Una persona puede ser tutora y profesora** ([SEC-01](#sec-01)). Definir si el panel cuenta
   personas o roles, y decirlo en el título.
-- **"Nunca usó la cuenta" no es una consulta SQL.** Las contraseñas por defecto se guardan con
-  `bcrypt.hash(password, 10)` y salt aleatoria ([`students/[id]/actions.ts:318`](../src/app/students/[id]/actions.ts)),
-  así que hay que comparar fila por fila: con ~181 usuarios son 10 a 20 segundos, imposible al cargar
-  la pantalla. Se resuelve con **una sola pasada** que deje el resultado en una columna y se apague
-  cuando la persona cambie la contraseña. Hay **tres** valores por defecto y no significan lo mismo:
-  `Modern2026` (tutores), `estudiante123` (alumnos) e `inscripcion123` (preinscriptos, que no
-  cuentan). La métrica muere el día que se resuelva [SEC-06](#sec-06): es un puente hasta que el
-  registro tenga historia, y el único que puede mirar el pasado.
+- **La contraseña por defecto no es una consulta SQL.** Se guardan con `bcrypt.hash(password, 10)` y
+  salt aleatoria ([`students/[id]/actions.ts:318`](../src/app/students/[id]/actions.ts)), así que hay
+  que comparar fila por fila: con ~181 usuarios y varios candidatos por cuenta son decenas de
+  segundos, imposible al cargar la pantalla. Ver abajo la decisión del 2026-08-24, que además corrige
+  qué significa el número.
 - **Mirar no deja rastro.** Ni la asistencia ni las notas escriben nada cuando el tutor las lee, así
   que la pregunta del cliente no tiene respuesta con los datos de hoy. Ver la fase 0.
 
@@ -4501,10 +4563,11 @@ https://claude.ai/code/artifact/72db505b-75dd-4710-945f-17314f0dd408
 **Lo que no se registre se pierde**; las otras cinco métricas se reconstruyen el día que se haga la
 pantalla. Cuatro cosas chicas, ninguna con interfaz, todas acumulando desde que se despliegan:
 
-> **Estado al 2026-08-23.** Los puntos 1, 2 y 3 están hechos y verificados en desarrollo — `9a8e02a`
-> (el registro de actividad) y `6e5f560` (la columna `source`). **Nada de esto acumula todavía**: el
-> registro junta datos recién cuando está desplegado, así que el reloj sigue corriendo hasta que
-> llegue a producción. Falta el punto 4.
+> **Estado al 2026-08-24.** Los tres puntos están hechos y verificados — `9a8e02a` (el registro de
+> actividad) y `6e5f560` (la columna `source`). El cuarto que había acá salió de la fase, por la
+> decisión del 2026-08-24 que está más abajo: no acumula nada, así que no apura. **Nada de esto junta
+> datos todavía**: el registro empieza a llenarse recién cuando está desplegado, así que el reloj
+> sigue corriendo hasta que llegue a producción.
 
 1. **`lastSeenAt` dentro de la compuerta de 5 minutos que ya existe.** El callback `jwt` de
    [`auth.ts:97`](../src/lib/auth.ts) relee los roles cada `ROLES_REFRESH_MS` mientras la persona usa
@@ -4521,24 +4584,86 @@ pantalla. Cuatro cosas chicas, ninguna con interfaz, todas acumulando desde que 
    instrumentar las tres pantallas donde vive la pregunta.
 3. **La columna `Attendance.source`**, con el relleno del pasado desde `notes` y sacando esa marca
    del campo, que es [BUG-12](#bug-12).
-4. **La pasada única de contraseñas por defecto**, que deja la métrica 6 disponible desde el día uno
-   y hacia atrás.
+Había un cuarto punto —la pasada de contraseñas por defecto— que salió de esta fase. Ver abajo.
 
-**Decisión (2026-08-24): el punto 4 se posterga, y no es por fecha sino por dependencia.** Su reloj
-corre mucho más lento que el de los otros tres: la evidencia de que una cuenta nunca se usó es que
-conserva la contraseña inicial, y eso sólo se pierde cuando alguien la cambia. Hoy nada obliga a
-cambiarla —no hay vencimiento, ni aviso, ni recuperación—, así que se pierden de a una.
+### Decisión (2026-08-24): la métrica 6 mide contraseñas, no ingresos
 
-**Pero hay que correrla antes de que salga [FEAT-05](#feat-05) o [SEC-06](#sec-06).** Cualquiera de
-las dos hace que la gente cambie contraseñas en masa —FEAT-05 porque recién ahí pueden recuperarlas
-solas, SEC-06 porque saca las que están escritas en el código— y ese día la evidencia se borra de
-golpe. Después de eso, "nunca entró" sólo se contesta hacia adelante, con el registro. Ninguna de las
-dos está cerca: FEAT-05 arrastra elegir proveedor de correo y verificar SPF y DKIM en el DNS, y
-SEC-06 va después.
+**La métrica 6 estaba mal titulada, y el título le prometía algo que no puede dar.** "Cuentas que
+nunca se usaron" se calculaba como "conserva la contraseña inicial", y esa inferencia sólo corre para
+un lado:
 
-**Lo que cuesta postergarla:** el mosaico de la métrica 6 arranca vacío en vez de lleno. La fase 1 se
-hace igual —el diseño ya contempla los mosaicos que dicen desde cuándo miden— y ese se completa
-entero, hacia atrás, el día que la pasada corra.
+- Si nunca entró → seguro conserva la contraseña inicial. ✅
+- Si conserva la contraseña inicial → **puede haber entrado todos los días.** ❌
+
+Verificado en el código el 2026-08-24: **no existe ninguna obligación de cambiar la contraseña.** No
+hay `mustChangePassword`, ni vencimiento, ni aviso, ni recuperación. Y cuando nada obliga, casi nadie
+cambia. El número no era un conteo sino un **techo**, y un techo tan flojo que el mosaico podía
+marcar 150 con una respuesta real de 12. Peor todavía: el reset manual del instituto vuelve a dejar
+la contraseña en una de por defecto, así que alguien que entró, la cambió, se la olvidó y pidió que
+se la restablezcan volvía a contar como "nunca entró".
+
+**La decisión del instituto es no mostrar ese dato.** Prefiere que el panel conteste quién entró y
+quién no **desde que el sistema mide**, aunque eso empiece vacío y sólo mire hacia adelante, antes que
+mostrar un número que se desarma con una sola pregunta. Es un cliente solo y sabe que esto se está
+construyendo. El argumento es de credibilidad y vale para todo el panel: un número que se cae con una
+pregunta no cuesta ese número, cuesta la confianza en los otros siete.
+
+**Lo que sí mide bien se queda, con su nombre verdadero: cuántas cuentas conservan la contraseña que
+les dio el sistema**, partido en alumnos, tutores y profesores. El instituto lo quiere ver. Es un
+número de seguridad y no de uso, no promete nada sobre ingresos, y es exactamente el trabajo pendiente
+de [SEC-06](#sec-06).
+
+**Y se cae la dependencia con [FEAT-05](#feat-05).** Lo único que obligaba a correr la pasada antes
+era congelar el techo de "nunca entró" antes de que la gente cambiara contraseñas en masa. Sin esa
+lectura no hay nada que congelar: el número tiene que **bajar** cuando alguien cambia su contraseña,
+porque bajar es justamente lo que significa que el problema se está resolviendo. FEAT-05 puede
+arrancar cuando se quiera, sin nada de esta ficha adelante.
+
+#### Cómo se calcula, corregido
+
+**Son siete valores por defecto y no tres**, y la ficha original sólo miraba los de alta.
+[SEC-06](#sec-06) los lista todos; los de **reset** cuentan igual, porque una cuenta reseteada queda
+tan abierta como una recién creada:
+
+| Grupo | De alta | De reset |
+|---|---|---|
+| Alumnos | `estudiante123` | el propio DNI, o `lingua1234` si no tiene |
+| Tutores | `Modern2026` | `tutor1234` |
+| Profesores | **ninguno** — el admin la tipea al crear la cuenta | `docente1234` |
+
+`lingua1234` ([`students/[id]/actions.ts:138`](../src/app/students/[id]/actions.ts)) no estaba en la
+lista de [SEC-06](#sec-06), y es el caso que más importa de los tres del alumno: cae justo sobre los
+que no tienen DNI cargado.
+
+**Los profesores sólo se pueden detectar por el reset**, y conviene saberlo antes de leer el número:
+un profesor cuya cuenta se creó con una contraseña floja elegida por el admin no aparece acá. El
+mosaico cuenta lo que el sistema repartió, no lo que es débil. Los preinscriptos (`inscripcion123`)
+siguen fuera: todavía no son usuarios.
+
+**La pasada llena el pasado; las escrituras la sostienen.** Una sola pasada compara fila por fila
+—decenas de segundos, y por eso no puede vivir en la pantalla— y deja el resultado en una columna.
+De ahí en adelante **no hace falta volver a comparar nunca**: los seis lugares que escriben una
+contraseña ya saben cuál están escribiendo, así que prenden o apagan la bandera de una. Es lo que
+hace que el número siga siendo verdad sin ninguna pasada periódica.
+
+**Este número es el que le da sentido a [SEC-11](#sec-11)**, que obliga a cambiar la contraseña por
+defecto en el primer ingreso: el mosaico deja de ser un diagnóstico y pasa a ser la barra de avance
+de ese despliegue, y su final natural es cero.
+
+### Decisión (2026-08-24): la métrica 8 se queda como está, con el rastro indirecto
+
+Al revisar la métrica 6 apareció la pregunta de si la 8 tiene el mismo problema: también muestra
+"Nunca" cuando no encuentra rastro, y la ausencia de rastro no prueba que nadie haya entrado. **Se
+queda como está**, y la diferencia con la 6 es la que decide:
+
+- **El error de la 6 no se corregía solo**, y encima empeoraba: cada persona que cambiaba su
+  contraseña se iba del conteo sin que eso dijera nada sobre si entraba.
+- **El de la 8 se corrige solo, y rápido.** Cada ingreso escribe en el registro, así que el rastro
+  indirecto se reemplaza por uno real en cuestión de semanas, sin que nadie haga nada.
+
+Y la pantalla ya distingue las dos cosas sin cartel: **el rastro real trae los distintivos de "qué
+miró" y el indirecto no**, porque `sections` sólo lo escribe el registro. El dato sin distintivos es
+el que se levantó de la base para que la métrica no naciera vacía, y así se le explica al instituto.
 
 **La forma del registro.** Una fila por persona y por día, no por evento: acota el crecimiento sin
 depender de con qué frecuencia se escriba, y no obliga a decidir la retención antes de empezar.
