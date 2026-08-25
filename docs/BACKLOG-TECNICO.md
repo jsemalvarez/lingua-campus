@@ -259,6 +259,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
 | [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
 | [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
+| [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -4855,6 +4856,11 @@ agregaciones por instituto: `groupBy` o SQL, no `findMany` con un `reduce` en me
 [`PlaygroundChartServer`](../src/app/dashboard/components/PlaygroundChartServer.tsx), que además trae
 dos veces las mismas sesiones de 30 días para calcular dos cosas distintas.
 
+**[FEAT-16](#feat-16) le agrega una métrica más**, y es la única que se decidió sumar después de
+cerrar las ocho: la actividad del Playground, que hoy vive en el Panel de Control. Es la otra mitad
+de la métrica 3 —ésta mide lo que se publicó, aquélla lo que se practicó— y separadas ninguna de las
+dos se puede interpretar sola.
+
 **Relacionado.** [ARQ-09](#arq-09) anota que las métricas y el registro de errores son cosas
 distintas y no conviene mezclarlas: "cuántos errores hubo" sale del registro, "cuánto se usa la
 plataforma" no. Comparten, eso sí, las mismas tres decisiones caras — dónde se guarda, cuánto tiempo
@@ -5072,6 +5078,56 @@ matrícula $10.000) y con abril puesto su tarjeta dice **$15.000**, sin la matr�
 
 **Relacionado.** [FIN-09](#fin-09), que agrega a esta misma pantalla un filtro por estado del alumno
 —activos, papelera, todos— y va en la misma barra: conviene diseñarla una sola vez.
+
+---
+
+<a id="feat-16"></a>
+## FEAT-16 · Mudar la actividad del Playground al panel de uso · **P3**
+
+**Decidido el 2026-08-25.** Hoy
+[`PlaygroundChartServer`](../src/app/dashboard/components/PlaygroundChartServer.tsx) vive en el
+Panel de Control, tercero en una pila de tres gráficos grandes, y lo ven `ADMIN` y `SECRETARY`.
+
+**Ese gráfico son dos cosas pegadas, y cada una es de una pantalla distinta.**
+
+- **Sesiones por día, total y reparto entre Speaking / Listening / Chat.** Contesta *"¿los alumnos
+  practican?"*, que es una pregunta de uso. **Va al panel de [FEAT-11](#feat-11).**
+- **Accuracy promedio por curso, top 8.** No mide si se usa el sistema, mide qué tan bien les va: es
+  "cómo va el instituto", que es la pregunta del Panel de Control. **Se queda donde está.** Además es
+  un ranking de cursos con porcentaje, justo lo que FEAT-11 decidió no tener —*listas de pendientes,
+  no puntajes*—, así que mudarla rompería el criterio del panel al que iría.
+
+**El argumento decisivo es que la métrica 3 ya contesta la otra mitad de la misma pregunta.** Hoy el
+panel dice *"el docente publicó práctica en N cursos"* y *"M publicadas que nadie practicó"* —la
+oferta—, y el gráfico del Panel de Control dice cuánto se consumió —la demanda—. Separadas, ninguna
+de las dos se puede interpretar: si nadie practica, no se sabe si es porque no hay nada publicado o
+porque hay y no llega a los alumnos. Juntas, se sabe.
+
+**Tres motivos que se suman:**
+
+- **El Panel de Control ya está cargado**: 775 líneas y siete consultas en serie. Y este componente
+  **trae dos veces las mismas sesiones de 30 días** para calcular dos cosas distintas — hay que
+  arreglarlo en el mismo pase, vaya donde vaya.
+- **Son dos relojes.** El gráfico tiene su propio selector 7d/30d, del lado del cliente. Al mudarse
+  tiene que obedecer el selector mes+año del panel y perder el suyo; si conviven dos controles de
+  período en la misma pantalla, es el problema de los dos relojes de finanzas otra vez.
+- **Momento de mirada.** El Panel de Control se abre todos los días para trabajar; el panel de uso,
+  cada tanto para evaluar. "¿Los alumnos practican?" es de las segundas.
+
+**Lo que se queda en el Panel de Control: una tarjeta chica**, del tipo *"X sesiones de práctica este
+mes"*. No es un consuelo, resuelve dos cosas concretas. El Playground es el diferencial del producto
+y el panel de uso entra por un botón secundario, no por el menú: sin nada en el home, el diferencial
+deja de verse donde se mira a diario. Y **es lo único que la secretaría necesita de esto**: queda
+afuera del panel de uso por el criterio de [SEC-03](#sec-03), y el gráfico grande no es algo que mire.
+
+**El costo no es trivial y conviene saberlo antes de empezar.**
+[`PlaygroundActivityChart`](../src/app/dashboard/components/PlaygroundActivityChart.tsx) es un
+componente de cliente con estado propio y su propio filtro de período: mudarlo es reescribirle el
+manejo de período para que lea el de la URL, no mover un import.
+
+**Cuándo.** Después de promover [FEAT-11](#feat-11) a producción. Meter mano en el Panel de Control
+—la pantalla que usa todo el mundo todos los días— con el panel de uso todavía sin llegar a
+producción es sumar dos riesgos que no tienen por qué viajar juntos.
 
 ---
 
