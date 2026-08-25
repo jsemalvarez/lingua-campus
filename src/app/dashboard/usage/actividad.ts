@@ -15,6 +15,22 @@ import type { Periodo } from "./periodo";
  * barras que nadie va a mirar.
  */
 
+/**
+ * Cómo se llaman en pantalla las secciones del portal del tutor.
+ *
+ * **Son los rótulos del menú, textuales.** El administrador tiene que poder
+ * mirar el distintivo y saber a qué pantalla fue el tutor sin traducir nada; si
+ * acá dijera "Portada" y el menú dijera "Resumen", serían dos nombres para lo
+ * mismo. Viven en un solo lugar porque los usan la tarjeta del panel y el
+ * listado completo, y un rótulo cambiado en uno solo de los dos es una
+ * incoherencia que nadie ve hasta que la ve el instituto.
+ */
+export const NOMBRE_DE_SECCION: Record<string, string> = {
+    GUARDIAN_HOME: "Resumen",
+    GUARDIAN_ACADEMICS: "Progreso",
+    GUARDIAN_PAYMENTS: "Administración",
+};
+
 /** Cómo agrupa el gráfico diario. */
 export type Bucket = "alumno" | "tutor" | "staff";
 

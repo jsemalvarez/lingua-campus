@@ -4,7 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { requireRole } from "@/lib/authz";
 import { Info } from "lucide-react";
-import { cargarTutores, type RastroDeTutor } from "../actividad";
+import { cargarTutores, NOMBRE_DE_SECCION, type RastroDeTutor } from "../actividad";
 import { PISO_REGISTRO, pisoCorto } from "../piso";
 import { CabeceraListado, Filtros, ListaVacia, Th } from "../Listado";
 
@@ -22,13 +22,6 @@ export const dynamic = "force-dynamic";
  * En el panel la tarjeta muestra los ocho más rancios; acá está la lista entera,
  * con el teléfono, que es lo que hace falta para hacer algo con ella.
  */
-
-/** Nombres de las secciones del portal, para no mostrar la constante cruda. */
-const SECCIONES: Record<string, string> = {
-    GUARDIAN_HOME: "Portada",
-    GUARDIAN_ACADEMICS: "Progreso",
-    GUARDIAN_PAYMENTS: "Administración",
-};
 
 const FILTROS: { clave: string; etiqueta: string; test: (t: RastroDeTutor) => boolean }[] = [
     { clave: "todos", etiqueta: "Todos", test: () => true },
@@ -165,7 +158,7 @@ export default async function TutoresUsagePage({
                                                                 key={s}
                                                                 className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20"
                                                             >
-                                                                {SECCIONES[s] ?? s}
+                                                                {NOMBRE_DE_SECCION[s] ?? s}
                                                             </span>
                                                         ))}
                                                     </span>

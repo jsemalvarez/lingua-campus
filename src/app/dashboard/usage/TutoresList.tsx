@@ -1,15 +1,8 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { ArrowRight, Clock, Info } from "lucide-react";
-import type { RastroDeTutor } from "./actividad";
+import { NOMBRE_DE_SECCION, type RastroDeTutor } from "./actividad";
 import { pisoCorto } from "./piso";
-
-/** Nombres de las secciones del portal, para no mostrar la constante cruda. */
-const SECCIONES: Record<string, string> = {
-    GUARDIAN_HOME: "Portada",
-    GUARDIAN_ACADEMICS: "Progreso",
-    GUARDIAN_PAYMENTS: "Administración",
-};
 
 /** Cuántos se muestran en la tarjeta. El resto vive en el listado completo. */
 const A_LA_VISTA = 8;
@@ -135,7 +128,7 @@ export function TutoresList({
                                                         key={s}
                                                         className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20"
                                                     >
-                                                        {SECCIONES[s] ?? s}
+                                                        {NOMBRE_DE_SECCION[s] ?? s}
                                                     </span>
                                                 ))}
                                             </span>
