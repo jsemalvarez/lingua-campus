@@ -656,6 +656,77 @@ alta de credenciales. Eliminar el DNI como contraseña.
 necesita correo, así que no espera a [FEAT-05](#feat-05) como sí lo hace la contraseña aleatoria —que
 hay que poder entregarle a la persona de alguna forma.
 
+### La forma del reemplazo (2026-08-25)
+
+**Lo que lo destapa es el segundo instituto.** Mientras hay uno solo, "iguales para todos los
+institutos" es una frase sin consecuencia. Con dos, `Modern2026` es una clave que sirve en los dos, y
+la sabe cualquiera que haya dado de alta un tutor en cualquiera de ellos.
+
+**La propuesta que se evaluó:** que el superadmin configure, **por instituto y por grupo**
+—administradores, profesores, alumnos y tutores—, cuál es la contraseña por defecto de cada uno.
+
+**Se compra la mitad y se descarta la otra.**
+
+- **Separar por grupo, sí.** Que la clave de los alumnos no sea la de los administradores es una
+  mejora real y barata. Hoy `Modern2026` es de tutores y, con [SEC-01](#sec-01), fue acceso efectivo
+  de administrador.
+- **Una clave compartida por grupo, no.** Achica el radio —de todos los institutos a un grupo de un
+  instituto— pero no cambia la clase de problema: sigue siendo un secreto que conoce mucha gente. La
+  secretaría lo dice en voz alta, viaja por mensaje, y alcanza con que una persona lo sepa para entrar
+  a la cuenta de cualquiera que no la haya cambiado. La métrica 6 de [FEAT-11](#feat-11) va a decir
+  que casi nadie la cambió.
+
+**Y arrastra un problema que hoy no existe: la contraseña en claro en la base.** Para que la
+configuración sirva, alguien tiene que poder leerla — el administrador necesita decirle al tutor cuál
+es. Eso obliga a guardarla en texto plano (o cifrada de forma reversible, que para esto es casi lo
+mismo) en una columna de `Institute`. Hoy las contraseñas están mal, pero están **en el código**: no
+hay ninguna guardada en claro en la base. Esta funcionalidad la crea, y es un empeoramiento que no
+salta a la vista porque viene envuelto en una mejora.
+
+**La alternativa, que no es más cara: contraseña aleatoria por cuenta, mostrada una sola vez.**
+
+El canal de entrega **ya existe y es humano**: el modal de alta de tutor
+([`CreateGuardianModal.tsx`](../src/app/students/[id]/components/CreateGuardianModal.tsx)) hoy le
+dice al administrador *"la contraseña inicial es Modern2026"* para que se la pase. Cambiar ese texto
+por *"la contraseña es K7m-2pQx, copiala ahora"* es la misma pantalla y el mismo flujo. No hay
+secreto compartido, no hay nada en claro en la base, no hay configuración nueva en el superadmin.
+
+**Y no espera a [FEAT-05](#feat-05).** Lo que necesita correo es la **entrega automática**, no la
+contraseña aleatoria. Quien crea la cuenta ya es quien la entrega.
+
+**Dónde la configuración por instituto sí gana: los alumnos.** Ahí el argumento se da vuelta y
+conviene no aplicar la misma regla a los cuatro grupos. Se crean de a doscientos en una importación,
+son chicos de 6 a 8 años, muchos no tienen correo y el DNI ya es su identificador
+([BUG-01](#bug-01), [FEAT-05](#feat-05)). Repartir doscientas claves aleatorias de a una no es
+operable. Para ese grupo sirve un valor repartible —por instituto, o el DNI, que ya es lo que hace el
+reset—, asumiendo que es un secreto flojo y compensándolo con [SEC-11](#sec-11).
+
+**[SEC-11](#sec-11) es lo que más cambia la ecuación, y es el más barato de los tres.** Si el sistema
+obliga a cambiar la contraseña en el primer ingreso, la ventana en la que el secreto compartido sirve
+para algo se reduce a *entre que se crea la cuenta y la primera vez que entran*. Con eso, hasta una
+clave repartible deja de ser un agujero permanente.
+
+**Orden recomendado:** [SEC-11](#sec-11) primero; después aleatoria por cuenta para administradores,
+profesores y tutores; y valor configurable por instituto sólo para alumnos, si hace falta.
+
+#### Qué le hace esto a la métrica 6 de [FEAT-11](#feat-11)
+
+Menos de lo que parece, y en un punto la mejora:
+
+- **La columna `hasDefaultPassword` sobrevive a los tres escenarios.** Las diez escrituras la
+  encienden en el momento de crear la cuenta y **sin comparar nada**, así que da igual si la
+  contraseña es fija, por instituto o aleatoria.
+- **Con contraseñas aleatorias, la pasada deja de poder mirar hacia atrás**: no hay catálogo contra el
+  cual comparar. Pero la pasada existe **sólo** para las cuentas viejas, que sí tienen una de las
+  ocho. Es una razón más para correrla antes de cambiar el esquema, y la única que queda.
+- **La marca pasa a significar algo mejor**: *"todavía tiene la contraseña con la que se creó la
+  cuenta"*. Eso es un hecho registrado en el momento del alta, no una inferencia — que es exactamente
+  lo que la decisión del 2026-08-24 en [FEAT-11](#feat-11) pedía.
+- **Si se elige el camino por instituto**, el costo cae sobre
+  [`defaultPasswords.ts`](../src/lib/defaultPasswords.ts): el catálogo deja de ser una constante y
+  pasa a depender del instituto, así que `isDefaultForUser` necesita saber cuál. Vuelve a tocar las
+  diez escrituras. Es mecánico, pero hay que contarlo.
+
 ---
 
 <a id="sec-07"></a>
@@ -4649,6 +4720,32 @@ hace que el número siga siendo verdad sin ninguna pasada periódica.
 **Este número es el que le da sentido a [SEC-11](#sec-11)**, que obliga a cambiar la contraseña por
 defecto en el primer ingreso: el mosaico deja de ser un diagnóstico y pasa a ser la barra de avance
 de ese despliegue, y su final natural es cero.
+
+#### Métrica 6 · **hecha** (2026-08-25)
+
+Commit `858cd06`, migración `add_default_password_flag`. La columna `hasDefaultPassword` en `User` y
+`Student`, el catálogo en [`defaultPasswords.ts`](../src/lib/defaultPasswords.ts), la pasada por
+lotes con su botón, el mosaico y el listado en `/dashboard/usage/contrasenas` con los cuatro grupos
+como filtro.
+
+**Eran diez sitios de escritura y no seis.** Faltaban el alta de administrador de instituto
+([`admin/actions.ts`](../src/app/admin/actions.ts)) y el repositorio del superadmin. Ninguno compara
+hashes: cada uno ya sabe qué contraseña escribe.
+
+**Dos cosas salieron de medir y no de estimar**, y las dos cambiaron el código:
+
+- `bcrypt.compare` con coste 10 tarda **~137 ms**, no los ~65 supuestos. El lote bajó de 25 a 12.
+- El lote pedía 12 alumnos **y** 12 usuarios en paralelo, o sea el doble del presupuesto. Ahora
+  comparten el lote y se piden en serie.
+
+**Verificado por pantalla el 2026-08-25** contra una consulta de control que prueba *todos* los
+candidatos e informa cuál coincidió, en vez de cortar en el primero: 294 cuentas a revisar, y el
+resultado **6 = 3 alumnos + 2 tutores + 0 profesores + 1 administración**. Los orígenes: 2 por el
+propio DNI, 1 de `estudiante123`, 2 de `Modern2026`, 1 de `admin123`. Los filtros del listado también.
+
+**Lo que la pantalla todavía no resuelve bien:** en el grupo de alumnos, la columna de teléfono es la
+del alumno, y a quien hay que llamar para que un chico de siete años cambie su contraseña es al
+tutor. No es un error del número, es que esa fila no lleva a quien puede accionarla.
 
 ### Decisión (2026-08-24): la métrica 8 se queda como está, con el rastro indirecto
 
