@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS } from "@/lib/defaultPasswords";
 import { revalidatePath } from "next/cache";
 
 export async function createPreEnrollmentAction(formData: FormData, instituteId: string) {
@@ -49,7 +50,7 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         }
 
         // Para pre-inscripciones públicas, usamos una contraseña genérica
-        const hashedPassword = await bcrypt.hash("inscripcion123", 10);
+        const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORDS.INSCRIPTION, 10);
 
         const parsedBirthDate = (birthDateStr && !isNaN(Date.parse(birthDateStr))) ? new Date(birthDateStr) : null;
 
@@ -58,6 +59,7 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
                 name,
                 email: email || null,
                 password: hashedPassword,
+                hasDefaultPassword: true,
                 phone: phone || null,
                 birthDate: parsedBirthDate,
                 dni: dni || null,

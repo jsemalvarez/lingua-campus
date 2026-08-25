@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { isDefaultForStudent, isDefaultForUser } from "@/lib/defaultPasswords";
 import { getAuthContext } from "@/lib/authz";
 
 export async function updateProfileAction(formData: FormData) {
@@ -107,6 +108,10 @@ export async function changePasswordAction(formData: FormData) {
     try {
         let dbUserPasswordHash = "";
         let userId = "";
+        // El DNI del alumno **es** una de las contraseñas por defecto: la escribe
+        // el reset de la ficha. Sin esto, alguien que "cambia" su contraseña
+        // poniendo su propio DNI saldría del conteo sin haber cambiado nada.
+        let studentDni: string | null = null;
 
         if (auth.isStudent) {
             const student = await prisma.student.findUnique({
@@ -115,6 +120,7 @@ export async function changePasswordAction(formData: FormData) {
             if (!student) return { success: false, error: "Estudiante no encontrado." };
             dbUserPasswordHash = student.password || "";
             userId = student.id;
+            studentDni = student.dni;
         } else {
             const user = await prisma.user.findUnique({
                 where: { id: auth.userId }
@@ -136,15 +142,24 @@ export async function changePasswordAction(formData: FormData) {
 
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
+        // La marca se recalcula en vez de darla por apagada: cambiar la
+        // contraseña casi siempre saca a la cuenta del conteo, pero no si la
+        // nueva vuelve a ser una de las que reparte el sistema.
         if (auth.isStudent) {
             await prisma.student.update({
                 where: { id: userId },
-                data: { password: hashedNewPassword }
+                data: {
+                    password: hashedNewPassword,
+                    hasDefaultPassword: isDefaultForStudent(newPassword, studentDni),
+                }
             });
         } else {
             await prisma.user.update({
                 where: { id: userId },
-                data: { password: hashedNewPassword }
+                data: {
+                    password: hashedNewPassword,
+                    hasDefaultPassword: isDefaultForUser(newPassword),
+                }
             });
         }
 

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 /**
- * La cáscara común de los cuatro listados del panel de uso (FEAT-11).
+ * Las piezas que comparten el panel de uso y sus listados (FEAT-11): la cáscara
+ * de las listas, y las dos que hacen clicable un número del mosaico.
  *
  * **Por qué los números llevan a una lista.** Un número que no se puede abrir no
  * se acciona: el administrador ve "7 clases sin parte", no sabe cuáles, y a la
@@ -61,14 +62,21 @@ export function Filtros({
     base,
     actual,
     opciones,
+    param = "estado",
 }: {
     /** Ruta del listado con lo que no es el filtro ya puesto (período, etc.). */
     base: string;
     actual: string;
     opciones: OpcionDeFiltro[];
+    /**
+     * Cómo se llama el filtro en la URL. Tres listados filtran por estado y el
+     * de contraseñas por grupo, que no es un estado de nada: llamarlo igual
+     * haría que el enlace mienta sobre lo que hace.
+     */
+    param?: string;
 }) {
     const unir = (clave: string) =>
-        clave === "todos" ? base : `${base}${base.includes("?") ? "&" : "?"}estado=${clave}`;
+        clave === "todos" ? base : `${base}${base.includes("?") ? "&" : "?"}${param}=${clave}`;
 
     return (
         <div className="flex flex-wrap gap-2">
@@ -110,6 +118,104 @@ export function ListaVacia({ children }: { children: React.ReactNode }) {
         <div className="py-16 text-center">
             <p className="text-sm text-muted-foreground">{children}</p>
         </div>
+    );
+}
+
+/**
+ * El número grande de una tarjeta, que abre su listado sin filtrar.
+ *
+ * **En cero no enlaza.** El destino sería una lista vacía, y un clic que no
+ * lleva a ningún lado enseña a no volver a hacer clic.
+ */
+export function Titular({
+    href,
+    activo,
+    children,
+}: {
+    href: string;
+    activo: boolean;
+    children: React.ReactNode;
+}) {
+    if (!activo) return <>{children}</>;
+
+    return (
+        <Link href={href} className="hover:text-primary transition-colors">
+            {children}
+        </Link>
+    );
+}
+
+/**
+ * Una fila del desglose de un mosaico.
+ *
+ * **En cero, ninguna fila se destaca.** El resaltado ámbar quiere decir "esto
+ * hay que resolverlo", y un cero es justamente lo contrario: pintarlo de naranja
+ * le pone urgencia a una buena noticia. Por lo mismo la fila en cero se apaga
+ * entera —punto incluido—: si no, el rojo de "sin ningún dato de tutor" tira el
+ * ojo hacia un problema que no existe. La categoría se sigue mostrando, porque
+ * un cero es información y mañana puede no serlo.
+ *
+ * **Y en cero tampoco se abre**, por el mismo motivo que el titular: detrás no
+ * hay ninguna fila que mirar.
+ */
+export function FilaEstado({
+    color,
+    etiqueta,
+    valor,
+    href,
+    destacada = false,
+    apagada = false,
+}: {
+    color?: string;
+    etiqueta: string;
+    valor: number;
+    /** El listado que abre esta fila. Sin esto, la fila no es clicable. */
+    href?: string;
+    destacada?: boolean;
+    apagada?: boolean;
+}) {
+    const enCero = valor === 0;
+    const resaltar = destacada && !enCero;
+    const atenuar = apagada || enCero;
+    const abrible = Boolean(href) && !enCero;
+
+    const tono = resaltar
+        ? "font-semibold text-amber-700 dark:text-amber-500"
+        : atenuar
+            ? "text-muted-foreground"
+            : "";
+
+    const contenido = (
+        <>
+            <span className="flex items-center gap-2.5 min-w-0">
+                {color && (
+                    <span
+                        className={`h-2 w-2 rounded-full shrink-0 ${enCero ? "opacity-30" : ""}`}
+                        style={{ backgroundColor: color }}
+                    />
+                )}
+                <span className={`text-sm truncate ${tono}`}>{etiqueta}</span>
+            </span>
+            <span className={`text-sm font-semibold tabular-nums shrink-0 ${tono}`}>{valor}</span>
+        </>
+    );
+
+    const clases = `flex items-center justify-between gap-3 ${resaltar ? "bg-amber-500/10 -mx-2.5 px-2.5 py-1.5 rounded-lg" : ""
+        }`;
+
+    return (
+        <li className={abrible ? "" : clases}>
+            {abrible ? (
+                <Link
+                    href={href!}
+                    className={`${clases} ${resaltar ? "" : "-mx-2.5 px-2.5 py-1.5 rounded-lg"} hover:bg-muted/60 transition-colors`}
+                >
+                    {contenido}
+                </Link>
+            ) : (
+                contenido
+            )}
+        </li>
     );
 }
 

@@ -102,6 +102,12 @@ model User {
   signatures         Signature[]
   mustSign           ReportSigner[]
 
+  // Si la contraseña vigente es una de las que reparte el sistema (SEC-06).
+  // `null` = todavía no se revisó: el hash lleva salt aleatoria y averiguarlo
+  // cuesta un bcrypt por candidato, así que se resuelve una vez en una pasada y
+  // después lo sostiene cada escritura de contraseña, que ya sabe cuál escribe.
+  hasDefaultPassword Boolean?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -135,6 +141,10 @@ model Student {
   guardian2Email    String?
   birthDate     DateTime?
   joinDate      DateTime @default(now())
+
+  // Ver la nota en `User.hasDefaultPassword`. Acá los candidatos incluyen el
+  // propio DNI, que es lo que escribe el reset de alumno.
+  hasDefaultPassword Boolean?
 
   // Billetera Virtual (Saldos a favor)
   creditBalance Float    @default(0)

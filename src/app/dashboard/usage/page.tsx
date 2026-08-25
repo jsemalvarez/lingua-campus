@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { requireRole } from "@/lib/authz";
 import { instituteToday } from "@/lib/activity";
 import { getMonthName } from "@/lib/utils";
 import prisma from "@/lib/prisma";
-import { Users, UserRound, KeyRound, CalendarClock, ClipboardCheck, QrCode, Sparkles, Info } from "lucide-react";
+import { Users, UserRound, CalendarClock, ClipboardCheck, QrCode, Sparkles, Info } from "lucide-react";
 import { PeriodSelector } from "./PeriodSelector";
 import { PISO_QR, PISO_REGISTRO, pisoCorto } from "./piso";
 import { aniosDisponibles, clasesDelPeriodo, resolverPeriodo } from "./periodo";
@@ -14,6 +13,9 @@ import { clasificarAlumno, estadoDelParte, practicaTieneContenido } from "./metr
 import { cargarGraficoDiario, cargarTutores, DIAS_PARA_GRAFICAR } from "./actividad";
 import { ActividadDiaria } from "./ActividadDiaria";
 import { TutoresList } from "./TutoresList";
+import { FilaEstado, Titular } from "./Listado";
+import { cargarContrasenas } from "./contrasenas/datos";
+import { TarjetaContrasenas } from "./contrasenas/Tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -214,10 +216,11 @@ export default async function UsagePage({
     const practicasSinUsar = practicasConContenido.filter((p) => p._count.sessions === 0).length;
     const cursosConPractica = new Set(practicasConContenido.map((p) => p.lesson.courseId)).size;
 
-    // ── Métricas 7 y 8 · lo que sale del registro de actividad ──
-    const [grafico, tutores] = await Promise.all([
+    // ── Métricas 6, 7 y 8 · el registro de actividad y las contraseñas ──
+    const [grafico, tutores, contrasenas] = await Promise.all([
         cargarGraficoDiario(instituteId, periodo),
         cargarTutores(instituteId),
+        cargarContrasenas(instituteId),
     ]);
 
     const porcentaje = (valor: number) =>
@@ -372,34 +375,8 @@ export default async function UsagePage({
                             </p>
                         </Card>
 
-                        {/* Cuentas que nunca se usaron — todavía sin medir */}
-                        <Card variant="bordered" className="flex flex-col gap-5">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">
-                                        Cuentas que nunca se usaron
-                                    </p>
-                                    <h3 className="text-xl font-semibold text-muted-foreground mt-2">Sin medir todavía</h3>
-                                </div>
-                                <div className="bg-muted/60 text-muted-foreground p-3 rounded-xl shrink-0">
-                                    <KeyRound size={24} />
-                                </div>
-                            </div>
-
-                            <div className="flex-1 flex items-center justify-center min-h-[88px]">
-                                <div className="flex items-end gap-1.5 h-16 w-full opacity-30">
-                                    {[8, 8, 8, 8, 8, 8, 8, 8].map((h, i) => (
-                                        <div key={i} className="flex-1 rounded-sm bg-border" style={{ height: h }} />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <p className="text-xs text-muted-foreground leading-relaxed pt-3 border-t border-border/60 mt-auto">
-                                Se detectan por la contraseña inicial sin cambiar, y eso necesita una pasada única sobre
-                                las cuentas. <strong className="text-foreground">Se completa hacia atrás</strong> el día
-                                que corra.
-                            </p>
-                        </Card>
+                        {/* Cuentas con la contraseña por defecto */}
+                        <TarjetaContrasenas datos={contrasenas} href={listaDe("contrasenas")} />
                     </div>
                 </section>
 
@@ -653,103 +630,5 @@ export default async function UsagePage({
                 </section>
             </main>
         </div>
-    );
-}
-
-/**
- * El número grande de una tarjeta, que abre su listado sin filtrar.
- *
- * **En cero no enlaza.** El destino sería una lista vacía, y un clic que no
- * lleva a ningún lado enseña a no volver a hacer clic.
- */
-function Titular({
-    href,
-    activo,
-    children,
-}: {
-    href: string;
-    activo: boolean;
-    children: React.ReactNode;
-}) {
-    if (!activo) return <>{children}</>;
-
-    return (
-        <Link href={href} className="hover:text-primary transition-colors">
-            {children}
-        </Link>
-    );
-}
-
-/**
- * Una fila del desglose.
- *
- * **En cero, ninguna fila se destaca.** El resaltado ámbar quiere decir "esto
- * hay que resolverlo", y un cero es justamente lo contrario: pintarlo de naranja
- * le pone urgencia a una buena noticia. Por lo mismo la fila en cero se apaga
- * entera —punto incluido—: si no, el rojo de "sin ningún dato de tutor" tira el
- * ojo hacia un problema que no existe. La categoría se sigue mostrando, porque
- * un cero es información y mañana puede no serlo.
- *
- * **Y en cero tampoco se abre**, por el mismo motivo que el titular: detrás no
- * hay ninguna fila que mirar.
- */
-function FilaEstado({
-    color,
-    etiqueta,
-    valor,
-    href,
-    destacada = false,
-    apagada = false,
-}: {
-    color?: string;
-    etiqueta: string;
-    valor: number;
-    /** El listado que abre esta fila. Sin esto, la fila no es clicable. */
-    href?: string;
-    destacada?: boolean;
-    apagada?: boolean;
-}) {
-    const enCero = valor === 0;
-    const resaltar = destacada && !enCero;
-    const atenuar = apagada || enCero;
-    const abrible = Boolean(href) && !enCero;
-
-    const tono = resaltar
-        ? "font-semibold text-amber-700 dark:text-amber-500"
-        : atenuar
-            ? "text-muted-foreground"
-            : "";
-
-    const contenido = (
-        <>
-            <span className="flex items-center gap-2.5 min-w-0">
-                {color && (
-                    <span
-                        className={`h-2 w-2 rounded-full shrink-0 ${enCero ? "opacity-30" : ""}`}
-                        style={{ backgroundColor: color }}
-                    />
-                )}
-                <span className={`text-sm truncate ${tono}`}>{etiqueta}</span>
-            </span>
-            <span className={`text-sm font-semibold tabular-nums shrink-0 ${tono}`}>{valor}</span>
-        </>
-    );
-
-    const clases = `flex items-center justify-between gap-3 ${resaltar ? "bg-amber-500/10 -mx-2.5 px-2.5 py-1.5 rounded-lg" : ""
-        }`;
-
-    return (
-        <li className={abrible ? "" : clases}>
-            {abrible ? (
-                <Link
-                    href={href!}
-                    className={`${clases} ${resaltar ? "" : "-mx-2.5 px-2.5 py-1.5 rounded-lg"} hover:bg-muted/60 transition-colors`}
-                >
-                    {contenido}
-                </Link>
-            ) : (
-                contenido
-            )}
-        </li>
     );
 }

@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/authz";
 
@@ -65,6 +66,7 @@ export async function createTeacherAction(formData: FormData) {
                 name,
                 email,
                 password: hashedPassword,
+                hasDefaultPassword: isDefaultForUser(password),
                 phone: phone || null,
                 roles: [role as UserRole],
                 instituteId: user.instituteId,
@@ -143,12 +145,12 @@ export async function resetTeacherPassword(teacherId: string, customPassword?: s
             return { success: false, error: "Profesor no encontrado o sin permisos" };
         }
 
-        const newPassword = customPassword || "docente1234";
+        const newPassword = customPassword || DEFAULT_PASSWORDS.TEACHER_RESET;
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await prisma.user.update({
             where: { id: teacherId },
-            data: { password: hashedPassword }
+            data: { password: hashedPassword, hasDefaultPassword: isDefaultForUser(newPassword) }
         });
 
         return { success: true, newPassword };

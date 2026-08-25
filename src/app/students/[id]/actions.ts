@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
 
 /** Ficha del alumno: los tres roles que ven "Estudiantes" en el menú. */
@@ -135,12 +136,15 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
-        const newPassword = customPassword || student.dni || "lingua1234";
+        const newPassword = customPassword || student.dni || DEFAULT_PASSWORDS.STUDENT_RESET_FALLBACK;
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await prisma.student.update({
             where: { id: studentId },
-            data: { password: hashedPassword }
+            data: {
+                password: hashedPassword,
+                hasDefaultPassword: isDefaultForStudent(newPassword, student.dni),
+            }
         });
 
         return { success: true, newPassword };
@@ -315,7 +319,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
 
     try {
         const normalizedEmail = email.toLowerCase().trim();
-        const defaultPassword = "Modern2026";
+        const defaultPassword = DEFAULT_PASSWORDS.GUARDIAN_NEW;
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         // 1. Buscar si ya existe el usuario
@@ -345,6 +349,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
                     email: normalizedEmail,
                     name: guardianName,
                     password: hashedPassword,
+                    hasDefaultPassword: true,
                     roles: ["GUARDIAN"],
                     instituteId: user.instituteId,
                     status: "ACTIVE"
