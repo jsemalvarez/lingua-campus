@@ -25,12 +25,18 @@ const MESES = [
  * Va por la URL y no por estado del cliente, al revés que el filtro de
  * deudores: acá el período cambia lo que el servidor **agrega**, no lo que se
  * filtra de una lista ya traída. De paso el período queda en el enlace.
+ *
+ * **El destino se recibe armado, sin el período.** El mismo control gobierna el
+ * panel y los dos listados que salen de sus números, y en los listados hay
+ * además un filtro de estado en la URL: si el selector supiera su propia ruta,
+ * cambiar de mes borraría el filtro que el administrador acababa de elegir.
  */
 export function PeriodSelector({
     valor,
     anios,
     anioActual,
     mesActual,
+    base = "/dashboard/usage",
 }: {
     valor: string;
     /** Años con datos, del más nuevo al más viejo. */
@@ -38,6 +44,8 @@ export function PeriodSelector({
     anioActual: number;
     /** Mes en curso, 1-12. Acota los meses ofrecidos del año actual. */
     mesActual: number;
+    /** Ruta a la que volver, ya con todo lo que no es el período. */
+    base?: string;
 }) {
     const router = useRouter();
 
@@ -55,7 +63,9 @@ export function PeriodSelector({
     // vez que se cambia de mes: el período no cambia de página, cambia lo que
     // muestra la que ya se está mirando.
     const irA = (p: string) =>
-        iniciar(() => router.push(`/dashboard/usage?p=${p}`, { scroll: false }));
+        iniciar(() =>
+            router.push(`${base}${base.includes("?") ? "&" : "?"}p=${p}`, { scroll: false })
+        );
 
     const dosDigitos = (n: number) => String(n).padStart(2, "0");
 

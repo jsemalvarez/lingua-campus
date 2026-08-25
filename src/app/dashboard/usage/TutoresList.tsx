@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { Clock, Info } from "lucide-react";
+import { ArrowRight, Clock, Info } from "lucide-react";
 import type { RastroDeTutor } from "./actividad";
 import { pisoCorto } from "./piso";
 
@@ -29,11 +30,14 @@ export function TutoresList({
     sinRastro,
     total,
     piso,
+    verTodos,
 }: {
     tutores: RastroDeTutor[];
     sinRastro: number;
     total: number;
     piso: Date;
+    /** El listado completo, con teléfono y filtros. */
+    verTodos: string;
 }) {
     const visibles = tutores.slice(0, A_LA_VISTA);
 
@@ -88,12 +92,19 @@ export function TutoresList({
                         <tbody>
                             {visibles.map((t) => (
                                 <tr key={t.id} className="border-b border-border/50 last:border-0">
-                                    <td className="px-2 py-3 text-sm font-medium">{t.nombre}</td>
+                                    <td className="px-2 py-3 text-sm font-medium">
+                                        <Link
+                                            href={`/guardians/${t.id}`}
+                                            className="hover:text-primary transition-colors"
+                                        >
+                                            {t.nombre}
+                                        </Link>
+                                    </td>
                                     <td className="px-2 py-3 text-sm text-muted-foreground">
                                         {t.alumnos.length === 0 ? (
                                             <span className="italic text-muted-foreground/70">Sin alumno vinculado</span>
                                         ) : (
-                                            t.alumnos.join(" · ")
+                                            t.alumnos.map((a) => a.nombre).join(" · ")
                                         )}
                                     </td>
                                     <td className="px-2 py-3 text-sm">
@@ -137,10 +148,21 @@ export function TutoresList({
                 </div>
             )}
 
-            {total > A_LA_VISTA && (
-                <p className="text-xs text-muted-foreground pt-1">
-                    Se muestran los {A_LA_VISTA} más rancios de {total}.
-                </p>
+            {total > 0 && (
+                <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
+                    <p className="text-xs text-muted-foreground">
+                        {total > A_LA_VISTA
+                            ? `Se muestran los ${A_LA_VISTA} más rancios de ${total}.`
+                            : "Están todos."}
+                    </p>
+                    <Link
+                        href={verTodos}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                    >
+                        Ver la lista completa
+                        <ArrowRight size={14} />
+                    </Link>
+                </div>
             )}
         </Card>
     );

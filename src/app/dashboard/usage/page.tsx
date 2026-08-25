@@ -1,81 +1,21 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { requireRole } from "@/lib/authz";
-import { signsForThemselves } from "@/lib/reports/signatures";
 import { instituteToday } from "@/lib/activity";
 import { getMonthName } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import { Users, UserRound, KeyRound, CalendarClock, ClipboardCheck, QrCode, Sparkles, Info } from "lucide-react";
 import { PeriodSelector } from "./PeriodSelector";
 import { PISO_QR, PISO_REGISTRO, pisoCorto } from "./piso";
-import { cargarActividad, DIAS_PARA_GRAFICAR } from "./actividad";
+import { aniosDisponibles, clasesDelPeriodo, resolverPeriodo } from "./periodo";
+import { clasificarAlumno, estadoDelParte, practicaTieneContenido } from "./metricas";
+import { cargarGraficoDiario, cargarTutores, DIAS_PARA_GRAFICAR } from "./actividad";
 import { ActividadDiaria } from "./ActividadDiaria";
 import { TutoresList } from "./TutoresList";
 
 export const dynamic = "force-dynamic";
-
-/** Un día de calendario del instituto, a medianoche UTC. */
-function diaUTC(anio: number, mes1: number, dia: number): Date {
-    return new Date(Date.UTC(anio, mes1 - 1, dia));
-}
-
-function formatoCorto(d: Date): string {
-    return `${d.getUTCDate()} ${getMonthName(d.getUTCMonth() + 1).slice(0, 3).toLowerCase()}`;
-}
-
-interface Periodo {
-    clave: string;
-    desde: Date;
-    hasta: Date;
-    etiqueta: string;
-}
-
-/**
- * Resuelve el período elegido. El `hasta` nunca pasa de hoy: una clase que
- * todavía no se dictó no puede estar sin parte de asistencia.
- */
-function resolverPeriodo(p: string | undefined, hoy: Date): Periodo {
-    const mes = /^(\d{4})-(\d{2})$/.exec(p ?? "");
-
-    if (mes) {
-        const anio = Number(mes[1]);
-        const m = Number(mes[2]);
-        if (m >= 1 && m <= 12) {
-            const desde = diaUTC(anio, m, 1);
-            const finDeMes = new Date(Date.UTC(anio, m, 0));
-            return {
-                clave: `${mes[1]}-${mes[2]}`,
-                desde,
-                hasta: finDeMes > hoy ? hoy : finDeMes,
-                etiqueta: `${getMonthName(m)} ${anio}`,
-            };
-        }
-    }
-
-    const desde = new Date(hoy);
-    desde.setUTCDate(desde.getUTCDate() - 29);
-    return {
-        clave: "30d",
-        desde,
-        hasta: hoy,
-        etiqueta: `${formatoCorto(desde)} – ${formatoCorto(hoy)}`,
-    };
-}
-
-/**
- * Los años que se pueden elegir: desde el de la clase más vieja hasta el
- * actual, del más nuevo al más viejo. Se calculan de los datos y no de una
- * ventana fija, así el instituto puede mirar todo su historial y la lista crece
- * de a un año en vez de acumular meses.
- */
-function aniosDisponibles(primeraClase: Date | null, hoy: Date): number[] {
-    const actual = hoy.getUTCFullYear();
-    const primero = primeraClase ? primeraClase.getUTCFullYear() : actual;
-    const anios: number[] = [];
-    for (let a = actual; a >= Math.min(primero, actual); a--) anios.push(a);
-    return anios;
-}
 
 /**
  * Panel de uso del sistema (FEAT-11).
@@ -89,9 +29,11 @@ function aniosDisponibles(primeraClase: Date | null, hoy: Date): number[] {
  * así que no es quien las mira. Es el mismo criterio de SEC-03 con egresos y
  * sueldos.
  *
- * Esta primera entrega trae la zona **"Estado de hoy"**, que es una foto y no
- * depende de ningún período. La zona de actividad, con su selector de mes,
- * viene aparte.
+ * **Cada número abre su lista**, en `alumnos`, `tutores`, `clases` y `practica`.
+ * Un número que no se puede abrir no se acciona: el administrador ve "7 clases
+ * sin parte", no sabe cuáles, y a la tercera vez deja de mirarlo. Lo que el
+ * mosaico cuenta y lo que la lista trae salen de las mismas funciones —`metricas`
+ * y `periodo`— para que no puedan discrepar.
  */
 export default async function UsagePage({
     searchParams,
@@ -109,6 +51,10 @@ export default async function UsagePage({
     const hoyInstituto = instituteToday();
     const { p } = await searchParams;
     const periodo = resolverPeriodo(p, hoyInstituto);
+
+    /** El período viaja en todos los enlaces: volver del listado no lo pierde. */
+    const listaDe = (cual: string, estado?: string) =>
+        `/dashboard/usage/${cual}?p=${periodo.clave}${estado ? `&estado=${estado}` : ""}`;
 
     const [institute, students, guardians, primeraClase] = await Promise.all([
         prisma.institute.findUnique({
@@ -144,12 +90,6 @@ export default async function UsagePage({
     ]);
 
     // ── Métrica 4 · Alumnos y su tutor ──
-    //
-    // Cinco estados excluyentes, y **el orden importa**. Los dos chequeos de
-    // tutor van primero para que "mayor de 20" quede sólo con los que no tienen
-    // ninguno: ahí es donde sirve, sacando de la lista de faltantes a quien no
-    // necesita tutor. Si fuera al revés, un alumno de 22 con su tutor cargado
-    // saldría del conteo de vinculados sin motivo.
     const alumnos = {
         conCuenta: 0,
         conDatosSinCuenta: 0,
@@ -159,23 +99,12 @@ export default async function UsagePage({
     };
 
     for (const alumno of students) {
-        const tieneDatosDeTutor = Boolean(
-            alumno.guardian1Name ||
-            alumno.guardian1Email ||
-            alumno.guardian2Name ||
-            alumno.guardian2Email
-        );
-
-        if (alumno._count.guardianLinks > 0) {
-            alumnos.conCuenta++;
-        } else if (tieneDatosDeTutor) {
-            alumnos.conDatosSinCuenta++;
-        } else if (signsForThemselves(alumno.birthDate, hoy)) {
-            alumnos.firmanSolos++;
-        } else if (!alumno.birthDate) {
-            alumnos.sinFechaNacimiento++;
-        } else {
-            alumnos.sinNada++;
+        switch (clasificarAlumno({ ...alumno, vinculos: alumno._count.guardianLinks }, hoy)) {
+            case "con-cuenta": alumnos.conCuenta++; break;
+            case "con-datos": alumnos.conDatosSinCuenta++; break;
+            case "firma-solo": alumnos.firmanSolos++; break;
+            case "sin-fecha": alumnos.sinFechaNacimiento++; break;
+            default: alumnos.sinNada++;
         }
     }
 
@@ -190,11 +119,7 @@ export default async function UsagePage({
     // El universo de clases excluye a los cursos **sin ningún inscripto activo**:
     // una clase sin alumnos figuraría "sin parte" para siempre y llenaría la
     // lista de trabajo con algo que nadie puede completar.
-    const dentroDelPeriodo = {
-        status: "ACTIVE" as const,
-        date: { gte: periodo.desde, lte: periodo.hasta },
-        course: { instituteId },
-    };
+    const dentroDelPeriodo = clasesDelPeriodo(instituteId, periodo);
 
     const [clases, marcasPorOrigen, leccionesConEscaner, practicas, cursosActivos] = await Promise.all([
         prisma.lesson.findMany({
@@ -247,26 +172,22 @@ export default async function UsagePage({
     ]);
 
     // ── Métrica 1 · Clases y su parte de asistencia ──
-    //
-    // Tres estados, no dos. Una clase con algunas marcas y no todas es alguien
-    // que empezó y no terminó —o el escáner de la puerta sin que el docente
-    // cerrara el parte—, y es el caso que más vale ver.
     let clasesCompletas = 0;
     let clasesIncompletas = 0;
     let clasesSinParte = 0;
     let masViejaSinParte: (typeof clases)[number] | null = null;
 
     for (const clase of clases) {
-        const inscriptos = clase.course._count.enrollments;
-        const marcas = clase._count.attendances;
-
-        if (marcas === 0) {
-            clasesSinParte++;
-            if (!masViejaSinParte) masViejaSinParte = clase;
-        } else if (marcas < inscriptos) {
-            clasesIncompletas++;
-        } else {
-            clasesCompletas++;
+        switch (estadoDelParte(clase._count.attendances, clase.course._count.enrollments)) {
+            case "sin-parte":
+                clasesSinParte++;
+                if (!masViejaSinParte) masViejaSinParte = clase;
+                break;
+            case "incompleta":
+                clasesIncompletas++;
+                break;
+            default:
+                clasesCompletas++;
         }
     }
 
@@ -288,19 +209,16 @@ export default async function UsagePage({
     const qrEsAproximado = periodo.desde < PISO_QR;
 
     // ── Métrica 3 · Práctica publicada ──
-    //
-    // La fila puede existir vacía: `speakingPhrases: []` con los otros dos en
-    // `null` es una práctica que no existe. Contar la fila sería contar trabajo
-    // que nadie hizo.
-    const practicasConContenido = practicas.filter(
-        (p) => p.speakingPhrases.length > 0 || Boolean(p.listeningText) || Boolean(p.chatScenario)
-    );
+    const practicasConContenido = practicas.filter(practicaTieneContenido);
     const practicasPublicadas = practicasConContenido.length;
     const practicasSinUsar = practicasConContenido.filter((p) => p._count.sessions === 0).length;
     const cursosConPractica = new Set(practicasConContenido.map((p) => p.lesson.courseId)).size;
 
     // ── Métricas 7 y 8 · lo que sale del registro de actividad ──
-    const actividad = await cargarActividad(instituteId, periodo);
+    const [grafico, tutores] = await Promise.all([
+        cargarGraficoDiario(instituteId, periodo),
+        cargarTutores(instituteId),
+    ]);
 
     const porcentaje = (valor: number) =>
         totalAlumnos === 0 ? 0 : (valor / totalAlumnos) * 100;
@@ -345,7 +263,9 @@ export default async function UsagePage({
                                 <div>
                                     <p className="text-sm font-medium text-muted-foreground">Alumnos y su tutor</p>
                                     <h3 className="text-3xl font-bold tracking-tight mt-1.5 tabular-nums">
-                                        {totalAlumnos}{" "}
+                                        <Titular href={listaDe("alumnos")} activo={totalAlumnos > 0}>
+                                            {totalAlumnos}
+                                        </Titular>{" "}
                                         <span className="text-sm font-medium text-muted-foreground">activos</span>
                                     </h3>
                                 </div>
@@ -368,19 +288,36 @@ export default async function UsagePage({
                             )}
 
                             <ul className="space-y-2.5">
-                                <FilaEstado color="#38b397" etiqueta="Con cuenta de tutor vinculada" valor={alumnos.conCuenta} />
+                                <FilaEstado
+                                    color="#38b397"
+                                    etiqueta="Con cuenta de tutor vinculada"
+                                    valor={alumnos.conCuenta}
+                                    href={listaDe("alumnos", "con-cuenta")}
+                                />
                                 <FilaEstado
                                     color="#f6a138"
                                     etiqueta="Con datos, sin cuenta creada"
                                     valor={alumnos.conDatosSinCuenta}
+                                    href={listaDe("alumnos", "con-datos")}
                                     destacada
                                 />
-                                <FilaEstado color="#dc2626" etiqueta="Sin ningún dato de tutor" valor={alumnos.sinNada} />
-                                <FilaEstado color="#2e3192" etiqueta="Mayores de 20, firman solos" valor={alumnos.firmanSolos} />
+                                <FilaEstado
+                                    color="#dc2626"
+                                    etiqueta="Sin ningún dato de tutor"
+                                    valor={alumnos.sinNada}
+                                    href={listaDe("alumnos", "sin-nada")}
+                                />
+                                <FilaEstado
+                                    color="#2e3192"
+                                    etiqueta="Mayores de 20, firman solos"
+                                    valor={alumnos.firmanSolos}
+                                    href={listaDe("alumnos", "firma-solo")}
+                                />
                                 <FilaEstado
                                     color="#d4d4d8"
                                     etiqueta="Sin fecha de nacimiento"
                                     valor={alumnos.sinFechaNacimiento}
+                                    href={listaDe("alumnos", "sin-fecha")}
                                     apagada
                                 />
                             </ul>
@@ -404,7 +341,9 @@ export default async function UsagePage({
                                 <div>
                                     <p className="text-sm font-medium text-muted-foreground">Tutores con cuenta</p>
                                     <h3 className="text-3xl font-bold tracking-tight mt-1.5 tabular-nums">
-                                        {guardians.length}
+                                        <Titular href={listaDe("tutores")} activo={guardians.length > 0}>
+                                            {guardians.length}
+                                        </Titular>
                                     </h3>
                                 </div>
                                 <div className="bg-purple-50 text-purple-600 p-3 rounded-xl shrink-0">
@@ -413,8 +352,17 @@ export default async function UsagePage({
                             </div>
 
                             <ul className="space-y-2.5">
-                                <FilaEstado etiqueta="Con alumno vinculado" valor={tutoresConAlumno} />
-                                <FilaEstado etiqueta="Sin ningún alumno" valor={tutoresSinAlumno} destacada />
+                                <FilaEstado
+                                    etiqueta="Con alumno vinculado"
+                                    valor={tutoresConAlumno}
+                                    href={listaDe("tutores", "con-alumno")}
+                                />
+                                <FilaEstado
+                                    etiqueta="Sin ningún alumno"
+                                    valor={tutoresSinAlumno}
+                                    href={listaDe("tutores", "sin-alumno")}
+                                    destacada
+                                />
                             </ul>
 
                             <p className="text-xs text-muted-foreground leading-relaxed pt-3 border-t border-border/60 mt-auto">
@@ -486,7 +434,9 @@ export default async function UsagePage({
                                         Clases sin parte de asistencia
                                     </p>
                                     <h3 className="text-3xl font-bold tracking-tight mt-1.5 tabular-nums">
-                                        {clasesSinParte}{" "}
+                                        <Titular href={listaDe("clases", "sin-parte")} activo={clasesSinParte > 0}>
+                                            {clasesSinParte}
+                                        </Titular>{" "}
                                         <span className="text-sm font-medium text-muted-foreground">
                                             de {clases.length} dictadas
                                         </span>
@@ -522,11 +472,17 @@ export default async function UsagePage({
                                     </div>
 
                                     <ul className="space-y-2.5">
-                                        <FilaEstado color="#38b397" etiqueta="Completas" valor={clasesCompletas} />
+                                        <FilaEstado
+                                            color="#38b397"
+                                            etiqueta="Completas"
+                                            valor={clasesCompletas}
+                                            href={listaDe("clases", "completa")}
+                                        />
                                         <FilaEstado
                                             color="#f6a138"
                                             etiqueta="Incompletas — faltan alumnos"
                                             valor={clasesIncompletas}
+                                            href={listaDe("clases", "incompleta")}
                                             destacada
                                         />
                                         {/* Sin resaltar: este número YA es el titular
@@ -537,6 +493,7 @@ export default async function UsagePage({
                                             color="#dc2626"
                                             etiqueta="Sin ningún registro"
                                             valor={clasesSinParte}
+                                            href={listaDe("clases", "sin-parte")}
                                         />
                                     </ul>
                                 </>
@@ -599,12 +556,18 @@ export default async function UsagePage({
                                         )}
                                     </div>
 
+                                    {/* Las dos primeras no se abren, y es a propósito:
+                                        son marcas, y el listado son clases. Un número
+                                        que abre una lista de otro largo se lee como un
+                                        error del panel. La fila que sí se abre es la de
+                                        cursos, que termina en las clases escaneadas. */}
                                     <ul className="space-y-2.5">
                                         <FilaEstado color="#2563eb" etiqueta="Con el escáner" valor={marcasQr} />
                                         <FilaEstado color="#d4d4d8" etiqueta="Cargadas a mano" valor={marcasAMano} />
                                         <FilaEstado
                                             etiqueta={`Cursos que lo usaron, de ${cursosActivos} activos`}
                                             valor={cursosConEscaner}
+                                            href={listaDe("clases", "con-escaner")}
                                         />
                                     </ul>
                                 </>
@@ -636,7 +599,9 @@ export default async function UsagePage({
                                         Cursos con práctica publicada
                                     </p>
                                     <h3 className="text-3xl font-bold tracking-tight mt-1.5 tabular-nums">
-                                        {cursosConPractica}{" "}
+                                        <Titular href={listaDe("practica")} activo={cursosConPractica > 0}>
+                                            {cursosConPractica}
+                                        </Titular>{" "}
                                         <span className="text-sm font-medium text-muted-foreground">
                                             de {cursosActivos} activos
                                         </span>
@@ -648,10 +613,15 @@ export default async function UsagePage({
                             </div>
 
                             <ul className="space-y-2.5">
-                                <FilaEstado etiqueta="Clases con práctica publicada" valor={practicasPublicadas} />
+                                <FilaEstado
+                                    etiqueta="Clases con práctica publicada"
+                                    valor={practicasPublicadas}
+                                    href={listaDe("practica")}
+                                />
                                 <FilaEstado
                                     etiqueta="Publicadas que nadie practicó"
                                     valor={practicasSinUsar}
+                                    href={listaDe("practica", "sin-usar")}
                                     destacada
                                 />
                             </ul>
@@ -666,22 +636,47 @@ export default async function UsagePage({
                         </Card>
 
                         <ActividadDiaria
-                            dias={actividad.dias}
-                            diasConDatos={actividad.diasConDatos}
+                            dias={grafico.dias}
+                            diasConDatos={grafico.diasConDatos}
                             piso={PISO_REGISTRO}
                             diasNecesarios={DIAS_PARA_GRAFICAR}
                         />
                     </div>
 
                     <TutoresList
-                        tutores={actividad.tutores}
-                        sinRastro={actividad.tutoresSinRastro}
-                        total={actividad.totalTutores}
+                        tutores={tutores.lista}
+                        sinRastro={tutores.sinRastro}
+                        total={tutores.total}
                         piso={PISO_REGISTRO}
+                        verTodos={listaDe("tutores")}
                     />
                 </section>
             </main>
         </div>
+    );
+}
+
+/**
+ * El número grande de una tarjeta, que abre su listado sin filtrar.
+ *
+ * **En cero no enlaza.** El destino sería una lista vacía, y un clic que no
+ * lleva a ningún lado enseña a no volver a hacer clic.
+ */
+function Titular({
+    href,
+    activo,
+    children,
+}: {
+    href: string;
+    activo: boolean;
+    children: React.ReactNode;
+}) {
+    if (!activo) return <>{children}</>;
+
+    return (
+        <Link href={href} className="hover:text-primary transition-colors">
+            {children}
+        </Link>
     );
 }
 
@@ -694,23 +689,30 @@ export default async function UsagePage({
  * entera —punto incluido—: si no, el rojo de "sin ningún dato de tutor" tira el
  * ojo hacia un problema que no existe. La categoría se sigue mostrando, porque
  * un cero es información y mañana puede no serlo.
+ *
+ * **Y en cero tampoco se abre**, por el mismo motivo que el titular: detrás no
+ * hay ninguna fila que mirar.
  */
 function FilaEstado({
     color,
     etiqueta,
     valor,
+    href,
     destacada = false,
     apagada = false,
 }: {
     color?: string;
     etiqueta: string;
     valor: number;
+    /** El listado que abre esta fila. Sin esto, la fila no es clicable. */
+    href?: string;
     destacada?: boolean;
     apagada?: boolean;
 }) {
     const enCero = valor === 0;
     const resaltar = destacada && !enCero;
     const atenuar = apagada || enCero;
+    const abrible = Boolean(href) && !enCero;
 
     const tono = resaltar
         ? "font-semibold text-amber-700 dark:text-amber-500"
@@ -718,11 +720,8 @@ function FilaEstado({
             ? "text-muted-foreground"
             : "";
 
-    return (
-        <li
-            className={`flex items-center justify-between gap-3 ${resaltar ? "bg-amber-500/10 -mx-2.5 px-2.5 py-1.5 rounded-lg" : ""
-                }`}
-        >
+    const contenido = (
+        <>
             <span className="flex items-center gap-2.5 min-w-0">
                 {color && (
                     <span
@@ -733,6 +732,24 @@ function FilaEstado({
                 <span className={`text-sm truncate ${tono}`}>{etiqueta}</span>
             </span>
             <span className={`text-sm font-semibold tabular-nums shrink-0 ${tono}`}>{valor}</span>
+        </>
+    );
+
+    const clases = `flex items-center justify-between gap-3 ${resaltar ? "bg-amber-500/10 -mx-2.5 px-2.5 py-1.5 rounded-lg" : ""
+        }`;
+
+    return (
+        <li className={abrible ? "" : clases}>
+            {abrible ? (
+                <Link
+                    href={href!}
+                    className={`${clases} ${resaltar ? "" : "-mx-2.5 px-2.5 py-1.5 rounded-lg"} hover:bg-muted/60 transition-colors`}
+                >
+                    {contenido}
+                </Link>
+            ) : (
+                contenido
+            )}
         </li>
     );
 }

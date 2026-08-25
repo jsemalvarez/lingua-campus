@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import type { Periodo } from "./periodo";
 
 /**
  * Los datos que salen del registro de actividad (FEAT-11, métricas 7 y 8).
@@ -6,6 +7,12 @@ import prisma from "@/lib/prisma";
  * Van aparte del resto de la pantalla porque comparten una particularidad que
  * las otras no tienen: **empiezan el día que se desplegó el registro**. Todo lo
  * demás del panel se reconstruye hacia atrás sin límite.
+ *
+ * **Son dos cargas y no una** porque tienen alcances distintos: el gráfico mira
+ * el período elegido, la lista de tutores mira todo el historial —"último
+ * rastro" no tiene sentido acotado a un mes—. El listado completo de tutores
+ * necesita la segunda y no la primera, y juntas lo obligarían a agregar treinta
+ * barras que nadie va a mirar.
  */
 
 /** Cómo agrupa el gráfico diario. */
@@ -18,10 +25,17 @@ export interface DiaActivo {
     staff: number;
 }
 
+export interface AlumnoDelTutor {
+    id: string;
+    nombre: string;
+}
+
 export interface RastroDeTutor {
     id: string;
     nombre: string;
-    alumnos: string[];
+    email: string;
+    telefono: string | null;
+    alumnos: AlumnoDelTutor[];
     /** `null` = sin ningún rastro. */
     visto: Date | null;
     /** `true` cuando el rastro sale del registro; `false` si es indirecto. */
@@ -30,28 +44,25 @@ export interface RastroDeTutor {
     secciones: string[];
 }
 
-export interface Actividad {
+export interface GraficoDiario {
     dias: DiaActivo[];
     diasConDatos: number;
-    tutores: RastroDeTutor[];
-    tutoresSinRastro: number;
-    totalTutores: number;
 }
 
-interface Periodo {
-    desde: Date;
-    hasta: Date;
+export interface Tutores {
+    lista: RastroDeTutor[];
+    sinRastro: number;
+    total: number;
 }
 
 /** Cuántos días de historia hacen falta antes de dibujar la curva diaria. */
 export const DIAS_PARA_GRAFICAR = 30;
 
-export async function cargarActividad(
+/** Métrica 7 · personas distintas con actividad cada día, por rol. */
+export async function cargarGraficoDiario(
     instituteId: string,
     periodo: Periodo
-): Promise<Actividad> {
-    // ── El gráfico diario ──
-    //
+): Promise<GraficoDiario> {
     // Se agrupa en la base y no en memoria: traer una fila por persona y por día
     // serían decenas de miles de filas para dibujar treinta barras.
     //
@@ -90,25 +101,29 @@ export async function cargarActividad(
          WHERE a."instituteId" = ${instituteId}
     `;
 
-    // ── La lista de tutores ──
+    return { dias: [...porDia.values()], diasConDatos: historia[0]?.dias ?? 0 };
+}
+
+/**
+ * Métricas 5 y 8 · los tutores con cuenta y su último rastro.
+ *
+ * **No se acota al período** a propósito: la pregunta es "¿cuándo entró por
+ * última vez?", y acotarla a agosto convertiría en "nunca" a quien entró en
+ * julio. Es el mismo motivo por el que la métrica 5 vive en la zona de estado.
+ */
+export async function cargarTutores(instituteId: string): Promise<Tutores> {
     const tutores = await prisma.user.findMany({
         where: { instituteId, status: "ACTIVE", roles: { has: "GUARDIAN" } },
         select: {
             id: true,
             name: true,
-            guardianLinks: { select: { student: { select: { name: true } } } },
+            email: true,
+            phone: true,
+            guardianLinks: { select: { student: { select: { id: true, name: true } } } },
         },
     });
 
-    if (tutores.length === 0) {
-        return {
-            dias: [...porDia.values()],
-            diasConDatos: historia[0]?.dias ?? 0,
-            tutores: [],
-            tutoresSinRastro: 0,
-            totalTutores: 0,
-        };
-    }
+    if (tutores.length === 0) return { lista: [], sinRastro: 0, total: 0 };
 
     const ids = tutores.map((t) => t.id);
 
@@ -174,7 +189,9 @@ export async function cargarActividad(
         return {
             id: t.id,
             nombre: t.name,
-            alumnos: t.guardianLinks.map((l) => l.student.name),
+            email: t.email,
+            telefono: t.phone,
+            alumnos: t.guardianLinks.map((l) => ({ id: l.student.id, nombre: l.student.name })),
             visto,
             esIngreso: Boolean(real && visto && real.getTime() === visto.getTime()),
             secciones: seccionesPorTutor.get(t.id) ?? [],
@@ -191,10 +208,8 @@ export async function cargarActividad(
     });
 
     return {
-        dias: [...porDia.values()],
-        diasConDatos: historia[0]?.dias ?? 0,
-        tutores: lista,
-        tutoresSinRastro: lista.filter((t) => !t.visto).length,
-        totalTutores: lista.length,
+        lista,
+        sinRastro: lista.filter((t) => !t.visto).length,
+        total: lista.length,
     };
 }
