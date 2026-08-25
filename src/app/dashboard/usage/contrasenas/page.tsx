@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { requireRole } from "@/lib/authz";
-import { Info } from "lucide-react";
 import { CabeceraListado, Filtros, ListaVacia, Th } from "../Listado";
 import { cargarContrasenas, NOMBRE_DEL_GRUPO, type Grupo } from "./datos";
 
@@ -63,18 +62,6 @@ export default async function ContrasenasUsagePage({
                         })),
                     ]}
                 />
-
-                <div className="flex items-start gap-2 bg-muted/40 border border-border rounded-lg px-3 py-2.5">
-                    <Info size={14} className="text-muted-foreground shrink-0 mt-0.5" />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                        <strong className="text-foreground">Esto no dice quién entró y quién no.</strong> Nada
-                        obliga a cambiar la contraseña, así que una cuenta muy usada puede seguir con la que le
-                        dieron. Quién entró está en la lista de tutores y en el gráfico de actividad.{" "}
-                        <strong className="text-foreground">A los profesores sólo se los detecta por el reset</strong>:
-                        su cuenta se crea con una contraseña que elige el administrador, así que una floja elegida
-                        a mano no aparece acá.
-                    </p>
-                </div>
 
                 <Card className="overflow-hidden">
                     {visibles.length === 0 ? (

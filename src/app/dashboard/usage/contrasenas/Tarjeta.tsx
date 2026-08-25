@@ -75,17 +75,17 @@ export function TarjetaContrasenas({
                 ))}
             </ul>
 
-            <p className="text-xs text-muted-foreground leading-relaxed pt-3 border-t border-border/60 mt-auto">
-                {total === 0 ? (
-                    "Ninguna cuenta conserva la contraseña que le dio el sistema."
-                ) : (
-                    <>
-                        Son contraseñas escritas en el código y conocidas por quien las repartió.{" "}
-                        <strong className="text-foreground">No dice quién entró</strong>: nada obliga a
-                        cambiarlas, así que una cuenta muy usada puede seguir con la suya.
-                    </>
-                )}
-            </p>
+            {/* Sólo el cierre en cero, que es la buena noticia. La explicación de
+                por qué el número significa lo que significa salió de acá: el
+                título ya lo dice —"con la contraseña por defecto" no promete
+                nada sobre ingresos— y el resto era una nota de desarrollo puesta
+                en la pantalla del administrador. Lo que hay que hacer con estas
+                cuentas se resuelve en SEC-11, no explicándolas. */}
+            {total === 0 && (
+                <p className="text-xs text-muted-foreground leading-relaxed pt-3 border-t border-border/60 mt-auto">
+                    Ninguna cuenta conserva la contraseña que le dio el sistema.
+                </p>
+            )}
         </Card>
     );
 }
