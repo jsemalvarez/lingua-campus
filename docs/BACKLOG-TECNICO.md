@@ -4584,6 +4584,48 @@ así que el `CASE` de la consulta podría contarla como tutor los días que va a
 hijo y como staff los días que va a trabajar. **Hoy en producción son dos personas**, medido el
 2026-08-24, así que no paga hacerlo todavía.
 
+#### Fase 2 · los listados detrás de cada número · **hecha** (2026-08-24)
+
+Commit `24fb2a2`. Completa el principio que la fase 1 dejó a medias: *"cada número lleva a una lista
+de nombres"*. Cuatro pantallas nuevas bajo `/dashboard/usage` —`alumnos`, `tutores`, `clases` y
+`practica`—, sólo `ADMIN`, con el filtro y el período en la URL.
+
+**Cuatro listados y no catorce.** El estado va como filtro adentro de la lista de su métrica, en vez
+de una pantalla por cada renglón del desglose. Quien abre "con datos y sin cuenta" muchas veces
+quiere mirar enseguida "sin ningún dato", que es el mismo trabajo con otro grado de dificultad. Por
+lo mismo **las métricas 5 y 8 comparten pantalla**: son la misma gente mirada por dos preguntas
+—si llegan a un alumno, y si entran—, y el tutor sin alumno vinculado es casi siempre el que nunca
+entró. Las métricas 1 y 2 comparten por la misma razón: son las mismas clases, miradas por el estado
+del parte y por cómo se cargó.
+
+**La clasificación se mudó a [`metricas.ts`](../src/app/dashboard/usage/metricas.ts) y el período a
+[`periodo.ts`](../src/app/dashboard/usage/periodo.ts)**, y los llaman tanto el mosaico como el
+listado. No es por no repetir código: es que un mosaico que dice 7 y una lista que trae 6 no se lee
+como un error de una de las dos, se lee como que el panel miente — y con la regla escrita dos veces
+eso pasa la primera vez que alguien toca una y no la otra, en silencio.
+
+**Dos números no se abren, a propósito.** Las marcas del escáner —"con el escáner: 2", "cargadas a
+mano: 1"— porque son marcas y el listado son clases: un número que abre una lista de otro largo se
+lee como un error del panel, así que la fila que abre es la de cursos, que termina en las clases
+escaneadas. Y **ningún número en cero enlaza**, ni el titular ni la fila: el destino sería una lista
+vacía, y un clic que no lleva a ningún lado enseña a no volver a hacer clic. El chip del filtro en
+cero se muestra igual pero no se puede apretar, porque esconderlo haría que la lista de filtros
+cambie de forma según el mes y que "ninguna incompleta" —buena noticia— sea indistinguible de "esta
+pantalla no mide eso".
+
+**Cada fila termina donde se arregla**: el alumno en su ficha, el tutor en la suya, la clase en su
+parte de asistencia, la práctica en su vista previa. Y la columna que hace utilizable a las dos
+listas de personas es el teléfono: el mosaico dice cuántos son, la lista dice a quién llamar.
+
+**Sigue valiendo que son listas de pendientes y no puntajes de personas.** El docente aparece en el
+listado de clases porque es a quien hay que avisarle de esa clase, no para sumarle un porcentaje al
+lado del nombre.
+
+**Verificado el 2026-08-24** contra una consulta de control formulada distinta —SQL crudo con `CASE`
+y subconsultas correlacionadas, contra el `findMany` + clasificación en memoria del código—: 284
+alumnos activos (6 / 258 / 0 / 20 / 0), 7 tutores con cuenta y 3 sin ningún rastro, 53 clases en el
+período (52 sin parte, 1 incompleta), 3 marcas con 2 del escáner en 1 curso.
+
 #### Lo que quedó afuera de la fase 1
 
 Las ocho métricas, las dos zonas y el selector. `recharts` ya está en el proyecto. Las consultas son
