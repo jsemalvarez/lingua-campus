@@ -107,6 +107,22 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
     return (
         <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8">
             <div className="pb-6 border-b border-border/50">
+                {/* Ya no está en el menú: sin esto la pantalla es un callejón. */}
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
+                    <Link href="/dashboard" className="hover:text-primary transition-colors">
+                        Dashboard
+                    </Link>
+                    <ChevronRight size={12} />
+                    <Link
+                        href="/dashboard/settings/reports"
+                        className="hover:text-primary transition-colors"
+                    >
+                        Plantillas de Informes
+                    </Link>
+                    <ChevronRight size={12} />
+                    <span className="text-foreground">Firmas</span>
+                </div>
+
                 <span className="text-sm font-bold text-primary/80 uppercase tracking-widest flex items-center gap-2 mb-2">
                     <ClipboardCheck size={16} /> Informes
                 </span>
