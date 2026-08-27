@@ -741,7 +741,7 @@ export default async function DashboardPage() {
                             <AnnualFinanceChartServer instituteId={user.instituteId} />
                         </Suspense>
                     )}
-                    <Suspense fallback={<Card className="h-[480px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                    <Suspense fallback={<Card className="h-[280px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
                         <PlaygroundChartServer instituteId={user.instituteId} />
                     </Suspense>
                 </div>

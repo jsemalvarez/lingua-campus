@@ -16,6 +16,8 @@ import { TutoresList } from "./TutoresList";
 import { FilaEstado, Titular } from "./Listado";
 import { cargarContrasenas } from "./contrasenas/datos";
 import { TarjetaContrasenas } from "./contrasenas/Tarjeta";
+import { cargarSesiones } from "./practica/sesiones";
+import { SesionesPractica } from "./practica/SesionesPractica";
 
 export const dynamic = "force-dynamic";
 
@@ -217,10 +219,11 @@ export default async function UsagePage({
     const cursosConPractica = new Set(practicasConContenido.map((p) => p.lesson.courseId)).size;
 
     // ── Métricas 6, 7 y 8 · el registro de actividad y las contraseñas ──
-    const [grafico, tutores, contrasenas] = await Promise.all([
+    const [grafico, tutores, contrasenas, sesiones] = await Promise.all([
         cargarGraficoDiario(instituteId, periodo),
         cargarTutores(instituteId),
         cargarContrasenas(instituteId),
+        cargarSesiones(instituteId, periodo),
     ]);
 
     const porcentaje = (valor: number) =>
@@ -612,6 +615,15 @@ export default async function UsagePage({
                             </p>
                         </Card>
 
+                        {/* La oferta y la demanda, una al lado de la otra: acá se
+                            ve qué publicó el docente y al lado cuánto se
+                            practicó. Separadas —que es como estaban, con ésta en
+                            el Panel de Control— ninguna de las dos se puede
+                            interpretar sola (FEAT-16). */}
+                        <SesionesPractica sesiones={sesiones} href={listaDe("practica")} />
+                    </div>
+
+                    <div className="grid gap-5">
                         <ActividadDiaria
                             dias={grafico.dias}
                             diasConDatos={grafico.diasConDatos}

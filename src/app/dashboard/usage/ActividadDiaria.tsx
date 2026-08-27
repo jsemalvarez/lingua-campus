@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { CalendarClock } from "lucide-react";
 import type { DiaActivo } from "./actividad";
 import { pisoCorto } from "./piso";
+import { BarrasDiarias } from "./BarrasDiarias";
 
 const SERIES = [
     { clave: "alumno" as const, etiqueta: "Alumnos", color: "#38b397" },
@@ -67,9 +68,6 @@ export function ActividadDiaria({
             </Card>
         );
     }
-
-    const alto = 132;
-    const techo = Math.max(...dias.map((d) => d.alumno + d.tutor + d.staff), 1);
     const promedio = Math.round(dias.reduce((acc, d) => acc + d.alumno + d.tutor + d.staff, 0) / dias.length);
 
     return (
@@ -86,32 +84,14 @@ export function ActividadDiaria({
                 </div>
             </div>
 
-            <div className="flex items-end gap-[3px]" style={{ height: alto }}>
-                {dias.map((d) => {
-                    const total = d.alumno + d.tutor + d.staff;
-                    return (
-                        <div
-                            key={d.dia}
-                            className="flex-1 flex flex-col justify-end gap-[2px] min-w-[3px]"
-                            title={`${d.dia}: ${total} ${total === 1 ? "persona" : "personas"}`}
-                        >
-                            {SERIES.map((s) => {
-                                const valor = d[s.clave];
-                                if (valor === 0) return null;
-                                return (
-                                    <div
-                                        key={s.clave}
-                                        style={{
-                                            height: Math.max((valor / techo) * (alto - 8), 2),
-                                            backgroundColor: s.color,
-                                        }}
-                                    />
-                                );
-                            })}
-                        </div>
-                    );
-                })}
-            </div>
+            <BarrasDiarias
+                columnas={dias.map((d) => ({
+                    dia: d.dia,
+                    valores: { alumno: d.alumno, tutor: d.tutor, staff: d.staff },
+                }))}
+                series={SERIES}
+                unidad={["persona", "personas"]}
+            />
 
             <div className="flex flex-wrap gap-4 pt-3 border-t border-border/60 mt-auto">
                 {SERIES.map((s) => (

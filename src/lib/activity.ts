@@ -45,7 +45,7 @@ export type ActivitySection = (typeof GUARDIAN_SECTIONS)[keyof typeof GUARDIAN_S
  * Está fijo porque hoy hay un solo instituto y es argentino. El día que haya uno
  * en otro huso, esto sale de acá y pasa a ser un campo de `Institute`.
  */
-const INSTITUTE_TIME_ZONE = "America/Argentina/Buenos_Aires";
+export const INSTITUTE_TIME_ZONE = "America/Argentina/Buenos_Aires";
 
 /**
  * La fecha del calendario del instituto, a medianoche UTC — que es como
