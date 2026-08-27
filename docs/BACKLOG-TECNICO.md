@@ -5125,9 +5125,31 @@ afuera del panel de uso por el criterio de [SEC-03](#sec-03), y el gráfico gran
 componente de cliente con estado propio y su propio filtro de período: mudarlo es reescribirle el
 manejo de período para que lea el de la URL, no mover un import.
 
-**Cuándo.** Después de promover [FEAT-11](#feat-11) a producción. Meter mano en el Panel de Control
-—la pantalla que usa todo el mundo todos los días— con el panel de uso todavía sin llegar a
-producción es sumar dos riesgos que no tienen por qué viajar juntos.
+### Hecha (2026-08-25)
+
+Commit `29e2f20`. **Se hizo antes de promover [FEAT-11](#feat-11) y no después**, al revés de lo que
+decía esta ficha: como todo viaja en la misma promoción, el cliente ve el panel completo de una vez y
+se ahorra un despliegue. El riesgo que preocupaba —tocar el Panel de Control, que usa todo el mundo
+todos los días— se cubre probándolo en stage antes de promover, que es lo que había que hacer igual.
+
+**Tres cosas aparecieron al mudarlo, y las tres estaban desde antes:**
+
+- **El día se agrupaba en UTC.** `toISOString()` corría al día siguiente toda práctica hecha después
+  de las 21:00 de Argentina — en la base de desarrollo, **51 de 172 sesiones**. Ahora la conversión
+  pasa por los dos husos, como ya hacía el registro de actividad.
+- **Las barras se rotulaban con el nivel del curso**, y el nivel se repite entre secciones: salían dos
+  "Pre-adolescents 1" y dos "Upper-intermediate" con números distintos, que se lee como un error del
+  gráfico. Ahora va el nombre real del curso.
+- **La consulta traía dos veces las mismas sesiones** y las recorría en memoria. Quedó en una sola
+  agregación en la base.
+
+**Y se agregó lo que el desglose por color no decía: el número de cada día.** Una barra de tres
+cuartos de alto puede ser 6 personas o 60 según el techo del período, y el techo cambia con cada mes
+elegido — así que el gráfico sólo se podía comparar consigo mismo. El cartel sale con `group-hover` y
+con `group-focus`, o sea con el mouse y con el dedo, sin estado ni bundle de cliente. Lo comparten
+los dos gráficos diarios en [`BarrasDiarias`](../src/app/dashboard/usage/BarrasDiarias.tsx), y cada
+uno pone su unidad: **"personas" en uno y "sesiones" en el otro**, que es justamente la diferencia
+que los dos no mostraban y que hacía que se confundieran.
 
 ---
 
