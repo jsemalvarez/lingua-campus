@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { isDefaultForStudent, isDefaultForUser } from "@/lib/defaultPasswords";
 import { getAuthContext } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 export async function updateProfileAction(formData: FormData) {
     const auth = await getAuthContext();
@@ -161,6 +162,12 @@ export async function changePasswordAction(formData: FormData) {
                     hasDefaultPassword: isDefaultForUser(newPassword),
                 }
             });
+
+            // La persona ya eligió una contraseña nueva desde adentro, así que un
+            // enlace de recuperación pendiente no tiene por qué seguir sirviendo
+            // (FEAT-05). Es justo el caso de quien la pidió, se acordó, y entró
+            // igual: el correo queda dando vueltas en la bandeja.
+            await invalidateResetTokens("USER", userId);
         }
 
         return { success: true };

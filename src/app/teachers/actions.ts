@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 /**
  * "Personal" es un módulo de administración: es lo que ya decide el menú y lo
@@ -152,6 +153,12 @@ export async function resetTeacherPassword(teacherId: string, customPassword?: s
             where: { id: teacherId },
             data: { password: hashedPassword, hasDefaultPassword: isDefaultForUser(newPassword) }
         });
+
+        // El instituto le restableció la contraseña, así que cualquier enlace de
+        // recuperación que estuviera dando vueltas deja de servir (FEAT-05). Sin
+        // esto, un correo viejo todavía sin usar pisaría lo que se acaba de
+        // escribir acá.
+        await invalidateResetTokens("USER", teacherId);
 
         return { success: true, newPassword };
     } catch (e) {

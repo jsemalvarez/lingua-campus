@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
@@ -122,9 +123,9 @@ export default function LoginForm({ institute }: LoginFormProps) {
                             <label htmlFor="password" className="text-sm font-semibold text-foreground/90">
                                 Contraseña
                             </label>
-                            <a href="#" className="text-xs font-semibold text-primary hover:underline" tabIndex={-1}>
+                            <Link href="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
                                 ¿Olvidaste tu clave?
-                            </a>
+                            </Link>
                         </div>
                         <div className="relative">
                             <input

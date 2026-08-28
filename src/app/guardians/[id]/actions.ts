@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 export async function updateGuardianAction(formData: FormData) {
     const adminUser = await requireRole(["ADMIN"]);
@@ -99,6 +100,10 @@ export async function resetGuardianPassword(guardianId: string, customPassword?:
             where: { id: guardianId },
             data: { password: hashedPassword, hasDefaultPassword: isDefaultForUser(newPassword) }
         });
+
+        // Ver la nota en el reset de profesores: el enlace de recuperación que
+        // haya pendiente queda sin efecto (FEAT-05).
+        await invalidateResetTokens("USER", guardianId);
 
         revalidatePath(`/guardians/${guardianId}`);
         return { success: true, newPassword };

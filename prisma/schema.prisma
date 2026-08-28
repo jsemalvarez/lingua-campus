@@ -28,6 +28,11 @@ model Institute {
   address     String?
   phone       String?
   email       String?
+  // Dirección desde la que salen los correos de este instituto (FEAT-05). Es el
+  // dominio propio del cliente, ya autenticado en el proveedor de envío. Vacío
+  // = sale por el remitente de la plataforma. No confundir con `email`, que es
+  // el contacto de la ficha y no está autenticado para mandar en su nombre.
+  senderEmail String?
   description String?
   logoUrl     String?
   facebookUrl String?
@@ -786,6 +791,38 @@ model StudentDataToken {
   expiresAt DateTime
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// PASSWORD RESET TOKENS
+// -----------------------------------------------------------------------------
+
+// Un pedido de recuperación de contraseña (FEAT-05).
+//
+// `subjectType` + `subjectId` en vez de una relación: la contraseña que se
+// restablece puede ser de un `User` o de un `Student`, que son dos tablas
+// distintas. Es el mismo par que ya usan `AiUsage` y el registro de actividad.
+// Hoy sólo se emiten para `User`; los alumnos entran después sin migración.
+//
+// Se guarda el **hash** del token y no el token. El original viaja por correo y
+// queda en la bandeja de quien lo pidió, así que la base no necesita poder
+// reconstruirlo: quien lea esta tabla no puede entrar con lo que ve.
+//
+// `consumedAt` no significa sólo "se usó": también se llena cuando el token
+// queda sin efecto por otro motivo — un pedido más nuevo que lo reemplaza, o un
+// cambio de contraseña por otra vía. Lo que marca es que ya no sirve.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  subjectType String    // "USER" | "STUDENT"
+  subjectId   String
+  instituteId String?
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([subjectType, subjectId])
+  @@index([expiresAt])
 }
 
 // -----------------------------------------------------------------------------
