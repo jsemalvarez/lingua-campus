@@ -3677,6 +3677,97 @@ necesita correo y por eso no espera a este ítem.
 adelante: el registro de actividad de [FEAT-11](#feat-11), desplegado el 2026-08-23. Cuando este ítem
 salga, va a haber historia real para saber a quién le sirvió.
 
+### Partida en dos entregas (2026-08-26)
+
+**Por decisión del cliente**, y por urgencia: *"la prioridad hoy son los tutores que entran cada tanto
+a la plataforma y para cuando quieren volver a ingresar, se olvidaron el pass"*. Los alumnos **no se
+caen del alcance, se corren**: la parte 2 es una entrega pendiente de este mismo ítem, no una idea.
+
+Lo que hace barata la partición es que la parte 1 no toca nada que la parte 2 tenga que rehacer. Tres
+decisiones cuestan lo mismo hoy y evitan la reescritura:
+
+- El token guarda `subjectType` + `subjectId` y no un `userId` con relación. En la parte 1 esa columna
+  siempre dice `"USER"` y parece de más; es la única de las tres que después sería una migración.
+- El destinatario del correo es un dato aparte de la cuenta que se restablece. Hoy son siempre el
+  mismo; con los alumnos el correo le llega al tutor.
+- Resolver el identificador es un paso propio que devuelve candidatos y **se niega si hay más de uno**.
+
+### Hecha · parte 1: las cuentas con correo propio (2026-08-27)
+
+Commit `96a9193`. Cubre todo lo que vive en `User` — tutores, docentes y administración.
+
+**Las tres trampas de arriba se resolvieron así:**
+
+1. **Los alumnos sin correo** quedan para la parte 2. La pantalla no los deja esperando: ver abajo.
+2. **El correo no identifica a una persona sola** — pero para `User` sí, porque `email` es único
+   global. **La parte 1 no necesitó arreglar [SEC-05](#sec-05)**, y la regla del corte por más de un
+   candidato es lo que va a sostener eso cuando entren los alumnos, cuyo correo y cuyo DNI son únicos
+   sólo por instituto.
+3. **El enlace lleva el instituto** porque sale de su ficha —`customDomain`, o el subdominio— y no del
+   host del pedido: `instituteBaseUrl` en [`tenant.ts`](../src/lib/tenant.ts). Además cierra un agujero
+   que no estaba anotado: nadie puede hacer que un correo nuestro apunte a otro lado mandando un
+   `Host` cualquiera. Y como stage y producción son dos bases, cada una apunta a su entorno sin
+   ninguna variable de entorno.
+
+**Seis cosas que aparecieron al hacerlo y no estaban en la ficha:**
+
+- **El mensaje neutro deja a los chicos en silencio.** Un alumno que escribe su DNI recibe "si está
+  registrado, te llega un correo" y espera un mail que no existe. La pantalla lo distingue por la
+  forma de lo tipeado —un DNI no tiene arroba—, que no consulta ni revela nada, y le dice que se lo
+  pida al instituto.
+- **El remitente es un dato del instituto y no una constante** (`Institute.senderEmail`, con caída al
+  de la plataforma). Sale de una decisión del 2026-08-26: **un cliente premium tiene su marca y no
+  corresponde que aparezca "Lingua Campus"**. Con el dato en la ficha, ese cambio es cargar un campo.
+- **`Institute.email` no sirve de remitente.** Es el contacto de la ficha y nadie verificó que su
+  dominio nos autorice a mandar en su nombre: en el `from` es spam, o rechazo si el dominio tiene
+  DMARC. Sí es lo correcto como dirección de respuesta, y ahí se usa.
+- **El seguimiento de clics de SendGrid hay que apagarlo.** Reescribe los enlaces para que pasen por
+  un dominio suyo, así que el botón dejaría de apuntar al instituto. En un correo de recuperación eso
+  se parece a un phishing.
+- **El límite se cuenta sobre la propia tabla de tokens**, no con el mecanismo de
+  [`AiUsage`](../prisma/schema.prisma) que proponía la ficha: cada pedido ya deja una fila con su
+  fecha, así que no hace falta un contador aparte. Y se cuenta por cuenta y **no por IP**: guardar la
+  IP de cualquiera que pase por la pantalla es un dato personal que el sistema no guarda en ningún
+  lado, y de las direcciones que no existen no sale correo ni queda fila, así que no hay nada que
+  inundar.
+- **El token se marca antes de tocar la contraseña**, con un `updateMany` que exige que siguiera sin
+  usar. Comprobar y después escribir deja una ventana en la que dos clics simultáneos pasan los dos.
+
+También: **SHA-256 y no bcrypt** para el hash del token —son 32 bytes al azar, no hay diccionario que
+los adivine, y hace falta que el hash sea determinístico para buscar por índice—, y la invalidación de
+tokens pendientes quedó enganchada en el cambio desde el perfil y en los resets de profesor y de
+tutor. La contraseña nueva recalcula `hasDefaultPassword`, así que la métrica 6 de
+[FEAT-11](#feat-11) sigue diciendo la verdad.
+
+**Verificado corriendo contra la base local**, no leído: el correo sale con el nombre del instituto;
+el enlace apuntó al dominio del instituto aunque el pedido se hizo desde `localhost`; la pantalla del
+enlace nombra la cuenta; contraseñas que no coinciden no queman el token; después del cambio la nueva
+sirve y la anterior no; el enlace vuelto a abrir dice que ya se usó; un pedido nuevo invalida el
+anterior; y al cuarto pedido en la ventana no salió correo y la pantalla dijo exactamente lo mismo.
+
+**Lo que sigue pendiente y no es de programación**: crear la cuenta de SendGrid, autenticar
+`mail.<dominio del cliente>` —el subdominio y no la raíz, que es un pedido que el cliente puede
+aprobar sin miedo a romperse el correo que ya tiene— y pasarle los tres CNAME a quien le administre el
+DNS. Hasta entonces `EMAIL_PROVIDER=console` deja el flujo entero probable sin mandar nada.
+
+**Y el canal queda montado para los otros tres casos**: [FEAT-12](#feat-12), [SEC-06](#sec-06) y el
+formulario del landing pasan a ser una plantilla y una llamada.
+
+### Falta · parte 2: los alumnos
+
+- La rama `STUDENT` en `consumeResetToken` y los dos casos nuevos en la resolución del identificador
+  —correo de alumno y DNI—. Ahí sí conviene mirar [SEC-05](#sec-05), aunque la regla del corte por más
+  de un candidato ya evita restablecer la cuenta equivocada sin él.
+- **El destinatario deja de ser el sujeto**: el correo va al tutor, por `GuardianStudentLink` o por
+  los `guardian1Email`/`guardian2Email` de la ficha. La plantilla y la pantalla ya lo contemplan — la
+  segunda ya nombra de quién es la contraseña, que es lo que evita que un tutor con dos hijos le
+  cambie la clave al hermano equivocado.
+- **El reset de alumno del instituto todavía no invalida tokens.** Hoy no existe ninguno con ese
+  sujeto y la llamada habría sido código muerto, pero esa línea va junto con la rama, o un enlace
+  viejo pisa lo que el instituto acaba de escribir.
+- Sirve también para el alta, no sólo para el olvido: hoy al alumno se le reparte `estudiante123` o su
+  DNI, y el mismo mecanismo mandado al tutor es la salida de [SEC-06](#sec-06) para los chicos.
+
 ---
 
 <a id="feat-06"></a>
