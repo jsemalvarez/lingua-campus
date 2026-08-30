@@ -16,7 +16,18 @@ type InstitutoDelCorreo = {
 };
 
 /** Una dirección a la que sale el enlace, con el nombre de quien la lee. */
-type Destinatario = { email: string; name: string };
+type Destinatario = {
+    email: string;
+    name: string;
+    /**
+     * Si quien recibe es el dueño de la contraseña.
+     *
+     * Se lleva explícito hasta el correo en vez de deducirlo comparando nombres:
+     * hay tutores cargados en la ficha con el correo y sin el nombre, y ahí la
+     * comparación diría que es la misma persona.
+     */
+    esElSujeto: boolean;
+};
 
 type CuentaEncontrada = {
     subject: ResetSubject;
@@ -68,14 +79,16 @@ async function destinatariosDeAlumno(student: {
     guardian2Name: string | null;
     guardian2Email: string | null;
 }): Promise<Destinatario[]> {
-    if (student.email) return [{ email: student.email, name: student.name }];
+    if (student.email) {
+        return [{ email: student.email, name: student.name, esElSujeto: true }];
+    }
 
     const links = await prisma.guardianStudentLink.findMany({
         where: { studentId: student.id },
         select: { guardian: { select: { email: true, name: true, status: true } } },
     });
 
-    const candidatos: Destinatario[] = [
+    const candidatos = [
         ...links
             .filter((l) => l.guardian && l.guardian.status === "ACTIVE")
             .map((l) => ({ email: l.guardian.email, name: l.guardian.name })),
@@ -94,7 +107,7 @@ async function destinatariosDeAlumno(student: {
         const clave = candidato.email.trim().toLowerCase();
         if (!clave || vistos.has(clave)) continue;
         vistos.add(clave);
-        unicos.push({ email: clave, name: candidato.name.trim() });
+        unicos.push({ email: clave, name: candidato.name.trim(), esElSujeto: false });
     }
 
     return unicos;
@@ -174,7 +187,7 @@ async function resolveAccount(
             return {
                 subject: { type: "USER", id: user.id, instituteId: user.instituteId },
                 subjectName: user.name,
-                destinatarios: [{ email: user.email, name: user.name }],
+                destinatarios: [{ email: user.email, name: user.name, esElSujeto: true }],
                 institute: user.institute,
             };
         }
@@ -262,6 +275,7 @@ export async function requestPasswordResetAction(formData: FormData) {
                 const { subject, text, html } = passwordResetEmail({
                     subjectName: cuenta.subjectName,
                     recipientName: destinatario.name || undefined,
+                    esParaOtro: !destinatario.esElSujeto,
                     instituteName: cuenta.institute.name,
                     url,
                     ttlMinutes: RESET_TOKEN_TTL_MINUTES,

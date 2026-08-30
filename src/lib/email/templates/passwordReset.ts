@@ -1,15 +1,19 @@
 export type PasswordResetEmailParams = {
     /** De quién es la contraseña que este enlace cambia. */
     subjectName: string;
-    /**
-     * Quién recibe el correo, cuando no es la misma persona.
-     *
-     * Hoy siempre es la misma —cada cuenta pide por su propia dirección—, pero
-     * con los alumnos el correo le llega al tutor: son dos datos distintos y el
-     * cuerpo tiene que decirlo, porque un tutor con dos hijos en el instituto
-     * recibe dos correos casi iguales.
-     */
+    /** Nombre de quien recibe el correo, si el sistema lo tiene. */
     recipientName?: string;
+    /**
+     * Si el enlace cambia la contraseña de **otra** persona — el caso del tutor
+     * que recibe el de su hijo.
+     *
+     * **Es un dato explícito y no una comparación de nombres.** El correo del
+     * tutor puede estar cargado en la ficha sin el nombre al lado, y adivinando
+     * por el nombre ese caso se leería como "es la misma persona": al tutor le
+     * llegaría un "restablecé *tu* contraseña" por una contraseña que no es
+     * suya, saludándolo por el nombre de su hijo.
+     */
+    esParaOtro: boolean;
     instituteName: string;
     url: string;
     ttlMinutes: number;
@@ -35,22 +39,22 @@ export function passwordResetEmail(params: PasswordResetEmailParams): {
     text: string;
     html: string;
 } {
-    const { subjectName, recipientName, instituteName, url, ttlMinutes } = params;
+    const { subjectName, recipientName, esParaOtro, instituteName, url, ttlMinutes } = params;
 
-    const esPropia = !recipientName || recipientName === subjectName;
-    const saludo = esPropia ? subjectName : recipientName;
+    // Sin nombre no hay saludo. Pasa con el tutor cuyo correo está en la ficha y
+    // el nombre no: "Hola:" a secas se lee peor que empezar por el motivo.
+    const saludo = esParaOtro ? recipientName?.trim() : subjectName;
 
-    const subject = esPropia
-        ? `Restablecé tu contraseña de ${instituteName}`
-        : `Restablecé la contraseña de ${subjectName}`;
+    const subject = esParaOtro
+        ? `Restablecé la contraseña de ${subjectName}`
+        : `Restablecé tu contraseña de ${instituteName}`;
 
-    const motivo = esPropia
-        ? `Pediste restablecer tu contraseña de ${instituteName}.`
-        : `Pediste restablecer la contraseña de ${subjectName} en ${instituteName}. Recibís este correo porque figurás como su tutor.`;
+    const motivo = esParaOtro
+        ? `Pediste restablecer la contraseña de ${subjectName} en ${instituteName}. Recibís este correo porque figurás como su tutor.`
+        : `Pediste restablecer tu contraseña de ${instituteName}.`;
 
     const text = [
-        `Hola ${saludo}:`,
-        "",
+        ...(saludo ? [`Hola ${saludo}:`, ""] : []),
         motivo,
         "",
         "Entrá acá y elegí una nueva:",
@@ -63,12 +67,16 @@ export function passwordResetEmail(params: PasswordResetEmailParams): {
         instituteName,
     ].join("\n");
 
+    const saludoHtml = saludo
+        ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hola ${escapeHtml(saludo)}:</p>`
+        : "";
+
     const html = `
 <div style="margin:0;padding:24px;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:0 auto;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:32px;">
     <h1 style="margin:0 0 24px;font-size:20px;line-height:1.3;font-weight:700;color:#0f172a;">${escapeHtml(instituteName)}</h1>
 
-    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hola ${escapeHtml(saludo)}:</p>
+    ${saludoHtml}
     <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155;">${escapeHtml(motivo)}</p>
 
     <p style="margin:0 0 28px;">
