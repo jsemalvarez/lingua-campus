@@ -4985,6 +4985,14 @@ decisión de **cómo manda correo esta aplicación**, y esa decisión no es de e
 helper de envío montado. Los otros tres pasan a ser una plantilla y una llamada. Hacer este primero
 sería resolver el problema chico y dejar el caro para después.
 
+**Al 2026-08-29 eso ya pasó: el canal de correo está montado** ([FEAT-05](#feat-05), commit
+`96a9193`). Existe [`src/lib/email/`](../src/lib/email/index.ts) con proveedor elegible por
+`EMAIL_PROVIDER`, el remitente resuelto por instituto y una plantilla de ejemplo, así que **este ítem
+ya no arrastra la decisión de cómo manda correo la aplicación**: es escribir la plantilla del aviso y
+llamar al proveedor. Lo que sigue abierto de acá es lo propio: a qué dirección se avisa —¿la de la
+ficha del instituto, configurable?— y que el cuerpo mande a la aplicación en vez de copiar los datos
+del aspirante, porque son datos de menores.
+
 **Decisiones que arrastra.** Proveedor y dominio remitente (un correo que sale de un dominio sin SPF
 y DKIM cae en spam, que es peor que no mandarlo); a qué dirección se avisa —¿la del instituto,
 configurable por instituto?—; y qué lleva el cuerpo, teniendo presente que **hay datos de menores**:
