@@ -1,16 +1,19 @@
 import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
-import { isDefaultForUser } from "@/lib/defaultPasswords";
+import { isDefaultForStudent, isDefaultForUser } from "@/lib/defaultPasswords";
 
 /**
  * Los tokens de recuperación de contraseña (FEAT-05).
  *
- * **Hoy sólo se emiten para cuentas de `User`** —tutores, profesores y
- * administración—, que es la primera de las dos entregas. Los alumnos van
- * después: el modelo ya distingue el sujeto por `subjectType`, así que entrar
- * con ellos es agregar una rama acá y en la resolución del identificador, sin
- * migración ni cambios de pantalla.
+ * Sirven para las dos tablas de identidad del sistema: `User` —tutores,
+ * profesores y administración— y `Student`. Por eso el sujeto se guarda como
+ * `subjectType` + `subjectId` y no como una relación.
+ *
+ * **A quién se le manda el correo es otra cosa, y vive en la acción del
+ * formulario.** Un alumno de siete años no tiene dirección propia: el enlace que
+ * cambia *su* contraseña le llega a *su tutor*. Acá abajo eso no se nota, y
+ * conviene que siga así — este archivo sabe de tokens, no de destinatarios.
  */
 
 /** Vida del enlace. Corta a propósito: viaja por correo y queda en la bandeja. */
@@ -141,10 +144,14 @@ export async function findResetSubject(token: string): Promise<ResetSubjectLooku
         return { valid: true, subjectType: "USER", subjectId: user.id, name: user.name };
     }
 
-    // Acá va la rama de `Student` cuando entre la segunda entrega. Hoy no se
-    // emite ningún token con ese sujeto, así que llegar hasta acá significa una
-    // fila escrita a mano.
-    return { valid: false, reason: "invalid" };
+    const student = await prisma.student.findUnique({
+        where: { id: row.subjectId },
+        select: { id: true, name: true, status: true },
+    });
+
+    if (!student || student.status !== "ACTIVE") return { valid: false, reason: "invalid" };
+
+    return { valid: true, subjectType: "STUDENT", subjectId: student.id, name: student.name };
 }
 
 /**
@@ -179,25 +186,43 @@ export async function consumeResetToken(
 
     if (gastado.count === 0) return { success: false, error: "Este enlace ya fue utilizado." };
 
-    if (row.subjectType !== "USER") {
-        return { success: false, error: "El enlace no es válido." };
-    }
-
     const hashed = await bcrypt.hash(newPassword, 10);
 
     // La marca se recalcula en vez de darla por apagada: casi siempre la nueva
     // contraseña saca a la cuenta del conteo, pero no si eligió justo una de las
     // que reparte el sistema. Es el mismo criterio del cambio desde el perfil.
-    await prisma.user.update({
-        where: { id: row.subjectId },
-        data: {
-            password: hashed,
-            hasDefaultPassword: isDefaultForUser(newPassword),
-        },
-    });
+    if (row.subjectType === "USER") {
+        await prisma.user.update({
+            where: { id: row.subjectId },
+            data: {
+                password: hashed,
+                hasDefaultPassword: isDefaultForUser(newPassword),
+            },
+        });
+    } else {
+        // El DNI del alumno **es** una de las contraseñas por defecto: la escribe
+        // el reset de la ficha. Sin traerlo, un alumno que elige su propio DNI
+        // saldría del conteo sin haber cambiado nada.
+        const student = await prisma.student.findUnique({
+            where: { id: row.subjectId },
+            select: { dni: true },
+        });
 
-    // Los demás enlaces pendientes de esta cuenta dejan de servir.
-    await invalidateResetTokens("USER", row.subjectId);
+        if (!student) return { success: false, error: "El enlace no es válido." };
+
+        await prisma.student.update({
+            where: { id: row.subjectId },
+            data: {
+                password: hashed,
+                hasDefaultPassword: isDefaultForStudent(newPassword, student.dni),
+            },
+        });
+    }
+
+    // Los demás enlaces pendientes de esta cuenta dejan de servir. Para un alumno
+    // eso incluye el que se le mandó al otro tutor: el enlace es uno solo, pero
+    // puede haber salido a dos direcciones.
+    await invalidateResetTokens(row.subjectType as ResetSubjectType, row.subjectId);
 
     return { success: true };
 }

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { ArrowLeft, MailCheck, Send, Info } from "lucide-react";
+import { ArrowLeft, MailCheck, Send } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { requestPasswordResetAction } from "./actions";
 
@@ -31,22 +31,23 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
     /**
      * Si lo que escribió no es un correo, es un alumno entrando con su DNI.
      *
-     * La respuesta del servidor es siempre la misma —"si está registrado, te
-     * llega un correo"—, y para un chico que puso su DNI eso significa quedarse
-     * esperando un mail que no va a llegar nunca, sin entender por qué. Se
-     * distingue por la forma de lo tipeado, que no consulta nada ni revela nada:
-     * un DNI no tiene arroba.
+     * No cambia lo que hace el formulario —el servidor resuelve las dos cosas—,
+     * sólo lo que dice después: a quien puso un DNI hay que avisarle que el
+     * enlace no le llega a él sino a su tutor, o se queda mirando una bandeja
+     * que nunca va a recibir nada. Se distingue por la forma de lo tipeado, que
+     * no consulta nada ni revela nada: un DNI no tiene arroba.
      */
-    const pareceDni = identifier.trim().length > 0 && !identifier.includes("@");
+    const esDni = identifier.trim().length > 0 && !identifier.includes("@");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!isOnline || pareceDni) return;
+        if (!isOnline) return;
 
         setLoading(true);
 
         const formData = new FormData();
         formData.append("identifier", identifier);
+        formData.append("instituteId", institute?.id ?? "");
         await requestPasswordResetAction(formData);
 
         setLoading(false);
@@ -102,8 +103,19 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
                                 <MailCheck size={28} />
                             </div>
                             <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                                Si <strong className="break-all">{identifier.trim()}</strong> está registrado, en un rato
-                                vas a recibir un correo con el enlace. Vence en una hora y se usa una sola vez.
+                                {esDni ? (
+                                    <>
+                                        Si el DNI <strong className="break-all">{identifier.trim()}</strong> está
+                                        registrado, el enlace sale al correo que figura en la ficha — puede ser el de tu
+                                        mamá, tu papá o tu tutor. Vence en una hora y se usa una sola vez.
+                                    </>
+                                ) : (
+                                    <>
+                                        Si <strong className="break-all">{identifier.trim()}</strong> está registrado, en
+                                        un rato vas a recibir un correo con el enlace. Vence en una hora y se usa una
+                                        sola vez.
+                                    </>
+                                )}
                             </p>
                         </div>
 
@@ -122,14 +134,14 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-1.5">
                             <label htmlFor="identifier" className="text-sm font-semibold text-foreground/90">
-                                Correo electrónico
+                                Email o DNI
                             </label>
                             <input
                                 id="identifier"
                                 type="text"
                                 value={identifier}
                                 onChange={(e) => setIdentifier(e.target.value)}
-                                placeholder="tu@email.com"
+                                placeholder="tu@email.com o 12345678"
                                 className="w-full px-4 py-3 rounded-xl border border-input focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all bg-background text-foreground text-sm font-medium placeholder:text-muted-foreground/50 disabled:opacity-50"
                                 required
                                 autoComplete="username"
@@ -138,20 +150,10 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
                             />
                         </div>
 
-                        {pareceDni && (
-                            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300 text-sm font-medium animate-in">
-                                <Info size={18} className="shrink-0 mt-0.5" />
-                                <p className="leading-relaxed">
-                                    Si sos alumno y entrás con tu DNI, todavía no podés recuperarla por acá:
-                                    pedile al instituto que te la restablezca.
-                                </p>
-                            </div>
-                        )}
-
                         <Button
                             type="submit"
                             className="w-full premium-gradient h-12 text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2 mt-4 transition-all hover:shadow-primary/30 disabled:opacity-70 disabled:grayscale-[0.5]"
-                            disabled={loading || !isOnline || pareceDni}
+                            disabled={loading || !isOnline}
                         >
                             {loading ? (
                                 <>

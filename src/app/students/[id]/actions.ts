@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 /** Ficha del alumno: los tres roles que ven "Estudiantes" en el menú. */
 const STUDENT_EDITORS = ["ADMIN", "SECRETARY", "TEACHER"] as const;
@@ -146,6 +147,12 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
                 hasDefaultPassword: isDefaultForStudent(newPassword, student.dni),
             }
         });
+
+        // El instituto le restableció la contraseña, así que el enlace de
+        // recuperación que estuviera en la bandeja del tutor deja de servir
+        // (FEAT-05). Sin esto, un correo viejo sin usar pisa lo que se acaba de
+        // escribir acá.
+        await invalidateResetTokens("STUDENT", studentId);
 
         return { success: true, newPassword };
     } catch {

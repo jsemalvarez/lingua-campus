@@ -154,6 +154,10 @@ export async function changePasswordAction(formData: FormData) {
                     hasDefaultPassword: isDefaultForStudent(newPassword, studentDni),
                 }
             });
+
+            // Ver la nota de la rama de al lado: el enlace pendiente —que en el
+            // caso del alumno está en la bandeja del tutor— deja de servir.
+            await invalidateResetTokens("STUDENT", userId);
         } else {
             await prisma.user.update({
                 where: { id: userId },
