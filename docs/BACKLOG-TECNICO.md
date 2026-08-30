@@ -3753,20 +3753,53 @@ DNS. Hasta entonces `EMAIL_PROVIDER=console` deja el flujo entero probable sin m
 **Y el canal queda montado para los otros tres casos**: [FEAT-12](#feat-12), [SEC-06](#sec-06) y el
 formulario del landing pasan a ser una plantilla y una llamada.
 
-### Falta · parte 2: los alumnos
+### Hecha · parte 2: los alumnos (2026-08-30)
 
-- La rama `STUDENT` en `consumeResetToken` y los dos casos nuevos en la resolución del identificador
-  —correo de alumno y DNI—. Ahí sí conviene mirar [SEC-05](#sec-05), aunque la regla del corte por más
-  de un candidato ya evita restablecer la cuenta equivocada sin él.
-- **El destinatario deja de ser el sujeto**: el correo va al tutor, por `GuardianStudentLink` o por
-  los `guardian1Email`/`guardian2Email` de la ficha. La plantilla y la pantalla ya lo contemplan — la
-  segunda ya nombra de quién es la contraseña, que es lo que evita que un tutor con dos hijos le
-  cambie la clave al hermano equivocado.
-- **El reset de alumno del instituto todavía no invalida tokens.** Hoy no existe ninguno con ese
-  sujeto y la llamada habría sido código muerto, pero esa línea va junto con la rama, o un enlace
-  viejo pisa lo que el instituto acaba de escribir.
-- Sirve también para el alta, no sólo para el olvido: hoy al alumno se le reparte `estudiante123` o su
-  DNI, y el mismo mecanismo mandado al tutor es la salida de [SEC-06](#sec-06) para los chicos.
+Commits `17d06bc` y `0c6a94c`. El alumno pide con su DNI o con su correo; si tiene dirección propia el
+enlace le llega a él, y si no, **le llega a su tutor**.
+
+**Los tutores se juntan de las dos fuentes que tiene el sistema** —las cuentas vinculadas por
+`GuardianStudentLink` y los correos sueltos de la ficha—, y se descartan los repetidos. Ninguna de las
+dos está garantizada: hay fichas con el correo del padre cargado a mano y sin cuenta creada, y cuentas
+de tutor creadas después sin que nadie volviera a tocar la ficha. Si hay dos tutores salen dos correos
+con **un solo enlace**, que gasta el primero que lo use.
+
+**El instituto del host ahora achica la búsqueda, pero sólo la de alumnos**, que son los que tienen
+correo y DNI únicos por instituto. La de `User` sigue abierta, que es lo que mantiene a
+[SEC-05](#sec-05) afuera de esto. Y el corte por más de un candidato sigue siendo la red: con dos
+institutos, el mismo chico anotado en los dos no recibe nada en vez de recibir el enlace equivocado.
+
+**Un error que apareció armando el caso de prueba**, y que no se habría visto sin datos reales: la
+plantilla decidía si el correo era para el dueño de la contraseña **comparando nombres**. El tutor
+cargado en la ficha puede tener el correo sin el nombre al lado —es lo más común—, y sin nombre la
+comparación daba "es la misma persona": al tutor le llegaba un *"restablecé tu contraseña"* por una
+clave que no era suya, saludándolo por el nombre de su hijo. Ahora el dato viaja explícito desde donde
+se sabe hasta la plantilla.
+
+**El número que hay que mirar antes de festejar esto.** En la base de desarrollo, **276 de 284 alumnos
+activos no tienen correo propio ni ningún tutor cargado**: para ellos la recuperación existe y no
+alcanza a nadie. Todos tienen DNI, así que el problema no es el identificador — es que la ficha está
+vacía del lado del contacto. **Eso no lo puede resolver el sistema**: es carga de datos del instituto,
+y conviene medirlo en producción y decirle el número al cliente antes de anunciarle la función. Sin
+eso, esta entrega le sirve a ocho alumnos.
+
+**Verificado corriendo** contra la base de desarrollo: un alumno sin correo propio con dos tutores
+—uno con nombre y otro sin— recibe dos correos con el mismo enlace, uno saludando por nombre y el otro
+arrancando por el motivo, los dos diciendo "la contraseña de *fulanito*"; el repetido entre la cuenta
+vinculada y la ficha se descarta; el enlace nombra al alumno en la pantalla; después de usarlo la
+copia del otro tutor dice "ya se usó"; la contraseña nueva sirve, el DNI —que era su clave por
+defecto— deja de servir, y `hasDefaultPassword` pasa a `false`. Un alumno con correo propio recibe el
+suyo, con *"restablecé **tu** contraseña"*.
+
+**Dos cosas que no se ejercitaron de punta a punta** y conviene mirar al probar en stage: que el reset
+de alumno desde la ficha invalide un enlace pendiente —la llamada está puesta y el helper está
+probado, pero hace falta una sesión de administración para dispararlo— y el corte por más de un
+candidato, que necesita dos institutos.
+
+**Sigue afuera del código**: la cuenta de SendGrid y el DNS del cliente. Y el uso que esto habilita
+más allá del olvido: hoy al alumno se le reparte `estudiante123` o su DNI, y el mismo mecanismo
+mandado al tutor es la salida de [SEC-06](#sec-06) para los chicos — que vuelve a depender de que la
+ficha tenga el correo del tutor.
 
 ---
 
