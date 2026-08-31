@@ -54,6 +54,31 @@ export function clasificarAlumno(alumno: AlumnoClasificable, hoy: Date): EstadoA
     return "sin-nada";
 }
 
+export interface AlumnoContactable {
+    /** Correo propio del alumno, si tiene. */
+    email: string | null;
+    /** Los de sus tutores: las cuentas vinculadas activas y los de la ficha. */
+    correosDeTutor: (string | null)[];
+}
+
+/**
+ * Si hay **alguna** dirección a la que el sistema pueda escribirle por este
+ * alumno. Es lo que decide si la recuperación de contraseña (FEAT-05) lo
+ * alcanza o no.
+ *
+ * **No es lo mismo que "tiene tutor", y por eso no sale de `clasificarAlumno`.**
+ * Aquel estado cuenta como "con datos" a un tutor que tiene **nombre y nada
+ * más**, que para firmar un informe alcanza y para escribirle no. En producción
+ * esa diferencia eran 121 alumnos del padrón completo.
+ *
+ * Y al revés: el alumno grande con su propio correo cargado **sí** está
+ * alcanzado aunque no tenga ningún tutor, así que la pregunta no se puede hacer
+ * mirando sólo el lado del tutor.
+ */
+export function tieneCorreoDeContacto(alumno: AlumnoContactable): boolean {
+    return [alumno.email, ...alumno.correosDeTutor].some((correo) => Boolean(correo?.trim()));
+}
+
 /** Los tres estados de la métrica 1. */
 export type EstadoParte = "completa" | "incompleta" | "sin-parte";
 

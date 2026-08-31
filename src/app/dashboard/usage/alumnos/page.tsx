@@ -4,7 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
-import { clasificarAlumno, type EstadoAlumno } from "../metricas";
+import { clasificarAlumno, tieneCorreoDeContacto, type EstadoAlumno } from "../metricas";
 import { CabeceraListado, Filtros, ListaVacia, Th } from "../Listado";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +21,26 @@ export const dynamic = "force-dynamic";
  * mosaico dice cuántos son, la lista dice a quién y con qué número.
  */
 
-const ESTADOS: { clave: EstadoAlumno | "todos"; etiqueta: string }[] = [
+/**
+ * `sin-correo` no es un estado más: es otro eje.
+ *
+ * Los cinco estados dicen **en qué situación de tutor** está el alumno y están
+ * atados a las firmas (FEAT-09), así que no se tocan. Éste dice si el sistema
+ * tiene **alguna dirección donde escribirle**, que es la pregunta de FEAT-05 y
+ * corta los cinco estados por la mitad: un alumno "con datos, sin cuenta" puede
+ * tener el correo del tutor o sólo su nombre, y son dos mundos distintos.
+ *
+ * Va como una opción más de la misma botonera —y no como un segundo control—
+ * porque lo que el administrador hace acá es elegir a quién mirar, y agregarle
+ * un interruptor aparte para una sola pregunta cuesta más de lo que aclara.
+ */
+type Filtro = EstadoAlumno | "todos" | "sin-correo";
+
+const ESTADOS: { clave: Filtro; etiqueta: string }[] = [
     { clave: "todos", etiqueta: "Todos" },
     { clave: "con-cuenta", etiqueta: "Con cuenta de tutor" },
     { clave: "con-datos", etiqueta: "Con datos, sin cuenta" },
+    { clave: "sin-correo", etiqueta: "Sin correo de contacto" },
     { clave: "sin-nada", etiqueta: "Sin ningún dato" },
     { clave: "firma-solo", etiqueta: "Mayores de 20" },
     { clave: "sin-fecha", etiqueta: "Sin fecha de nacimiento" },
@@ -55,6 +71,7 @@ export default async function AlumnosUsagePage({
             id: true,
             name: true,
             dni: true,
+            email: true,
             birthDate: true,
             guardian1Name: true,
             guardian1Relation: true,
@@ -67,7 +84,7 @@ export default async function AlumnosUsagePage({
             guardianLinks: {
                 select: {
                     relation: true,
-                    guardian: { select: { id: true, name: true, phone: true, email: true } },
+                    guardian: { select: { id: true, name: true, phone: true, email: true, status: true } },
                 },
             },
         },
@@ -77,16 +94,25 @@ export default async function AlumnosUsagePage({
     const clasificados = alumnos.map((a) => ({
         ...a,
         estado: clasificarAlumno({ ...a, vinculos: a.guardianLinks.length }, hoy),
+        // La cuenta dada de baja no es una dirección donde escribir, así que se
+        // descarta acá igual que la descarta el envío del enlace.
+        sinCorreo: !tieneCorreoDeContacto({
+            email: a.email,
+            correosDeTutor: [
+                ...a.guardianLinks.filter((l) => l.guardian.status === "ACTIVE").map((l) => l.guardian.email),
+                a.guardian1Email,
+                a.guardian2Email,
+            ],
+        }),
     }));
 
-    const cuantos = (clave: string) =>
-        clave === "todos"
-            ? clasificados.length
-            : clasificados.filter((a) => a.estado === clave).length;
+    const coincide = (alumno: (typeof clasificados)[number], clave: Filtro) =>
+        clave === "todos" ? true : clave === "sin-correo" ? alumno.sinCorreo : alumno.estado === clave;
 
-    const filtro = ESTADOS.some((e) => e.clave === estado) ? estado! : "todos";
-    const visibles =
-        filtro === "todos" ? clasificados : clasificados.filter((a) => a.estado === filtro);
+    const cuantos = (clave: Filtro) => clasificados.filter((a) => coincide(a, clave)).length;
+
+    const filtro: Filtro = ESTADOS.some((e) => e.clave === estado) ? (estado as Filtro) : "todos";
+    const visibles = clasificados.filter((a) => coincide(a, filtro));
 
     // El período no gobierna nada de esta métrica —es de la zona "Estado de
     // hoy"—, pero se arrastra para que volver al panel no pierda el mes que el
