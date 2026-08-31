@@ -15,6 +15,9 @@ interface ForgotPasswordFormProps {
         id: string;
         name: string;
         logoUrl: string | null;
+        /** Para decirle a quién escribirle si el correo no llega. */
+        email: string | null;
+        phone: string | null;
     } | null;
 }
 
@@ -27,6 +30,27 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
 
     const brandName = institute ? institute.name : "Lingua Campus";
     const primaryColor = "#4F46E5";
+
+    /**
+     * A quién recurrir si el correo no llega.
+     *
+     * La pantalla contesta siempre lo mismo, exista o no la cuenta, así que
+     * cuando algo falla —no hay dirección cargada, se pasó del límite, el envío
+     * se cayó— la persona queda esperando un mail que no viene y sin nadie a
+     * quien preguntarle. Esto no revela nada: se le muestra a todo el mundo, y
+     * son los datos que el instituto ya publica en su ficha. Convierte el
+     * silencio en un teléfono.
+     */
+    const contacto: { valor: string; href: string }[] = [];
+    if (institute?.email) {
+        contacto.push({ valor: institute.email, href: `mailto:${institute.email}` });
+    }
+    if (institute?.phone) {
+        contacto.push({
+            valor: institute.phone,
+            href: `https://wa.me/${institute.phone.replace(/[^0-9]/g, "")}`,
+        });
+    }
 
     /**
      * Si lo que escribió no es un correo, es un alumno entrando con su DNI.
@@ -119,9 +143,29 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
                             </p>
                         </div>
 
-                        <p className="text-xs text-center text-muted-foreground font-medium leading-relaxed">
-                            ¿No llegó? Fijate en la carpeta de correo no deseado, o volvé a pedirlo en unos minutos.
-                        </p>
+                        <div className="text-xs text-center text-muted-foreground font-medium leading-relaxed space-y-2">
+                            <p>¿No llegó? Fijate en la carpeta de correo no deseado, o volvé a pedirlo en unos minutos.</p>
+                            {contacto.length > 0 ? (
+                                <p>
+                                    Si igual no aparece, escribile a {brandName}:{" "}
+                                    {contacto.map((c, i) => (
+                                        <span key={c.valor}>
+                                            {i > 0 && " o "}
+                                            <a
+                                                href={c.href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="font-semibold text-primary hover:underline"
+                                            >
+                                                {c.valor}
+                                            </a>
+                                        </span>
+                                    ))}
+                                </p>
+                            ) : (
+                                <p>Si igual no aparece, pedile al instituto que te restablezca la contraseña.</p>
+                            )}
+                        </div>
 
                         <Link href="/login" className="block">
                             <Button variant="outline" className="w-full h-12 font-bold flex items-center justify-center gap-2">
