@@ -6,6 +6,8 @@ import { resolveSender } from "@/lib/email/sender";
 import { passwordResetEmail } from "@/lib/email/templates/passwordReset";
 import { instituteBaseUrl } from "@/lib/tenant";
 import { issueResetToken, RESET_TOKEN_TTL_MINUTES, type ResetSubject } from "@/lib/passwordReset";
+import { createNotificationForRoles } from "@/app/actions/notifications";
+import { INSTITUTE_ADMINS } from "@/lib/authz";
 
 type InstitutoDelCorreo = {
     name: string;
@@ -221,12 +223,12 @@ async function alumnoEncontrado(
 ): Promise<CuentaEncontrada | null> {
     if (!student.institute) return null;
 
+    // Puede volver vacío: el alumno sin correo propio y sin ningún tutor cargado
+    // no tiene por dónde recibir nada. **Eso no es "no se encontró la cuenta"**,
+    // y por eso se devuelve igual — la cuenta existe, y quien tiene que
+    // enterarse de que no hay dónde escribirle es el instituto, que es el único
+    // que puede arreglarlo cargando la ficha.
     const destinatarios = await destinatariosDeAlumno(student);
-
-    // El alumno sin correo propio y sin ningún tutor cargado no tiene por dónde
-    // recibir nada. Es el agujero que el instituto tiene que cerrar cargando el
-    // correo del tutor en la ficha, no algo que el sistema pueda resolver solo.
-    if (destinatarios.length === 0) return null;
 
     return {
         subject: { type: "STUDENT", id: student.id, instituteId: student.instituteId },
@@ -234,6 +236,66 @@ async function alumnoEncontrado(
         destinatarios,
         institute: student.institute,
     };
+}
+
+const TIPO_DE_AVISO = "PASSWORD_RESET_FAILED";
+
+type MotivoDelAviso = "sin-direccion" | "no-salio";
+
+/**
+ * Le avisa al instituto que alguien quiso volver a entrar y no pudo.
+ *
+ * **Es el único lugar del flujo donde el fracaso sale a la superficie.** La
+ * pantalla contesta siempre lo mismo para no revelar quién tiene cuenta, así que
+ * sin esto el intento no existe para nadie: la persona espera un correo que no
+ * viene y del otro lado el error muere en un log que no mira ninguno.
+ *
+ * **Va a la campana y no a un panel** porque no es una métrica. Un número que se
+ * mira cada tanto contesta "cómo venimos"; esto es una persona trabada ahora, y
+ * lo que necesita es llegarle a alguien que pueda destrabarla. Por eso también
+ * lleva el enlace a la ficha, que es donde se arregla, y no a un listado.
+ *
+ * Cuando el cliente confirme que lo quiere, el aviso por correo se engancha acá
+ * mismo: es el punto donde ya está decidido que hubo un fracaso y quién lo
+ * sufrió.
+ */
+async function avisarAlInstituto(cuenta: CuentaEncontrada, motivo: MotivoDelAviso): Promise<void> {
+    const instituteId = cuenta.subject.instituteId;
+    if (!instituteId) return;
+
+    const body =
+        motivo === "sin-direccion"
+            ? `${cuenta.subjectName} pidió restablecer su contraseña y no tiene ningún correo cargado, ni propio ni de un tutor. Cargale uno en la ficha o restablecésela a mano.`
+            : `${cuenta.subjectName} pidió restablecer su contraseña y el correo no llegó a salir. Suele ser un problema del proveedor de envío y no de la ficha.`;
+
+    // El enlace sólo cuando hay algo que arreglar ahí. Si el envío se cayó, el
+    // problema no está en la ficha y mandar a la ficha haría perder el tiempo.
+    // "Sin dirección" es siempre un alumno: un `User` tiene correo obligatorio.
+    const link =
+        motivo === "sin-direccion" && cuenta.subject.type === "STUDENT"
+            ? `/students/${cuenta.subject.id}`
+            : undefined;
+
+    // **Uno por persona y por día.** El caso "sin dirección" se resuelve antes de
+    // pedir el token, así que no pasa por el límite de pedidos: sin este tope,
+    // insistir en el formulario le llenaría la campana al instituto. El cuerpo
+    // alcanza como llave porque lleva el nombre y el motivo adentro.
+    const desde = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const yaAvisado = await prisma.notification.findFirst({
+        where: { instituteId, type: TIPO_DE_AVISO, body, createdAt: { gte: desde } },
+        select: { id: true },
+    });
+
+    if (yaAvisado) return;
+
+    await createNotificationForRoles({
+        instituteId,
+        roles: [...INSTITUTE_ADMINS],
+        type: TIPO_DE_AVISO,
+        title: "No se pudo enviar una recuperación de contraseña",
+        body,
+        link,
+    });
 }
 
 /**
@@ -259,6 +321,11 @@ export async function requestPasswordResetAction(formData: FormData) {
     try {
         const cuenta = await resolveAccount(identifier, instituteId);
         if (!cuenta) return respuesta;
+
+        if (cuenta.destinatarios.length === 0) {
+            await avisarAlInstituto(cuenta, "sin-direccion");
+            return respuesta;
+        }
 
         const token = await issueResetToken(cuenta.subject);
         if (!token) return respuesta;
@@ -291,6 +358,13 @@ export async function requestPasswordResetAction(formData: FormData) {
             if (envio.status === "rejected") {
                 console.error(`[forgot-password] falló un envío de "${identifier}":`, envio.reason);
             }
+        }
+
+        // Alcanza con que **uno** haya salido: el enlace es el mismo, así que si
+        // le llegó a un tutor el pedido se cumplió. Sólo cuando no salió ninguno
+        // hay algo que el instituto tenga que saber.
+        if (!envios.some((envio) => envio.status === "fulfilled")) {
+            await avisarAlInstituto(cuenta, "no-salio");
         }
     } catch (error) {
         console.error(`[forgot-password] falló el pedido de "${identifier}":`, error);
