@@ -263,10 +263,21 @@ async function avisarAlInstituto(cuenta: CuentaEncontrada, motivo: MotivoDelAvis
     const instituteId = cuenta.subject.instituteId;
     if (!instituteId) return;
 
+    // **El nombre va en el título y no en el cuerpo**, que es lo contrario de lo
+    // que parece natural. La campana recorta el cuerpo a dos líneas
+    // (`line-clamp-2` en `NotificationBell`) y no recorta el título, así que un
+    // nombre largo dentro del cuerpo se come el espacio y deja afuera el motivo
+    // — justo lo que hay que leer. Con el reparto al revés no se pierde nada.
+    //
+    // Y el cuerpo no dice "cargale un correo en la ficha": la flecha del aviso ya
+    // lleva ahí. Un texto que explica lo que el botón de al lado hace es relleno,
+    // y acá el espacio se paga en líneas.
+    const title = `No se pudo enviar la recuperación de ${cuenta.subjectName}`;
+
     const body =
         motivo === "sin-direccion"
-            ? `${cuenta.subjectName} pidió restablecer su contraseña y no tiene ningún correo cargado, ni propio ni de un tutor. Cargale uno en la ficha o restablecésela a mano.`
-            : `${cuenta.subjectName} pidió restablecer su contraseña y el correo no llegó a salir. Suele ser un problema del proveedor de envío y no de la ficha.`;
+            ? "No tiene ningún correo cargado, ni propio ni de un tutor."
+            : "El envío falló. Suele ser el proveedor de correo, no la ficha.";
 
     // El enlace sólo cuando hay algo que arreglar ahí. Si el envío se cayó, el
     // problema no está en la ficha y mandar a la ficha haría perder el tiempo.
@@ -278,11 +289,14 @@ async function avisarAlInstituto(cuenta: CuentaEncontrada, motivo: MotivoDelAvis
 
     // **Uno por persona y por día.** El caso "sin dirección" se resuelve antes de
     // pedir el token, así que no pasa por el límite de pedidos: sin este tope,
-    // insistir en el formulario le llenaría la campana al instituto. El cuerpo
-    // alcanza como llave porque lleva el nombre y el motivo adentro.
+    // insistir en el formulario le llenaría la campana al instituto.
+    //
+    // La llave son **título y cuerpo juntos**: el título trae el nombre y el
+    // cuerpo el motivo, así que ninguno de los dos alcanza solo. Con el cuerpo
+    // nada más, dos alumnos distintos sin correo se pisarían entre ellos.
     const desde = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const yaAvisado = await prisma.notification.findFirst({
-        where: { instituteId, type: TIPO_DE_AVISO, body, createdAt: { gte: desde } },
+        where: { instituteId, type: TIPO_DE_AVISO, title, body, createdAt: { gte: desde } },
         select: { id: true },
     });
 
@@ -292,7 +306,7 @@ async function avisarAlInstituto(cuenta: CuentaEncontrada, motivo: MotivoDelAvis
         instituteId,
         roles: [...INSTITUTE_ADMINS],
         type: TIPO_DE_AVISO,
-        title: "No se pudo enviar una recuperación de contraseña",
+        title,
         body,
         link,
     });
