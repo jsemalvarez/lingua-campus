@@ -67,13 +67,14 @@ BUG-04 se puede cerrar sin depender de nadie.
 
 ### 🗣️ Pedidos del cliente · 2026-09-02
 
-Cuatro pedidos en un mismo mensaje. **Dos no son trabajo nuevo**, y conviene contestarlos antes de
-ponerlos en la cola:
+Cinco pedidos del mismo día. **Dos no son trabajo nuevo**, y conviene contestarlos antes de ponerlos
+en la cola:
 
 | | Qué es en realidad |
 |---|---|
 | [FIN-29](#fin-29) | La cuota que no se emite al inscribir. **Es el único urgente**: es plata que no se factura y que no se ve en ninguna pantalla. |
 | [FIN-09](#fin-09) | Los deudores acotados a alumnos activos en cursos activos. Estaba decidido a medias el 16/08 y nunca se hizo; el pedido le agrega el curso. |
+| [FEAT-17](#feat-17) | Borrador de la clase y publicación. El estado ya existe dos veces en el producto —la práctica y los informes—; lo caro es lo que arrastra la liquidación de sueldos. |
 | [FEAT-06](#feat-06) | Escribirle al docente del curso. Ya estaba pedido para tutores y docentes; ahora suma a los alumnos. Es el mismo corte de código. |
 | [BUG-13](#bug-13) | Cambiar de curso desde la ficha del alumno. **Ya existe y la secretaria ya puede**: falta saber con qué se topó ella. |
 
@@ -274,6 +275,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
 | [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
 | [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
+| [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -5444,6 +5446,94 @@ con `group-focus`, o sea con el mouse y con el dedo, sin estado ni bundle de cli
 los dos gráficos diarios en [`BarrasDiarias`](../src/app/dashboard/usage/BarrasDiarias.tsx), y cada
 uno pone su unidad: **"personas" en uno y "sesiones" en el otro**, que es justamente la diferencia
 que los dos no mostraban y que hacía que se confundieran.
+
+---
+
+<a id="feat-17"></a>
+## FEAT-17 · Borrador de la clase, y publicarla cuando el docente quiera · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Que el docente pueda armar la clase como **borrador** y **publicarla cuando
+lo considere necesario**.
+
+**Hoy no hay estado intermedio: lo que se guarda, se ve.** El tema de la clase llega a cinco lugares
+apenas se guarda —el panel del alumno ([`dashboard/page.tsx:244`](../src/app/dashboard/page.tsx)), sus
+académicos ([`academics/page.tsx:83`](../src/app/academics/page.tsx)), los del tutor
+([`guardian/academics/page.tsx:60`](../src/app/guardian/academics/page.tsx)), el panel del instituto
+([`dashboard/page.tsx:620`](../src/app/dashboard/page.tsx)) y el calendario, incluido el de los pares
+de [FEAT-07](#feat-07)—, y las cinco consultas filtran lo mismo: `status: "ACTIVE"` y de hoy en
+adelante. No hay dónde poner un borrador.
+
+**Antes de diseñar nada, un dato que achica el pedido: el alumno no ve los contenidos.** De la clase
+se le muestran el **tema**, la fecha y el horario; `content` no se renderiza en ninguna pantalla de
+alumno ni de tutor — es lo que lee la IA para escribir la práctica ([PED-01](#ped-01)) y lo que ve el
+docente. Así que hoy "publicar una clase" es **publicar su título**, y —si se decide así— su práctica.
+Si lo que preocupa al docente es que le lean los contenidos mientras los escribe, eso se contesta, no
+se construye.
+
+**El estado ya existe dos veces en el producto, con dos formas distintas:**
+
+- **`LessonPractice.isPublished`** — *"El profesor activa cuando está listo"*, textual en el schema.
+  Es exactamente lo que se está pidiendo, un nivel más abajo: la práctica de la clase ya se publica
+  aparte, con su interruptor en el modal de la clase.
+- **`StudentReport.publishedAt`** — `null` es borrador, la fecha es publicado ([FEAT-09](#feat-09)).
+  Además de decir *si*, dice *cuándo*, y ese dato terminó sosteniendo todo lo demás: el congelamiento
+  de los firmantes, el aviso al tutor y la marca de edición posterior.
+
+**Recomendación: la forma de `publishedAt`**, por lo mismo que sirvió en los informes, y en **campo
+propio, no en `status`**. `Lesson.status` es `ACTIVE | DELETED` y es el borrado lógico de
+[ARQ-05](#arq-05): un borrador borrado necesita las dos cosas dichas por separado.
+
+**Y hay un tercer estado ya inventado a mano que conviene absorber.** `generateLessonsAction`
+([`lessons/actions.ts:273`](../src/app/courses/[id]/lessons/actions.ts)) crea todas las clases del
+período desde los horarios del curso con el tema en `SCHEDULED_LESSON_TOPIC` —la cadena
+`"Clase Programada"`—, y el calendario decide si la clase está cargada **comparando el título contra
+esa cadena** ([`schedule/page.tsx:355`](../src/app/schedule/page.tsx),
+[`WeeklyGridView.tsx:111`](../src/app/schedule/components/WeeklyGridView.tsx)). Mientras tanto el
+alumno ve *"Clase Programada"* en su lista de próximas clases, que es un borrador publicado sin que
+nadie lo haya decidido. Con el campo nuevo, **la clase generada nace en borrador** y esa comparación
+de strings se reemplaza por el estado real. La migración se resuelve sola: todo lo existente se
+publica en el backfill, salvo las programadas que nadie cargó.
+
+**Lo que hay que decidir con el docente y con el instituto:**
+
+- **¿Qué pasa con la asistencia y las notas de una clase en borrador?** Si se tomó asistencia, la
+  clase existió. La regla más fácil de explicar es que **tomar asistencia publica la clase**; la más
+  previsible es que no haga nada y publique el docente. Hay que elegir una: hoy las dos pantallas
+  escriben sin preguntar nada sobre el estado.
+- **¿La práctica conserva su propio interruptor?** Dos publicaciones en el mismo modal se explican
+  mal. Lo coherente es que la práctica no pueda estar publicada sobre una clase en borrador —el alumno
+  vería la práctica de una clase que no ve— y que el interruptor quede sólo para publicar la clase sin
+  la práctica.
+- **¿Se avisa al publicar?** [FEAT-09](#feat-09) le avisa al alumno y a los tutores cuando se publica
+  un informe, que son dos o tres por año. Una clase por semana y por curso es otro volumen:
+  **recomendación, no avisar**.
+- **¿El par del mismo nivel ve los borradores?** [FEAT-07](#feat-07) existe para saber en qué tema van
+  los pares. Lo razonable es que vea lo publicado, igual que el alumno.
+
+**Y una consecuencia de plata que hay que resolver en el mismo pase.** La liquidación de sueldos
+cuenta **una clase por cada fila `ACTIVE` del período** ([`payroll.ts:18`](../src/lib/payroll.ts)),
+con el criterio escrito ahí mismo: *"Una clase borrada no se dictó: no se paga"*. O sea que la
+existencia de la fila es lo que se paga: una clase generada que no se dictó **se liquida igual** si
+nadie la borró. Los borradores multiplican esas filas, así que la pregunta deja de poder postergarse:
+**¿se paga la clase programada o la clase dictada?** Si es la segunda, el borrador no cuenta y el
+criterio pasa a ser la publicación —o, mejor, la asistencia tomada—. No es algo que resuelva quien
+liquida, fila por fila: lo tiene que contemplar el sistema.
+
+**Alcance:**
+
+1. `publishedAt` en `Lesson`, su migración y el backfill.
+2. El filtro en las cinco consultas de alumno, tutor y calendario. **Que viva en un solo lugar**, como
+   el `yearlyEnrollmentTargetsWhere` de [FIN-14](#fin-14): cinco copias del mismo `where` son cinco
+   lugares donde olvidarse el día que aparezca una pantalla más.
+3. La acción de publicar —y la de volver a borrador, si se decide que exista— con
+   `requireCourseWriteAccess`, que es el corte que ya usa el resto del libro de temas.
+4. El distintivo en el libro de temas del curso, que es donde el docente ve la lista, y la decisión
+   sobre la liquidación de arriba.
+
+**Relacionado.** [FEAT-09](#feat-09) (de donde sale la forma de `publishedAt`), [PED-01](#ped-01) (el
+`isPublished` de la práctica), [FEAT-07](#feat-07) (el calendario de los pares),
+[ARQ-05](#arq-05) (`status` es el borrado lógico y no se puede mezclar), [FEAT-02](#feat-02) (el libro
+de temas paginado, donde va el distintivo).
 
 ---
 
