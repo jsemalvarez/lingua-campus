@@ -67,7 +67,7 @@ BUG-04 se puede cerrar sin depender de nadie.
 
 ### 🗣️ Pedidos del cliente · 2026-09-02
 
-Cinco pedidos del mismo día. **Dos no son trabajo nuevo**, y conviene contestarlos antes de ponerlos
+Seis pedidos del mismo día. **Dos no son trabajo nuevo**, y conviene contestarlos antes de ponerlos
 en la cola:
 
 | | Qué es en realidad |
@@ -75,6 +75,7 @@ en la cola:
 | [FIN-29](#fin-29) | La cuota que no se emite al inscribir. **Es el único urgente**: es plata que no se factura y que no se ve en ninguna pantalla. |
 | [FIN-09](#fin-09) | Los deudores acotados a alumnos activos en cursos activos. Estaba decidido a medias el 16/08 y nunca se hizo; el pedido le agrega el curso. |
 | [FEAT-17](#feat-17) | Borrador de la clase y publicación. El estado ya existe dos veces en el producto —la práctica y los informes—; lo caro es lo que arrastra la liquidación de sueldos. |
+| [FEAT-18](#feat-18) | Que el listado del curso no muestre a los que dejaron. El parte y las notas ya los filtran: empareja la lista con lo que el sistema ya decidió. **Se cruza con FIN-09.** |
 | [FEAT-06](#feat-06) | Escribirle al docente del curso. Ya estaba pedido para tutores y docentes; ahora suma a los alumnos. Es el mismo corte de código. |
 | [BUG-13](#bug-13) | Cambiar de curso desde la ficha del alumno. **Ya existe y la secretaria ya puede**: falta saber con qué se topó ella. |
 
@@ -277,6 +278,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
 | [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
 | [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
+| [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -1463,6 +1465,11 @@ etiqueta de cada cuota lleva el curso entre paréntesis
 muestra deudores, cuántas son de alumnos en la papelera, cuántas de inscripciones cerradas, cuántas
 de cursos no activos y cuántas sin inscripción. Si el grueso está en el eje 1, el trabajo es el que
 ya estaba escrito el 16/08 y el resto es alcance.
+
+**Y el eje 2 no se decide solo.** El mismo día se pidió que el listado del curso deje de mostrar a
+los alumnos marcados como incompletos ([FEAT-18](#feat-18)). Las dos cosas juntas hacen desaparecer
+al que dejó el curso debiendo, que es el caso que la decisión del 16/08 quería conservar: hay que
+escribirlas mirando la otra.
 
 ---
 
@@ -5536,6 +5543,65 @@ liquida, fila por fila: lo tiene que contemplar el sistema.
 `isPublished` de la práctica), [FEAT-07](#feat-07) (el calendario de los pares),
 [ARQ-05](#arq-05) (`status` es el borrado lógico y no se puede mezclar), [FEAT-02](#feat-02) (el libro
 de temas paginado, donde va el distintivo).
+
+---
+
+<a id="feat-18"></a>
+## FEAT-18 · Que el listado del curso no muestre a los que dejaron · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Que en la pantalla del curso no aparezcan los alumnos marcados como
+**incompletos**, que es como queda la inscripción del que dejó el curso.
+
+**El criterio ya existe y ya está aplicado en las otras pantallas.** El parte de asistencia
+([`attendance/page.tsx:41`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx)) y la
+planilla de notas ([`grades/page.tsx:41`](../src/app/courses/[id]/lessons/[lessonId]/grades/page.tsx))
+traen las inscripciones con `status: { in: ["ACTIVE", "FINISHED"] }`, y el generador mensual sólo le
+emite cuotas a las `ACTIVE` ([`billingActions.ts:39`](../src/app/payments/billingActions.ts)). El que
+dejó el curso ya desapareció de todo eso. **La única pantalla que lo sigue mostrando es el listado del
+curso**, que trae todas las inscripciones sin filtrar
+([`courses/[id]/page.tsx:83`](../src/app/courses/[id]/page.tsx)) y las distingue con un distintivo
+ámbar *"Incompleto"*. El pedido no inventa una regla: empareja la lista con lo que el sistema ya
+decidió.
+
+**Y de paso arregla un número que no cierra.** El encabezado dice *"Alumnos Inscritos (N)"* contando
+`course.enrollments.length` —todos, incompletos incluidos—, mientras que el `totalEnrolled` que usa el
+resto de la pantalla cuenta sólo los `ACTIVE`
+([`:212`](../src/app/courses/[id]/page.tsx)). Son dos números del mismo grupo en la misma pantalla. El
+subtítulo, además, ya promete lo que el pedido pide: *"Listado oficial de estudiantes activos en este
+grupo"*.
+
+**Qué no hay que filtrar de más.** `FINISHED` no es `INCOMPLETE`: al finalizar un curso,
+`finishCourseAction` pasa todas las inscripciones activas a `FINISHED`, así que filtrar los dos
+dejaría todo curso terminado con la lista vacía. El corte es sólo `INCOMPLETE`, igual que en el parte.
+
+**Recomendación: ocultar por defecto, con manera de verlos** —un *"N dejaron el curso"* que
+despliegue— y no excluirlos del todo. Tres razones concretas:
+
+1. **Es la salida que el propio sistema recomienda.** Al intentar eliminar una inscripción con cuotas
+   pagas, el error dice *"Si el alumno dejó el curso, marcá la inscripción como incompleta"*
+   ([`courses/actions.ts:259`](../src/app/courses/actions.ts)). No es un caso raro: es el camino
+   oficial.
+2. **Hoy es un estado sin vuelta desde esta pantalla.** El botón de dar de baja sólo se dibuja para
+   las inscripciones `ACTIVE` ([`:432`](../src/app/courses/[id]/page.tsx)), así que una vez marcada
+   incompleta no queda nada que tocar; si además desaparece, quien se equivocó de alumno no ve qué
+   hizo. La vuelta existe —volver a inscribirlo reactiva **la misma** inscripción con sus cuotas
+   ([FIN-23](#fin-23))—, pero hay que saberla.
+3. **Es la misma doctrina que se decidió en [FIN-09](#fin-09)**: filtro con vista por defecto, no
+   exclusión.
+
+**Ojo con el cruce con el otro pedido del mismo día.** [FIN-09](#fin-09) pide que los deudores sean
+los de alumnos activos en cursos activos. Si eso se implementa como *"inscripción activa"* y esto
+oculta al incompleto del listado, **el alumno que dejó el curso debiendo cuotas desaparece de las dos
+pantallas a la vez** y su deuda queda sólo en su ficha. Es exactamente el caso que la decisión del
+16/08 de FIN-09 dijo que no puede perderse de vista — el que se va debiendo y quizás vuelve. Las dos
+fichas se tocan acá y conviene escribirlas mirando la otra.
+
+**Alcance.** El filtro en la consulta del curso —o en memoria, que ya está a mano—, el número del
+encabezado, y dónde queda el desplegable de los que dejaron. No toca la base.
+
+**Relacionado.** [FIN-09](#fin-09) (el cruce de arriba), [FIN-23](#fin-23) (la inscripción que no se
+borra y se reactiva), [FIN-24](#fin-24) (mover de curso, la otra salida cuando el alumno no se va sino
+que cambia).
 
 ---
 
