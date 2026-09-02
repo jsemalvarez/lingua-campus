@@ -67,7 +67,7 @@ BUG-04 se puede cerrar sin depender de nadie.
 
 ### 🗣️ Pedidos del cliente · 2026-09-02
 
-Seis pedidos del mismo día. **Dos no son trabajo nuevo**, y conviene contestarlos antes de ponerlos
+Siete pedidos del mismo día. **Dos no son trabajo nuevo**, y conviene contestarlos antes de ponerlos
 en la cola:
 
 | | Qué es en realidad |
@@ -78,6 +78,7 @@ en la cola:
 | [FEAT-18](#feat-18) | Que el listado del curso no muestre a los que dejaron. El parte y las notas ya los filtran: empareja la lista con lo que el sistema ya decidió. **Se cruza con FIN-09.** |
 | [FEAT-06](#feat-06) | Escribirle al docente del curso. Ya estaba pedido para tutores y docentes; ahora suma a los alumnos. Es el mismo corte de código. |
 | [BUG-13](#bug-13) | Cambiar de curso desde la ficha del alumno. **Ya existe y la secretaria ya puede**: falta saber con qué se topó ella. |
+| [FEAT-19](#feat-19) | Sumar un concepto de nota al boletín desde el 2° trimestre. La plantilla es una sola fila viva y sin tiempo: hacerlo hoy le cambia el informe que las familias ya firmaron. **Tiene fecha: antes de que se toque la plantilla.** |
 
 ### Tanda 1 · Pedidos del cliente que no dependen de nada
 
@@ -280,6 +281,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
 | [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
 | [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
+| [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -5695,6 +5697,160 @@ curso"* desplegable. Sigue valiendo la recomendación de arriba —con vista, no
 más concreta es que desde esa pantalla marcar incompleto no tiene vuelta: **cómo vuelve un alumno
 incompleto quedó abierto en [FIN-30](#fin-30)**, y ahí adentro es donde tiene sentido que viva el
 botón.
+
+---
+
+<a id="feat-19"></a>
+## FEAT-19 · Sumar un concepto de nota al boletín sin tocar lo ya publicado · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Sumarle un concepto de nota —*"Comprensión oral"*— a un boletín trimestral
+que **ya tiene el 1° trimestre publicado**, y que se vea **del 2° informe en adelante**. Con dos
+condiciones que puso el cliente: que **no se puedan cargar notas del concepto nuevo en el 1°
+trimestre**, y que el cambio pueda alcanzar **a un curso sí y a otro no**.
+
+**Hoy la plantilla no tiene tiempo ni dueño, y por eso el pedido no se puede hacer sin daño.**
+`CourseReportTemplate` ([`schema.prisma:969`](../prisma/schema.prisma)) es un puntero
+`courseId + templateId`, no una copia: todos los cursos vinculados miran **la misma fila viva**. Y el
+informe publicado tampoco guarda su estructura — `StudentReport` guarda notas y comentario, nada más;
+el boletín se arma en tiempo de lectura contra `template.categories` **actual**
+([`StudentReportViewer.tsx:331`](../src/components/reports/StudentReportViewer.tsx)). Agregar la
+categoría hoy, tal como está el código:
+
+- **le aparece al 1° trimestre ya publicado**, vacía, con la leyenda *"Calificación no provista para
+  este período"* ([`:380`](../src/components/reports/StudentReportViewer.tsx)), en pantalla y en el
+  PDF que la familia se descargó ([`:166`](../src/components/reports/StudentReportViewer.tsx));
+- **alcanza a todos los cursos** vinculados a esa plantilla, y a todos los años;
+- **y las firmas no se enteran.** `reportContentHash`
+  ([`signatures.ts:18`](../src/lib/reports/signatures.ts)) hashea `categoryId=valor` más el
+  comentario, y una categoría sin nota no genera fila `ReportEntry`: el hash no se mueve. El informe
+  cambia y la pantalla del instituto sigue diciendo *firmado, sin ediciones*. Es exactamente el
+  agujero que [FEAT-09](#feat-09) vino a tapar;
+- y si después **alguien carga la nota atrasada del 1°**, ahí sí cambia el hash y los informes quedan
+  marcados *"editado tras firmar"* para todo el curso, con el nombre del admin
+  ([`signatures/page.tsx:97`](../src/app/reports/signatures/page.tsx)).
+
+El pedido son en realidad **dos ejes de la misma falta**: la categoría no sabe **desde cuándo** vale
+ni **para quién**.
+
+### 1 · Desde cuándo — la vigencia de la categoría
+
+**No alcanza con el índice de período: tiene que ser un punto del calendario.** Con
+`activeFromPeriod` solo, la columna desaparecería cada enero, porque `periodIndex 1` en 2027 vuelve a
+ser el 2° trimestre y el 1° del año que viene tampoco la tendría. Van los dos campos —
+`activeFromYear` + `activeFromPeriod` — y el predicado es
+`year > afy || (year === afy && periodIndex >= afp)`. Para este pedido: `2026` y `1`.
+
+**Los cuatro lugares que hoy leen `template.categories` crudo** y tienen que respetarla:
+
+1. la planilla del docente, en el armado del estado
+   ([`ReportGradeSheet.tsx:91`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)) y
+   en las columnas ([`:406`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx));
+2. el POST de notas
+   ([`entries/route.ts:184`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts)), que
+   tiene que **rechazar** una categoría fuera de vigencia aunque le llegue igual — misma disciplina
+   que el guard de publicado que ya está ahí: la pantalla frena, el servidor decide;
+3. el visor de la familia;
+4. el PDF, que es el que queda impreso en la carpeta.
+
+**Tres propiedades salen gratis con esto:**
+
+- **El 1° trimestre no cambia de estructura**, así que el hash y las firmas quedan intactos. La
+  vigencia no es sólo la forma linda de hacerlo: es la que no rompe [FEAT-09](#feat-09).
+- **Ocultar no borra.** El POST sólo elimina los `categoryId` que le llegan con valor vacío, y una
+  categoría fuera de vigencia ya no viaja en el pedido: si alguien alcanzó a cargar una nota por
+  error, la fila sobrevive.
+- **El mismo campo resuelve dar de baja un concepto**, que hoy es imposible. Una categoría con una
+  sola nota cargada no se puede borrar nunca más
+  ([`templates/[id]/route.ts:63`](../src/app/api/reports/templates/[id]/route.ts)) — y está bien que
+  no se pueda, porque borrarla se llevaría notas puestas. Lo que falta es poder decir *"esta va hasta
+  acá"*.
+
+### 2 · Para quién — el ámbito por curso
+
+Confirmado: **hoy no se puede**, y no es un descuido chico. La categoría cuelga de la plantilla
+([`schema.prisma:949`](../prisma/schema.prisma)) y el vínculo con el curso es un puntero. Hay tres
+salidas.
+
+**(a) Sin tocar el schema: copiar la plantilla y cambiar de plantilla a mitad de año.** Al curso que
+no cambia se le deja la vieja; al que sí, se le vincula la copia, y el 2° trimestre se carga ahí.
+Funciona —el 1° queda bajo la plantilla vieja y el 2° bajo la copia, y como no comparten
+`periodIndex` el visor de la familia no se pisa—, pero **funciona de casualidad**: el visor agrupa
+por curso y busca el informe por `periodIndex` **sin mirar `templateId`**
+([`:295`](../src/components/reports/StudentReportViewer.tsx)), así que el día que alguien cargue el
+mismo período bajo las dos plantillas, una tapa a la otra. Además el panel del curso pasa a mostrar
+dos tarjetas, con el 1° colgando de una y el 2° de la otra.
+
+**(b) Ámbito por curso en la categoría.** Una tabla `ReportCategoryCourse`: sin filas, la categoría
+vale para todos los cursos; con filas, sólo para esos. Barato, sin migrar datos, no toca nada de lo
+que hoy funciona. El costo es conceptual: el editor de plantillas del instituto se convierte en una
+matriz de *"esta categoría, desde cuándo y en qué cursos"*, y escala mal si los cursos empiezan a
+divergir en serio.
+
+**(c) Instancia por curso.** Vincular una plantilla **copia** sus categorías al curso, y la planilla,
+el visor y `ReportEntry` pasan a apuntar a la categoría del curso. Es el modelo correcto: la
+plantilla del instituto queda como lo que en realidad es —un modelo, un punto de partida— y el curso
+edita lo suyo sin tocarle el boletín a nadie. Lo caro es la migración: copiar categorías por cada
+curso vinculado y **remapear los `ReportEntry` ya cargados**, sobre una base sin backup.
+
+**Recomendación.** La vigencia primero: es lo que el cliente pidió, no depende de nada y tiene fecha.
+Para el ámbito, la **(b)**, que no bloquea la (c) — cuando la instancia por curso exista, el ámbito
+de la categoría se convierte en la instancia. La **(a) no**: es la que parece gratis y es la que
+después no se desarma.
+
+### Lo que hay que decidir antes de escribir código
+
+- **¿El ámbito es una excepción sobre la plantilla del instituto (b) o una instancia del curso (c)?**
+  Cambia el tamaño de la migración, no el resultado.
+- **¿Qué pasa con una nota cargada antes de la vigencia?** Queda guardada e invisible —y sin poder
+  editarla desde ninguna pantalla—, o hay que mostrársela a alguien.
+- **Si el instituto edita el modelo después, ¿qué pasa con los cursos que ya lo tenían?** No se
+  propaga nada y se ofrece aplicarlo, o se propaga y volvemos al problema de hoy.
+
+### El editor de plantillas no avisa de nada, y esto no lo cubre todo
+
+La vigencia arregla agregar y dar de baja. **Renombrar sigue siendo retroactivo y silencioso:** la
+familia firmó *"Lectura: 8"* y pasa a ver *"Comprensión oral: 8"*, con el hash intacto, porque el
+hash guarda `categoryId`, no el nombre. Eso se tapa metiendo el nombre y el conjunto de categorías
+**adentro del hash**, o —la versión de fondo— guardando en el informe **el snapshot de la estructura
+con la que se publicó**, igual que ya congela los firmantes.
+
+Y hay tres cambios más que el PUT
+([`templates/[id]/route.ts:76`](../src/app/api/reports/templates/[id]/route.ts)) acepta sobre
+plantillas con informes publicados, sin preguntar:
+
+- **cambiar la escala** deja los valores viejos huérfanos: el boletín sigue mostrando *"8.5"* y la
+  planilla del docente lo muestra **en blanco**, porque ese valor no está entre las opciones del
+  `select` ([`:438`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)). El dato no
+  se pierde al guardar, pero es invisible para quien corrige;
+- **cambiar el rango numérico** recalcula la barra de progreso de todos los informes publicados;
+- **cambiar el tipo de período o las etiquetas** renombra períodos ya publicados y, si achica la
+  cantidad, deja los informes con `periodIndex` mayor **sin pestaña** en el visor de la familia.
+
+Lo que sí está frenado hoy: borrar una categoría con notas cargadas y borrar una plantilla con
+boletines ([`:147`](../src/app/api/reports/templates/[id]/route.ts)).
+
+**Alcance:**
+
+1. `activeFromYear` y `activeFromPeriod` en `ReportCategory`, con migración y backfill en el año y
+   período más viejos —que es lo que significa lo que hay hoy—.
+2. **Un solo helper** que conteste si una categoría corre en un `(year, periodIndex)`, y que lo usen
+   los cuatro lugares. Que viva en un lugar, como el `yearlyEnrollmentTargetsWhere` de
+   [FIN-14](#fin-14): cuatro copias del mismo criterio son cuatro lugares donde olvidarse el día que
+   aparezca una pantalla más.
+3. El guard en el POST de notas.
+4. El editor de plantillas: dónde se elige la vigencia, y **el aviso de cuántos informes publicados y
+   firmados toca el cambio** — hoy no dice nada de nada.
+5. El ámbito por curso, según lo que se decida arriba.
+
+**Cuándo.** Antes de que alguien toque esa plantilla, que es lo mismo que decir antes de cargar el 2°
+trimestre. Hasta entonces el pedido está frenado por una razón sana: hacerlo hoy le cambia el boletín
+a las familias que ya firmaron.
+
+**Relacionado.** [FEAT-09](#feat-09) (las firmas, el hash de contenido y el congelamiento de
+firmantes — es lo que esto no puede romper, y de donde sale la idea del snapshot),
+[ARQ-11](#arq-11) (la misma planilla de notas, del lado del costo de guardarla),
+[ARQ-05](#arq-05) (dar de baja una categoría es este mismo campo, no un borrado),
+[FEAT-17](#feat-17) (la misma forma: algo que vale desde un momento y no desde siempre).
 
 ---
 
