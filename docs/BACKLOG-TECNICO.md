@@ -5603,6 +5603,33 @@ encabezado, y dónde queda el desplegable de los que dejaron. No toca la base.
 borra y se reactiva), [FIN-24](#fin-24) (mover de curso, la otra salida cuando el alumno no se va sino
 que cambia).
 
+### Decidido — 2026-09-02 · sin estado nuevo, y el criterio es el del parte
+
+**No se agrega un estado.** La pregunta que abrió esto era si el que abandona necesita un estado
+propio, y la respuesta es que ya lo tiene: `INCOMPLETE` significa exactamente eso y es lo único que lo
+escribe —`markEnrollmentIncompleteAction`, desde el botón del listado—. Un valor nuevo sería un
+sinónimo, y saldría gratis en la base —`Enrollment.status` es un `String` con los valores en un
+comentario, no un enum— pero habría que enseñárselo a los quince lugares que filtran por ese campo con
+listas literales, uno de ellos SQL crudo en el widget de cumpleaños que TypeScript no chequea. **Lo
+que cambia es la pantalla, no el modelo.**
+
+**Y hay una tercera pantalla que ya lo hace: la tarjeta del listado de cursos.** `/courses` trae los
+nombres y el conteo con `where: { status: "ACTIVE" }`
+([`courses/page.tsx:56`](../src/app/courses/page.tsx) y [`:61`](../src/app/courses/page.tsx)). Por eso
+hoy el mismo curso se ve con **dos números distintos**: la tarjeta dice *"Alumnos Inscriptos (3)"* y
+la pantalla de administrar, *"(4)"*. Es el mejor argumento del pedido — no es una preferencia, es una
+inconsistencia visible sin abrir el código.
+
+**Pero el `where` de la tarjeta no es el que hay que copiar.** Filtra sólo `ACTIVE`, así que en la
+pestaña de finalizados la tarjeta muestra el curso con **cero alumnos**; el comentario de esa misma
+consulta lo dice a medias (*"For finished courses, we might want to see who WAS active"*). El criterio
+bueno es el del parte, `["ACTIVE", "FINISHED"]`, y conviene emparejar la tarjeta en el mismo pase:
+quedan las tres pantallas diciendo lo mismo.
+
+**Lo único que queda por definir** es si el que dejó desaparece del todo o queda como *"1 dejó el
+curso"* desplegable. Sigue valiendo la recomendación de arriba —con vista, no excluido—, y la razón
+más concreta es que desde esa pantalla marcar incompleto no tiene vuelta.
+
 ---
 
 <a id="bug-08"></a>
