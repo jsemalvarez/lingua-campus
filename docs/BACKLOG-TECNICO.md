@@ -65,6 +65,18 @@ los sufre alguien todos los días y los dos tienen la causa ya identificada:
 
 BUG-04 se puede cerrar sin depender de nadie.
 
+### 🗣️ Pedidos del cliente · 2026-09-02
+
+Cuatro pedidos en un mismo mensaje. **Dos no son trabajo nuevo**, y conviene contestarlos antes de
+ponerlos en la cola:
+
+| | Qué es en realidad |
+|---|---|
+| [FIN-29](#fin-29) | La cuota que no se emite al inscribir. **Es el único urgente**: es plata que no se factura y que no se ve en ninguna pantalla. |
+| [FIN-09](#fin-09) | Los deudores acotados a alumnos activos en cursos activos. Estaba decidido a medias el 16/08 y nunca se hizo; el pedido le agrega el curso. |
+| [FEAT-06](#feat-06) | Escribirle al docente del curso. Ya estaba pedido para tutores y docentes; ahora suma a los alumnos. Es el mismo corte de código. |
+| [BUG-13](#bug-13) | Cambiar de curso desde la ficha del alumno. **Ya existe y la secretaria ya puede**: falta saber con qué se topó ella. |
+
 ### Tanda 1 · Pedidos del cliente que no dependen de nada
 
 Son acotados, aislados y de valor visible inmediato. Sacarlos primero compra tiempo para el trabajo
@@ -212,7 +224,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [x] |
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
-| [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
+| [FIN-09](#fin-09) | P2 | 🗣️ Deudores incluye alumnos dados de baja y cursos terminados | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [x] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
@@ -232,6 +244,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
 | [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
+| [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -244,12 +257,13 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
 | [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
+| [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
 | [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
-| [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
+| [FEAT-06](#feat-06) | P2 | 🗣️ Que alumnos, tutores y docentes puedan escribirle al docente del curso | [ ] |
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [x] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
 | [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de informes y novedades | [ ] |
@@ -1377,7 +1391,7 @@ lo va a notar, y además todavía se están migrando datos.
 ---
 
 <a id="fin-09"></a>
-## FIN-09 · Deudores incluye alumnos dados de baja · **P2**
+## FIN-09 · Deudores incluye alumnos dados de baja y cursos terminados · **P2** · 🗣️ Pedido del cliente
 
 `getDebtorsReportAction` ([`billingActions.ts:188`](../src/app/payments/billingActions.ts)) no filtra
 `student.status`. Los alumnos con `status: "DELETED"` aparecen en el reporte.
@@ -1405,6 +1419,46 @@ vuelve. Está en [FIN-26](#fin-26), junto con las otras formas de conciliar una 
 **Relacionado.** `deleteFeeAction` bloquea el borrado si `fee.payments.length > 0`
 ([`billingActions.ts:244`](../src/app/payments/billingActions.ts)), contando también los pagos
 `VOIDED`. Una cuota cuyo único pago fue anulado no se puede borrar.
+
+### 🗣️ Ampliado por el cliente — 2026-09-02 · activos, y en cursos activos
+
+**Pedido.** Que los deudores que muestra la pantalla sean los de **alumnos activos en cursos
+activos**.
+
+**Confirma la decisión del 16/08 y le suma un eje.** Aquella dejó definido el filtro por estado del
+alumno con los activos por defecto; el cliente pide eso mismo y además que el curso cuente.
+
+**Hoy no se filtra ninguna de las dos cosas.** `getDebtorsReportAction`
+([`billingActions.ts:350`](../src/app/payments/billingActions.ts)) filtra por instituto, estado de la
+cuota, importe mayor a cero y período vencido — y nada más: ni `student.status`, ni
+`enrollment.status`, ni `course.status`. Lo único que se sumó desde entonces es el filtro por mes de
+[FEAT-15](#feat-15), que corre en el cliente sobre esa misma lista. **La decisión del 16/08 nunca se
+implementó**, así que el pedido no cambia el rumbo: lo reafirma.
+
+**Son tres ejes y no uno**, y conviene nombrarlos porque no dicen lo mismo:
+
+1. **Alumno activo** — el de la decisión del 16/08: el que está en la papelera.
+2. **Inscripción activa** — el alumno sigue en el instituto, pero dejó ese curso.
+3. **Curso activo** — el curso terminó o se dio de baja, y el alumno sigue activo.
+
+**La trampa está en el 3, y es plata.** Un curso que terminó en julio con cuotas impagas es deuda
+real: si "curso activo" filtra de verdad, esa deuda desaparece de la pantalla el día que el curso se
+cierra — que es justo cuando hay que ir a cobrarla. Vale la misma regla que ya se decidió para el
+alumno de la papelera: **filtro con vista por defecto, no exclusión**. Los tres ejes en el mismo
+control, con "activos en cursos activos" como vista que abre.
+
+**Y una trampa técnica: las cuotas sueltas.** Una cuota con `enrollmentId` en `null` no tiene
+inscripción y por lo tanto tampoco tiene curso ([FIN-22](#fin-22), [FIN-23](#fin-23)): cualquier
+filtro que pase por `enrollment.course` la deja afuera **en silencio**. Son cuotas de alumnos reales
+y con deuda real —las que quedaron de cuando desinscribir borraba la fila—, así que el filtro tiene
+que contemplarlas aparte en vez de perderlas. La pantalla ya las distingue sin proponérselo: la
+etiqueta de cada cuota lleva el curso entre paréntesis
+([`debtors/page.tsx:62`](../src/app/payments/debtors/page.tsx)) y la suelta aparece sin él.
+
+**Antes de codificar conviene el número**, que además dimensiona el pedido: de las filas que hoy
+muestra deudores, cuántas son de alumnos en la papelera, cuántas de inscripciones cerradas, cuántas
+de cursos no activos y cuántas sin inscripción. Si el grueso está en el eje 1, el trabajo es el que
+ya estaba escrito el 16/08 y el resto es alcance.
 
 ---
 
@@ -2881,6 +2935,84 @@ tampoco tiene año propio, que es el otro lado de esta carencia).
 
 ---
 
+<a id="fin-29"></a>
+## FIN-29 · Inscribir a un alumno no le emite la cuota del mes · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-09-02).** Se da de alta un alumno nuevo, se lo inscribe a un curso, y no se le genera
+la cuota.
+
+**Confirmado en el código, y no es una falla: nunca existió.**
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts) emite **una sola** cuota al inscribir
+—la **matrícula**, y sólo si el curso tiene `enrollmentPrice > 0`—. La cuota mensual no la emite nadie
+ahí: las `MONTHLY` salen únicamente de `generateMonthlyFeesAction`, la corrida masiva del botón
+*Generar Cuotas* de la pantalla de pagos
+([`GenerateFeesButton.tsx:54`](../src/app/payments/components/GenerateFeesButton.tsx)).
+
+**Entonces el alumno que entra después de la corrida del mes no tiene cuota de ese mes.** Y como no
+tiene cuota, tampoco figura en deudores: **no hay ninguna pantalla donde el hueco se vea**. Es la
+misma familia que los bugs de la tanda 3 —plata que no se factura y que nadie reclama, silenciosa
+porque nadie la ve—, con el agravante de que acá no hay siquiera una fila mal calculada: no hay fila.
+
+**Cuánto dura.** Hasta que alguien vuelva a generar ese mes. Repetir la corrida es seguro: el filtro
+en memoria más el `skipDuplicates` apoyado en la restricción única de [FIN-06](#fin-06) hacen que le
+cree la cuota al que faltaba y no toque al resto. Pero hay que saberlo, y nada lo sugiere: el que ya
+generó el mes no tiene motivo para volver, y el aviso de [FIN-22](#fin-22) —*"N alumnos quedaron
+afuera, revisalos antes de volver a generar"*— empuja para el otro lado.
+
+**Y hay una decisión pendiente que puede tapar esa salida.** [FIN-16](#fin-16) tiene definido limitar
+la regeneración de un mes ya cerrado. Si eso entra antes que esto, el hueco se queda sin arreglo por
+pantalla. O van en el orden inverso, o el límite de FIN-16 nace con la excepción escrita.
+
+**Lo que hay que decidir con el instituto**, y es de negocio:
+
+- **¿El que entra el 20 paga el mes entero?** Es la única pregunta que importa. **Recomendación:
+  emitir la cuota completa** y que la secretaría la ajuste cuando corresponda — editar el importe de
+  una cuota sin pagos ya existe (`editFeeAmountAction`), y borrarla deja rastro con motivo desde
+  [FEAT-10](#feat-10). Prorratear es una regla nueva, con redondeos y con la pregunta espejo de qué
+  pasa con el mes de la baja, y no es lo que pidieron.
+- **¿Y el que se inscribe el 28 de septiembre a un curso que arranca en octubre?** Ahí la cuota de
+  septiembre no corresponde. El año del curso lo da `startDate` ([FIN-28](#fin-28)); el mes hay que
+  mirarlo igual antes de emitir.
+
+**Alcance.** Todo lo que la corrida masiva ya sabe hay que repetirlo en el alta, o compartirlo:
+
+1. **`billingMode`.** Una inscripción `FULL_COURSE` no lleva cuota mensual. La corrida lo filtra; el
+   alta no puede olvidarse, o le cobra dos veces al que pagó el curso entero.
+2. **El precio** sale de `customMonthlyPrice` y, si no hay, del curso.
+3. **La cuota suelta de [FIN-22](#fin-22).** Si el alumno ya tiene una `MONTHLY` de ese período con
+   `enrollmentId` en `null`, no se le emite otra.
+4. **Curso activo y del período lectivo**, para no emitir la cuota de septiembre de un curso que
+   terminó en julio.
+
+**Que las mismas cuatro reglas vivan en dos lugares es la deuda de fondo.** Conviene una función
+única de emisión de cuota mensual: la corrida la llama en lote y el alta la llama para uno. Si se
+copian, la próxima regla se va a agregar en uno solo de los dos — que es exactamente cómo nació
+[FIN-16](#fin-16).
+
+**Dos cosas más que quedan a la vista en la misma función**, y conviene resolverlas en el mismo pase:
+
+- **La matrícula del alta ignora el precio propio de la inscripción.** Usa `course.enrollmentPrice`
+  pelado, mientras que la corrida anual sí respeta `customEnrollmentPrice`
+  ([`billingActions.ts:309`](../src/app/payments/billingActions.ts)). Una beca de matrícula cargada en
+  la inscripción no se aplica si la matrícula la emite el alta.
+- **Con la matrícula del curso en 0, el alta no emite absolutamente nada.** Y 0 es el valor con el que
+  arranca el formulario de curso ([`CourseForm.tsx:50`](../src/app/courses/new/CourseForm.tsx)),
+  coherente con que la corrida anual pida el monto a mano. Si el instituto carga los cursos así,
+  inscribir a un alumno hoy no genera ni cuota ni matrícula — que es, textual, lo que reportaron.
+
+**Verificar antes de codificar**, y son dos consultas cortas: cuántos cursos activos tienen
+`enrollmentPrice` en 0, y qué inscripciones activas de alumnos activos con `billingMode = MONTHLY` no
+tienen cuota `MONTHLY` del mes en curso. La segunda además devuelve la lista de lo que hay que emitir
+a mano para no perder el mes.
+
+**Relacionado.** [FIN-16](#fin-16) (el límite a regenerar, que hay que ordenar con esto),
+[FIN-22](#fin-22) (las cuotas sueltas que la corrida saltea), [FIN-06](#fin-06) (la restricción que
+hace repetible la corrida), [FIN-28](#fin-28) (el año del curso), [FIN-09](#fin-09) (la pantalla donde
+esto tendría que haberse visto), [BUG-08](#bug-08) (el alta por preinscripción, el otro camino por el
+que un alumno llega a un curso).
+
+---
+
 # Bugs funcionales
 
 <a id="bug-01"></a>
@@ -3804,7 +3936,7 @@ ficha tenga el correo del tutor.
 ---
 
 <a id="feat-06"></a>
-## FEAT-06 · Que tutores y docentes puedan escribirle al docente del curso · **P2** · 🗣️ Pedido del cliente
+## FEAT-06 · Que alumnos, tutores y docentes puedan escribirle al docente del curso · **P2** · 🗣️ Pedido del cliente
 
 **Pedido (2026-08-13).** Que los tutores y los docentes puedan **iniciar** conversaciones con el
 docente del curso del alumno.
@@ -3848,6 +3980,36 @@ mitad del trabajo; la otra mitad es que hoy no existe la lista de a quién podr�
 (adjuntos en el primer mensaje) tocan la misma pantalla; si se va a abrir el módulo, conviene
 mirarlos juntos. Y abrir el canal a los tutores multiplica el volumen de hilos, así que BUG-06 pasa
 de molestia a problema.
+
+### 🗣️ Ampliado — 2026-09-02 · los alumnos también
+
+**Nuevo pedido.** Que también **los alumnos** puedan escribirle al docente de su curso. El pedido del
+13/08 nombraba a los tutores y a los docentes; ahora son los tres.
+
+**Es el mismo corte de código, y ya los tenía adentro.** `createThread` bloquea `isStudent` en la
+misma línea en que bloquea al tutor ([`messages.ts:383`](../src/app/actions/messages.ts)), y el
+comentario de arriba lo dice como decisión de fase: *"En Fase 1, STUDENT y GUARDIAN no pueden iniciar
+(solo responder)"*. Levantar el corte para los dos es un cambio, no dos. Responder ya pueden: el
+alumno participa de hilos y manda mensajes en ellos, lo único que no puede es abrir uno.
+
+**Y el alumno es el más barato de los tres destinatarios.** El tutor necesita una lista que hoy no
+existe —sus alumnos vinculados → inscripciones activas → docente de cada curso—; el alumno tiene esa
+lista en su propia inscripción: el docente de sus cursos activos, y nadie más. Sigue valiendo lo otro:
+la lista **se hace cumplir en el servidor**, porque el destinatario llega en el body.
+
+**Trae una pregunta que el pedido del tutor no tenía: la edad.** Hay alumnos de 6 a 8 años, que entran
+con DNI y sin correo propio. Abrirles un canal directo con la docente es una decisión del instituto y
+no un corolario del pedido:
+
+- **¿El tutor ve lo que escribe su hijo?** Hoy un hilo tiene participantes y nada más: no hay forma de
+  que un tercero supervise sin ser participante. Sumar al tutor como participante automático es una
+  opción, y cambia lo que la docente puede contestar ahí adentro.
+- **¿Todos los alumnos, o de cierta edad para arriba?** `Student.birthDate` permitiría el corte, pero
+  es opcional y puede estar vacío en muchas fichas: antes de apoyar un permiso en ese campo hay que
+  decidir qué pasa con el alumno sin fecha de nacimiento. Es la misma línea del resto del modelo,
+  donde los obligatorios del negocio son opcionales en el schema.
+- **El volumen.** Sumar tutores ya movía a [BUG-06](#bug-06) de molestia a problema; con los alumnos
+  adentro son tres veces los hilos sobre el mismo contador roto.
 
 ---
 
@@ -5489,6 +5651,49 @@ de regrabar el parte entero las tres siguieron en `QR`.
 
 **Lo que falta ejercitar, y necesita cámara:** el escaneo sobre un alumno que ya tiene observación
 cargada. Es el caso original de la ficha. Queda para stage.
+
+---
+
+<a id="bug-13"></a>
+## BUG-13 · La secretaria no encuentra cómo cambiar de curso a un alumno, y el botón está · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Que la secretaria pueda cambiar de curso a un alumno desde la ficha del
+alumno.
+
+**Ya puede, y hace rato.** El botón **Cambiar curso** está en cada tarjeta de curso de la ficha
+([`students/[id]/page.tsx:258`](../src/app/students/[id]/page.tsx)) y
+[`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) autoriza a `["ADMIN", "SECRETARY"]`:
+no le falta ningún permiso. Está en `main` desde la promoción del 19/08, con la etiqueta que se le
+puso el 16/08 en [FIN-23](#fin-23) **justamente porque como lápiz pelado no se lo encontraba**.
+
+**Así que lo que falta no es código: es el dato de con qué se topó ella.** Cuatro hipótesis, en orden
+de probabilidad:
+
+1. **Lo buscó en otro lado.** El único acceso vive dentro de la tarjeta del curso, en la ficha del
+   alumno. Desde el listado del curso lo que hay es desinscribir, que es el camino que le suelta las
+   cuotas al alumno ([FIN-23](#fin-23)) — el que gana cuando el bueno no se anuncia.
+2. **Estaba operando como profesora.** Los controles de la ficha se dibujan por **rol activo**
+   (`isAdmin = ["ADMIN", "SECRETARY"].includes(activeRole)`,
+   [`students/[id]/page.tsx:80`](../src/app/students/[id]/page.tsx)), no por los roles que tiene la
+   cuenta: con el selector en Profesora no hay botón. Es el residuo esperable de [BUG-04](#bug-04) —
+   lo que se arregló es que el rol se revirtiera solo, no que el selector exista.
+3. **El alumno no tenía ninguna inscripción.** Sin tarjeta no hay botón: ahí lo que aparece es
+   *"Inscribir en un Curso"*.
+4. **Quería otra cosa**: mover a un preinscripto ([BUG-08](#bug-08)), o mover a varios de una.
+
+**Qué preguntar, en una sola vuelta:** qué alumno, qué vio en la pantalla —¿la tarjeta del curso con
+el estado, o el cartel de "No inscripto"?— y qué decía el selector de rol de arriba a la derecha.
+
+**Nada se codifica hasta tener eso.** Si es la 1, lo que falta no es un permiso sino que el camino se
+encuentre, y la respuesta es de pantalla. Si es la 2, la ficha se cierra contra [BUG-04](#bug-04) y lo
+que hay que mirar es por qué la secretaria termina operando con otro rol. Si es cualquier otra, recién
+ahí hay un defecto.
+
+**Y si el camino se empieza a usar de verdad, aprieta [FIN-24](#fin-24)**, que es lo que el cambio de
+curso todavía no decide sobre las cuotas ya emitidas.
+
+**Relacionado.** [FIN-23](#fin-23) (de donde salió la etiqueta del botón), [FIN-24](#fin-24),
+[BUG-04](#bug-04), [BUG-08](#bug-08).
 
 ---
 
