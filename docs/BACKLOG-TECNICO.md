@@ -259,6 +259,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
 | [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
 | [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
+| [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -291,6 +292,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-13](#arq-13) | P3 | Saber qué versión está usando cada usuario | [ ] |
 | [ARQ-14](#arq-14) | P3 | La purga de un alumno no puede borrar a ningún alumno real | [ ] |
 | [ARQ-15](#arq-15) | P2 | 🗣️ La identidad está partida en dos tablas: `User` y `Student` | [ ] |
+| [ARQ-16](#arq-16) | P3 · sube con el número | Qué cuesta cada filtro del calendario | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -5787,6 +5789,38 @@ curso todavía no decide sobre las cuotas ya emitidas.
 
 ---
 
+<a id="bug-14"></a>
+## BUG-14 · Los filtros del calendario no avisan que están filtrando · **P2**
+
+**Visto el 2026-09-02**, probando *"Ver a mis pares"* ([FEAT-07](#feat-07)): entre el clic y el
+calendario nuevo pasa un rato en el que **no pasa nada en la pantalla**. El botón queda igual, la
+grilla queda igual, y no hay manera de saber si el clic entró.
+
+**La causa es de una línea.** Los cuatro filtros de la barra —curso, profesor, aula y pares— hacen
+`router.push()` pelado
+([`ScheduleFilters.tsx:36`](../src/app/schedule/components/ScheduleFilters.tsx)), sin
+`useTransition`: el componente no tiene ningún estado "en curso" que dibujar. La navegación se
+resuelve entera en el servidor y recién vuelve con la pantalla nueva.
+
+**Y el esqueleto de carga existe, pero no aparece.** `/schedule` tiene su `loading.tsx`; lo dispara
+entrar a la ruta, no cambiarle los parámetros a una ruta ya montada. Por eso la primera carga avisa y
+el filtro no — que es también por qué esto no se notó antes.
+
+**Cambio.** `startTransition` alrededor del `router.push`, y usar `isPending` para dos cosas: marcar
+**el control que se tocó** —no un cartel arriba de todo— y bajarle la opacidad a la grilla mientras
+llega la respuesta. Va en los cuatro filtros: el reporte salió del de pares, pero los otros tres
+tienen exactamente el mismo silencio.
+
+**No es sólo cosmético, y por eso es P2:** sin señal, la reacción natural es volver a apretar, y cada
+clic de más es otra navegación entera al servidor. La pantalla se siente más lenta justo cuando ya
+estaba lenta.
+
+**Relacionado.** [ARQ-16](#arq-16) es la otra mitad del mismo reporte —cuánto tarda de verdad— y
+conviene hacerlas en este orden: esto es barato, seguro, y puede disolver la queja sin tocar una sola
+consulta. [FEAT-07](#feat-07), el filtro que lo destapó.
+
+---
+
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
 
@@ -6422,6 +6456,51 @@ que ninguna pantalla dependa de ella antes de quitarla.
 **Relacionado.** [FIN-23](#fin-23) (de donde salió, y de cuyo `SET NULL` depende hoy),
 [ARQ-05](#arq-05) (la interfaz para restaurar lo borrado, que es el otro lado de la política de
 borrado lógico).
+
+---
+
+<a id="arq-16"></a>
+## ARQ-16 · Qué cuesta cada filtro del calendario · **P3 · sube con el número**
+
+**Visto el 2026-09-02**, junto con [BUG-14](#bug-14): al encender *"Ver a mis pares"* el calendario
+tarda lo suficiente como para que se note.
+
+**Antes de optimizar hay que medir**, porque hay dos explicaciones y llevan a arreglos opuestos.
+
+**Explicación 1: el interruptor ensancha las consultas.** `visibleCoursesFilter`
+([`peers.ts:41`](../src/lib/peers.ts)) lleva el alcance de *"mis cursos"* a *"mis cursos + todos los
+del mismo nivel"*, y ese alcance entra en las dos consultas grandes de la página: la de horarios y la
+del desplegable de cursos. Con los pares encendidos entran más filas de `Schedule`, y **cada fila
+arrastra su curso, su docente y las clases de la semana dos veces** — `schedule.lessons` y
+`course.lessons` se superponen, porque la clase atada a un horario cae en las dos
+([`schedule/page.tsx:182`](../src/app/schedule/page.tsx)). La segunda no está de más: es el respaldo
+para la clase sin horario ([`:349`](../src/app/schedule/page.tsx)). Pero se paga completa.
+
+**Explicación 2: es lo que cuesta cualquier clic de esa barra.** La página es dinámica y se rehace
+entera en el servidor en cada navegación: sesión, rol, `requireRole` —que consulta la base por diseño
+([SEC-02](#sec-02))—, `getPeerLevels`, las tres consultas de los desplegables y la de horarios. Nada
+de eso está cacheado, y encima se paga la latencia contra Supabase sin pooling ([ARQ-02](#arq-02)).
+Si es esto, prender y apagar los pares tarda lo mismo que cambiar de aula, y lo que se notó no es el
+filtro sino **el silencio** de [BUG-14](#bug-14).
+
+**La sospecha es la 2**, y hay un dato que la respalda: el instituto tiene **31 cursos activos**
+—contados contra producción el 17/08 en [FIN-28](#fin-28)—, así que "todos los del mismo nivel" son
+unos pocos cursos más, no un salto de escala. Con ese volumen ninguna de estas consultas debería
+tardar de forma perceptible.
+
+**Cómo medirlo, y alcanza con poco.** El tiempo está del lado del servidor, así que sale de la
+duración de la función en Vercel o de un `console.time` alrededor de la consulta de horarios. Hay que
+comparar dos cosas: la misma semana con `?pares=0` y con los pares encendidos, y **un filtro
+cualquiera contra otro**. Si cambiar de aula tarda lo mismo, esta ficha se cierra contra
+[ARQ-02](#arq-02) y [BUG-14](#bug-14), y no hay nada que optimizar acá.
+
+**Si el número justifica tocar algo**, en orden de barato a caro: no traer `course.lessons` cuando
+`schedule.lessons` alcanza; sacar del `include` los campos del curso y del docente que la grilla no
+dibuja —hoy entran enteros—; y recién después mirar índices, que es [ARQ-01](#arq-01).
+
+**Relacionado.** [BUG-14](#bug-14) (la otra mitad del mismo reporte, y va primero),
+[ARQ-02](#arq-02) (pooling), [ARQ-11](#arq-11) (la otra pantalla que se midió por lo que costaba),
+[FEAT-07](#feat-07).
 
 ---
 
