@@ -247,6 +247,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
+| [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -3024,6 +3025,69 @@ que un alumno llega a un curso).
 
 ---
 
+<a id="fin-30"></a>
+## FIN-30 · Volver a un curso que se dejó no tiene camino propio ni deja rastro · **P2**
+
+**Abierto el 2026-09-02**, saliendo de [FEAT-18](#feat-18): si el alumno marcado incompleto deja de
+figurar en el listado del curso, hay que poder decir **cómo vuelve**.
+
+**Volver ya funciona, y funciona bien: lo que no existe es el camino.**
+`createEnrollmentAction` ([`enrollments/actions.ts:39`](../src/app/enrollments/actions.ts)) busca la
+inscripción por `studentId_courseId` y, si la encuentra cerrada, **la reactiva** en lugar de crear
+otra. Eso conserva lo que importa —las cuotas de antes, el precio propio, la modalidad de cobro, el
+registro de examen— y no vuelve a emitir la matrícula del año si ya la tiene. Es la decisión de
+[FIN-23](#fin-23) y sigue siendo la correcta.
+
+**El problema es por dónde se llega.** El único acceso es *Inscribir Alumno* → `/enrollments/new`,
+que es la misma pantalla con la que se inscribe a alguien por primera vez: hay que saber que
+"inscribir" al que ya estuvo significa reincorporarlo. Y al terminar, el cartel dice *"¡Alumno
+inscripto exitosamente!"* ([`EnrollmentForm.tsx:184`](../src/app/enrollments/new/EnrollmentForm.tsx));
+nunca dice que reactivó la inscripción vieja con sus cuotas colgando.
+
+Desde el listado del curso no hay nada: el botón de dar de baja sólo se dibuja para las inscripciones
+`ACTIVE` ([`courses/[id]/page.tsx:432`](../src/app/courses/[id]/page.tsx)), así que la fila incompleta
+es hoy una fila sin acciones. **Con [FEAT-18](#feat-18) adelante deja de estar siquiera a la vista**,
+y el camino de vuelta pasa a depender de que alguien se acuerde de que existe.
+
+**Recomendación: que la vuelta viva donde está el alumno.** Es lo que resuelve el desplegable que ya
+recomienda FEAT-18 —*"1 dejó el curso"*—: adentro, un botón **Reincorporar** que llame a la misma
+reactivación. Las dos fichas se sostienen entre sí: la lista se limpia y el camino de vuelta queda a
+un clic del lugar donde se lo busca.
+
+**Y hay dos vueltas distintas que hoy son el mismo clic:**
+
+1. **El error.** Se marcó incompleto al alumno equivocado, hace treinta segundos. Corresponde
+   deshacer, y que no quede nada.
+2. **El regreso real.** Dejó en mayo y vuelve en agosto. No es un error: es un hueco de tres meses que
+   **tiene que poder explicarse**, sobre todo del lado de las cuotas.
+
+Hoy las dos hacen exactamente lo mismo, y ninguna deja registro.
+
+**Lo que no se guarda en ningún lado, y es lo que hay que decidir:**
+
+- **Cuándo dejó y cuándo volvió.** `Enrollment` no tiene `leftAt` ni historial de estados, y
+  `enrolledAt` conserva la fecha original —la reactivación no la toca—, así que la ficha del alumno
+  muestra el alta de la primera vez y nada más. La pantalla dice "Incompleto" pero no *desde cuándo*.
+- **Por qué faltan las cuotas del hueco.** No se generan, porque el generador mensual sólo mira las
+  inscripciones `ACTIVE` ([`billingActions.ts:40`](../src/app/payments/billingActions.ts)), y eso está
+  bien. Lo que falta es que se entienda el faltante cuando alguien mire esa ficha el año que viene.
+- **La deuda vieja vuelve con él, y eso ya está decidido.** [FIN-09](#fin-09) lo dejó escrito el
+  16/08: *"si más adelante vuelve y se lo restaura, la deuda tiene que reaparecer, y ahí el instituto
+  decide si se la perdona o se la cobra"*. Perdonarla sigue sin existir como operación
+  ([FIN-26](#fin-26)). Al reincorporar conviene **mostrar el saldo que vuelve con el alumno**, en vez
+  de que aparezca solo en deudores tres días después.
+
+**Lo mínimo que cierra esto** son dos cosas: una fecha —cuándo se marcó incompleto— y que reincorporar
+sea una acción con nombre propio. El historial completo de cambios de estado es [ARQ-10](#arq-10)
+(auditoría de las acciones del panel): si esa ficha se hace, esto viene adentro, así que no conviene
+inventar acá una tabla que después se duplique.
+
+**Relacionado.** [FEAT-18](#feat-18) (de donde salió, y dónde va el botón), [FIN-23](#fin-23) (la
+reactivación que hace posible todo esto), [FIN-24](#fin-24) (el otro movimiento del alumno entre
+cursos), [FIN-09](#fin-09) y [FIN-26](#fin-26) (la deuda que vuelve con él), [ARQ-10](#arq-10).
+
+---
+
 # Bugs funcionales
 
 <a id="bug-01"></a>
@@ -5628,7 +5692,9 @@ quedan las tres pantallas diciendo lo mismo.
 
 **Lo único que queda por definir** es si el que dejó desaparece del todo o queda como *"1 dejó el
 curso"* desplegable. Sigue valiendo la recomendación de arriba —con vista, no excluido—, y la razón
-más concreta es que desde esa pantalla marcar incompleto no tiene vuelta.
+más concreta es que desde esa pantalla marcar incompleto no tiene vuelta: **cómo vuelve un alumno
+incompleto quedó abierto en [FIN-30](#fin-30)**, y ahí adentro es donde tiene sentido que viva el
+botón.
 
 ---
 
