@@ -4010,6 +4010,68 @@ más allá del olvido: hoy al alumno se le reparte `estudiante123` o su DNI, y e
 mandado al tutor es la salida de [SEC-06](#sec-06) para los chicos — que vuelve a depender de que la
 ficha tenga el correo del tutor.
 
+### Hecha · parte 3: el proveedor real es Resend (2026-09-09)
+
+Commit `365c852`. **El proveedor deja de ser SendGrid y pasa a ser Resend**, y el cambio costó un
+archivo: `ResendEmailProvider` es el tercero sobre la misma interfaz, y el factory ahora acepta
+`"console" | "resend" | "sendgrid"`. No hubo que tocar el flujo — el envío ya estaba enganchado desde
+la parte 1, y [`IEmailProvider`](../src/lib/email/IEmailProvider.ts) existía justamente para esto.
+**SendGrid queda como plan B**: el archivo no molesta, no corre, y es la salida si el dominio se cae.
+
+**La adaptación que importa: Resend no tira cuando el envío falla, devuelve `{ data, error }`.**
+Verificado con una clave inválida — el SDK loguea el 401 y retorna normal. De ese `throw` cuelga el
+`Promise.allSettled` de la acción, que es quien decide si le avisa al instituto que no salió nada.
+Sin convertirlo, un envío rechazado se contaría como exitoso y el fracaso quedaría invisible para
+todos, porque la pantalla contesta siempre lo mismo. Es el mismo agujero que el aviso a la campana
+vino a tapar, y se habría reabierto por debajo.
+
+**El seguimiento de clics ya no se apaga por mensaje**, y conviene tenerlo anotado: en SendGrid era
+una opción del envío, en Resend es una configuración **del dominio**. Tiene que quedar apagado por la
+razón de siempre —reescribe los enlaces y el botón deja de apuntar al instituto, que en un correo de
+recuperación se lee como phishing—, pero ahora eso se rompe desde el panel de Resend y **sin que
+cambie una línea de código**.
+
+**La plantilla pasó a React Email**, con la paleta de marca (navy `#0B1220` / `#131B2E`, acento
+`#F5C842`). El HTML lo arma un componente y el texto plano se sigue escribiendo a mano, pero los dos
+salen del **mismo** saludo y del mismo motivo. Eso no es prolijidad: el error de la parte 2 fue
+exactamente que una de las dos versiones decidía por su cuenta si el correo era para el dueño de la
+contraseña o para su tutor. Ahora no puede.
+
+**La marca del cuerpo es la del instituto, no la de la plataforma** — la misma regla que ya seguía el
+remitente. Un correo firmado "Modern English School" que adentro se presenta como otra empresa se lee
+como phishing. Lingua Campus queda en el pie. Y **Exo 2 no se va a ver casi nunca**: Gmail bloquea las
+fuentes remotas, así que lo que se lee es el fallback.
+
+**Un error que traía la implementación de referencia**, y que vale anotar porque es fácil de repetir:
+elegía el remitente con `process.env.NODE_ENV === "production"`. En Vercel eso vale `production` en
+**los dos** proyectos —stage también compila en modo producción—, así que stage habría mandado desde
+la casilla de producción. El remitente sale de `EMAIL_FROM`, que es por entorno, y de
+`Institute.senderEmail`, que es por instituto; el entorno no entra al código.
+
+**Verificado renderizando** los tres casos —dueño, tutor con nombre y tutor sin nombre—: la paleta va
+inline, el `href` del botón queda intacto apuntando al instituto, y en el del tutor "tu contraseña"
+aparece cero veces. **No hubo ningún envío real todavía**: el dominio `lingua-campus.com.ar` está en
+`pending` en Resend, con los tres registros (DKIM, y el MX y el TXT de `send`) sin verificar.
+
+**El número que la parte 2 pedía medir en producción, medido (2026-09-09).** De **362 alumnos
+activos**: 14 tienen correo propio, 200 no lo tienen pero sí al menos un tutor con dirección, y **148
+no tienen ninguna** — el 41%. Es bastante mejor que el 97% de la base de desarrollo, pero sigue
+queriendo decir que **cuatro de cada diez alumnos no pueden recuperar su contraseña por esta vía**, y
+para ellos lo que se dispara es el aviso a la campana. Los 182 usuarios activos tienen todos correo.
+Sigue siendo carga de datos del instituto, y sigue conviniendo decirle el número al cliente antes de
+anunciarle la función.
+
+**Lo que falta, y no es de este ítem**: verificar el dominio en Resend, cargar `EMAIL_PROVIDER`,
+`RESEND_API_KEY` y `EMAIL_FROM` en los dos proyectos de Vercel, y dos bloqueantes que se descubrieron
+buscando dónde probar. El Supabase de stage está **pausado**. Y **producción está cinco migraciones
+atrás** —la última aplicada es del 2026-08-18—, así que ahí no existen ni `PasswordResetToken` ni
+`Institute.senderEmail`: **FEAT-05 no está desplegado en producción**. Promover a `main` corre
+`migrate deploy` con las cinco de una sola vez, sobre una base sin backups.
+
+Al probar en stage hay una trampa que ya mordió una vez: **el enlace sale de la ficha del instituto,
+no del host desde el que se pidió**. Si la ficha de stage es copia de producción, el correo de prueba
+llega con un enlace a `modernenglishschool.com.ar` — o sea, a producción, donde el token no existe.
+
 ---
 
 <a id="feat-06"></a>
