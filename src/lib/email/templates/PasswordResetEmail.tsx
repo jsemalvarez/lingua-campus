@@ -43,15 +43,52 @@ export interface PasswordResetEmailProps {
     ttlMinutes: number;
 }
 
-// Paleta de marca — Lingua Campus
+/**
+ * Paleta — la misma que ve el que recibe cuando hace clic.
+ *
+ * **El correo es claro porque el resto del recorrido es claro.** El enlace lleva
+ * al campus y de ahí al sitio del instituto, y los dos son fondo pálido con
+ * tarjeta blanca: un mail de tarjeta oscura hace que el clic se sienta como un
+ * salto entre dos productos distintos. En un correo de recuperación eso no es
+ * sólo estética — la continuidad visual es la mitad de lo que distingue un
+ * correo legítimo de uno que imita a uno.
+ *
+ * **Copiada a mano y no importada, porque no hay forma de importarla.** El
+ * correo viaja con todo el estilo en atributos `style`: no hay hoja de estilos
+ * ni cascada, y ningún cliente de correo resuelve un `var(--c-primary)`. Así
+ * que esto es una copia, y como toda copia se desincroniza: **si cambian los
+ * tokens de `globals.css`, hay que pasar por acá.**
+ *
+ * Son los tokens de la app y no los del landing del cliente, y la diferencia
+ * es sólo de grises. La marca la comparten —`--c-primary` es el mismo verde
+ * que `InstituteLanding.tsx` tiene hardcodeado, y `--c-accent` el mismo azul—,
+ * pero el landing usa slate azulados y casi negros, que funcionan a 48px sobre
+ * un degradé y pesan demasiado a 20px sobre blanco. El correo se lee como un
+ * documento, así que sigue la escala de la app, que es además la de la pantalla
+ * donde aterriza el enlace.
+ *
+ * La etiqueta del botón va en blanco porque `--c-primary-fg` es blanco. Da
+ * 2,6:1, por debajo del mínimo de accesibilidad, y se acepta a sabiendas: es lo
+ * que el instituto publica en su home y lo que la app usa en cada botón
+ * primario. Arreglar el contraste sólo acá dejaría al correo siendo el único
+ * lugar donde el botón no se ve como el de siempre.
+ *
+ * El enlace de respaldo va en el azul de `--c-accent` y no en el verde:
+ * subrayado y verde se confunde con el botón, y azul es lo que la gente
+ * reconoce como algo en lo que se hace clic.
+ */
 const colors = {
-    bgOuter: "#0B1220",
-    bgCard: "#131B2E",
-    border: "rgba(245, 200, 66, 0.12)",
-    textPrimary: "#F5F5F7",
-    textMuted: "#94A3B8",
-    accent: "#F5C842",
-    accentText: "#0B1220",
+    // El fondo de página no sale de un token: en pantalla la tarjeta se apoya
+    // sobre `--c-bg` blanco y se separa con el borde, pero en un correo tiene
+    // que flotar. Es un neutro de la misma familia que `--c-muted`.
+    bgOuter: "#F5F5F5",
+    bgCard: "#FFFFFF", // --c-card
+    border: "#E6E6E6", // --c-border
+    textPrimary: "#4D4D4D", // --c-fg
+    textMuted: "#808080", // --c-muted-fg
+    accent: "#38B397", // --c-primary
+    accentText: "#FFFFFF", // --c-primary-fg
+    link: "#2E3192", // --c-accent
 };
 
 // Exo 2 no se va a ver en la mayoría de los clientes —Gmail bloquea las fuentes
@@ -99,7 +136,7 @@ export default function PasswordResetEmail({
                         <Text style={styles.fallback}>
                             ¿El botón no funciona? Copiá y pegá este enlace en tu navegador:
                             <br />
-                            <span style={{ color: colors.accent }}>{url}</span>
+                            <span style={{ color: colors.link }}>{url}</span>
                         </Text>
                     </Section>
 

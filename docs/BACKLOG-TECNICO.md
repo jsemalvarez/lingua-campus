@@ -4031,11 +4031,32 @@ razón de siempre —reescribe los enlaces y el botón deja de apuntar al instit
 recuperación se lee como phishing—, pero ahora eso se rompe desde el panel de Resend y **sin que
 cambie una línea de código**.
 
-**La plantilla pasó a React Email**, con la paleta de marca (navy `#0B1220` / `#131B2E`, acento
-`#F5C842`). El HTML lo arma un componente y el texto plano se sigue escribiendo a mano, pero los dos
-salen del **mismo** saludo y del mismo motivo. Eso no es prolijidad: el error de la parte 2 fue
-exactamente que una de las dos versiones decidía por su cuenta si el correo era para el dueño de la
-contraseña o para su tutor. Ahora no puede.
+**La plantilla pasó a React Email.** El HTML lo arma un componente y el texto plano se sigue
+escribiendo a mano, pero los dos salen del **mismo** saludo y del mismo motivo. Eso no es prolijidad:
+el error de la parte 2 fue exactamente que una de las dos versiones decidía por su cuenta si el correo
+era para el dueño de la contraseña o para su tutor. Ahora no puede.
+
+**La paleta es la del modo claro de `globals.css`, token por token** — y llegó ahí después de una
+vuelta. El componente entró con una paleta propia, navy y amarillo, que al verla entregada al lado del
+sitio del cliente y de la pantalla de éxito se leía como otro producto. El enlace de un correo de
+recuperación aterriza en el campus, y **parecerse a donde uno aterriza es la mitad de lo que distingue
+un correo legítimo de uno que lo imita**: el mail oscuro trabajaba en contra de eso.
+
+Copiar los tokens de la app alinea las dos superficies de una sola vez, porque **los tokens de la app
+ya son la marca del cliente**: `--c-primary` es el mismo verde que `InstituteLanding.tsx` tiene
+hardcodeado y `--c-accent` el mismo azul. Los grises salen de la app y no del landing, que usa slate
+azulados casi negros — funcionan a 48px sobre un degradé y pesan a 20px sobre blanco.
+
+**Es una copia a mano y no hay forma de evitarlo**, que es la deuda que esto deja. El correo viaja con
+todo el estilo en atributos `style`: sin hoja de estilos, sin cascada, y ningún cliente de correo
+resuelve un `var(--c-primary)`. Si cambian los tokens de `globals.css`, **hay que pasar por
+`PasswordResetEmail.tsx`**, y nada lo va a avisar. Queda dicho en el archivo.
+
+De paso quedó a la vista algo más grande: **ninguna superficie sabe de qué color es el instituto**. El
+landing tiene sus tres colores hardcodeados, las pantallas de login y recuperación un índigo
+`#4F46E5` que no aparece en ningún otro lado, y `Institute` tiene `logoUrl` y ningún campo de color.
+Hoy no molesta porque el cliente es uno solo y los tokens de la app son justo los suyos; **con el
+segundo cliente eso se rompe solo**, y ahí el correo va a heredar la marca del cliente equivocado.
 
 **La marca del cuerpo es la del instituto, no la de la plataforma** — la misma regla que ya seguía el
 remitente. Un correo firmado "Modern English School" que adentro se presenta como otra empresa se lee
