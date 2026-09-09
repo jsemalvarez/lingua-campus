@@ -352,8 +352,8 @@ export async function requestPasswordResetAction(formData: FormData) {
         // tutor rebota, el segundo sigue siendo una vía válida para el mismo
         // enlace.
         const envios = await Promise.allSettled(
-            cuenta.destinatarios.map((destinatario) => {
-                const { subject, text, html } = passwordResetEmail({
+            cuenta.destinatarios.map(async (destinatario) => {
+                const { subject, text, html } = await passwordResetEmail({
                     subjectName: cuenta.subjectName,
                     recipientName: destinatario.name || undefined,
                     esParaOtro: !destinatario.esElSujeto,

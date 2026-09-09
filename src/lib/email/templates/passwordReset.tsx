@@ -1,3 +1,6 @@
+import { render } from "@react-email/components";
+import PasswordResetEmail from "./PasswordResetEmail";
+
 export type PasswordResetEmailParams = {
     /** De quién es la contraseña que este enlace cambia. */
     subjectName: string;
@@ -19,31 +22,37 @@ export type PasswordResetEmailParams = {
     ttlMinutes: number;
 };
 
-/** Los nombres salen de la base y se meten en el HTML: hay que escaparlos. */
-function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-}
-
 /**
  * El correo de recuperación de contraseña (FEAT-05).
  *
  * Devuelve las tres partes y no manda nada: quién lo manda es el proveedor, y
  * así esto se puede leer de un vistazo sin mirar la infraestructura.
+ *
+ * **El HTML lo arma un componente de React Email** —
+ * [`PasswordResetEmail`](./PasswordResetEmail.tsx)— y el texto plano se sigue
+ * escribiendo acá. Los dos salen del **mismo** saludo y del mismo motivo, y ésa
+ * es la parte que importa: son dos versiones del mismo correo, y la única vez
+ * que este mail salió mal fue porque una de las dos decidía por su cuenta si
+ * era para el dueño de la contraseña o para su tutor.
+ *
+ * **El texto plano no se genera con `render(..., { plainText: true })`.** Esa
+ * conversión aplana el HTML y devuelve algo legible pero desprolijo — el enlace
+ * repetido, el pie pegado al cuerpo. Es el único cuerpo que ve quien tiene el
+ * HTML desactivado, así que se escribe a mano.
+ *
+ * Es asíncrona porque `render` lo es.
  */
-export function passwordResetEmail(params: PasswordResetEmailParams): {
+export async function passwordResetEmail(params: PasswordResetEmailParams): Promise<{
     subject: string;
     text: string;
     html: string;
-} {
+}> {
     const { subjectName, recipientName, esParaOtro, instituteName, url, ttlMinutes } = params;
 
     // Sin nombre no hay saludo. Pasa con el tutor cuyo correo está en la ficha y
     // el nombre no: "Hola:" a secas se lee peor que empezar por el motivo.
-    const saludo = esParaOtro ? recipientName?.trim() : subjectName;
+    const nombreDelSaludo = esParaOtro ? recipientName?.trim() : subjectName;
+    const saludo = nombreDelSaludo ? `Hola ${nombreDelSaludo}:` : undefined;
 
     const subject = esParaOtro
         ? `Restablecé la contraseña de ${subjectName}`
@@ -54,7 +63,7 @@ export function passwordResetEmail(params: PasswordResetEmailParams): {
         : `Pediste restablecer tu contraseña de ${instituteName}.`;
 
     const text = [
-        ...(saludo ? [`Hola ${saludo}:`, ""] : []),
+        ...(saludo ? [saludo, ""] : []),
         motivo,
         "",
         "Entrá acá y elegí una nueva:",
@@ -67,32 +76,15 @@ export function passwordResetEmail(params: PasswordResetEmailParams): {
         instituteName,
     ].join("\n");
 
-    const saludoHtml = saludo
-        ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Hola ${escapeHtml(saludo)}:</p>`
-        : "";
-
-    const html = `
-<div style="margin:0;padding:24px;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:32px;">
-    <h1 style="margin:0 0 24px;font-size:20px;line-height:1.3;font-weight:700;color:#0f172a;">${escapeHtml(instituteName)}</h1>
-
-    ${saludoHtml}
-    <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155;">${escapeHtml(motivo)}</p>
-
-    <p style="margin:0 0 28px;">
-      <a href="${encodeURI(url)}" style="display:inline-block;padding:13px 26px;background-color:#4f46e5;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">Elegir una nueva contraseña</a>
-    </p>
-
-    <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#64748b;">Si el botón no funciona, copiá y pegá esta dirección en el navegador:</p>
-    <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#4f46e5;word-break:break-all;">${escapeHtml(url)}</p>
-
-    <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#64748b;">El enlace vence en ${ttlMinutes} minutos y se puede usar una sola vez.</p>
-
-    <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
-
-    <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">Si no lo pediste, podés ignorar este correo: la contraseña sigue siendo la misma.</p>
-  </div>
-</div>`.trim();
+    const html = await render(
+        <PasswordResetEmail
+            instituteName={instituteName}
+            saludo={saludo}
+            motivo={motivo}
+            url={url}
+            ttlMinutes={ttlMinutes}
+        />
+    );
 
     return { subject, text, html };
 }
