@@ -286,6 +286,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
 | [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
 | [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
+| [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -6521,6 +6522,169 @@ engancha en el mismo punto de la misma función, con la misma infraestructura. [
 puso el canal. [BUG-08](#bug-08) define qué es un preinscripto y comparte el bloque del duplicado.
 [SEC-12](#sec-12) salió a la superficie analizando esta ficha. [SEC-06](#sec-06) es lo que vuelve
 adivinable el acceso del aspirante.
+
+---
+
+<a id="feat-21"></a>
+## FEAT-21 · Firma de la dirección y del profesor en el boletín · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-10).** Que el profesor tenga su firma en el boletín, y la dirección también. Firman
+**una vez y se replica en todos los alumnos de ese informe**.
+
+**Punto de partida: hoy no firma nadie del instituto.** En el PDF son dos rayas con una leyenda debajo
+—*"Prof. X"* y *"Firma de la Institución"*—
+([`StudentReportViewer.tsx:210`](../src/components/reports/StudentReportViewer.tsx)), y en pantalla ni
+las rayas. La firma de conformidad de las familias ([FEAT-09](#feat-09)) es **otra cosa** y no se
+toca: aquélla es un acuse de lectura, ésta es del lado del instituto.
+
+### Qué significa cada firma, que no es lo mismo
+
+- **La dirección revisa.** La dueña ya lee las notas y los comentarios antes de que salgan; hoy lo
+  hace fuera del sistema. Su firma dice *"revisé esto"* — es una revisión **del trabajo de otro**.
+- **El profesor firma autoría.** Las notas son suyas. No revisa nada: declara que son las que puso.
+- **Y de yapa, la firma del profesor es un aviso.** En el circuito real el profesor le avisa a la
+  dueña que la tanda está lista para firmar. Esa firma *es* ese aviso, así que la lista de pendientes
+  de ella no es "todo lo sin firmar" sino **"firmadas por el profesor y todavía no por mí"**. Sale
+  gratis y es lo que le ordena los 30 cursos.
+
+**La unidad que se firma es la tanda**: curso + plantilla + año + período. En la base **no existe como
+fila**: son N `StudentReport` que comparten esas cuatro claves. Es lo que agrupa la planilla del
+docente y lo que ya agrupa la pantalla de firmas
+([`signatures/page.tsx:59`](../src/app/reports/signatures/page.tsx)).
+
+### Decidido con el cliente — 2026-09-10
+
+| | |
+|---|---|
+| **1 · No traba la publicación** | Se publica sin firma de nadie. Motivo del cliente: se está estrenando el mecanismo y conoce a la gente que lo usa. **La traba queda para la etapa 2** |
+| **2 · Editar una nota tira la firma de la dirección, y sólo en ese alumno** | La del profesor no se cae |
+| **3 · La firma de dirección es del cargo** | Cualquier ADMIN firma y el boletín imprime su nombre. La secretaría no firma |
+| **4 · Se firma hacia atrás** | Dirección, profesores y tutores |
+| **5 · No hay "firmar todo lo pendiente"** | Firma adentro de cada planilla, con las notas delante |
+| **6 · Los profesores también firman hacia atrás** | Son 7 u 8 firmas cada uno, no 30: firman por informe |
+
+**Por qué sólo se cae la de ella (decisión 2).** Si el profesor corrige una nota que él mismo puso,
+sigue siendo el autor: no hay nada que volver a declarar, y hacerlo refirmar es un trámite sin
+contenido. Ella en cambio revisó *ese* contenido, y si cambió, no lo revisó. **Y sólo en el alumno
+tocado**: le cambiaron la nota a una alumna, las otras 23 sí las revisó y no hay razón para
+castigarlas. Tirar la tanda entera por un typo es desproporcionado.
+
+**Cómo se entera ella, que es lo que hace que la decisión 2 signifique algo.** Tres momentos, porque
+cada uno atrapa un caso que los otros no:
+
+1. **Antes** — aviso al profesor en la planilla: *"este informe ya lo firmó la dirección; si guardás,
+   su firma se cae para los alumnos que modifiques"*. Avisa, no traba, siguiendo la decisión 1. Es lo
+   único que **evita** el problema.
+2. **En el momento** — notificación por la campanita, que ya existe (`NotificationBell`,
+   `createNotificationForUsers`). **Se dispara en la transición** de firmada a caída, no en cada
+   guardado: cinco correcciones seguidas mandan un aviso, no cinco.
+3. **Después** — la pantalla de firmas, donde ve el conjunto y resuelve.
+
+**Y un aviso al profesor cuando el ADMIN edita un informe publicado.** Su firma no se cae, pero se
+entera. Razonamiento del cliente: en general va a ser la confirmación de que el cambio que él pidió se
+hizo; **el caso que justifica el aviso es el otro** — que el administrador tenga un vecino cursando,
+le parezca que merece más nota y la suba sin permiso. Sin el aviso, la firma del profesor queda sobre
+una nota que no puso y él nunca se entera.
+
+**El candado que ya existe cubre sólo la mitad.** Un informe publicado lo toca únicamente el ADMIN, en
+la pantalla ([`ReportGradeSheet.tsx:248`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx))
+y en el servidor con 403
+([`entries/route.ts:136`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts)). Pero
+como la firma **no traba** (decisión 1), ella va a firmar tandas todavía sin publicar —que es el orden
+natural: el profesor carga, ella revisa, después se publica—, y ahí el profesor sigue editando sin
+restricción. Por eso la detección tiene que ser del sistema y no de que ella lo note.
+
+**Los tutores hacia atrás son la parte que más interesa (decisión 4), y ya está resuelta.** El script
+[`backfill-report-signers.js`](../scripts/backfill-report-signers.js) le agrega hash y lista de
+firmantes a los informes publicados antes de que existiera la firma, sin pisar `publishedAt`,
+resolviendo la edad con la fecha original y sin disparar el aviso de publicación. **Se corre cuando
+FEAT-09 salga a producción.** Para dirección y profesor firmar hacia atrás no necesita nada: entran a
+la planilla vieja y firman.
+
+**Por qué no un botón de firmar todo (decisión 5).** Son 30 cursos y la primera tanda va a ser larga
+—el cliente lo sabe y lo acepta—, pero un botón que firma 30 tandas de un click convierte la revisión
+en un trámite y la firma vuelve a no decir nada, que es justo lo que se estuvo cuidando. Lo que sí: la
+pantalla de firmas lista lo pendiente, linkea a cada planilla, **devuelve a la lista** después de
+firmar y muestra el avance. Con 30 cursos eso es la diferencia entre una tarde y tres.
+
+**La transición, para que ningún boletín ya emitido se vea peor (decisión 6).** Hoy el PDF imprime
+siempre las dos rayas con los nombres. La regla nueva es *sin firma no se imprime la línea*, pero
+aplicada a todo, los boletines que ya salieron **perderían** algo que hoy tienen. Entonces: **una
+tanda anterior a esta funcionalidad sigue imprimiendo la raya y el nombre hasta que se firme**; cuando
+la firman, la firma reemplaza la línea. Las tandas nuevas, sin firma no llevan línea.
+
+### El modelo
+
+Tabla nueva, `ReportBatchSignature`: `instituteId`, la clave natural de la tanda
+(`courseId` + `templateId` + `year` + `periodIndex`), `signerRole` —`"ADMIN"` o `"TEACHER"`, como
+`ThreadParticipant.actingRole` ya guarda el rol activo—, `userId`, `signerName`, `signedAt`,
+`batchHash` y `strokeData`. Con `@@unique([courseId, templateId, year, periodIndex, signerRole])`:
+una firma por rol y por tanda, y volver a firmar la reemplaza.
+
+**No puede ser una fila en `Signature`.** La pantalla del instituto hace
+`report.signatures.length > 0` ([`signatures/page.tsx:77`](../src/app/reports/signatures/page.tsx)):
+la firma del profesor daría por firmada a la familia y el porcentaje de FEAT-09 pasaría a mentir.
+
+**Por qué la clave natural y no una tabla `ReportBatch` con FK.** Es el modelo correcto y obligaría a
+backfillear todos los `StudentReport` existentes. Así es puramente aditivo: **una tabla nueva, cero
+columnas tocadas, cero filas migradas** — importa porque el `build` corre `migrate deploy`. La tanda
+como entidad real queda como refactor posterior, y ese día también le sirve a [FEAT-19](#feat-19).
+
+**El hash de la tanda.** `reportBatchHash()` en
+[`lib/reports/signatures.ts`](../src/lib/reports/signatures.ts): sha256 sobre la lista ordenada de
+`studentId:contentHash`. Incluye el id del alumno a propósito — si entra uno nuevo al curso después de
+que ella firmó, la tanda cambió y su revisión no lo cubre.
+
+**Lo que habilita todo lo anterior: mantener `contentHash` también en los informes sin publicar.** Hoy
+sólo se escribe para los publicados
+([`entries/route.ts:231`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts)), y sin
+eso no hay contra qué comparar en la mitad donde la firma de ella tiene más sentido. Son dos líneas.
+`lastEditedAt` / `lastEditedById` siguen siendo sólo de lo publicado, que es lo que audita ediciones
+posteriores. No rompe el filtro de la pantalla de firmas, que pide `publishedAt` **y** `contentHash`,
+pero hay que corregir el comentario de
+[`publish/route.ts:150`](../src/app/api/courses/[id]/reports/[templateId]/publish/route.ts), que
+documenta lo contrario.
+
+**El trazo se copia en la firma, no se lee de la referencia.** Mismo patrón que `Signature.strokeData`:
+si ella retoca su firma, los boletines viejos no se reescriben.
+
+**El nombre del firmante se congela.** Hoy el PDF lee `course.teacher.name` en vivo
+([`StudentReportViewer.tsx:151`](../src/components/reports/StudentReportViewer.tsx)), así que cambiar
+el profesor del curso reescribe el nombre en boletines ya emitidos. Es **anterior a esta ficha**; con
+firma se imprime el nombre congelado y al menos deja de empeorar.
+
+### Alcance
+
+1. **Pantalla "mi firma" en el perfil.** Es donde el profesor y la dirección registran la suya, y
+   cierra un hueco de FEAT-09: la interfaz ya se la promete al tutor
+   ([`ReportSignatureBox.tsx:96`](../src/components/reports/ReportSignatureBox.tsx)) y `/profile` no
+   la tiene; `getMySignatureReference` quedó escrita y sin usar. **FEAT-09 todavía no está en
+   producción, así que es el momento de cerrarlo.**
+2. La tabla, `reportBatchHash()` y el `contentHash` en borradores.
+3. **Firmar desde la planilla**, que ya pueden abrir ADMIN, SECRETARY y el docente del curso
+   ([`page.tsx:45`](../src/app/courses/[id]/reports/[templateId]/page.tsx)). Autoriza por rol activo;
+   la secretaría no firma.
+4. **Dibujar la firma** en pantalla y en el PDF. `strokeToPath`
+   ([`signatureCompare.ts:148`](../src/lib/reports/signatureCompare.ts)) ya devuelve coordenadas
+   normalizadas: en pantalla es un `<path>`, en el PDF son segmentos.
+5. **La pantalla de firmas**: estado por tanda, las tandas sin publicar que tengan firma del personal
+   —hoy quedan fuera del filtro—, el orden por "listas para firmar" y el avance.
+6. Las notificaciones: a ella cuando su firma se cae, al profesor cuando el ADMIN edita.
+7. **Retención.** El trazo del personal es el mismo tipo de dato que el del tutor: se vacía con la
+   regla que FEAT-09 ya definió, y el boletín viejo degrada a la raya con el nombre impreso.
+
+**En el texto no puede decir "firma digital"**, por lo mismo que se cuidó en FEAT-09: es una firma
+ológrafa digitalizada, y la Ley 25.506 usa ese término para otra cosa.
+
+### Lo que no se toca
+
+La firma de conformidad de las familias, el flujo de publicación y el porcentaje de firmas.
+
+### Etapa 2
+
+La traba: sin firma de la dirección no se publica. Y enchufar `specialFields.teacherSignature`
+([`ReportTemplateManager.tsx:120`](../src/features/reports/ReportTemplateManager.tsx)), que hoy se
+configura en el editor de plantillas y **nadie lee** — es configuración muerta anterior a esta ficha.
 
 ---
 
