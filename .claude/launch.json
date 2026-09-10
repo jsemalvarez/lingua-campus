@@ -6,6 +6,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
+      "url": "http://instituto-test.localhost:3000",
       "env": {
         "NODE_EXTRA_CA_CERTS": "C:/ProgramData/Avast Software/Avast/wscert.pem"
       }
