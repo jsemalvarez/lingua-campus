@@ -219,6 +219,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
 | [SEC-11](#sec-11) | P1 | 🗣️ Obligar a cambiar la contraseña por defecto en el primer ingreso | [ ] |
+| [SEC-12](#sec-12) | P1 | El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual | [ ] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
@@ -950,6 +951,65 @@ Sin proveedor de correo, sin SPF ni DKIM, sin esperar a nada.
 **Relacionado.** [SEC-06](#sec-06) es la otra mitad y va después. [FEAT-11](#feat-11) aporta el
 número: cuántas cuentas siguen con la contraseña por defecto, partido en alumnos, tutores y
 profesores, que es la barra de avance de este despliegue y termina en cero.
+
+---
+
+<a id="sec-12"></a>
+## SEC-12 · El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual · **P1**
+
+**Encontrado el 2026-09-09**, analizando el correo de acuse de la preinscripción pública. No es parte
+de ese trabajo: es de antes, y sale a la superficie porque ese correo tenía que decidir si copiaba el
+DNI del aspirante.
+
+**`authorize` no filtra por estado.** [`auth.ts:49`](../src/lib/auth.ts) busca al alumno por correo, o
+por DNI más instituto, y compara la contraseña. En ningún momento mira `status`. Si la contraseña da,
+emite la sesión con `roles: ["STUDENT"]` fijo. Un `PRE_INSCRIBED` y un `DELETED` entran igual que un
+alumno activo.
+
+**Y a los alumnos no los alcanza la red que sí tiene el personal.** La relectura periódica del JWT
+vacía los roles de un `User` que dejó de estar activo ([`auth.ts:144`](../src/lib/auth.ts)), pero
+está adentro de un `if (!isStudent)` ([`auth.ts:124`](../src/lib/auth.ts)) — el alumno nunca pasa por
+ahí. Su `["STUDENT"]` queda escrito en el token y no se revisa nunca más, en los 30 días que dura.
+
+**Lo que sí ataja hoy es `getAuthContext`**, que consulta la fila y devuelve `null` si el alumno no
+está `ACTIVE` ([`authz.ts:70`](../src/lib/authz.ts)). Todo lo que pasa por el helper deniega bien, y
+por eso esto no es un agujero de permisos financieros ni de administración.
+
+**Pero 23 archivos leen la sesión directo, sin pasar por el helper.** Entre ellos
+[`practice/page.tsx`](../src/app/practice/page.tsx), [`profile/page.tsx`](../src/app/profile/page.tsx)
+y las tres pantallas de [`messages/`](../src/app/messages/page.tsx). O sea que el alumno dado de baja
+entra, usa el módulo de práctica, ve su ficha y escribe mensajes.
+
+**Por qué es P1 y no defensa en profundidad.** La política del sistema es el borrado lógico
+([ARQ-05](#arq-05)): dar de baja **es** la única forma de sacar a alguien. Un borrado que no corta el
+acceso no es un borrado — el instituto cree que lo sacó y la persona sigue adentro, sin que nada en la
+pantalla se lo desmienta a ninguno de los dos.
+
+**Los dos estados llegan acá por caminos distintos.**
+
+- **`DELETED`** es el caso grave, porque es una decisión explícita del instituto que el sistema no
+  ejecuta.
+- **`PRE_INSCRIBED`** es un aspirante que el instituto todavía no aceptó ([BUG-08](#bug-08)): no es
+  alumno y no tiene por qué tener sesión. Y ahí se suma que su contraseña es `"inscripcion123"`, fija
+  y escrita en el repositorio ([SEC-06](#sec-06)), así que **con saber el DNI alcanza para entrar** —
+  y el DNI no es un secreto. Es la mitad de este ítem que además es un acceso adivinable.
+
+**Qué tiene que pasar en su lugar.** El filtro va en `authorize`, que es el único lugar donde se emite
+una sesión. Tres cosas, y ninguna es cara:
+
+1. **`status: "ACTIVE"` en la búsqueda del alumno**, con el mensaje de error de siempre. Si dijera
+   *"tu cuenta está dada de baja"*, el formulario de login pasaría a contestar quién existe en el
+   instituto y quién no.
+2. **Mirar de paso la rama de `User`**, que tampoco filtra. Hoy el usuario no activo entra y queda sin
+   roles, que es mucho más suave, pero es el mismo agujero y se arregla en la misma línea.
+3. **Sacar el `if (!isStudent)` de la relectura**, o las sesiones ya emitidas sobreviven al arreglo
+   hasta 30 días. Sin esto, el alumno que el instituto da de baja hoy con la sesión abierta sigue
+   entrando mañana.
+
+**Relacionado.** [SEC-06](#sec-06) (la contraseña fija de la preinscripción, que es lo que vuelve
+adivinable el acceso del aspirante), [ARQ-05](#arq-05) (la política de borrado lógico que esto
+incumple), [BUG-08](#bug-08) (qué es un preinscripto y por qué no es un alumno),
+[SEC-09](#sec-09) (el `middleware.ts` que no existe y que sería la otra capa).
 
 ---
 
