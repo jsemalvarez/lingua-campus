@@ -45,6 +45,10 @@ next-env.d.ts
 # scripts
 /scripts
 
+# Los HTML que rinde `npm run preview:email`. El script sí se versiona; su
+# salida es descartable y se regenera cuando haga falta.
+/.preview-emails
+
 # AI workspaces
 /artifacts
 /scratch
