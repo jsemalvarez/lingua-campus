@@ -264,6 +264,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
 | [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
 | [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
+| [BUG-15](#bug-15) | P2 | En el celular el listado de alumnos no tiene ninguna acción | [ ] |
 | [BUG-15](#bug-15) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
@@ -6295,6 +6296,60 @@ estaba lenta.
 **Relacionado.** [ARQ-16](#arq-16) es la otra mitad del mismo reporte —cuánto tarda de verdad— y
 conviene hacerlas en este orden: esto es barato, seguro, y puede disolver la queja sin tocar una sola
 consulta. [FEAT-07](#feat-07), el filtro que lo destapó.
+
+---
+
+<a id="bug-15"></a>
+## BUG-15 · En el celular el listado de alumnos no tiene ninguna acción · **P2**
+
+**Visto el 2026-09-10**, buscando por dónde se borra la preinscripción de un chistoso. La respuesta
+—desde la ficha, con el botón *"Borrar Inscripción"* de la Zona de Peligro
+([`StudentDangerZone.tsx:116`](../src/app/students/[id]/StudentDangerZone.tsx))— **alcanza tal como
+está**: con status `PRE_INSCRIBED` ese botón hace borrado duro, que para una preinscripción falsa es
+lo que corresponde, y **no se agrega un tacho a la pestaña** (decidido el mismo día). Lo que quedó a
+la vista buscándolo es otra cosa.
+
+**La columna de acciones no existe abajo de 1024px.** El `<th>` y el `<td>` llevan
+`hidden lg:table-cell` ([`students/page.tsx:258`](../src/app/students/page.tsx) y `:381`): en un
+celular, o en una tablet en vertical, la columna no se aprieta ni se corta, no se dibuja. Y hay una
+segunda capa debajo, que es la que hace que borrar esa clase no alcance: los botones de las tres
+ramas viven en `opacity-0 group-hover:opacity-100`
+([`StudentListActions.tsx:78`](../src/app/students/components/StudentListActions.tsx)), y en una
+pantalla táctil no hay hover.
+
+**Lo que se pierde no es lo mismo en cada pestaña**, y ahí está la diferencia entre una molestia y un
+callejón sin salida:
+
+| Pestaña | Acciones de la fila | ¿Hay otra puerta? |
+|---|---|---|
+| Pre-inscriptos | link de completar datos, activar, ver ficha | **Sí.** El nombre es link a la ficha, y ahí están el banner de activar ([`page.tsx:203`](../src/app/students/[id]/page.tsx)) y el mismo botón de completar datos ([`StudentProfileView.tsx:105`](../src/app/students/[id]/StudentProfileView.tsx)). Se pierde el atajo, no la función. |
+| Activos | link de completar datos, ver ficha | **Sí**, los mismos dos. |
+| Archivados | restaurar, borrar permanentemente | **No.** |
+
+**Desde un celular, un alumno dado de baja no se puede recuperar.** `restoreStudentAction` se importa
+en un solo lugar, que es la fila del listado, y la Zona de Peligro del archivado no sirve de
+reemplazo: con status `DELETED` el botón cae en `softDeleteStudent`, o sea que vuelve a dar de baja a
+alguien que ya está de baja. La purga permanente está igual. Son las dos únicas acciones del módulo
+con una sola puerta, y es justo la que se cierra en la pantalla chica.
+
+**Cambio.** Dos cosas, y la segunda importa más que la primera:
+
+1. Que las acciones se vean abajo de `lg`. No basta con sacar el `hidden lg:table-cell`: hay que
+   resolver también el `opacity-0` donde no hay hover, o los botones quedan presentes e invisibles,
+   que es peor que ausentes.
+2. Darle a *restaurar* un lugar propio en la ficha del archivado, al lado de donde ya vive el
+   borrado. Sin eso la fila del listado sigue siendo la única puerta, y cualquier pantalla que la
+   esconda —hoy el celular, mañana otra— vuelve a dejar sin salida al alumno dado de baja.
+
+**Por qué P2 y no P1:** no se mueve plata y ninguna pantalla miente, y en la pestaña que destapó esto
+sólo se pierde un atajo. Lo que lo sostiene arriba es Archivados: la ficha es responsive, así que
+**dar de baja sí se puede desde el celular y deshacerlo no** — la asimetría exacta que el borrado
+lógico existe para no tener.
+
+**Relacionado.** [BUG-10](#bug-10) (la otra vez que la tabla no entró en la pantalla),
+[ARQ-14](#arq-14) (la purga que este listado ofrece y que no puede borrar a un alumno real),
+[ARQ-05](#arq-05) (la política de borrado lógico), [FIN-30](#fin-30) (volver después de una baja,
+que tampoco tiene camino propio).
 
 ---
 
