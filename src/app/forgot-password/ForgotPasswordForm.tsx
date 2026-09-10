@@ -180,6 +180,27 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
                             <label htmlFor="identifier" className="text-sm font-semibold text-foreground/90">
                                 Email o DNI
                             </label>
+
+                            {/*
+                              * **De quién es el DNI**, y por qué hay que aclararlo acá.
+                              *
+                              * El campo acepta las dos cosas, pero un tutor que lee
+                              * "DNI" se pregunta de dónde sacamos su documento — un
+                              * dato que a él nunca se le pidió. No es de él: es de los
+                              * alumnos, que entran con su número porque muchos tienen
+                              * 6, 7 u 8 años y no tienen correo propio
+                              * ([BUG-01](../../../docs/BACKLOG-TECNICO.md)).
+                              *
+                              * Va antes del campo y no después: contesta la pregunta
+                              * en el momento en que aparece, que es al leer la
+                              * etiqueta, y de paso le dice al tutor cuál de las dos
+                              * opciones es la suya antes de que tenga que elegir.
+                              */}
+                            <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                                Usá tu correo. El DNI es la vía de los alumnos más chicos, que entran
+                                con su número de documento porque todavía no tienen una casilla propia.
+                            </p>
+
                             <input
                                 id="identifier"
                                 type="text"
