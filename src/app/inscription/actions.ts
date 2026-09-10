@@ -458,7 +458,13 @@ async function manejarChoque(formData: FormData, instituteId: string) {
                 await avisarPorLaCampana({
                     instituteId,
                     title: `${name} no pudo anotarse`,
-                    body: "Ese correo ya figura en la ficha de otro alumno. La inscripción no se guardó: hay que pedirle otra dirección, o cargarla a mano.",
+                    // **La dirección va en el cuerpo, y es lo primero.** Sin ella
+                    // hay que abrir la ficha del otro alumno para saber de qué
+                    // correo se está hablando, y lo que el instituto necesita para
+                    // llamar a Marcos es justamente eso. Que "no se guardó" ya lo
+                    // dice el título, así que no se repite: la campana recorta el
+                    // cuerpo a dos líneas y el lugar se paga.
+                    body: `Quiso usar ${correo}, que ya está en la ficha de otro alumno. Hay que pedirle otra dirección, o cargarla a mano.`,
                     link: `/students/${duenoDelCorreo.id}`,
                     unaVezPorDia: true,
                 });
