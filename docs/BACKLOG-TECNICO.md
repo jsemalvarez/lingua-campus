@@ -283,6 +283,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
 | [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
 | [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
+| [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -5418,6 +5419,23 @@ datos del aspirante.
 dashboard del instituto resuelve buena parte del problema sin infraestructura nueva. No reemplaza al
 correo —no avisa a quien no entró—, pero es de horas y no de días.
 
+### Decidido — 2026-09-09 · sale junto con [FEAT-20](#feat-20)
+
+Lo que quedaba abierto acá se cerró al definir el acuse al aspirante, que es el correo espejo de éste:
+
+- **Se avisa a `Institute.email`**, el correo de contacto de la ficha del instituto. Es la dirección
+  que `resolveSender` ya usa como `replyTo` de todo lo que sale, así que no se agrega ningún concepto
+  nuevo. **Ojo que el campo es opcional en el schema** (`email String?`): si en producción está vacío,
+  el aviso no sale y el instituto se sigue enterando sólo por la campana — que es exactamente lo que
+  este ítem viene a arreglar. **Hay que verificar que esté cargado antes de darlo por hecho.**
+- **El cuerpo no copia los datos del aspirante** y manda a la aplicación, como esta ficha ya venía
+  diciendo por tratarse de datos de menores. FEAT-20 llegó a la misma conclusión por otro camino —la
+  dirección de destino no está verificada—, así que los dos correos se redactan igual de cortos.
+- **Se hacen en la misma pasada.** Se enganchan en el mismo punto de la misma función
+  ([`inscription/actions.ts:87`](../src/app/inscription/actions.ts)) y comparten la infraestructura de
+  [FEAT-05](#feat-05): una vez abierto el archivo, el segundo es una plantilla más. Siguen siendo
+  independientes — si uno se cae, el otro se hace igual.
+
 ---
 
 <a id="feat-13"></a>
@@ -6276,6 +6294,177 @@ estaba lenta.
 **Relacionado.** [ARQ-16](#arq-16) es la otra mitad del mismo reporte —cuánto tarda de verdad— y
 conviene hacerlas en este orden: esto es barato, seguro, y puede disolver la queja sin tocar una sola
 consulta. [FEAT-07](#feat-07), el filtro que lo destapó.
+
+---
+
+<a id="feat-20"></a>
+## FEAT-20 · Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta · **P2**
+
+**Planteado el 2026-09-09.** El que completa el formulario público ve una pantalla que le dice
+*"Pronto nos pondremos en contacto"* y ahí termina todo. No le queda nada: ni una constancia de que su
+formulario llegó, ni un lugar donde mirar. Del otro lado, el instituto se entera por la campana
+([`inscription/actions.ts:95`](../src/app/inscription/actions.ts)), que exige que alguien entre a la
+plataforma ese día. **Entre las dos puntas hay un silencio que puede durar una semana**, y quien lo
+sufre es el que menos puede hacer algo al respecto.
+
+**El canal de correo ya está montado** desde [FEAT-05](#feat-05): proveedor elegible, remitente
+resuelto por instituto y el par plantilla + copy con HTML y texto plano saliendo del mismo lugar. Esto
+es una plantilla y una llamada. **El trabajo está en las decisiones, no en el código**, y por eso esta
+ficha es mayormente decisiones.
+
+### Es un acuse, no una copia de la ficha
+
+El pedido arrancó como *"que se le mande un correo con los datos que puso en el formulario"*. **Se
+descartó**, y es la decisión más importante de acá.
+
+El alumno queda `PRE_INSCRIBED`: es un aspirante esperando respuesta, **no está inscripto**. Un correo
+que devuelva la ficha completa se lee como una confirmación de vacante y le crea al instituto una
+expectativa que después tiene que desarmar. Y los datos no le sirven a nadie: la persona los acaba de
+tipear.
+
+**El cuerpo lleva el nombre del alumno y nada más.** El nombre sí hace falta — una madre que anota a
+dos hijos tiene que saber de cuál es este correo. El DNI, el nivel, el domicilio y el teléfono no
+entran.
+
+### Por qué el DNI no entra, aunque sea lo que la persona escribió
+
+Porque en este sistema **el DNI es media credencial**. El alumno entra con DNI más contraseña, la
+preinscripción le escribe `"inscripcion123"` —fija y escrita en el repositorio, [SEC-06](#sec-06)— y
+el login no filtra por estado, así que un preinscripto entra igual ([SEC-12](#sec-12)).
+
+La dirección de destino **no está verificada**: la escribió quien llenó el formulario. Si está mal
+tipeada, o si la puso a propósito de un tercero, el que recibe el correo se queda con la única pieza
+que le faltaba.
+
+**Esto no ata FEAT-20 a SEC-12**: justamente por no llevar el DNI, el acuse se puede hacer hoy y SEC-12
+se arregla cuando toque.
+
+### El nivel tampoco entra, por otro motivo
+
+Los tutores no saben a qué nivel se anota el chico — eso lo asigna el instituto. Ponerlo invita a una
+pregunta que el correo no puede contestar.
+
+De paso queda anotado que **el nivel se guarda como ID y no como nombre** (el `<select>` manda
+`level.id`, [`RegistrationForm.tsx:247`](../src/app/inscription/RegistrationForm.tsx)). Las pantallas
+lo resuelven, pero la notificación de la campana no: hoy la secretaria lee `Nivel: cmf3x8k2...`
+([`inscription/actions.ts:89`](../src/app/inscription/actions.ts)). **Es un bug aparte y chico**, no
+lo arregla esta ficha, pero está a la vista de quien la lea.
+
+### A quién le llega
+
+**Al alumno y al tutor 1, a los dos, los que tengan correo.** Cuando el alumno es menor los tutores
+son los que pagan el curso, así que el tutor no puede quedar afuera; y un alumno de 15 con correo
+propio tampoco. Hay que **normalizar y descartar repetidos**: es muy común que la madre ponga su
+misma dirección en el "Email Personal" del chico y otra vez en el suyo, y sin eso le llegan dos
+correos idénticos. `destinatariosDeAlumno`
+([`forgot-password/actions.ts:75`](../src/app/forgot-password/actions.ts)) ya hace exactamente eso.
+
+**El texto va en tercera persona** — *"Recibimos la preinscripción de Tomás Ferreyra a Modern English
+School"*— para que le cierre a los dos lectores. Eso ahorra toda la maquinaria de `esParaOtro` que sí
+necesitó el correo de recuperación.
+
+**Al tutor 2 no se le manda.** En el formulario está rotulado "Segundo Contacto de Emergencia", y un
+acuse no es una emergencia.
+
+### El correo no se vuelve obligatorio
+
+Se evaluó exigirlo —al alumno si es adulto, al tutor 1 si es menor— y **se descartó**. Los campos que
+el negocio pide son opcionales en el schema a propósito, y trabar el formulario le cobra el precio a
+la familia que menos puede pagarlo: la que no tiene correo hoy se anota igual y el instituto la llama.
+Después del cambio se trabaría en la pantalla y **el instituto no se enteraría de que existió**.
+
+En su lugar, tres cosas:
+
+1. **Un cartel al apretar enviar**, sólo si el campo que corresponde quedó vacío, invitando a
+   completarlo y ofreciendo mandar igual. Cuatro condiciones para que no termine siendo la obligación
+   con pasos de más:
+   - **No es un muro**: las dos salidas igual de visibles. Si "enviar sin correo" queda chiquito y
+     gris al lado de un botón grande, es una obligación disfrazada.
+   - **Aparece una sola vez.** Si vuelve a preguntar, la persona cree que el formulario está roto y
+     abandona — el peor de los dos mundos.
+   - **"Agregar mi correo" lleva el foco al campo.** En un celular ese campo quedó ocho pantallas más
+     arriba; si sólo cierra el cartel, la mitad no lo encuentra y manda igual. Es la diferencia entre
+     que el patrón convierta o no.
+   - **Apagado en `complete-profile`**, que usa el mismo componente
+     ([`page.tsx:75`](../src/app/complete-profile/[token]/page.tsx)): ahí la persona ya es alumno y no
+     hay ningún acuse que perder.
+2. **Texto de ayuda en el campo, en positivo** — *"Acá te confirmamos que tu inscripción llegó"*—, que
+   da una razón para completarlo en vez de una penalidad por no hacerlo. **Reemplaza** al renglón de
+   advertencia que se había pensado primero: anunciar el aviso antes de darlo lo vuelve repetitivo.
+3. **Que la campana lo diga.** Cuando no hay ninguna dirección, el cuerpo de la notificación que el
+   instituto ya recibe suma `· sin correo de contacto`. **Sin esto el cartel no sirve de nada**: la
+   familia sin correo es exactamente la que se queda en el silencio que esta ficha viene a cerrar, y
+   avisarle a ella que no va a recibir nada no hace que alguien la llame. La secretaria abre la
+   campana, ve cuáles hay que llamar por teléfono, y el vacío se cierra por otra vía.
+
+### El formulario es público, y eso lo vuelve un botón de mandar correo
+
+Cualquiera puede escribir la casilla de un tercero y texto libre en el nombre, y sale un correo
+firmado con el dominio del cliente. Las quejas de spam caen sobre `senderEmail` —**el mismo dominio
+por el que sale la recuperación de contraseña**— y degradan la entrega de todo junto.
+
+Juega a favor algo que no es obvio: el correo **sólo sale cuando se crea el alumno**, y
+`@@unique([dni, instituteId])` bloquea el DNI repetido. Para mandar dos veces a la misma víctima hay
+que inventar dos DNIs, y **cada envío deja una fila basura en la pestaña de preinscriptos**. El abuso
+se acumula donde el instituto lo ve.
+
+**Lo que se hace:**
+
+- **Cuerpo sin texto libre más allá del nombre.** Sin eso el correo no sirve como vehículo de mensaje:
+  el que lo recibe ve un acuse genérico de un instituto.
+- **Tope por casilla de destino.** Antes de mandar, contar cuántas preinscripciones de las últimas 24 h
+  de este instituto llevan esa misma dirección; pasado el tope, la inscripción **se guarda igual** pero
+  el correo no sale. Una consulta, sin tabla nueva.
+
+**Lo que no se hace, y por qué:**
+
+- **Límite por IP.** Obligaría a guardar la IP de cualquiera que pase por la pantalla, que es un dato
+  personal que hoy el sistema no guarda en ningún lado. Es el mismo criterio ya razonado en
+  [`passwordReset.ts:70`](../src/lib/passwordReset.ts).
+- **Captcha (Turnstile).** Corta la automatización, que es lo único que lleva esto a volumen dañino,
+  pero es una dependencia y una clave más en dos proyectos de Vercel. **Con un solo instituto y unas
+  pocas inscripciones por semana el atacante no gana nada.** Queda anotado para el día que la pestaña
+  de preinscriptos aparezca con basura.
+- **Mandar recién cuando el instituto acepta.** Cierra el abuso del todo porque cada envío lo aprueba
+  una persona, pero mata el sentido: el punto era avisar que el formulario llegó.
+
+### El que ya estaba registrado
+
+Hoy ese camino devuelve *"El DNI del alumno ya se encuentra registrado en este instituto"*
+([`inscription/actions.ts:113`](../src/app/inscription/actions.ts)), lo que convierte al formulario en
+una forma de averiguar quién es alumno ahí. **Esta parte cambia el comportamiento de algo que ya está
+en producción**, no agrega algo nuevo al lado, y es la más delicada de la ficha.
+
+- **A la persona, la misma pantalla y el mismo correo que si fuera nueva.** No se le miente: su
+  formulario llegó de verdad. Y el que estaba probando DNIs no aprende nada, porque la respuesta es
+  idéntica en los dos casos.
+- **Al instituto, la verdad completa por la campana**, distinguiendo cuál de los tres estados es. Los
+  tres piden cosas distintas: el `ACTIVE` probablemente quiere otra cosa, el `DELETED` quiere volver
+  —eso es [FIN-30](#fin-30)—, y el `PRE_INSCRIBED` está ansioso porque nadie le contestó, que es un
+  problema del instituto y no suyo.
+
+La persona no recibe la explicación: recibe la llamada. La explicación va a quien puede resolverla.
+
+> **Corrección a [BUG-08](#bug-08) — 2026-09-09.** Esa ficha dice que `Student.dni` no tiene `@unique`
+> y que por eso la preinscripción duplica alumnos. **Quedó viejo**: el schema hoy tiene
+> `@@unique([dni, instituteId])` y `@@unique([email, instituteId])`, y la acción ya atrapa el `P2002`.
+> El duplicado no se crea. Lo que sigue abierto de BUG-08 es qué se le contesta a cada lado, que es
+> justamente lo que resuelve este bloque.
+
+### Alcance
+
+**Sólo el formulario público.** El alta a mano del admin
+([`students/new/actions.ts`](../src/app/students/new/actions.ts)) y la actualización por token de
+`complete-profile` quedan afuera. La del admin es el lugar natural de un correo de bienvenida con el
+acceso, pero **ése es otro correo** y se cruza con [SEC-06](#sec-06) y [SEC-11](#sec-11).
+
+### Relacionado
+
+[FEAT-12](#feat-12) es el correo espejo —el aviso **al instituto**— y **sale en la misma pasada**: se
+engancha en el mismo punto de la misma función, con la misma infraestructura. [FEAT-05](#feat-05)
+puso el canal. [BUG-08](#bug-08) define qué es un preinscripto y comparte el bloque del duplicado.
+[SEC-12](#sec-12) salió a la superficie analizando esta ficha. [SEC-06](#sec-06) es lo que vuelve
+adivinable el acceso del aspirante.
 
 ---
 
