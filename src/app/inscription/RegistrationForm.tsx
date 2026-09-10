@@ -331,14 +331,14 @@ export function RegistrationForm({
                         </div>
 
                         <div className="flex flex-col gap-2.5">
-                            <label className="text-[0.95rem] font-bold ml-1">Email Acceso</label>
+                            <label className="text-[0.95rem] font-bold ml-1">Email</label>
                             <div className="relative group/input">
                                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-emerald-500 transition-colors" />
                                 <input
                                     name="guardian1Email"
                                     defaultValue={initialData?.guardian1Email || ""}
                                     type="email"
-                                    placeholder="Su email preferido para acceso al sistema"
+                                    placeholder="email"
                                     className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                                 />
                             </div>
@@ -401,7 +401,7 @@ export function RegistrationForm({
                             </div>
                         </div>
                         <div className="flex flex-col gap-2.5">
-                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Email Acceso</label>
+                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Email</label>
                             <div className="relative group/input">
                                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-blue-500 transition-colors" />
                                 <input
