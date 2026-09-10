@@ -264,6 +264,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
 | [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
 | [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
+| [BUG-15](#bug-15) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -6465,6 +6466,89 @@ engancha en el mismo punto de la misma función, con la misma infraestructura. [
 puso el canal. [BUG-08](#bug-08) define qué es un preinscripto y comparte el bloque del duplicado.
 [SEC-12](#sec-12) salió a la superficie analizando esta ficha. [SEC-06](#sec-06) es lo que vuelve
 adivinable el acceso del aspirante.
+
+---
+
+<a id="bug-15"></a>
+## BUG-15 · El alumno y el tutor no pueden descargar el recibo de un pago · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-09-10).** Los alumnos y los tutores no pueden descargar los recibos de sus pagos.
+
+**El botón está bien; la acción que llama los echa.** `ReceiptDownloadButton` le pide los datos a
+`getReceiptDataAction`, y esa acción entra por el `getAuthAndInstitute` del módulo de pagos, que exige
+`requireRole(["ADMIN", "SECRETARY"])` ([`payments/actions.ts:18`](../src/app/payments/actions.ts)).
+`requireRole` corta dos veces ([`authz.ts:141`](../src/lib/authz.ts)): primero por `ctx.isStudent`,
+que voltea al alumno, y después por el rol activo, que voltea al tutor. Vuelve
+`{ success: false, error: "No autorizado" }` y el botón lo muestra tal cual en un `alert`
+([`ReceiptDownloadButton.tsx:60`](../src/components/financials/ReceiptDownloadButton.tsx)).
+
+**El síntoma exacto es un cartel que dice "No autorizado".** Si lo que vieron fue otra cosa —que no
+pasa nada, o que baja un PDF roto— hay un segundo problema y esta ficha no lo cubre; ver el último
+bloque.
+
+### Son dos bugs con historias distintas
+
+**El del tutor es una regresión del 2026-08-10**, commit `782f9f3`. Antes el chequeo era
+`user.role !== "SUPERADMIN" && user.instituteId`: cualquier tutor pasaba y el recibo bajaba. La
+migración a `requireRole(["ADMIN", "SECRETARY"])` le cerró la puerta.
+
+**Y no fue un descuido.** [SEC-03](#sec-03) lista textualmente `getReceiptDataAction` entre las 16
+acciones a cerrar. Pero las otras 15 escriben plata —cobran, anulan, generan cuotas, borran— y ésta es
+la única que es una **lectura que dos portales de fuera del instituto ya estaban usando**. Se fue con
+el lote.
+
+**El del alumno nunca funcionó.** [`/administration`](../src/app/administration/page.tsx) existe desde
+el 2026-04-18 con el botón puesto, y el helper viejo buscaba
+`prisma.user.findUnique({ where: { email } })`: los alumnos viven en `Student`, no en `User`, así que
+siempre devolvió `null`. Es el golpe de [ARQ-15](#arq-15), el mismo de [BUG-01](#bug-01) — lo que
+cruza las dos tablas de identidad hay que construirlo dos veces, y lo que se construye una sola vez
+deja afuera a una de las dos.
+
+**A quién le pega hoy:** a todos los tutores, en el histórico de
+[`guardian/payments`](../src/app/guardian/payments/page.tsx), y a los alumnos **mayores de edad** en
+`/administration`. Los menores no llegan: la pantalla los redirige y el `Navbar` ni les dibuja el
+acceso.
+
+### Sumar los dos roles a la lista es el arreglo equivocado
+
+Si a `getReceiptDataAction` se le agregan `GUARDIAN` y `STUDENT`, el único filtro que queda es el del
+instituto ([`payments/actions.ts:1089`](../src/app/payments/actions.ts)). Con un solo instituto eso no
+filtra nada: cualquier tutor logueado, mandando un `paymentId` que no es suyo, se baja el recibo de
+otra familia con nombre, domicilio e importe. Un server action es un POST como cualquier otro y el
+`paymentId` viaja en el cuerpo — el mismo argumento con el que se escribió SEC-03, ahora en el otro
+sentido.
+
+**El corte no es por rol, es por vínculo.** Tres caminos sobre el mismo pago:
+
+| Quién | Qué tiene que ser cierto |
+|---|---|
+| ADMIN / SECRETARY | `payment.fee.instituteId === auth.instituteId` — lo de hoy |
+| STUDENT | `payment.fee.studentId === ctx.userId` |
+| GUARDIAN | hay un `GuardianStudentLink` entre `ctx.userId` y `payment.fee.studentId` |
+
+**Cambio.** Que la acción entre por `getAuthContext()` en vez de por el helper de pagos y decida con
+esa tabla. Conviene que **viva fuera de `payments/actions.ts`**: ese módulo es la caja, y todo lo que
+está adentro asume `["ADMIN", "SECRETARY"]`. Dejar una excepción en el medio es invitar al próximo
+barrido a repetir exactamente esto.
+
+### Lo que esta ficha no arregla
+
+El PDF se arma entero en el navegador y `generatePaymentReceipt` envuelve todo en un `try` que sólo
+hace `console.error` ([`generateReceipt.ts:226`](../src/lib/pdf/generateReceipt.ts)): si falla algo
+adentro, el botón deja de girar y no pasa nada más. Desde afuera se ve igual que este bug, y no deja
+ni un rastro que se pueda pedir. No es la causa del reporte, pero es lo que lo va a tapar la próxima
+vez.
+
+**Y ya hay algo cayéndose ahí adentro, en silencio: el logo.** `institute.logoUrl` es una URL de
+Cloudinary y se la pasa como está a `doc.addImage`, que no busca nada por la red — sólo acepta base64,
+un data URI o un elemento del DOM. Tira, lo agarra el `catch` de al lado y el recibo sale con el
+nombre del instituto en texto. **Nadie se entera de que el logo nunca estuvo**, y el que emite el
+recibo tampoco, porque el fallback se ve prolijo. Arreglarlo es leer la imagen antes de armar el PDF y
+pasarla convertida.
+
+**Relacionado.** [SEC-03](#sec-03), de donde salió. [ARQ-15](#arq-15) y [BUG-01](#bug-01), la
+identidad partida en dos tablas. [FIN-19](#fin-19) toca el mismo recibo por el otro lado: el concepto
+que no nombra el curso. [ARQ-09](#arq-09), los errores que no se registran en ningún lado.
 
 ---
 
