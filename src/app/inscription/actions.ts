@@ -117,22 +117,46 @@ async function casillasHabilitadas(
     return direcciones.filter((_, i) => cuentas[i] <= TOPE_POR_CASILLA);
 }
 
-/** Le avisa por la campana a quien puede hacer algo con esto. */
+const TIPO_DE_AVISO = "NEW_ENROLLMENT";
+
+/**
+ * Le avisa por la campana a quien puede hacer algo con esto.
+ *
+ * `unaVezPorDia` es para los avisos que salen de un **intento fallido**. Los de
+ * una preinscripción nueva no lo necesitan —cada una es un hecho distinto—, pero
+ * los otros dos sí: insistir en el formulario con el mismo DNI, o con el mismo
+ * correo y DNIs inventados, le llenaría la campana al instituto. La llave son
+ * **título y cuerpo juntos**, igual que en el aviso de la recuperación: el título
+ * trae el nombre y el cuerpo el motivo, así que ninguno de los dos alcanza solo.
+ */
 async function avisarPorLaCampana(params: {
     instituteId: string;
     title: string;
     body: string;
     link: string;
+    unaVezPorDia?: boolean;
 }): Promise<void> {
+    const { instituteId, title, body, link, unaVezPorDia } = params;
+
+    if (unaVezPorDia) {
+        const desde = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const yaAvisado = await prisma.notification.findFirst({
+            where: { instituteId, type: TIPO_DE_AVISO, title, body, createdAt: { gte: desde } },
+            select: { id: true },
+        });
+
+        if (yaAvisado) return;
+    }
+
     const { createNotificationForRoles } = await import("@/app/actions/notifications");
 
     await createNotificationForRoles({
-        instituteId: params.instituteId,
+        instituteId,
         roles: ["ADMIN", "SECRETARY"],
-        type: "NEW_ENROLLMENT",
-        title: params.title,
-        body: params.body,
-        link: params.link,
+        type: TIPO_DE_AVISO,
+        title,
+        body,
+        link,
     });
 }
 
@@ -342,77 +366,120 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         }
 
         return { success: true };
-    } catch (e: any) {
+    } catch (e) {
         console.error("Error in pre-enrollment:", e);
-        if (e.code === 'P2002') {
-            const target = e.meta?.target || [];
-
-            if (target.includes('dni')) {
-                return manejarDuplicado(formData, instituteId);
-            }
-
-            if (target.includes('email')) {
-                return { success: false, error: "El correo electrónico del alumno ya se encuentra registrado en este instituto." };
-            }
-            return { success: false, error: "El alumno ya se encuentra registrado en el sistema." };
+        // **Cuál de las dos restricciones saltó se averigua contra la base, no
+        // leyendo `e.meta.target`.** Cuando la misma persona se vuelve a anotar
+        // con el mismo DNI **y** el mismo correo se violan las dos a la vez, y
+        // Postgres reporta la que pega primero: si venía la del correo, este
+        // camino le contestaba "ese correo ya está registrado" y le filtraba
+        // que ya estaba en el instituto — justo lo que el acuse neutro existe
+        // para no filtrar.
+        if (esViolacionDeUnico(e)) {
+            return manejarChoque(formData, instituteId);
         }
         return { success: false, error: "Error al procesar la inscripción. Intente nuevamente." };
     }
 }
 
+/** El `P2002` de Prisma: chocó contra una restricción única. */
+function esViolacionDeUnico(e: unknown): boolean {
+    return typeof e === "object" && e !== null && "code" in e && e.code === "P2002";
+}
+
 /**
- * Alguien que **ya está en la base** volvió a completar el formulario (FEAT-20).
+ * El `create` chocó con una restricción única. Hay dos causas, y no se le
+ * contesta lo mismo a cada una (FEAT-20).
  *
- * **Se le contesta exactamente lo mismo que a cualquiera que se anota**: la misma
- * pantalla y el mismo correo. No se le miente —su formulario llegó de verdad—, y
- * el que estaba probando DNIs no aprende nada, porque la respuesta es idéntica en
- * los dos casos. Hasta ahora la pantalla le decía *"El DNI del alumno ya se
- * encuentra registrado en este instituto"*, que convertía al formulario en una
- * forma de averiguar quién es alumno del instituto.
+ * **Cuál fue se pregunta contra la base y no se lee de `e.meta.target`.** Cuando
+ * la misma persona se vuelve a anotar con el mismo DNI y el mismo correo se
+ * violan las dos a la vez, y cuál reporta Postgres no está bajo nuestro control.
  *
- * **La verdad completa va al instituto**, y ahí sí distinguiendo cuál de los tres
- * estados es: el activo probablemente quiere otra cosa, el dado de baja quiere
- * volver ([FIN-30](../../../docs/BACKLOG-TECNICO.md)), y el que ya estaba
- * preinscripto está esperando una respuesta que no llegó — que es un problema del
- * instituto y no suyo.
+ * - **El DNI ya existe** → es la misma persona, y se le contesta **exactamente lo
+ *   mismo que a cualquiera que se anota**: la misma pantalla y el mismo correo. No
+ *   se le miente —su formulario llegó de verdad—, y el que estaba probando DNIs no
+ *   aprende nada, porque la respuesta es idéntica en los dos casos. Hasta ahora la
+ *   pantalla le decía *"El DNI del alumno ya se encuentra registrado"*, que
+ *   convertía al formulario en una forma de averiguar quién es alumno del
+ *   instituto. **La verdad completa va al instituto**, distinguiendo cuál de los
+ *   tres estados es: el activo probablemente quiere otra cosa, el dado de baja
+ *   quiere volver ([FIN-30](../../../docs/BACKLOG-TECNICO.md)), y el que ya estaba
+ *   preinscripto está esperando una respuesta que no llegó.
  *
- * La persona no recibe la explicación: recibe la llamada.
+ * - **El correo ya lo usa otro alumno** → son dos personas distintas compartiendo
+ *   una casilla, y la inscripción **no se guarda**: `Student.email` es único por
+ *   instituto porque el login del alumno lo acepta como identificador
+ *   ([`auth.ts`](../../lib/auth.ts)), así que dos filas con el mismo correo harían
+ *   que entrara uno a la ficha del otro. A la persona se le muestra el error, que
+ *   es recuperable —puede preguntarle al instituto—, pero **el instituto se entera
+ *   igual por la campana**: sin eso, ésta es la única puerta del formulario donde
+ *   un intento se pierde sin que nadie lo sepa.
  */
-async function manejarDuplicado(formData: FormData, instituteId: string) {
-    const respuesta = { success: true as const };
+async function manejarChoque(formData: FormData, instituteId: string) {
+    const errorDeCorreo = {
+        success: false as const,
+        error: "El correo electrónico del alumno ya se encuentra registrado en este instituto.",
+    };
+
+    const name = (formData.get("name") as string) ?? "";
+    const dni = (formData.get("dni") as string) ?? "";
+    const email = formData.get("email") as string;
+    const g1Email = (formData.get("guardian1Email") as string) || (formData.get("g1Email") as string);
+    const correo = normalizar(email);
 
     try {
-        const name = (formData.get("name") as string) ?? "";
-        const dni = (formData.get("dni") as string) ?? "";
-        const email = formData.get("email") as string;
-        const g1Email = (formData.get("guardian1Email") as string) || (formData.get("g1Email") as string);
-
-        const [institute, existente] = await Promise.all([
+        const [institute, enConflicto] = await Promise.all([
             prisma.institute.findUnique({
                 where: { id: instituteId },
                 select: INSTITUTO_DEL_CORREO,
             }),
-            prisma.student.findFirst({
-                where: { dni, instituteId },
-                select: { id: true, status: true },
+            prisma.student.findMany({
+                where: {
+                    instituteId,
+                    OR: [{ dni }, ...(correo ? [{ email: correo }] : [])],
+                },
+                select: { id: true, name: true, status: true, dni: true, email: true },
+                take: 2,
             }),
         ]);
 
-        if (!institute) return respuesta;
+        const mismaPersona = enConflicto.find((s) => s.dni === dni);
 
-        // Si la restricción única saltó, la fila está. Sólo un borrado físico
-        // entre medio la haría desaparecer, y eso implica haber tocado la base a
-        // mano.
+        if (!mismaPersona) {
+            const duenoDelCorreo = enConflicto.find((s) => s.email === correo);
+
+            // Ninguna de las dos: el choque fue con algo que no sabemos leer.
+            // Mejor el mensaje genérico que inventar un motivo.
+            if (!duenoDelCorreo) {
+                return { success: false, error: "El alumno ya se encuentra registrado en el sistema." };
+            }
+
+            try {
+                await avisarPorLaCampana({
+                    instituteId,
+                    title: `${name} no pudo anotarse`,
+                    body: "Ese correo ya figura en la ficha de otro alumno. La inscripción no se guardó: hay que pedirle otra dirección, o cargarla a mano.",
+                    link: `/students/${duenoDelCorreo.id}`,
+                    unaVezPorDia: true,
+                });
+            } catch (notifErr) {
+                console.error("Error creating email-collision notification:", notifErr);
+            }
+
+            return errorDeCorreo;
+        }
+
+        if (!institute) return { success: true as const };
+
         const situacion: SituacionDePreinscripcion =
-            existente?.status === "DELETED"
+            mismaPersona.status === "DELETED"
                 ? "ya-de-baja"
-                : existente?.status === "PRE_INSCRIBED"
+                : mismaPersona.status === "PRE_INSCRIBED"
                   ? "ya-preinscripto"
                   : "ya-activo";
 
         const destinatarios = destinatariosDelAcuse(email, g1Email);
-
-        const dondeSeArregla = existente ? `/students/${existente.id}` : "/students";
+        const dondeSeArregla = `/students/${mismaPersona.id}`;
 
         try {
             await avisarPorLaCampana({
@@ -429,6 +496,7 @@ async function manejarDuplicado(formData: FormData, instituteId: string) {
                           ? "Ya tenía una preinscripción sin atender. No se creó una nueva."
                           : "Ya figura como alumno activo. No se creó una ficha nueva.",
                 link: dondeSeArregla,
+                unaVezPorDia: true,
             });
         } catch (notifErr) {
             console.error("Error creating duplicate pre-enrollment notification:", notifErr);
@@ -446,11 +514,17 @@ async function manejarDuplicado(formData: FormData, instituteId: string) {
         } catch (mailErr) {
             console.error("[inscription] falló el envío del duplicado:", mailErr);
         }
-    } catch (error) {
-        // Ni siquiera esto puede cambiar lo que ve la persona: si algo se cae acá,
-        // la respuesta sigue siendo la misma que la de una inscripción nueva.
-        console.error("[inscription] falló el manejo del duplicado:", error);
-    }
 
-    return respuesta;
+        return { success: true as const };
+    } catch (error) {
+        console.error("[inscription] falló el manejo del choque:", error);
+
+        // **El error neutro, y no el acuse.** Si algo se cayó acá no sabemos cuál
+        // de las dos causas fue: contestar "ese correo ya está registrado"
+        // filtraría lo que el acuse existe para no filtrar, y contestar el acuse
+        // sería peor todavía — la persona se iría creyendo que se anotó cuando no
+        // se creó ninguna fila y nadie va a llamarla. "Volvé a intentar" no revela
+        // nada y la deja sabiendo que tiene que hacer algo.
+        return { success: false as const, error: "Error al procesar la inscripción. Intente nuevamente." };
+    }
 }
