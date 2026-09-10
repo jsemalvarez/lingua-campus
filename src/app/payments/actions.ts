@@ -1066,4 +1066,4 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
 
 // El recibo se mudó a `receiptActions.ts`. No es una acción de caja: la piden
 // también el tutor y el alumno, que no pasan por `getAuthAndInstitute()` y no
-// tienen que empezar a pasar. Ver BUG-15.
+// tienen que empezar a pasar. Ver BUG-16.

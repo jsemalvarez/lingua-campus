@@ -14,7 +14,7 @@ import { getAuthContext, INSTITUTE_ADMINS, type AuthContext } from "@/lib/authz"
  * de alguien de afuera del instituto, y la última vez que estuvo mezclada con el
  * resto se fue con el lote: el barrido de permisos de SEC-03 le aplicó el mismo
  * `requireRole` que a los quince cobros, y tutores y alumnos se quedaron sin
- * recibo (BUG-15). Si el próximo barrido pasa por acá, que tenga que abrir este
+ * recibo (BUG-16). Si el próximo barrido pasa por acá, que tenga que abrir este
  * archivo para hacerlo.
  */
 

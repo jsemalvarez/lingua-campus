@@ -265,7 +265,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
 | [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
 | [BUG-15](#bug-15) | P2 | En el celular el listado de alumnos no tiene ninguna acción | [ ] |
-| [BUG-15](#bug-15) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
+| [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -6524,8 +6524,8 @@ adivinable el acceso del aspirante.
 
 ---
 
-<a id="bug-15"></a>
-## BUG-15 · El alumno y el tutor no pueden descargar el recibo de un pago · **P1** · 🗣️ Pedido del cliente
+<a id="bug-16"></a>
+## BUG-16 · El alumno y el tutor no pueden descargar el recibo de un pago · **P1** · 🗣️ Pedido del cliente
 
 **Reporte (2026-09-10).** Los alumnos y los tutores no pueden descargar los recibos de sus pagos.
 
