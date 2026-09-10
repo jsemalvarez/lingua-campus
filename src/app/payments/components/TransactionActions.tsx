@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { XCircle, AlertTriangle } from "lucide-react";
-import { voidExpenseAction, voidPaymentAction, voidIncomeAction, getReceiptDataAction } from "../actions";
+import { voidExpenseAction, voidPaymentAction, voidIncomeAction } from "../actions";
+import { getReceiptDataAction } from "../receiptActions";
 import { Download, Loader2 } from "lucide-react";
 import { generatePaymentReceipt } from "@/lib/pdf/generateReceipt";
 import { formatFeeLabel } from "@/lib/utils";
