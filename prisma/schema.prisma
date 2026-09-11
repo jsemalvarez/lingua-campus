@@ -59,6 +59,7 @@ model Institute {
   reportTemplates ReportTemplate[]
   signatures    Signature[]
   signatureReferences SignatureReference[]
+  reportBatchSignatures ReportBatchSignature[]
 }
 
 // -----------------------------------------------------------------------------
@@ -106,6 +107,9 @@ model User {
   signatureReference SignatureReference?
   signatures         Signature[]
   mustSign           ReportSigner[]
+
+  // Firmas del instituto en el boletín: dirección o docente (FEAT-21)
+  reportBatchSignatures ReportBatchSignature[]
 
   // Si la contraseña vigente es una de las que reparte el sistema (SEC-06).
   // `null` = todavía no se revisó: el hash lleva salt aleatoria y averiguarlo
@@ -225,6 +229,7 @@ model Course {
   threads     MessageThread[]
   reportTemplates CourseReportTemplate[]
   studentReports  StudentReport[]
+  batchSignatures ReportBatchSignature[]
 
 
   startDate   DateTime?
@@ -939,6 +944,7 @@ model ReportTemplate {
   categories    ReportCategory[]
   reports       StudentReport[]
   courses       CourseReportTemplate[]
+  batchSignatures ReportBatchSignature[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1115,6 +1121,62 @@ model Signature {
   similarityScore Float?
 
   @@index([reportId])
+  @@index([instituteId, signedAt])
+}
+
+// -----------------------------------------------------------------------------
+// FIRMA DEL INSTITUTO EN EL BOLETÍN (FEAT-21)
+// La dirección firma que revisó las notas y los comentarios; el docente firma
+// autoría. Es del lado del instituto: no tiene nada que ver con el acuse de
+// lectura de la familia, que es `Signature`.
+// -----------------------------------------------------------------------------
+
+// Una firma sobre una **tanda** de informes: curso + plantilla + año + período.
+// La tanda no existe como fila —son N `StudentReport` que comparten esas cuatro
+// claves—, así que la clave natural va acá repetida. Se firma una vez y la firma
+// sale en el boletín de todos los alumnos de esa tanda.
+//
+// **No puede ser una fila de `Signature`.** La pantalla del instituto cuenta
+// `report.signatures.length > 0` como "la familia firmó"; meter acá la firma del
+// docente haría mentir ese porcentaje.
+model ReportBatchSignature {
+  id          String    @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  templateId  String
+  template    ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  year        Int
+  periodIndex Int
+
+  // "ADMIN" (la dirección) o "TEACHER". Texto y no enum, igual que
+  // `ThreadParticipant.actingRole`, que ya guarda así el rol activo.
+  signerRole  String
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  // El nombre se congela. Leerlo en vivo del curso es lo que hoy hace que
+  // cambiar el docente reescriba el nombre en boletines ya emitidos.
+  signerName  String
+
+  signedAt    DateTime  @default(now())
+
+  // Foto de lo que se firmó, **alumno por alumno**: `{ studentId: contentHash }`.
+  // Es un mapa y no un hash único de la tanda porque la decisión es por alumno:
+  // si se corrige la nota de uno, la firma de la dirección se cae en su boletín
+  // y los otros veintitrés no se enteran.
+  contentHashes Json
+
+  // El trazo, copiado de la firma de referencia al firmar. Se copia y no se lee
+  // en vivo para que retocar la firma no reescriba los boletines ya emitidos.
+  // Se vacía por retención; la fila queda siempre.
+  strokeData  Json?
+
+  // Una firma por rol y por tanda: volver a firmar reemplaza la anterior.
+  @@unique([courseId, templateId, year, periodIndex, signerRole])
   @@index([instituteId, signedAt])
 }
 

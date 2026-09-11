@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { StudentAcademicsView } from "../dashboard/components/StudentAcademicsView";
+import { withSignatureLines } from "@/lib/reports/batchSignatureQuery";
 
 export default async function StudentAcademicsPage() {
     const session = await getServerSession(authOptions);
@@ -66,7 +67,11 @@ export default async function StudentAcademicsPage() {
                         }
                     },
                     entries: true,
-                    course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } }
+                    course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } },
+                    // Firma de conformidad (FEAT-09): el alumno de 20 o más
+                    // firma su propio informe y nadie más puede hacerlo por él.
+                    signers: { select: { userId: true, studentId: true } },
+                    signatures: { select: { userId: true, studentId: true, signedAt: true } }
                 },
                 orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
             }
@@ -160,6 +165,15 @@ export default async function StudentAcademicsPage() {
         isMinor = age < 18;
     }
 
+    // Las firmas del instituto que salen impresas en el boletín (FEAT-21).
+    const reports = await withSignatureLines(student.studentReports);
+
+    // Su propia firma de referencia, para mostrársela mientras firma (FEAT-09).
+    const signatureReference = await prisma.signatureReference.findUnique({
+        where: { studentId: student.id },
+        select: { strokeData: true }
+    });
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <Navbar currentActiveRole={activeRole} />
@@ -175,7 +189,8 @@ export default async function StudentAcademicsPage() {
                 recentGrades={student.grades}
                 academicStats={academicStats}
                 practiceMetrics={practiceMetrics}
-                reports={student.studentReports}
+                reports={reports}
+                signatureReference={signatureReference?.strokeData ?? null}
             />
         </div>
     );

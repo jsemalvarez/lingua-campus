@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getAuthContext } from "@/lib/authz";
 import { reportContentHash } from "@/lib/reports/signatures";
-import { compareSignatures, type StrokeData } from "@/lib/reports/signatureCompare";
+import {
+    compareSignatures,
+    isValidStroke,
+    type StrokeData
+} from "@/lib/reports/signatureCompare";
 
 /**
  * Firma de conformidad de un informe (FEAT-09).
@@ -12,33 +16,6 @@ import { compareSignatures, type StrokeData } from "@/lib/reports/signatureCompa
  * Es un acuse de lectura: el instituto quiere saber quién vio las notas. No
  * bloquea nada, no invalida nada y no tiene valor probatorio.
  */
-
-/** Tope defensivo: una firma real no pasa de unos cientos de puntos. */
-const MAX_POINTS = 10_000;
-
-/** El trazo llega del cliente, así que se valida entero antes de tocarlo. */
-function isValidStroke(data: unknown): data is StrokeData {
-    if (!data || typeof data !== "object") return false;
-
-    const { strokes, width, height } = data as StrokeData;
-    if (typeof width !== "number" || typeof height !== "number") return false;
-    if (!Array.isArray(strokes) || strokes.length === 0) return false;
-
-    let points = 0;
-    for (const stroke of strokes) {
-        if (!Array.isArray(stroke)) return false;
-        points += stroke.length;
-        if (points > MAX_POINTS) return false;
-        for (const p of stroke) {
-            if (typeof p?.x !== "number" || typeof p?.y !== "number" || typeof p?.t !== "number") {
-                return false;
-            }
-        }
-    }
-
-    // Un punto suelto no es una firma.
-    return points >= 2;
-}
 
 export async function signReportAction(reportId: string, strokeData: unknown) {
     const auth = await getAuthContext();
@@ -154,8 +131,60 @@ export async function getMySignatureReference() {
 
     const reference = await prisma.signatureReference.findFirst({
         where: auth.isStudent ? { studentId: auth.userId } : { userId: auth.userId },
-        select: { strokeData: true, createdAt: true }
+        select: { strokeData: true, createdAt: true, updatedAt: true }
     });
 
     return reference;
+}
+
+/**
+ * Registrar o volver a registrar la firma propia, desde el perfil.
+ *
+ * FEAT-09 decidió que la referencia se crea sola con la primera firma y que
+ * después **la persona** la pueda volver a registrar —ella, no la secretaría—,
+ * y la pantalla de firma se lo promete al tutor con todas las letras. Faltaba
+ * el lugar donde hacerlo.
+ *
+ * Y es lo que vuelve viable FEAT-21: el docente y la dirección no firman
+ * informes propios, así que sin esta pantalla no tendrían por dónde registrar
+ * un trazo. Con la referencia puesta, firmar una tanda es un click.
+ *
+ * **Las firmas ya hechas no se tocan**: cada una guardó su propio trazo.
+ */
+export async function saveMySignatureReference(strokeData: unknown) {
+    const auth = await getAuthContext();
+    if (!auth) return { success: false, error: "No autorizado" };
+    if (!auth.instituteId) return { success: false, error: "No autorizado" };
+
+    if (!isValidStroke(strokeData)) {
+        return { success: false, error: "La firma está vacía o no es válida" };
+    }
+
+    const owner = auth.isStudent
+        ? { studentId: auth.userId, userId: null }
+        : { userId: auth.userId, studentId: null };
+
+    const existing = await prisma.signatureReference.findFirst({
+        where: auth.isStudent ? { studentId: auth.userId } : { userId: auth.userId },
+        select: { id: true }
+    });
+
+    if (existing) {
+        await prisma.signatureReference.update({
+            where: { id: existing.id },
+            data: { strokeData: strokeData as object }
+        });
+    } else {
+        await prisma.signatureReference.create({
+            data: {
+                ...owner,
+                instituteId: auth.instituteId,
+                strokeData: strokeData as object
+            }
+        });
+    }
+
+    revalidatePath("/profile");
+
+    return { success: true };
 }

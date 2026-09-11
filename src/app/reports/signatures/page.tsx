@@ -4,29 +4,70 @@ import { Navbar } from "@/components/layout/Navbar";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 import { templateRequiresSignature } from "@/lib/reports/signatures";
 import type { StrokeData } from "@/lib/reports/signatureCompare";
-import { SignatureOverview, type Batch, type ReportRow } from "./SignatureOverview";
+import {
+    asSignedHashes,
+    batchKeyOf,
+    fallenStudentIds,
+    type BatchSignerRole
+} from "@/lib/reports/batchSignatures";
+import { SignatureOverview, type Batch, type ReportRow, type StaffSignature } from "./SignatureOverview";
 
 /**
- * Seguimiento de firmas de conformidad (FEAT-09).
+ * Seguimiento de firmas (FEAT-09 y FEAT-21).
  *
- * Lo que el instituto realmente necesita no es la firma, es la lista de quién
- * falta. Esta pantalla es el entregable de la ficha; la firma es el mecanismo.
+ * Dos cosas distintas en la misma pantalla, porque la pregunta operativa es la
+ * misma —"¿qué me falta?"—: qué familias confirmaron que leyeron las notas, y
+ * qué tandas faltan firmar del lado del instituto.
  */
 export default async function SignaturesPage() {
     const auth = await requireRole(INSTITUTE_ADMINS);
     if (!auth) redirect("/dashboard");
 
+    // Las firmas del instituto se leen primero: son las que hacen entrar a la
+    // lista una tanda **todavía sin publicar**, que es donde la dirección firma
+    // cuando el circuito va en orden.
+    const staffSignatures = await prisma.reportBatchSignature.findMany({
+        where: { instituteId: auth.instituteId },
+        select: {
+            courseId: true,
+            templateId: true,
+            year: true,
+            periodIndex: true,
+            signerRole: true,
+            signerName: true,
+            signedAt: true,
+            strokeData: true,
+            contentHashes: true
+        }
+    });
+
+    const signedBatchKeys = staffSignatures.map(s => ({
+        courseId: s.courseId,
+        templateId: s.templateId,
+        year: s.year,
+        periodIndex: s.periodIndex
+    }));
+
     const reports = await prisma.studentReport.findMany({
         where: {
             course: { instituteId: auth.instituteId },
-            publishedAt: { not: null },
-            // Sin hash es un informe publicado por una versión que no sabía de
-            // firmas —todo el primer trimestre, por ejemplo—. No es que nadie lo
-            // haya firmado: es que nunca se le pidió a nadie.
-            contentHash: { not: null }
+            OR: [
+                {
+                    publishedAt: { not: null },
+                    // Sin hash es un informe publicado por una versión que no
+                    // sabía de firmas —todo el primer trimestre, por ejemplo—.
+                    // No es que nadie lo haya firmado: es que nunca se le pidió
+                    // a nadie.
+                    contentHash: { not: null }
+                },
+                ...(signedBatchKeys.length > 0 ? [{ OR: signedBatchKeys }] : [])
+            ]
         },
         select: {
             id: true,
+            studentId: true,
+            courseId: true,
+            templateId: true,
             year: true,
             periodIndex: true,
             publishedAt: true,
@@ -49,14 +90,26 @@ export default async function SignaturesPage() {
         orderBy: [{ year: "desc" }, { periodIndex: "desc" }]
     });
 
-    const groups = new Map<string, Batch>();
+    const firmadasPorTanda = new Map<string, typeof staffSignatures>();
+    for (const sig of staffSignatures) {
+        const key = batchKeyOf(sig);
+        const list = firmadasPorTanda.get(key) ?? [];
+        list.push(sig);
+        firmadasPorTanda.set(key, list);
+    }
+
+    type Acc = Batch & { currentHashes: { studentId: string; contentHash: string | null }[] };
+    const groups = new Map<string, Acc>();
 
     for (const report of reports) {
-        // Una plantilla puede no pedir firma, y entonces sus informes no entran
-        // acá: no están pendientes, simplemente no se firman.
-        if (!templateRequiresSignature(report.template.specialFields)) continue;
+        const key = batchKeyOf(report);
+        const tieneFirmaDelInstituto = firmadasPorTanda.has(key);
 
-        const key = `${report.course.id}|${report.template.id}|${report.year}|${report.periodIndex}`;
+        // Una plantilla puede no pedir firma de la familia. Sus informes no
+        // entran por ese lado, pero sí si el instituto los firmó: son dos cosas
+        // distintas sobre el mismo boletín.
+        const pideFirmaFamilia = templateRequiresSignature(report.template.specialFields);
+        if (!pideFirmaFamilia && !tieneFirmaDelInstituto) continue;
 
         if (!groups.has(key)) {
             groups.set(key, {
@@ -64,15 +117,28 @@ export default async function SignaturesPage() {
                 courseId: report.course.id,
                 courseName: report.course.name,
                 courseLevel: report.course.level,
+                templateId: report.template.id,
+                periodIndex: report.periodIndex,
                 periodLabel:
                     report.template.periodLabels[report.periodIndex] ??
                     `Período ${report.periodIndex + 1}`,
                 templateName: report.template.name,
                 year: report.year,
+                published: Boolean(report.publishedAt),
                 publishedAt: report.publishedAt?.toISOString() ?? null,
-                rows: []
+                staffSignatures: [],
+                rows: [],
+                currentHashes: []
             });
         }
+
+        const group = groups.get(key)!;
+        group.currentHashes.push({ studentId: report.studentId, contentHash: report.contentHash });
+
+        // Las filas de la familia son sólo de lo publicado y con hash. Un
+        // borrador no tiene firmantes resueltos, y contarlo como "sin firmante"
+        // ensuciaría el número que el instituto usa para perseguir.
+        if (!pideFirmaFamilia || !report.publishedAt || !report.contentHash) continue;
 
         const signed = report.signatures.length > 0;
         const row: ReportRow = {
@@ -101,13 +167,48 @@ export default async function SignaturesPage() {
             lastEditedAt: report.lastEditedAt?.toISOString() ?? null
         };
 
-        groups.get(key)!.rows.push(row);
+        group.rows.push(row);
     }
 
-    const batches = [...groups.values()].map(b => ({
-        ...b,
-        rows: b.rows.sort((a, z) => a.studentName.localeCompare(z.studentName))
-    }));
+    const batches: Batch[] = [...groups.values()].map(({ currentHashes, ...b }) => {
+        const staff: StaffSignature[] = (firmadasPorTanda.get(b.key) ?? []).map(sig => ({
+            role: sig.signerRole as BatchSignerRole,
+            signerName: sig.signerName,
+            signedAt: sig.signedAt.toISOString(),
+            strokeData: (sig.strokeData as StrokeData) ?? null,
+            fallenCount: fallenStudentIds(asSignedHashes(sig.contentHashes), currentHashes).length
+        }));
+
+        return {
+            ...b,
+            staffSignatures: staff,
+            rows: b.rows.sort((a, z) => a.studentName.localeCompare(z.studentName))
+        };
+    });
+
+    /**
+     * El orden lo da el circuito real: el docente avisa que terminó firmando, y
+     * lo que la dirección está esperando es justamente eso. Arriba van las
+     * tandas listas para que firme; después las que ella ya firmó pero se le
+     * cayeron; al final, las que todavía está preparando el docente.
+     */
+    const prioridad = (b: Batch) => {
+        const docente = b.staffSignatures.find(s => s.role === "TEACHER");
+        const direccion = b.staffSignatures.find(s => s.role === "ADMIN");
+
+        if (direccion && direccion.fallenCount > 0) return 0;
+        if (docente && !direccion) return 1;
+        if (!docente && !direccion) return 2;
+        return 3;
+    };
+
+    batches.sort(
+        (a, z) =>
+            prioridad(a) - prioridad(z) ||
+            z.year - a.year ||
+            z.periodIndex - a.periodIndex ||
+            a.courseName.localeCompare(z.courseName)
+    );
 
     return (
         <div className="min-h-screen bg-background">

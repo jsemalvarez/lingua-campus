@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
 import { reportContentHash } from "@/lib/reports/signatures";
+import { asSignedHashes, fallenStudentIds } from "@/lib/reports/batchSignatures";
+import { notifyAfterGradeEdit } from "@/lib/reports/batchSignatureNotices";
 
 export async function GET(
     req: NextRequest,
@@ -73,7 +75,49 @@ export async function GET(
             };
         });
 
-        return NextResponse.json({ students: rows });
+        // Las firmas del instituto sobre esta tanda (FEAT-21). El parecido con
+        // el contenido se calcula **en vivo** y no contra `contentHash`: una
+        // tanda sin publicar puede no tenerlo todavía, y firmar antes de
+        // publicar es justamente el orden natural.
+        const batchSignatures = await prisma.reportBatchSignature.findMany({
+            where: { courseId, templateId, year, periodIndex },
+            select: {
+                signerRole: true,
+                signerName: true,
+                signedAt: true,
+                userId: true,
+                strokeData: true,
+                contentHashes: true
+            }
+        });
+
+        const currentHashes = studentReports.map(r => ({
+            studentId: r.studentId,
+            contentHash: reportContentHash({
+                teacherComments: r.teacherComments,
+                entries: r.entries
+            })
+        }));
+
+        const signatures = batchSignatures.map(sig => ({
+            signerRole: sig.signerRole,
+            signerName: sig.signerName,
+            signedAt: sig.signedAt,
+            strokeData: sig.strokeData,
+            isMine: sig.userId === user.userId,
+            fallenCount: fallenStudentIds(asSignedHashes(sig.contentHashes), currentHashes).length
+        }));
+
+        return NextResponse.json({
+            students: rows,
+            signatures,
+            // Quién puede firmar esta tanda, para no mostrar un botón que el
+            // servidor va a rechazar. La secretaría no firma.
+            canSign: {
+                ADMIN: user.activeRole === "ADMIN",
+                TEACHER: user.userId === course.teacherId
+            }
+        });
 
     } catch (error: any) {
         console.error("GET Course Report Entries Error:", error);
@@ -94,7 +138,7 @@ export async function POST(
 
         const course = await prisma.course.findUnique({
             where: { id: courseId },
-            select: { id: true, instituteId: true, teacherId: true }
+            select: { id: true, name: true, instituteId: true, teacherId: true }
         });
 
         if (!course || course.instituteId !== user.instituteId) {
@@ -123,7 +167,7 @@ export async function POST(
         // mantiene siendo un hecho raro y deliberado.
         const existing = await prisma.studentReport.findMany({
             where: { courseId, templateId, year, periodIndex },
-            select: { studentId: true, publishedAt: true }
+            select: { studentId: true, publishedAt: true, contentHash: true }
         });
         const publishedStudentIds = new Set(
             existing.filter(r => r.publishedAt).map(r => r.studentId)
@@ -223,12 +267,18 @@ export async function POST(
                     include: { entries: true }
                 });
 
-                // Si el informe ya estaba publicado, el hash tiene que seguir al
-                // contenido: cuando deja de coincidir con el que guardó una firma,
-                // la pantalla del instituto lo muestra como editado después de
-                // firmado. Se compara antes de escribir para no dejar rastro de una
-                // edición que no cambió nada — abrir y guardar sin tocar no cuenta.
-                if (finalReport && publishedStudentIds.has(studentId)) {
+                // El hash sigue al contenido **siempre**, publicado o no. Cuando
+                // deja de coincidir con el que guardó una firma, esa firma ya no
+                // cubre a ese alumno. Antes se escribía sólo para lo publicado, y
+                // eso dejaba ciega la mitad que más importa: la dirección firma
+                // tandas todavía sin publicar (FEAT-21).
+                //
+                // `lastEditedAt` / `lastEditedById` sí son de lo publicado: auditan
+                // la corrección posterior a que la familia lo vio.
+                //
+                // Se compara antes de escribir para no dejar rastro de una edición
+                // que no cambió nada — abrir y guardar sin tocar no cuenta.
+                if (finalReport) {
                     const newHash = reportContentHash({
                         teacherComments: finalReport.teacherComments,
                         entries: finalReport.entries
@@ -239,8 +289,9 @@ export async function POST(
                             where: { id: finalReport.id },
                             data: {
                                 contentHash: newHash,
-                                lastEditedAt: new Date(),
-                                lastEditedById: user.userId
+                                ...(publishedStudentIds.has(studentId)
+                                    ? { lastEditedAt: new Date(), lastEditedById: user.userId }
+                                    : {})
                             },
                             include: { entries: true }
                         });
@@ -252,6 +303,39 @@ export async function POST(
 
             const batchResults = await Promise.all(batchPromises);
             result.push(...batchResults);
+        }
+
+        // Si la edición tiró la firma de la dirección, o si la hizo la dirección
+        // sobre una tanda que el docente firmó, hay a quién avisarle (FEAT-21).
+        // Nunca puede tumbar un guardado que ya se hizo.
+        try {
+            const before = existing.map(r => ({
+                studentId: r.studentId,
+                contentHash: r.contentHash
+            }));
+            const after = result
+                .filter((r): r is NonNullable<typeof r> => Boolean(r))
+                .map(r => ({ studentId: r.studentId, contentHash: r.contentHash }));
+
+            const previo = new Map(before.map(r => [r.studentId, r.contentHash]));
+            const huboCambios = after.some(r => previo.get(r.studentId) !== r.contentHash);
+
+            if (huboCambios) {
+                await notifyAfterGradeEdit({
+                    instituteId: user.instituteId,
+                    courseId,
+                    courseName: course.name,
+                    templateId,
+                    year,
+                    periodIndex,
+                    editorUserId: user.userId,
+                    editorIsAdmin: user.activeRole === "ADMIN",
+                    before,
+                    after
+                });
+            }
+        } catch (notifErr) {
+            console.error("Error notifying batch signers:", notifErr);
         }
 
         return NextResponse.json({ success: true, count: result.length, reports: result });

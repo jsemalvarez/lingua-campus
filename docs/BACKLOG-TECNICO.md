@@ -286,7 +286,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
 | [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
 | [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
-| [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [ ] |
+| [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [~] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -6630,10 +6630,12 @@ backfillear todos los `StudentReport` existentes. Así es puramente aditivo: **u
 columnas tocadas, cero filas migradas** — importa porque el `build` corre `migrate deploy`. La tanda
 como entidad real queda como refactor posterior, y ese día también le sirve a [FEAT-19](#feat-19).
 
-**El hash de la tanda.** `reportBatchHash()` en
-[`lib/reports/signatures.ts`](../src/lib/reports/signatures.ts): sha256 sobre la lista ordenada de
-`studentId:contentHash`. Incluye el id del alumno a propósito — si entra uno nuevo al curso después de
-que ella firmó, la tanda cambió y su revisión no lo cubre.
+**La foto de lo firmado es un mapa por alumno, no un hash de la tanda.** El enunciado original decía
+`batchHash`, un sha256 sobre la lista ordenada; **al implementar no alcanza**, y por la decisión 2:
+un hash único sabe que *algo* cambió y no *a quién*, que es exactamente lo que hay que responder para
+que la firma se caiga sólo en el alumno tocado. Va entonces
+`contentHashes: { studentId: contentHash }`. Un alumno que no está en la foto —se inscribió después—
+tampoco está cubierto, que es lo correcto: la persona que firmó nunca vio sus notas.
 
 **Lo que habilita todo lo anterior: mantener `contentHash` también en los informes sin publicar.** Hoy
 sólo se escribe para los publicados
@@ -6685,6 +6687,47 @@ La firma de conformidad de las familias, el flujo de publicación y el porcentaj
 La traba: sin firma de la dirección no se publica. Y enchufar `specialFields.teacherSignature`
 ([`ReportTemplateManager.tsx:120`](../src/features/reports/ReportTemplateManager.tsx)), que hoy se
 configura en el editor de plantillas y **nadie lee** — es configuración muerta anterior a esta ficha.
+
+### Implementado — 2026-09-10
+
+Migración `20260910120000_add_report_batch_signatures`: **una tabla nueva, cero columnas tocadas,
+cero filas migradas.** Lo construido:
+
+- [`ReportBatchSignature`](../prisma/schema.prisma) con la clave natural de la tanda y el mapa de
+  hashes por alumno.
+- [`batchSignatures.ts`](../src/lib/reports/batchSignatures.ts) con las reglas puras —qué cubre una
+  firma, qué alumnos se le cayeron, qué tanda es anterior a la funcionalidad— y
+  [`batchSignatureQuery.ts`](../src/lib/reports/batchSignatureQuery.ts) con el cruce, que **no
+  devuelve las firmas caídas**: para el boletín es como si no estuvieran.
+- [`signReportBatchAction`](../src/app/actions/batchSignatures.ts), con `unsign` para sacar la
+  propia. Autoriza la de dirección por rol activo y la del docente por ser el del curso.
+- El panel de firma en la planilla
+  ([`BatchSignaturePanel.tsx`](../src/app/courses/[id]/reports/[templateId]/BatchSignaturePanel.tsx)),
+  **arriba y no en la barra del final**: con treinta cursos, que el botón esté sin scrollear es la
+  diferencia entre una tarde y tres. Ahí va también el aviso al docente de que guardar tira la firma
+  de la dirección.
+- La pantalla "Mi firma" en el perfil
+  ([`SignatureManager.tsx`](../src/components/reports/SignatureManager.tsx)), que cierra la promesa
+  de FEAT-09 y es por donde el personal registra su trazo. Con la referencia puesta, firmar una
+  tanda es un click.
+- El boletín dibuja las firmas en pantalla y en el PDF —vectorial, punto por punto, sin pasar por
+  imagen— con el corte `BATCH_SIGNATURES_SINCE` para que las tandas viejas conserven la raya.
+- La pantalla de firmas suma las tandas **sin publicar** que tengan firma del instituto, el estado
+  por tanda, y el orden que sale del circuito real: primero las que el docente ya firmó y ella no.
+- Los dos avisos, en [`batchSignatureNotices.ts`](../src/lib/reports/batchSignatureNotices.ts).
+
+**Un arreglo de FEAT-09 que salió en el camino.** El alumno de 20 o más **no podía firmar su propio
+informe**: `/academics` monta el visor sin pasarle `viewer`
+([`StudentAcademicsView.tsx`](../src/app/dashboard/components/StudentAcademicsView.tsx)), así que el
+cuadro de firma no aparecía nunca — y a él no le firma nadie más, con lo cual su informe quedaba
+pendiente para siempre. Corregido acá porque FEAT-09 todavía no salió a producción.
+
+**Qué falta verificar en stage.** Con la dueña: firmar una tanda sin publicar, publicarla y
+confirmar que la firma sale en el PDF de la familia. Con un docente: que su firma aparezca en la
+lista de ella como "lista para firmar". Editar una nota de una tanda firmada y confirmar las tres
+cosas: que el boletín de **ese** alumno pierde la firma de dirección, que los demás la conservan, y
+que a ella le entra un solo aviso. Y que un boletín viejo sin firmar siga imprimiendo la raya con el
+nombre como antes.
 
 ---
 

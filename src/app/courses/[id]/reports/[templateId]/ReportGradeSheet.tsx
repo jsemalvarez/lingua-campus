@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { BatchSignaturePanel, type BatchSignatureRow } from "./BatchSignaturePanel";
 
 interface Category {
     id: string;
@@ -47,12 +48,27 @@ interface ReportGradeSheetProps {
     courseId: string;
     template: Template;
     userRole: string;
+    /**
+     * Con qué tanda abrir. Viene de la URL: la pantalla de firmas y los avisos
+     * linkean directo al período que hay que mirar, para que firmar treinta
+     * cursos no sea treinta veces "buscar el trimestre" (FEAT-21).
+     */
+    initialYear?: number;
+    initialPeriod?: number;
 }
 
-export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSheetProps) {
-    const [selectedPeriod, setSelectedPeriod] = useState(0);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+export function ReportGradeSheet({
+    courseId,
+    template,
+    userRole,
+    initialYear,
+    initialPeriod
+}: ReportGradeSheetProps) {
+    const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod ?? 0);
+    const [selectedYear, setSelectedYear] = useState(initialYear ?? new Date().getFullYear());
     const [students, setStudents] = useState<StudentRow[]>([]);
+    const [signatures, setSignatures] = useState<BatchSignatureRow[]>([]);
+    const [canSign, setCanSign] = useState({ ADMIN: false, TEACHER: false });
     const [grades, setGrades] = useState<GradeState>({});
     const [savedGrades, setSavedGrades] = useState<GradeState>({});
     const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +117,8 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
             setStudents(studentRows);
             setGrades(initialGrades);
             setSavedGrades(JSON.parse(JSON.stringify(initialGrades)));
+            setSignatures(data.signatures ?? []);
+            setCanSign(data.canSign ?? { ADMIN: false, TEACHER: false });
         } catch (err: any) {
             toast.error(err.message || "No se pudieron obtener las calificaciones");
         } finally {
@@ -344,6 +362,20 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                     {getStatusBadge()}
                 </div>
             </div>
+
+            {!isLoading && students.length > 0 && (
+                <BatchSignaturePanel
+                    courseId={courseId}
+                    templateId={template.id}
+                    year={selectedYear}
+                    periodIndex={selectedPeriod}
+                    periodLabel={template.periodLabels[selectedPeriod] ?? `Período ${selectedPeriod + 1}`}
+                    signatures={signatures}
+                    canSign={canSign}
+                    hasUnsavedChanges={totalModified > 0}
+                    onChanged={fetchGrades}
+                />
+            )}
 
             {isLoading ? (
                 <div className="flex items-center justify-center p-24">

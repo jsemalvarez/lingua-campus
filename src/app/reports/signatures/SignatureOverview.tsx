@@ -22,6 +22,7 @@ import {
     type SimilarityBand,
     type StrokeData
 } from "@/lib/reports/signatureCompare";
+import type { BatchSignerRole } from "@/lib/reports/batchSignatures";
 
 export type ReportState = "FIRMADO" | "PENDIENTE" | "SIN_FIRMANTE";
 
@@ -38,15 +39,29 @@ export type ReportRow = {
     lastEditedAt: string | null;
 };
 
+/** Una firma del instituto sobre la tanda entera (FEAT-21). */
+export type StaffSignature = {
+    role: BatchSignerRole;
+    signerName: string;
+    signedAt: string;
+    strokeData: StrokeData | null;
+    /** Alumnos cuya nota se tocó después de firmar: ahí la firma dejó de valer. */
+    fallenCount: number;
+};
+
 export type Batch = {
     key: string;
     courseId: string;
     courseName: string;
     courseLevel: string | null;
+    templateId: string;
+    periodIndex: number;
     periodLabel: string;
     templateName: string;
     year: number;
+    published: boolean;
     publishedAt: string | null;
+    staffSignatures: StaffSignature[];
     rows: ReportRow[];
 };
 
@@ -100,6 +115,28 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
     );
     const totalAtencion = editados + sinFecha;
 
+    /**
+     * Lo que la dirección está esperando. El docente firma cuando terminó de
+     * cargar —esa firma *es* el aviso—, así que "firmada por el docente y no
+     * por mí" es exactamente la cola de trabajo de ella.
+     */
+    const listasParaFirmar = useMemo(
+        () =>
+            batches.filter(
+                b =>
+                    b.staffSignatures.some(s => s.role === "TEACHER") &&
+                    !b.staffSignatures.some(s => s.role === "ADMIN")
+            ).length,
+        [batches]
+    );
+    const firmadasPorDireccion = useMemo(
+        () =>
+            batches.filter(b =>
+                b.staffSignatures.some(s => s.role === "ADMIN" && s.fallenCount === 0)
+            ).length,
+        [batches]
+    );
+
     // Con el filtro puesto se abren todas: si pediste ver los que requieren
     // atención, no tiene sentido que tengas que ir desplegando tanda por tanda.
     const isExpanded = (key: string) => onlyAttention || openKey === key;
@@ -128,10 +165,31 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                 </span>
                 <h1 className="text-4xl font-extrabold tracking-tight">Firmas de los informes</h1>
                 <p className="text-muted-foreground font-medium mt-2 max-w-2xl">
-                    Quién confirmó que leyó las notas y quién falta. Los informes publicados antes
-                    de que existiera la firma no aparecen acá.
+                    Qué tandas faltan firmar del lado del instituto, y qué familias confirmaron que
+                    leyeron las notas. Los informes publicados antes de que existiera la firma no
+                    aparecen acá hasta que alguien los firme.
                 </p>
             </div>
+
+            {batches.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 -mt-4">
+                    <span
+                        className={cn(
+                            "px-3 py-1.5 rounded-xl border text-sm font-bold",
+                            listasParaFirmar > 0
+                                ? "bg-violet-500/10 border-violet-500/25 text-violet-700"
+                                : "bg-muted/30 border-border/40 text-muted-foreground"
+                        )}
+                    >
+                        {listasParaFirmar} {listasParaFirmar === 1 ? "lista" : "listas"} para que
+                        firme la dirección
+                    </span>
+                    <span className="text-sm text-muted-foreground font-medium">
+                        {firmadasPorDireccion} de {batches.length}{" "}
+                        {batches.length === 1 ? "tanda firmada" : "tandas firmadas"}
+                    </span>
+                </div>
+            )}
 
             {batches.length === 0 ? (
                 <Card className="p-10 text-center space-y-3">
@@ -246,14 +304,15 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                                 )}
                                             </p>
                                             <p className="text-sm text-muted-foreground truncate">
-                                                {batch.periodLabel} {batch.year} · publicado{" "}
+                                                {batch.periodLabel} {batch.year} ·{" "}
                                                 {batch.publishedAt
-                                                    ? dayjs(batch.publishedAt).format("D [de] MMMM")
-                                                    : "—"}
+                                                    ? `publicado ${dayjs(batch.publishedAt).format("D [de] MMMM")}`
+                                                    : "sin publicar"}
                                             </p>
                                         </div>
 
                                         <div className="flex items-center gap-4 shrink-0">
+                                            <StaffSignatures batch={batch} />
                                             {/* Con la tanda cerrada esto es lo único que
                                                 dice que adentro hay algo que mirar. */}
                                             {atencion.length > 0 && (
@@ -271,17 +330,32 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                                     <UserX size={13} /> {t.sinFirmante} sin firmante
                                                 </span>
                                             )}
-                                            <div className="text-right">
-                                                <Pct value={t.pct} />
-                                                <p className="text-xs text-muted-foreground font-medium">
-                                                    {t.firmados} de {t.firmables}
-                                                </p>
-                                            </div>
+                                            {batch.published ? (
+                                                <div className="text-right">
+                                                    <Pct value={t.pct} />
+                                                    <p className="text-xs text-muted-foreground font-medium">
+                                                        {t.firmados} de {t.firmables}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                // Sin publicar no hay firmas de familia que
+                                                // contar: la tanda está acá por la del instituto.
+                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                                                    Sin publicar
+                                                </span>
+                                            )}
                                         </div>
                                     </button>
 
                                     {isOpen && (
                                         <div className="border-t border-border/50 divide-y divide-border/30">
+                                            {rowsToShow.length === 0 && (
+                                                <p className="px-5 py-3 text-sm text-muted-foreground">
+                                                    {batch.published
+                                                        ? "Esta plantilla no pide firma de la familia."
+                                                        : "Todavía sin publicar: la firma de las familias se pide al publicar."}
+                                                </p>
+                                            )}
                                             {rowsToShow.map(row => (
                                                 <div
                                                     key={row.reportId}
@@ -323,12 +397,20 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                                 </div>
                                             ))}
 
-                                            <div className="px-5 py-3 bg-muted/20">
+                                            <div className="px-5 py-3 bg-muted/20 flex flex-wrap items-center gap-4">
+                                                {/* Con año y período en la URL la planilla abre
+                                                    en la tanda que hay que firmar, sin buscarla. */}
                                                 <Link
-                                                    href={`/courses/${batch.courseId}`}
+                                                    href={`/courses/${batch.courseId}/reports/${batch.templateId}?year=${batch.year}&period=${batch.periodIndex}`}
                                                     className="text-sm font-bold text-primary hover:underline"
                                                 >
-                                                    Ir al curso →
+                                                    Abrir la planilla y firmar →
+                                                </Link>
+                                                <Link
+                                                    href={`/courses/${batch.courseId}`}
+                                                    className="text-sm font-medium text-muted-foreground hover:underline"
+                                                >
+                                                    Ir al curso
                                                 </Link>
                                             </div>
                                         </div>
@@ -403,6 +485,67 @@ function SignatureThumb({ stroke, score }: { stroke: StrokeData; score: number |
                 {band.label}
                 {score !== null && <span className="hidden lg:inline"> · {score}</span>}
             </span>
+        </span>
+    );
+}
+
+/**
+ * Las firmas del instituto sobre la tanda (FEAT-21).
+ *
+ * Van en la fila cerrada porque son el estado que la dirección viene a mirar:
+ * qué le falta firmar y qué se le cayó. La firma del docente no lleva marca de
+ * caída porque no se cae — es autoría, no revisión.
+ */
+function StaffSignatures({ batch }: { batch: Batch }) {
+    const docente = batch.staffSignatures.find(s => s.role === "TEACHER");
+    const direccion = batch.staffSignatures.find(s => s.role === "ADMIN");
+
+    const chip = (
+        label: string,
+        tone: "ok" | "warn" | "off",
+        title: string,
+        icon: React.ReactNode
+    ) => (
+        <span
+            title={title}
+            className={cn(
+                "inline-flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide whitespace-nowrap",
+                tone === "ok" && "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+                tone === "warn" && "bg-amber-500/10 text-amber-700 border-amber-500/20",
+                tone === "off" && "bg-muted/40 text-muted-foreground border-border/40 border-dashed"
+            )}
+        >
+            {icon}
+            <span className="hidden lg:inline">{label}</span>
+        </span>
+    );
+
+    return (
+        <span className="hidden sm:flex items-center gap-1.5">
+            {docente
+                ? chip(
+                      "Docente",
+                      "ok",
+                      `Firmado por ${docente.signerName} el ${dayjs(docente.signedAt).format("D/M/YYYY")}`,
+                      <PenLine size={11} />
+                  )
+                : chip("Docente", "off", "El docente todavía no firmó", <PenLine size={11} />)}
+
+            {direccion
+                ? direccion.fallenCount > 0
+                    ? chip(
+                          `Dirección · ${direccion.fallenCount}`,
+                          "warn",
+                          `La firma de ${direccion.signerName} dejó de valer para ${direccion.fallenCount} alumno(s): se les modificó la nota después`,
+                          <AlertTriangle size={11} />
+                      )
+                    : chip(
+                          "Dirección",
+                          "ok",
+                          `Firmado por ${direccion.signerName} el ${dayjs(direccion.signedAt).format("D/M/YYYY")}`,
+                          <CheckCircle2 size={11} />
+                      )
+                : chip("Dirección", "off", "La dirección todavía no firmó", <PenLine size={11} />)}
         </span>
     );
 }

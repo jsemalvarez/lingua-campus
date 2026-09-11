@@ -16,6 +16,38 @@ export type StrokePoint = { x: number; y: number; t: number };
 /** Una firma es una lista de trazos, y cada trazo una lista de puntos. */
 export type StrokeData = { strokes: StrokePoint[][]; width: number; height: number };
 
+/** Tope defensivo: una firma real no pasa de unos cientos de puntos. */
+const MAX_POINTS = 10_000;
+
+/**
+ * El trazo llega del cliente, así que se valida entero antes de tocarlo. Vive
+ * acá y no en la acción porque ahora hay dos puertas por las que entra un trazo
+ * —firmar un informe y registrar la firma desde el perfil— y la validación
+ * tiene que ser la misma en las dos.
+ */
+export function isValidStroke(data: unknown): data is StrokeData {
+    if (!data || typeof data !== "object") return false;
+
+    const { strokes, width, height } = data as StrokeData;
+    if (typeof width !== "number" || typeof height !== "number") return false;
+    if (!Array.isArray(strokes) || strokes.length === 0) return false;
+
+    let points = 0;
+    for (const stroke of strokes) {
+        if (!Array.isArray(stroke)) return false;
+        points += stroke.length;
+        if (points > MAX_POINTS) return false;
+        for (const p of stroke) {
+            if (typeof p?.x !== "number" || typeof p?.y !== "number" || typeof p?.t !== "number") {
+                return false;
+            }
+        }
+    }
+
+    // Un punto suelto no es una firma.
+    return points >= 2;
+}
+
 /** Cuántos puntos se usan para comparar, repartidos a lo largo del recorrido. */
 const RESAMPLE = 64;
 
