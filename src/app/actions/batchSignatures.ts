@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
-import { reportContentHash } from "@/lib/reports/signatures";
+import {
+    reportContentHash,
+    resolveSigners,
+    templateRequiresSignature
+} from "@/lib/reports/signatures";
 import { isValidStroke } from "@/lib/reports/signatureCompare";
 import type { BatchSignerRole, SignedHashes } from "@/lib/reports/batchSignatures";
 
@@ -58,7 +62,7 @@ export async function signReportBatchAction(input: SignBatchInput, strokeData?: 
 
     const template = await prisma.reportTemplate.findFirst({
         where: { id: templateId, instituteId: auth.instituteId },
-        select: { id: true }
+        select: { id: true, specialFields: true }
     });
 
     if (!template) return { success: false, error: "Plantilla no encontrada" };
@@ -70,7 +74,15 @@ export async function signReportBatchAction(input: SignBatchInput, strokeData?: 
             studentId: true,
             contentHash: true,
             teacherComments: true,
-            entries: { select: { categoryId: true, value: true } }
+            publishedAt: true,
+            entries: { select: { categoryId: true, value: true } },
+            signers: { select: { id: true } },
+            student: {
+                select: {
+                    birthDate: true,
+                    guardianLinks: { select: { guardianId: true } }
+                }
+            }
         }
     });
 
@@ -97,6 +109,34 @@ export async function signReportBatchAction(input: SignBatchInput, strokeData?: 
             faltanHash.push({ id: report.id, hash });
         }
     }
+
+    // Un informe publicado sin firmantes resueltos es uno de antes de que la
+    // firma existiera. Escribirle el hash —que es lo que hay que hacer -3
+    // líneas más arriba— lo mete en la pantalla de firmas de las familias, y
+    // sin firmantes entraría mostrando a **todos** los alumnos como "sin
+    // firmante". Así que se resuelven acá, igual que hace
+    // `scripts/backfill-report-signers.js`.
+    //
+    // Con la **fecha original de publicación**, no la de hoy: un alumno que
+    // cumplió 20 desde marzo resolvería que firma él, cuando en marzo le tocaba
+    // al tutor.
+    //
+    // El script sigue haciendo falta para habilitar todo de una; esto saca la
+    // dependencia del orden, que era la trampa: firmar antes de correrlo
+    // ensuciaba la pantalla.
+    const pideFirmaFamilia = templateRequiresSignature(template.specialFields);
+    const nuevosFirmantes = pideFirmaFamilia
+        ? reports
+              .filter(r => r.publishedAt && r.signers.length === 0)
+              .flatMap(r =>
+                  resolveSigners({
+                      studentId: r.studentId,
+                      birthDate: r.student.birthDate,
+                      guardianIds: r.student.guardianLinks.map(l => l.guardianId),
+                      publishedAt: r.publishedAt!
+                  }).map(signer => ({ reportId: r.id, ...signer }))
+              )
+        : [];
 
     // El trazo sale de la firma de referencia de la persona: se registra una vez
     // desde el perfil y firmar pasa a ser un click. Con treinta cursos, esa
@@ -144,6 +184,13 @@ export async function signReportBatchAction(input: SignBatchInput, strokeData?: 
             await tx.studentReport.update({
                 where: { id: row.id },
                 data: { contentHash: row.hash }
+            });
+        }
+
+        if (nuevosFirmantes.length > 0) {
+            await tx.reportSigner.createMany({
+                data: nuevosFirmantes,
+                skipDuplicates: true
             });
         }
 

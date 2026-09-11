@@ -6701,6 +6701,12 @@ cero filas migradas.** Lo construido:
   devuelve las firmas caídas**: para el boletín es como si no estuvieran.
 - [`signReportBatchAction`](../src/app/actions/batchSignatures.ts), con `unsign` para sacar la
   propia. Autoriza la de dirección por rol activo y la del docente por ser el del curso.
+- **Firmar una tanda vieja resuelve sus firmantes.** Escribirle el hash a un informe publicado antes
+  de que la firma existiera es lo que lo mete en la pantalla de firmas de las familias, y sin
+  firmantes entraría mostrando a **todos** los alumnos como *"sin firmante"*. La acción los resuelve
+  con la **fecha original de publicación**, igual que el script. El script sigue haciendo falta para
+  habilitar todo de una; esto saca la dependencia del orden, que era la trampa: firmar antes de
+  correrlo ensuciaba la pantalla.
 - El panel de firma en la planilla
   ([`BatchSignaturePanel.tsx`](../src/app/courses/[id]/reports/[templateId]/BatchSignaturePanel.tsx)),
   **arriba y no en la barra del final**: con treinta cursos, que el botón esté sin scrollear es la
@@ -6721,6 +6727,13 @@ informe**: `/academics` monta el visor sin pasarle `viewer`
 ([`StudentAcademicsView.tsx`](../src/app/dashboard/components/StudentAcademicsView.tsx)), así que el
 cuadro de firma no aparecía nunca — y a él no le firma nadie más, con lo cual su informe quedaba
 pendiente para siempre. Corregido acá porque FEAT-09 todavía no salió a producción.
+
+**Un docente sólo puede firmar los cursos que tiene hoy.** El permiso sale de `course.teacherId`,
+que es el docente **actual**. Si un curso cambió de profesor durante el año, el que dictó el 1°
+trimestre no puede entrar a firmarlo y el que está ahora lo firmaría con su nombre sobre notas que
+no puso. No se resolvió: `StudentReport` no guarda quién lo dictó, y arreglarlo de verdad es darle
+al informe su propio docente. **Mientras tanto, conviene mirar si hubo cambios de docente antes del
+operativo de firma hacia atrás.**
 
 **Qué falta verificar en stage.** Con la dueña: firmar una tanda sin publicar, publicarla y
 confirmar que la firma sale en el PDF de la familia. Con un docente: que su firma aparezca en la
