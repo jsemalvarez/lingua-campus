@@ -4235,6 +4235,146 @@ no un corolario del pedido:
 - **El volumen.** Sumar tutores ya movía a [BUG-06](#bug-06) de molestia a problema; con los alumnos
   adentro son tres veces los hilos sobre el mismo contador roto.
 
+### Decidido — 2026-09-13 · las seis preguntas, cerradas de a una
+
+El pedido volvió por tercera vez, ahora como *"que los estudiantes y los tutores puedan iniciar
+conversación con el profesor de la clase"*. Se cerraron seis puntos con el cliente, de a uno. El
+docente→docente del pedido original **queda afuera de este paquete** (ver el final de la ficha).
+
+**1 · El hilo guarda de qué alumno habla.** Va una columna `studentId` opcional en `MessageThread`.
+El curso más el tutor alcanzan para deducir el alumno salvo con hermanos en el mismo curso — pero la
+deducción es **en vivo**, y se cae el día que el alumno se cambia de curso o se da de baja. Un hilo
+viejo tiene que poder decir de quién hablaba. Es el criterio que ya usan `ReportBatchSignature`, que
+congela `signerName` en vez de leerlo del curso, y `FeeDeletion`, que copia el nombre del alumno.
+
+La tentación que se descartó es resolverlo **sumando al alumno como participante**: en este modelo
+participar *es* poder leer, así que el tutor que escribe "Juan está desbordado" lo estaría
+escribiendo en un hilo que Juan abre. Quién es el sujeto y quién lee tienen que ser dos cosas
+distintas.
+
+De experiencia: el tutor con un solo hijo **no elige nada**; con dos o más elige el hijo y el curso
+se desprende de ahí — el tutor piensa en el hijo, no en el curso. Y la docente lo ve **en la
+bandeja**, no adentro del hilo (*"Marta González · sobre Juan Pérez · Nivel 3"*): si hay que abrir
+el hilo para saber de quién le hablan, el campo no sirvió de nada. Desde el hilo, atajo a la ficha
+del alumno.
+
+**2 · Quién ve qué.** El hilo del alumno es alumno↔docente y el del tutor es tutor↔docente, y **no
+se cruzan**: el tutor no ve lo que escribe su hijo ni el alumno lo que escribe su tutor. La
+supervisión la hace la administración, que **ya ve todos los hilos del instituto** — eso no hay que
+construirlo, está en [`getThreadsForUser`](../src/app/actions/messages.ts) y en el chequeo de
+`isInstituteAdmin` de `getThread`. Y está bien resuelto el matiz: mirar es invisible, contestar no —
+el admin que responde se suma al hilo como participante y el resto lo ve entrar.
+
+**La secretaría también lee.** Hoy el código no las distingue (`isAdmin` mete a ADMIN y a SECRETARY
+en la misma bolsa), y el cliente decidió dejarlo así y avisarle al instituto; si les incomoda, se
+quita después. Vale saber que del lado de la familia **sí se distinguen al escribir**: firman
+"Administración" y "Secretaría" respectivamente, con el rol congelado por mensaje en
+`Message.senderRole`.
+
+**Sin corte de edad**, y el argumento es del cliente: el alumno cumple años a mitad de cursada, y un
+permiso que cambia solo el día del cumpleaños es un problema esperando. De paso desaparece la
+dependencia de `Student.birthDate`, que es opcional y está vacío en muchas fichas — el problema que
+la ampliación del 02/09 dejaba abierto.
+
+**3 · El aviso es el sobre, y nada más.** Hoy **no hay ninguno**: ni `createThread` ni `sendMessage`
+escriben una `Notification` ni mandan correo, y el único indicio es el badge del sobre, que se
+refresca con un poll de 60 segundos y sólo mientras la persona está adentro de la app. No se nota
+porque la mensajería corre en un solo sentido —escribe el instituto y leen las familias, y el que
+escribe ya sabe que escribió—; al abrir el otro sentido, el mensaje de un tutor queda esperando a
+que la docente entre y mire un sobrecito.
+
+**Se evaluó escribir una `Notification` por mensaje y se descartó**, con el motivo que puso el
+cliente: *"si mandamos la notificación en la campana, ¿para qué tenemos el sobre?"*. Serían dos
+contadores del mismo hecho, y se desincronizan — leer el hilo actualiza el `lastReadAt` del
+participante y **no toca** la fila de `Notification`, así que la campana seguiría marcando pendiente
+algo ya leído y contestado. La campana es un **evento** ("se publicó un boletín"), el sobre es un
+**estado** ("tenés tres conversaciones sin leer"), y mensajería ya lleva ese estado bien.
+
+Entonces al sobre hay que darle lo que no tiene: **realtime** —el canal `user:${id}` ya existe y la
+campana ya está suscripta ([`NotificationBell.tsx`](../src/components/layout/NotificationBell.tsx)),
+así que el sobre puede colgarse del mismo y de paso desaparece el poll que para un admin levanta
+todos los hilos del instituto una vez por minuto y por pestaña—, el **contador arreglado**
+([BUG-06](#bug-06)) y un **desplegable** con los últimos hilos sin leer, con quién escribió y sobre
+qué alumno.
+
+**Sin correo.** Razón del cliente: los correos están saturados y la gente no los mira. Se suma que
+iría a la casilla personal de la docente, que es justo donde no queremos que termine lo que escribe
+una familia. **El push queda para más adelante** y está más cerca de lo que parece: la app ya es PWA
+con service worker propio (`@ducanh2912/next-pwa`, `public/sw.js`) y ya tiene el diálogo de
+instalación; falta VAPID, una tabla de suscripciones por dispositivo y el handler en el worker. Con
+una salvedad que decide si sirve: **en iPhone el push web sólo llega si la familia instaló la app**
+en la pantalla de inicio, así que la conversión de la PWA pasa a ser parte del problema.
+
+**4 · Dos destinos: el docente del curso y Administración.** Si el único destino fuera el docente,
+lo administrativo entraría igual por ahí — el tutor no separa lo pedagógico de lo de secretaría,
+escribe donde tiene un cuadrito — y la docente terminaría de mesa de entradas reenviando consultas
+de cuotas. Además la administración ya les escribe hoy, y un canal de una sola mano se iba a sentir
+como un olvido. De yapa resuelve un caso feo: **el curso puede no tener docente**, porque
+`teacherId` es opcional y [`courses/actions.ts`](../src/app/courses/actions.ts) guarda
+`teacherId || null` sin chistar; con Administración entre los destinos, ese curso no queda con un
+botón que no hace nada.
+
+**Se elige un área o un curso, nunca un nombre** ("Mi profesor de Nivel 3", "Administración"): así
+no se le muestra el padrón del instituto a nadie.
+
+**5 · Se mantiene el hilo por tema, con asunto.** Se evaluó pasarlo a un chat único por alumno y
+curso —el cliente los venía llamando "chats"— y lo descartó con el argumento correcto: el asunto es
+lo que después permite encontrar *"la respuesta sobre la tarea del martes"* sin scrollear una
+conversación única. Su lectura: tiene la dinámica de chat para escribir, contestar y ver quién está,
+y la de correo para organizar. La fricción del asunto —un tutor apurado y un chico de 8 años no
+inventan un título— se resuelve **en la pantalla**, con sugerencias tocables ("Tarea",
+"Inasistencia", "Consulta sobre la clase"), no sacando el campo.
+
+**6 · Buscador por asunto, filtros y paginación.** La bandeja **no tiene nada de eso**:
+[`MessagesInboxClient`](../src/app/messages/components/MessagesInboxClient.tsx) son 127 líneas que
+reciben la lista y la dibujan entera, y `getThreadsForUser` no tiene `take` — para un admin trae
+todos los hilos del instituto, siempre. Con el modelo de hilo por tema recién confirmado, esto deja
+de ser un lujo: sin buscador, "un hilo por tema" es sólo muchos hilos.
+
+Van **filtros por curso, por alumno y por sin leer** —los tres salen de datos que el hilo ya va a
+tener, así que son casi gratis—, **paginación**, y el buscador **sólo por asunto**: por contenido es
+índice de texto completo en Postgres, y eso se paga en infraestructura todos los meses, no una vez.
+Si el instituto lo pide, se cotiza aparte.
+
+Volumen estimado, **sin medir**: el instituto ronda las 580 personas (el mismo número que usa
+`ActivityDay` para acotar su crecimiento). Si un tercio de las familias abre un hilo por mes —y con
+dos destinos habilitados no parece exagerado—, son unos 150 hilos nuevos por mes y cerca de 1.500 en
+el año lectivo, hoy todos en una sola página y recontados cada 60 segundos.
+
+### Lo que queda afuera, anotado para no perderlo
+
+**El ciclo de vida de los hilos — planteado por el cliente el 2026-09-11, no se implementa ahora.**
+*"Los chats no tienen que vivir para siempre: cuando un estudiante cambia de curso, o cuando el
+curso termina, no tiene sentido que sigan accesibles."* Adentro hay dos cosas y una ya está resuelta
+sola: **abrir hilos nuevos con el docente equivocado no va a pasar**, porque la lista de
+destinatarios se arma de inscripciones activas y cursos activos, así que el docente viejo
+simplemente deja de aparecer. Lo que falta decidir es qué pasa con **los hilos ya abiertos**.
+
+La forma recomendada: **se cierran, no se borran** — sólo lectura, porque una conversación entre una
+familia y una docente es registro del instituto y acá el borrado es siempre lógico
+([ARQ-05](#arq-05)). Y **derivado, sin columna nueva**: el hilo ya sabe el curso y el alumno, así que
+*"¿sigue activa esa inscripción y sigue activo el curso?"* se contesta sola, sin proceso que correr
+ni hilos que alguien se olvide de cerrar. No contradice el punto 1: **se congela el sujeto y se
+deriva el permiso** — de quién se hablaba es un hecho del pasado y hay que guardarlo; quién puede
+escribir hoy es una pregunta del presente.
+
+**Lo único que hay que hacer desde ahora, y es gratis:** que los hilos que abren alumnos y tutores
+lleven `courseId` **siempre**. Hoy es opcional en `MessageThread` y se abren desde un curso igual,
+así que no cuesta nada — pero si entran hilos sin curso, van a ser justo los que nadie sepa cuándo
+cerrar.
+
+**El docente→docente del pedido original (13/08).** El cliente no lo nombró en ninguno de los dos
+pedidos siguientes, que hablaron de estudiantes y tutores. Sigue valiendo lo de arriba: el docente ya
+puede iniciar hilos, pero `allTeachers` se arma **sólo para administradores**, así que alcanza con
+extendérselo. Se deja afuera porque trae su propia pregunta de alcance —¿cualquier docente del
+instituto, o sólo los de los otros cursos de sus alumnos?— que no tiene nada que ver con las seis
+que se cerraron.
+
+**[BUG-06](#bug-06) deja de ser una molestia.** Con la administración como única supervisión de lo
+que escriben los alumnos, ese contador **es** la herramienta de supervisión: hoy muestra
+permanentemente todos los hilos del instituto como no leídos y nunca baja, así que no distingue un
+hilo nuevo de uno de agosto. Sube de prioridad por sí solo, y además el punto 3 lo toca igual.
+
 ---
 
 <a id="feat-07"></a>
