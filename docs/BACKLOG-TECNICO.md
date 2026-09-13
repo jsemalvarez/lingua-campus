@@ -287,6 +287,10 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
 | [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
 | [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [~] |
+| [FEAT-22](#feat-22) | P2 · sube a P1 con FEAT-06 | Notificaciones push: el sobre solo no alcanza | [ ] |
+| [FEAT-23](#feat-23) | P3 | Los hilos de mensajes no se cierran nunca | [ ] |
+| [FEAT-24](#feat-24) | P3 | Buscar dentro del contenido de los mensajes | [ ] |
+| [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -4343,6 +4347,11 @@ el año lectivo, hoy todos en una sola página y recontados cada 60 segundos.
 
 ### Lo que queda afuera, anotado para no perderlo
 
+Cuatro de estos temas tienen **ficha propia desde el 2026-09-13**, para no quedar enterrados acá
+adentro: [FEAT-22](#feat-22) (push), [FEAT-23](#feat-23) (cerrar los hilos), [FEAT-24](#feat-24)
+(buscar por contenido) y [FEAT-25](#feat-25) (quién de administración contestó). Lo que sigue es el
+porqué, y lo que no tiene ficha.
+
 **El ciclo de vida de los hilos — planteado por el cliente el 2026-09-11, no se implementa ahora.**
 *"Los chats no tienen que vivir para siempre: cuando un estudiante cambia de curso, o cuando el
 curso termina, no tiene sentido que sigan accesibles."* Adentro hay dos cosas y una ya está resuelta
@@ -4374,6 +4383,63 @@ que se cerraron.
 que escriben los alumnos, ese contador **es** la herramienta de supervisión: hoy muestra
 permanentemente todos los hilos del instituto como no leídos y nunca baja, así que no distingue un
 hilo nuevo de uno de agosto. Sube de prioridad por sí solo, y además el punto 3 lo toca igual.
+
+### Medido en producción — 2026-09-13 · el instituto escribe y la familia no lee
+
+Con las seis decisiones cerradas, se midió la base de producción para ver cuánto se usa hoy la
+mensajería y qué mueve el cambio. Consultas de sólo lectura. **Dos de los números que se dieron por
+buenos más arriba estaban mal, y van corregidos al final.**
+
+**Cuánto se usa.** 27 hilos, 61 mensajes y 118 participaciones desde el 2026-05-12. Por mes: 1 en
+mayo, 4 en junio, ninguno en julio, 11 en agosto y 11 en septiembre al día 13. **Viene creciendo
+rápido** — septiembre proyecta unos 25. No es un módulo muerto al que le estamos agregando features.
+
+**Quién escribe: los docentes, no la administración.** 44 de los 61 mensajes (72%) los mandó alguien
+con rol TEACHER, en 23 de los 27 hilos. La administración puso 3 y la secretaría 4. Era justo al
+revés de lo que se suponía al empezar la ronda.
+
+**Y las familias contestan cuando les llega.** 5 mensajes de tutores y 4 de alumnos, en 7 hilos
+distintos. El promedio es de 2,26 mensajes por hilo y sólo 8 de 27 se quedaron en un solo mensaje:
+**el 70% tiene ida y vuelta**. El canal de vuelta ya funciona para el que lo ve.
+
+**El dato más importante, y es malo.** El **80%** de las participaciones de alumnos (37 de 46) y el
+**86%** de las de tutores (38 de 44) tienen `lastReadAt` en `null`: **nunca abrieron el hilo**.
+Docentes y staff, 0%. Es lo que motiva [FEAT-22](#feat-22) y lo que le pone condición al punto 3:
+abrir el canal de ida sirve de poco si la respuesta de la docente no se lee.
+
+**Lo que confirma las decisiones:**
+
+- **`COURSE_BLAST` no se usó nunca.** Los 27 hilos son `DIRECT`, con 4,4 participantes promedio: los
+  docentes arman el envío a varios **a mano**, seleccionando alumnos, teniendo la función de curso
+  completo al lado. Conviene averiguar por qué antes de construir más pantalla — o no la encuentran,
+  o no les sirve como está.
+- **26 de 27 hilos ya llevan curso.** Exigir `courseId` en los hilos de familia no cambia la
+  costumbre, la garantiza ([FEAT-23](#feat-23)).
+- **El selector casi nunca va a preguntar.** Sólo **1** de los 205 alumnos con inscripción activa
+  está en más de un curso, y sólo **29 de 173 tutores** (17%) tienen más de un hijo. Lo decidido —no
+  preguntar cuando hay uno solo— cubre al 83% de los tutores y a prácticamente todos los alumnos.
+- **No hay un solo curso activo sin docente: 0 de 31.** El caso feo que justificaba en parte el
+  destino "Administración" **no se da hoy**. El destino se sostiene por el otro motivo: lo
+  administrativo entra igual por el canal del docente.
+- **96% de los alumnos activos sin correo** (348 de 362). Confirma que para el alumno no hay ningún
+  canal fuera de la app.
+
+**Dos correcciones a lo escrito más arriba:**
+
+1. **`birthDate` no está "vacío en muchas fichas": faltan 7 de 362 alumnos activos, el 2%.** La
+   decisión de no usar la edad sigue en pie, pero por el motivo del cliente —el alumno cumple años a
+   mitad de cursada— y no por la calidad del dato, que es buena.
+2. **La proyección de ~1.500 hilos al año estaba inflada unas seis veces.** Salía de suponer que un
+   tercio de las familias abriría un hilo por mes. Con la base real, y aun triplicando el volumen al
+   abrir el canal, da del orden de **200 a 400 hilos por año lectivo**. Consecuencia: **la paginación
+   y el buscador no son urgentes por volumen.** Entran igual —el modelo de hilo por tema los
+   necesita— pero no hay que apurarlos por miedo a que la bandeja explote. Lo mismo vale para
+   [BUG-06](#bug-06): el badge del admin muestra 27, no 1.500.
+
+**Un caso de borde que ahora tiene nombre.** Hay una persona en producción que es **tutora y docente
+a la vez**. Con el canal abierto va a poder escribirle a la docente de su hijo y recibir mensajes
+como docente, en la misma bandeja. El rol activo ya resuelve qué permisos tiene en cada momento
+([SEC-01](#sec-01)), pero es el caso que hay que probar a mano antes de salir.
 
 ---
 
@@ -6964,6 +7030,129 @@ pasarla convertida.
 **Relacionado.** [SEC-03](#sec-03), de donde salió. [ARQ-15](#arq-15) y [BUG-01](#bug-01), la
 identidad partida en dos tablas. [FIN-19](#fin-19) toca el mismo recibo por el otro lado: el concepto
 que no nombra el curso. [ARQ-09](#arq-09), los errores que no se registran en ningún lado.
+
+---
+
+<a id="feat-22"></a>
+## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
+
+**De dónde sale.** De la ronda de decisiones de [FEAT-06](#feat-06) (2026-09-13). Ahí se descartó el
+correo —"están saturados y la gente no los mira"— y quedó el sobre como único aviso de que llegó un
+mensaje. El push quedó anotado como el reemplazo, para más adelante.
+
+**El número que lo justifica, medido en producción el 2026-09-13.** De las 118 participaciones en
+hilos, **el 80% de las de alumnos y el 86% de las de tutores tienen `lastReadAt` en `null`**: nunca
+abrieron el hilo en el que están. Las de docentes y staff, 0% — pero es esperable, son los que
+escriben. Dicho en limpio: **el instituto escribe y ocho de cada diez familias no leen.** No es un
+problema de contenido ni de adopción del módulo, que viene creciendo; es que no hay forma de que se
+enteren si no entran solas a la app.
+
+**Eso le cambia el sentido a [FEAT-06](#feat-06).** Abrir el canal de ida sirve de poco si el de
+vuelta tiene esa tasa: la familia escribe, la docente contesta, y la respuesta se queda adentro de
+una campana que nadie mira. **Este ítem sube a P1 el día que se abra el canal de las familias.**
+
+**Qué falta.** La base ya está: la app es PWA con service worker propio (`@ducanh2912/next-pwa`,
+`public/sw.js`) y ya tiene el diálogo de instalación (`@khmyznikov/pwa-install`). Falta el par de
+claves VAPID, una **tabla de suscripciones por dispositivo** —una persona puede tener varias, y
+caducan solas, así que hay que darlas de baja cuando el proveedor las rechaza— y el handler en el
+worker.
+
+**La salvedad que decide si sirve, y no es un detalle de implementación.** En iPhone el push web
+**sólo llega si la PWA está instalada** en la pantalla de inicio; en el navegador suelto no existe.
+Así que la tasa de instalación pasa a ser parte del problema: sin ella, este ítem no mueve la aguja
+en la mitad del padrón.
+
+**Y para los alumnos no compite con nada.** 348 de los 362 alumnos activos —el 96%— no tienen correo
+cargado: entran con DNI. Para ellos el push no es una alternativa al correo, es el único aviso
+posible fuera de la app.
+
+**Relacionado.** [FEAT-06](#feat-06), de donde sale. [BUG-06](#bug-06), el otro extremo del mismo
+problema: el aviso que sí existe, roto para el admin.
+
+---
+
+<a id="feat-23"></a>
+## FEAT-23 · Los hilos de mensajes no se cierran nunca · **P3**
+
+**De dónde sale.** Planteo del cliente durante la ronda de [FEAT-06](#feat-06), el 2026-09-11: *"los
+chats no tienen que vivir para siempre; cuando un estudiante cambia de curso, o cuando el curso
+termina, no tiene sentido que sigan accesibles"*. Se decidió **no implementarlo ahora** y dejarlo
+anotado.
+
+**Adentro hay dos cosas, y una se resuelve sola.** Abrir hilos *nuevos* con el docente equivocado no
+va a pasar: la lista de destinatarios se arma de inscripciones activas y cursos activos, así que el
+docente del curso que el alumno dejó simplemente no aparece. Lo que falta decidir es qué pasa con
+**los hilos ya abiertos**.
+
+**La forma recomendada: se cierran, no se borran.** Sólo lectura. Una conversación entre una familia
+y una docente es registro del instituto, y acá el borrado es siempre lógico ([ARQ-05](#arq-05)).
+
+**Y derivado, sin columna nueva.** El hilo va a saber el curso y el alumno, así que *"¿sigue activa
+esa inscripción y sigue activo el curso?"* se contesta sola, sin proceso que correr ni hilos que
+alguien se olvide de cerrar. No contradice la columna `studentId` que suma FEAT-06: **se congela el
+sujeto y se deriva el permiso** — de quién se hablaba es un hecho del pasado y hay que guardarlo;
+quién puede escribir hoy es una pregunta del presente.
+
+**El prerrequisito es gratis y hay que cumplirlo desde ahora:** que los hilos que abren alumnos y
+tutores lleven `courseId` **siempre**. Hoy es opcional en `MessageThread`, pero la costumbre ya va
+para ese lado — de los 27 hilos en producción, **26 tienen curso**. Exigirlo no cambia nada de lo
+que se viene haciendo; sólo evita que entren hilos que después nadie sepa cuándo cerrar.
+
+**Por qué P3.** El hilo más viejo en producción es del 2026-05-12 y son 27 en total. No hay volumen
+de hilos viejos que moleste todavía. Se vuelve visible cuando termine el primer ciclo lectivo
+completo con el canal de las familias abierto.
+
+---
+
+<a id="feat-24"></a>
+## FEAT-24 · Buscar dentro del contenido de los mensajes · **P3**
+
+**De dónde sale.** De la ronda de [FEAT-06](#feat-06) (2026-09-13). El buscador que entra en la
+bandeja es **sólo por asunto** — un `contains` sobre una columna. Buscar dentro del cuerpo de los
+mensajes se dejó explícitamente afuera.
+
+**Por qué se cortó ahí.** Buscar por contenido en Postgres es índice de texto completo (`tsvector` +
+índice GIN, o `pg_trgm` para búsquedas parciales). Eso se paga en almacenamiento y en cada escritura,
+todos los meses, no una vez. Decisión del cliente: si el instituto lo pide, **se cotiza como
+infraestructura adicional** — no es deuda técnica que arrastremos nosotros.
+
+**Qué tan lejos está de hacer falta.** Hoy hay **61 mensajes en total** en producción. El asunto como
+única clave de búsqueda va a alcanzar durante bastante tiempo: el modelo de un hilo por tema, que se
+confirmó en FEAT-06, existe justamente para que el asunto sea suficiente.
+
+**Cuándo mirarlo de nuevo.** Cuando alguien del instituto diga *"sé que me lo escribió pero no
+encuentro en cuál"*. Ese reclamo es el que dice que el asunto dejó de alcanzar.
+
+---
+
+<a id="feat-25"></a>
+## FEAT-25 · No se sabe quién de la administración contestó un hilo · **P3**
+
+**Lo que pasa.** Del lado de la familia, quien escribe con rol ADMIN firma **"Administración"** y
+quien escribe con rol SECRETARY firma **"Secretaría"**
+([`messages.ts`](../src/app/actions/messages.ts)). El nombre propio no aparece nunca, y eso está
+bien: del lado del instituto contesta el área, no la persona.
+
+**El problema es que tampoco aparece del lado del instituto.** Si mañana hay tres personas con rol
+ADMIN, las tres firman igual y en pantalla no hay manera de saber cuál contestó. El dato está
+guardado (`Message.senderUserId`), simplemente no se muestra a nadie.
+
+**Hoy no se da, y conviene decirlo.** En producción hay **un** usuario con rol ADMIN y **una** con
+rol SECRETARY, y nadie tiene los dos. La ambigüedad es teórica: aparece cuando el instituto sume
+gente a administración, o con el segundo instituto.
+
+**Por qué igual se anota.** Por la decisión del 2026-09-13 en [FEAT-06](#feat-06): la administración
+queda como **única supervisión** de lo que escriben los alumnos. El día que sean varias personas,
+"quién intervino en este hilo" deja de ser un detalle.
+
+**El arreglo es chico.** El armado del nombre ya tiene a la vista los roles de quien mira: alcanza
+con mostrar el nombre propio cuando el que mira es staff, y seguir mostrando "Administración" a la
+familia.
+
+**De paso, un detalle vecino.** Los mensajes anteriores a que existiera `senderRole` no tienen rol
+guardado y el nombre se deduce de los roles actuales, donde **ADMIN le gana a SECRETARY**. En
+producción es **un solo mensaje**, del 2026-05-12, y nadie tiene los dos roles — así que hoy no
+muestra mal a nadie.
 
 ---
 
