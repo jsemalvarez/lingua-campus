@@ -46,24 +46,30 @@ export function MessagesBell({ userId, variant, isActive, label = "Mensajes" }: 
         return () => clearInterval(timer);
     }, [userId, refresh]);
 
-    // ── Aviso en vivo, por el mismo canal que usa la campana ──
+    // ── Aviso en vivo ──
     //
     // El mensaje que llega sólo dice "pasó algo en este hilo": el contador se
     // vuelve a pedir al servidor en vez de sumar uno de este lado. Sumar acá
     // sería llevar una segunda cuenta que se despega de la real en cuanto haya
     // dos pestañas abiertas.
+    //
+    // **Tema propio, separado del `user:${id}` de `NotificationBell`.** Un
+    // cliente de Supabase no admite dos suscripciones al mismo tema: la segunda
+    // recibe `CHANNEL_ERROR` y se queda muda. Las dos campanas viven en la misma
+    // barra, así que compartirlo significaba que una de las dos no andaba nunca.
     useEffect(() => {
         if (!supabaseClient || !userId) return;
 
         const channel = supabaseClient
-            .channel(`user:${userId}`)
+            .channel(`user:${userId}:messages`)
             .on("broadcast", { event: "new_message" }, () => {
                 refresh();
             })
-            .subscribe((status) => {
-                if (status === "CHANNEL_ERROR") {
+            .subscribe((status, err) => {
+                if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
                     console.warn(
-                        "[MessagesBell] Canal en vivo no disponible (¿Realtime apagado?); queda el refresco periódico"
+                        `[MessagesBell] Canal en vivo no disponible (${status}); queda el refresco periódico`,
+                        err ?? ""
                     );
                 }
             });

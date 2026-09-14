@@ -233,7 +233,15 @@ export function MessagesInboxClient({ inbox, filters }: Props) {
                                         >
                                             {thread.subject}
                                         </p>
-                                        <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                                        {/* El texto se calcula contra el reloj, así que el
+                                            servidor puede decir "hace 1m" y el navegador
+                                            "hace 2m" un segundo después. No es un error a
+                                            corregir sino la naturaleza del dato: se le avisa
+                                            a React que acá la diferencia es esperada. */}
+                                        <span
+                                            suppressHydrationWarning
+                                            className="text-xs text-muted-foreground shrink-0 mt-0.5"
+                                        >
                                             {formatRelativeTime(
                                                 thread.lastMessageAt ?? thread.createdAt
                                             )}

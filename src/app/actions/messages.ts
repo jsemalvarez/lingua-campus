@@ -63,9 +63,15 @@ function isFamily(ctx: MessagingContext): boolean {
  * contador del mismo hecho, y leer el hilo no la apagaría — la campana quedaría
  * marcando pendiente algo ya contestado.
  *
- * Lo que se manda es sólo un empujón por el canal que ya existe, para que el
- * sobre se actualice sin esperar al siguiente poll. El contenido del mensaje no
- * viaja en el payload: el sobre vuelve a preguntar por su cuenta.
+ * Lo que se manda es sólo un empujón para que el sobre se actualice sin esperar
+ * al siguiente refresco. El contenido del mensaje no viaja en el payload: el
+ * sobre vuelve a preguntar por su cuenta.
+ *
+ * **Canal propio, y no el `user:${id}` de las notificaciones.** Un cliente de
+ * Supabase no puede tener dos suscripciones al mismo tema: la segunda recibe
+ * `CHANNEL_ERROR` y queda muda. Como la campana ya ocupa `user:${id}`, el sobre
+ * necesita el suyo — verificado por pantalla el 2026-09-13, compartiéndolo no
+ * conectaba.
  */
 async function broadcastNewMessage(
     threadId: string,
@@ -84,7 +90,7 @@ async function broadcastNewMessage(
 
     await Promise.allSettled(
         targets.map((id) =>
-            supabaseClient!.channel(`user:${id}`).send({
+            supabaseClient!.channel(`user:${id}:messages`).send({
                 type: "broadcast",
                 event: "new_message",
                 payload: { threadId },
