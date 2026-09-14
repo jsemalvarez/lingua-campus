@@ -180,6 +180,7 @@ model Student {
   // Messaging
   threadParticipations ThreadParticipant[]
   sentMessages         Message[]           @relation("StudentSentMessages")
+  subjectOfThreads     MessageThread[]
 
   // Firmas de conformidad (FEAT-09) — el alumno de 20+ firma su propio informe
   signatureReference SignatureReference?
@@ -851,6 +852,27 @@ model MessageThread {
   courseId    String?
   course      Course?    @relation(fields: [courseId], references: [id])
 
+  // De qué alumno habla el hilo (FEAT-06). **Se escribe al crearlo y no se
+  // recalcula nunca.** El curso más el autor alcanzan para deducirlo hoy —salvo
+  // hermanos en el mismo curso—, pero la deducción es en vivo y se cae el día
+  // que el alumno se cambia de curso o se da de baja, y un hilo viejo tiene que
+  // poder decir de quién hablaba. Mismo criterio que `ReportBatchSignature`, que
+  // congela el nombre del firmante en vez de leerlo del curso.
+  //
+  // No es lo mismo que un participante: el tutor escribe **sobre** su hijo sin
+  // que el hijo lea el hilo. Resolverlo sumando al alumno como participante
+  // sería darle permiso de lectura, que es justo lo que se decidió no hacer.
+  //
+  // Nulo cuando el hilo no es sobre un alumno en particular: los envíos a un
+  // curso entero y los hilos con administración que no nombran a nadie.
+  //
+  // `Restrict` y no el `SetNull` que Prisma pone por defecto: con aquel, borrar
+  // un alumno le sacaría al hilo justamente el dato que esta columna existe para
+  // conservar, y en silencio. Es la lección de FIN-23. El borrado acá es lógico
+  // (`status`), así que en la práctica no bloquea nada.
+  studentId   String?
+  student     Student?   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -859,6 +881,8 @@ model MessageThread {
 
   @@index([instituteId])
   @@index([instituteId, updatedAt])
+  @@index([studentId])
+  @@index([courseId])
 }
 
 // Participantes del hilo (polimórfico: User o Student)

@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
-import { getThreadsForUser } from "@/app/actions/messages";
+import { getThreadsForUser, getFamilyRecipients } from "@/app/actions/messages";
 import { MessagesInboxClient } from "./components/MessagesInboxClient";
 import { Mail, PenSquare } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +14,17 @@ export const metadata = {
     description: "Bandeja de mensajes del instituto",
 };
 
-export default async function MessagesPage() {
+interface Props {
+    searchParams: Promise<{
+        q?: string;
+        curso?: string;
+        alumno?: string;
+        sinleer?: string;
+        pagina?: string;
+    }>;
+}
+
+export default async function MessagesPage({ searchParams }: Props) {
     const session = await getServerSession(authOptions);
     const sessionUser = session?.user;
     // Se exige el `id` y no sólo el usuario: la bandeja marca los hilos propios
@@ -28,15 +38,29 @@ export default async function MessagesPage() {
         activeRole === "ADMIN" ||
         activeRole === "SECRETARY" ||
         activeRole === "SUPERADMIN";
-    const canCompose =
-        isAdmin || activeRole === "TEACHER";
+    const isFamily = isStudent || activeRole === "GUARDIAN";
 
     if (!sessionUser.instituteId && !isStudent) redirect("/dashboard");
 
-    // La identidad y el rol se derivan de la sesión dentro del server action
-    const threads = await getThreadsForUser();
+    const params = await searchParams;
 
-    const unreadCount = threads.filter((t) => t.unreadCount > 0).length;
+    // La identidad y el rol se derivan de la sesión dentro del server action
+    const inbox = await getThreadsForUser({
+        search: params.q,
+        courseId: params.curso,
+        studentId: params.alumno,
+        onlyUnread: params.sinleer === "1",
+        page: params.pagina ? Number(params.pagina) : 1,
+    });
+
+    // El personal siempre puede redactar. La familia, sólo si tiene sobre qué:
+    // sin inscripción activa no hay docente ni curso a quien escribirle, y un
+    // botón que lleva a una pantalla vacía es peor que no tener el botón.
+    const canCompose = isAdmin || activeRole === "TEACHER"
+        ? true
+        : isFamily
+        ? (await getFamilyRecipients()).length > 0
+        : false;
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -51,9 +75,10 @@ export default async function MessagesPage() {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold tracking-tight">Mensajes</h1>
-                                {unreadCount > 0 && (
+                                {inbox.unreadTotal > 0 && (
                                     <p className="text-sm text-muted-foreground">
-                                        {unreadCount} {unreadCount === 1 ? "hilo sin leer" : "hilos sin leer"}
+                                        {inbox.unreadTotal}{" "}
+                                        {inbox.unreadTotal === 1 ? "hilo sin leer" : "hilos sin leer"}
                                     </p>
                                 )}
                             </div>
@@ -70,7 +95,15 @@ export default async function MessagesPage() {
                 </div>
 
                 {/* Inbox */}
-                <MessagesInboxClient threads={threads} currentUserId={sessionUser.id} isStudent={isStudent} />
+                <MessagesInboxClient
+                    inbox={inbox}
+                    filters={{
+                        q: params.q ?? "",
+                        curso: params.curso ?? "",
+                        alumno: params.alumno ?? "",
+                        sinleer: params.sinleer === "1",
+                    }}
+                />
             </main>
         </div>
     );
