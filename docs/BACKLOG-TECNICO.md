@@ -4500,10 +4500,43 @@ servidor en vez de sumarlo del lado del cliente, que se despegaría con dos pest
 nulable más dos índices y una clave foránea sobre una tabla de 27 filas: instantánea y sin bloqueo
 que se note. Pero es la misma que va a correr al promover a `main`.
 
-**Verificado hasta acá:** compila, pasa el build de producción, y el SQL del contador se corrió
-contra la base de producción en sólo lectura, dando lo previsto (ver [BUG-06](#bug-06)). **Falta la
-pantalla**, que va en stage, y sobre todo estos cuatro casos: el tutor con dos hijos, el alumno con
-una sola materia, el hilo a Administración, y la persona que es tutora y docente a la vez.
+### Verificado por pantalla — 2026-09-13 · contra la base local · dos cosas que el build no veía
+
+Se sembró el escenario en la base de desarrollo: una tutora con **dos hijas**, una en un curso con
+docente y la otra en uno **sin** docente, más un alumno con una sola materia y 32 hilos de relleno
+para ver la paginación. Lo que se recorrió, con las dos correcciones que salieron, en `e745991`.
+
+**El canal en vivo del sobre no conectaba nunca, y el motivo no es el que decía el aviso.** Las dos
+campanas de la barra se suscribían al **mismo tema** `user:${id}`, y un cliente de Supabase no admite
+dos suscripciones al mismo tema: la segunda recibe `CHANNEL_ERROR` y queda muda. Como
+`NotificationBell` monta primero, la que perdía era siempre el sobre. Se descartó la primera
+sospecha —"Realtime apagado", que es lo que dice el aviso heredado— abriendo un WebSocket a mano
+contra el proyecto: responde. El sobre pasó a `user:${id}:messages` y **el aviso llega**: con la
+bandeja abierta y sin recargar, el badge de la tutora pasó de 0 a 1 al entrar un mensaje.
+
+Vale para cualquiera que agregue una tercera suscripción: **un tema por consumidor**.
+
+**El tiempo relativo de la bandeja rompía la hidratación.** El servidor renderizaba *"hace 1m"* y el
+navegador *"hace 2m"* un segundo después. Ya estaba antes de este cambio; se marca el `span` como
+diferencia esperada, que es lo que es.
+
+**Lo recorrido, y anduvo:** la tutora con dos hijas ve el selector y el curso se desprende del hijo;
+con la hija del curso sin docente, el botón del profesor **se deshabilita solo** y las sugerencias de
+asunto cambian a las administrativas; el hilo se crea con el alumno guardado y **sin la hija adentro
+como participante**; el docente lo ve en su bandeja con el chip *"sobre aitana"* y el badge en 1;
+para el personal ese chip es enlace a la ficha y para la familia no; responder baja el badge a 0 y
+levanta el de la tutora; el alumno no elige alumno y le sale su curso y su profe; el buscador por
+asunto filtra; la paginación corta en 20 y la segunda página trae las 16 restantes.
+
+**Y la prueba de [BUG-06](#bug-06) en pantalla:** la administradora ve los 36 hilos del instituto y
+el badge le queda en **cero**, con los dos desplegables —curso y alumno— ya poblados.
+
+**Lo que sigue sin verse:** la persona que es tutora **y** docente a la vez. El rol activo la manda
+al redactor del personal por defecto, así que hay que probar el selector de rol antes de salir.
+
+**Ojo con el `.env` de desarrollo:** `NEXT_PUBLIC_SUPABASE_URL` apunta al proyecto de **producción**
+mientras `DATABASE_URL` apunta a la base local. Para estas pruebas dio igual —el canal en vivo no
+guarda nada—, pero conviene saberlo antes de probar Storage desde local.
 
 ---
 
