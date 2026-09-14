@@ -255,7 +255,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
-| [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
+| [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [x] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
 | [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
 | [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
@@ -271,7 +271,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
 | [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
-| [FEAT-06](#feat-06) | P2 | 🗣️ Que alumnos, tutores y docentes puedan escribirle al docente del curso | [ ] |
+| [FEAT-06](#feat-06) | P2 | 🗣️ Que alumnos, tutores y docentes puedan escribirle al docente del curso | [~] |
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [x] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
 | [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de informes y novedades | [ ] |
@@ -296,7 +296,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
 | [ARQ-04](#arq-04) | P3 | Tests automatizados | [ ] |
 | [ARQ-05](#arq-05) | P1 | Política de borrado lógico en todo el sistema | [ ] |
-| [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
+| [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [x] |
 | [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [x] |
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
@@ -3565,6 +3565,26 @@ baja. Es previo a [BUG-05](#bug-05), pero se nota más ahora que el admin puede 
 Recomiendo la 3, y revisar con el cliente si el admin espera enterarse de mensajes nuevos en hilos
 que no son suyos.
 
+### Resuelto — 2026-09-13 en `b0303d8` · va la opción 3 · pendiente de verificar en stage
+
+Entró con [FEAT-06](#feat-06), que abrió el canal de las familias y convirtió este contador en la
+herramienta de supervisión de la administración: era el momento.
+
+**El contador cuenta sólo los hilos donde la persona participa.** Los hilos del instituto siguen
+todos visibles en la bandeja del admin; lo que dejan de hacer es inflar el badge. Se sumó una regla
+que no estaba en ninguna de las tres opciones y que hacía falta igual: **los mensajes propios no
+cuentan como sin leer**, porque el que acaba de escribir ya sabe lo que escribió.
+
+**Y dejó de reusar la bandeja.** `getUnreadThreadCount` hacía `getThreadsForUser()` y contaba en
+memoria, o sea que cada vuelta del sobre levantaba todos los hilos con todos sus participantes —para
+un admin, el instituto entero, una vez por minuto y por pestaña abierta. Ahora es un `COUNT` en SQL
+sobre `ThreadParticipant`.
+
+**Medido en producción antes de tocar nada:** la administradora tenía el badge en **27** —todos los
+hilos del instituto— y participa de 4. Con la consulta nueva da **0**, que es lo correcto: de esos 4,
+en ninguno hay algo sin leer que no haya escrito ella. La misma consulta sobre el resto del padrón
+devuelve números distintos de cero (alumnos con 2 y 3 sin leer), así que no está apagada de más.
+
 ---
 
 <a id="bug-07"></a>
@@ -4440,6 +4460,50 @@ abrir el canal de ida sirve de poco si la respuesta de la docente no se lee.
 a la vez**. Con el canal abierto va a poder escribirle a la docente de su hijo y recibir mensajes
 como docente, en la misma bandeja. El rol activo ya resuelve qué permisos tiene en cada momento
 ([SEC-01](#sec-01)), pero es el caso que hay que probar a mano antes de salir.
+
+### Hecho — 2026-09-13 en `b0303d8` · pendiente de verificar en stage
+
+Las seis decisiones, construidas. De la ficha queda abierto sólo el docente→docente del pedido
+original del 13/08.
+
+**La columna.** `MessageThread.studentId`, opcional, con `onDelete: Restrict` —migración
+`20260913120000_add_message_thread_student`—. Los 27 hilos que ya existen quedan en `null` y **no se
+rellenan hacia atrás**: el dato no se puede reconstruir con certeza, y esta columna existe
+justamente para no deducirlo. Los hilos que el instituto le manda a **un solo** alumno también la
+llenan, así el filtro por alumno sirve de los dos lados.
+
+**La puerta de la familia es una función aparte**, `createFamilyThread`, en vez de levantar el corte
+de `createThread`. Aquella recibe ids de destinatarios sueltos, que es aceptable para quien ya ve a
+todo el instituto y no para una familia. Lo que llega acá es `"TEACHER"` o `"ADMIN"`, nunca un id: el
+destinatario real sale de recalcular el alcance con `getFamilyRecipients`, **la misma función que
+dibuja la pantalla**. Si sólo dibujara, alcanzaría con mandar otro `courseId` en el cuerpo del pedido.
+
+**El redactor.** Pantalla propia para la familia. Con un alumno y un curso no pregunta nada; con
+varios hijos se elige el hijo y el curso se desprende de ahí. Los dos destinos son botones con
+nombre de área, y el del docente se deshabilita solo cuando el curso no tiene docente activo —un
+docente dado de baja queda con `roles` vacío pero sigue colgando del curso ([SEC-01](#sec-01)), y
+escribirle sería mandarle un mensaje a una cuenta que ya no entra—. El asunto trae sugerencias
+tocables según el destino.
+
+**La bandeja.** Buscador por asunto, filtros por curso, por alumno y por sin leer, y paginación de
+20. Los filtros viven en la URL, así que la búsqueda se comparte y el botón de atrás hace lo que uno
+espera. El chip *"sobre Fulano"* va en la fila y no adentro del hilo; para el personal es además
+atajo a la ficha del alumno.
+
+**El aviso.** El sobre escucha el canal `user:${id}` que ya usaba la campana, con evento
+`new_message`. El poll de 60 segundos pasa a red de seguridad cada 5 minutos —por si Realtime está
+apagado en el proyecto, que es el caso que ya contempla `NotificationBell`— más un refresco al
+volver a la pestaña. Lo que llega por el canal sólo dice "pasó algo": el número se vuelve a pedir al
+servidor en vez de sumarlo del lado del cliente, que se despegaría con dos pestañas abiertas.
+
+**La migración corre sola en el deploy**, porque `build` hace `migrate deploy`. Es un `ADD COLUMN`
+nulable más dos índices y una clave foránea sobre una tabla de 27 filas: instantánea y sin bloqueo
+que se note. Pero es la misma que va a correr al promover a `main`.
+
+**Verificado hasta acá:** compila, pasa el build de producción, y el SQL del contador se corrió
+contra la base de producción en sólo lectura, dando lo previsto (ver [BUG-06](#bug-06)). **Falta la
+pantalla**, que va en stage, y sobre todo estos cuatro casos: el tutor con dos hijos, el alumno con
+una sola materia, el hilo a Administración, y la persona que es tutora y docente a la vez.
 
 ---
 
@@ -7291,6 +7355,13 @@ lea el código después.
 **Cambio.** Quitar las cuatro props de `MessagesBell`, ajustar el `useEffect` para depender sólo del
 intervalo, y dejar de pasarlas desde `Navbar`. Revisar si `Navbar` las sigue necesitando para otra
 cosa antes de borrarlas de ahí.
+
+### Resuelto — 2026-09-13 en `b0303d8` · pendiente de verificar en stage
+
+Cayó solo: [FEAT-06](#feat-06) reescribió el componente para que escuche el canal en vivo, y las
+props sobrantes no sobrevivieron a la reescritura. Quedan `userId` —que ahora sí se usa, es el
+nombre del canal— más las tres de presentación (`variant`, `isActive`, `label`). `Navbar` las
+seguía calculando sólo para pasárselas, así que también se fueron de ahí.
 
 ---
 
