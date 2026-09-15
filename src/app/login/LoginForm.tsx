@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
@@ -118,14 +119,9 @@ export default function LoginForm({ institute }: LoginFormProps) {
 
                     {/* Password */}
                     <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="password" className="text-sm font-semibold text-foreground/90">
-                                Contraseña
-                            </label>
-                            <a href="#" className="text-xs font-semibold text-primary hover:underline" tabIndex={-1}>
-                                ¿Olvidaste tu clave?
-                            </a>
-                        </div>
+                        <label htmlFor="password" className="text-sm font-semibold text-foreground/90">
+                            Contraseña
+                        </label>
                         <div className="relative">
                             <input
                                 id="password"
@@ -147,6 +143,21 @@ export default function LoginForm({ institute }: LoginFormProps) {
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
+                        </div>
+
+                        {/*
+                          * El enlace va **después** del campo y no al lado de la
+                          * etiqueta. Al lado, el tabulador lo pisa entre un campo y el
+                          * otro: quien entra con el teclado escribe el usuario, tabula
+                          * esperando la contraseña y aterriza en un enlace que lo saca
+                          * de la pantalla. Acá abajo el recorrido es usuario →
+                          * contraseña → enlace → entrar, que es el orden en que se
+                          * usan.
+                          */}
+                        <div className="flex justify-end pt-1">
+                            <Link href="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
+                                ¿Olvidaste tu clave?
+                            </Link>
                         </div>
                     </div>
 

@@ -1,0 +1,17 @@
+{
+  // Cómo compilar `preview-email.tsx` cuando lo corre `ts-node`, que no es cómo
+  // compila Next el resto del proyecto: esto es un script suelto de Node, no
+  // código de la aplicación.
+  //
+  // Está en un archivo aparte y no en la línea del `npm run` porque ahí habría
+  // que escribir el JSON entre comillas, y esa línea se rompe distinto en cmd,
+  // en PowerShell y en bash.
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2020",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}

@@ -5,6 +5,7 @@ import { CreateInstituteWithAdmin } from "@/features/superadmin/application/use-
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS } from "@/lib/defaultPasswords";
 
 export async function createInstituteAction(formData: FormData) {
     // Protección: solo SUPERADMIN puede ejecutar esta acción
@@ -108,12 +109,13 @@ export async function addInstituteAdminAction(formData: FormData) {
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) return { success: false, error: "El email ya está registrado" };
 
-        const hashedPassword = await bcrypt.hash("admin123", 10);
+        const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORDS.ADMIN_NEW, 10);
         await prisma.user.create({
             data: {
                 name: name.trim(),
                 email: email.trim().toLowerCase(),
                 password: hashedPassword,
+                hasDefaultPassword: true,
                 roles: ["ADMIN"],
                 instituteId: instituteId
             }

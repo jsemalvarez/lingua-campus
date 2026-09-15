@@ -8,10 +8,15 @@ import { ReportGradeSheet } from "./ReportGradeSheet";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, ClipboardList } from "lucide-react";
 
+// IMPORTANTE: `searchParams` debe declararse en la firma del page para que
+// Next lo inyecte; con `year` y `period` la planilla abre directo en la tanda
+// que hay que mirar, que es lo que hace llevadero firmar treinta cursos.
 export default async function ReportGradeSheetPage({
-    params
+    params,
+    searchParams
 }: {
-    params: Promise<{ id: string; templateId: string }>
+    params: Promise<{ id: string; templateId: string }>;
+    searchParams: Promise<{ year?: string; period?: string }>;
 }) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) redirect("/login");
@@ -74,6 +79,16 @@ export default async function ReportGradeSheetPage({
 
     const template = link.template;
 
+    const { year, period } = await searchParams;
+    const initialYear = year && /^\d{4}$/.test(year) ? parseInt(year) : undefined;
+    const parsedPeriod = period ? parseInt(period) : NaN;
+    const initialPeriod =
+        Number.isInteger(parsedPeriod) &&
+        parsedPeriod >= 0 &&
+        parsedPeriod < template.periodLabels.length
+            ? parsedPeriod
+            : undefined;
+
     return (
         <div className="min-h-screen bg-background text-foreground">
             <Navbar currentActiveRole={activeRole} />
@@ -106,10 +121,12 @@ export default async function ReportGradeSheetPage({
                 </header>
 
                 <div className="bg-card/60 backdrop-blur-sm shadow-md border border-border/40 rounded-3xl p-6">
-                    <ReportGradeSheet 
+                    <ReportGradeSheet
                         courseId={course.id}
                         template={template}
                         userRole={activeRole}
+                        initialYear={initialYear}
+                        initialPeriod={initialPeriod}
                     />
                 </div>
             </main>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { getReceiptDataAction } from "@/app/payments/actions";
+import { getReceiptDataAction } from "@/app/payments/receiptActions";
 import { generatePaymentReceipt } from "@/lib/pdf/generateReceipt";
 import { formatFeeLabel, cn } from "@/lib/utils";
 

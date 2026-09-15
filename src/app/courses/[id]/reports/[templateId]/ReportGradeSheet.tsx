@@ -4,11 +4,12 @@ import * as React from "react";
 import { useState, useEffect, useTransition } from "react";
 import { 
     Save, Send, Calendar, Clock, AlertTriangle, 
-    Check, Loader2, Sparkles, X, Undo2, Ban, Eye, EyeOff
+    Check, Loader2, Sparkles, X, Undo2, Ban, Eye, EyeOff, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { BatchSignaturePanel, type BatchSignatureRow } from "./BatchSignaturePanel";
 
 interface Category {
     id: string;
@@ -47,12 +48,27 @@ interface ReportGradeSheetProps {
     courseId: string;
     template: Template;
     userRole: string;
+    /**
+     * Con qué tanda abrir. Viene de la URL: la pantalla de firmas y los avisos
+     * linkean directo al período que hay que mirar, para que firmar treinta
+     * cursos no sea treinta veces "buscar el trimestre" (FEAT-21).
+     */
+    initialYear?: number;
+    initialPeriod?: number;
 }
 
-export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSheetProps) {
-    const [selectedPeriod, setSelectedPeriod] = useState(0);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+export function ReportGradeSheet({
+    courseId,
+    template,
+    userRole,
+    initialYear,
+    initialPeriod
+}: ReportGradeSheetProps) {
+    const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod ?? 0);
+    const [selectedYear, setSelectedYear] = useState(initialYear ?? new Date().getFullYear());
     const [students, setStudents] = useState<StudentRow[]>([]);
+    const [signatures, setSignatures] = useState<BatchSignatureRow[]>([]);
+    const [canSign, setCanSign] = useState({ ADMIN: false, TEACHER: false });
     const [grades, setGrades] = useState<GradeState>({});
     const [savedGrades, setSavedGrades] = useState<GradeState>({});
     const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +117,8 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
             setStudents(studentRows);
             setGrades(initialGrades);
             setSavedGrades(JSON.parse(JSON.stringify(initialGrades)));
+            setSignatures(data.signatures ?? []);
+            setCanSign(data.canSign ?? { ADMIN: false, TEACHER: false });
         } catch (err: any) {
             toast.error(err.message || "No se pudieron obtener las calificaciones");
         } finally {
@@ -243,6 +261,10 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
     const isCurrentlyPublished = publishedAt !== null && new Date(publishedAt) <= new Date();
     const isCurrentlyScheduled = publishedAt !== null && new Date(publishedAt) > new Date();
 
+    // Publicado sólo lo edita un ADMIN (FEAT-09). El servidor lo rechaza igual;
+    // acá se bloquea antes para no dejar cargar notas que se van a perder.
+    const isLockedByPublication = isCurrentlyPublished && userRole !== "ADMIN";
+
     const getStatusBadge = () => {
         if (isCurrentlyPublished) {
             return (
@@ -276,6 +298,20 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
 
     return (
         <div className="space-y-6">
+            {isLockedByPublication && (
+                <div className="flex items-start gap-3 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl">
+                    <Lock className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                    <div className="text-sm">
+                        <p className="font-bold">Este informe ya está publicado</p>
+                        <p className="text-muted-foreground">
+                            Las familias pueden estar viéndolo y confirmando que lo leyeron, así
+                            que las notas quedan cerradas. Si hay algo para corregir, pedíselo a un
+                            administrador.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Cabecera de filtros y estados */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-background/40 border border-border/20 rounded-2xl">
                 <div className="flex flex-wrap items-center gap-4">
@@ -326,6 +362,20 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                     {getStatusBadge()}
                 </div>
             </div>
+
+            {!isLoading && students.length > 0 && (
+                <BatchSignaturePanel
+                    courseId={courseId}
+                    templateId={template.id}
+                    year={selectedYear}
+                    periodIndex={selectedPeriod}
+                    periodLabel={template.periodLabels[selectedPeriod] ?? `Período ${selectedPeriod + 1}`}
+                    signatures={signatures}
+                    canSign={canSign}
+                    hasUnsavedChanges={totalModified > 0}
+                    onChanged={fetchGrades}
+                />
+            )}
 
             {isLoading ? (
                 <div className="flex items-center justify-center p-24">
@@ -399,8 +449,9 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                                                                 step="0.1"
                                                                 value={val}
                                                                 onChange={(e) => handleGradeChange(student.id, cat.id, e.target.value)}
+                                                                disabled={isLockedByPublication}
                                                                 className={cn(
-                                                                    "w-16 h-9 px-2 text-center text-sm font-semibold bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40",
+                                                                    "w-16 h-9 px-2 text-center text-sm font-semibold bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed",
                                                                     cellModified ? "border-amber-400 focus:ring-amber-400" : "border-border/60"
                                                                 )}
                                                                 placeholder="-"
@@ -409,8 +460,9 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                                                             <select
                                                                 value={val}
                                                                 onChange={(e) => handleGradeChange(student.id, cat.id, e.target.value)}
+                                                                disabled={isLockedByPublication}
                                                                 className={cn(
-                                                                    "w-28 h-9 px-2 text-xs font-semibold bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40",
+                                                                    "w-28 h-9 px-2 text-xs font-semibold bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed",
                                                                     cellModified ? "border-amber-400 focus:ring-amber-400" : "border-border/60"
                                                                 )}
                                                             >
@@ -432,6 +484,7 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                                                     rows={1}
                                                     value={stGrades.teacherComments}
                                                     onChange={(e) => handleCommentChange(student.id, e.target.value)}
+                                                    disabled={isLockedByPublication}
                                                     placeholder="Comentarios adicionales sobre el desempeño..."
                                                     className={cn(
                                                         "w-full px-3 py-2 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none h-9 align-middle",
@@ -493,7 +546,7 @@ export function ReportGradeSheet({ courseId, template, userRole }: ReportGradeSh
                             {/* Guardar Borrador */}
                             <Button
                                 onClick={handleSaveDraft}
-                                disabled={isPending || totalModified === 0}
+                                disabled={isPending || totalModified === 0 || isLockedByPublication}
                                 className="bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95"
                             >
                                 {isPending ? (

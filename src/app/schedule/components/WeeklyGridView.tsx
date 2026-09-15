@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/Card";
 import { Clock, MapPin, User, BookOpen, ClipboardCheck, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import dayjs from "dayjs";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
 interface Schedule {
@@ -42,34 +41,55 @@ interface Schedule {
 interface WeeklyGridViewProps {
     schedules: any[];
     daysMapping: string[];
-    currentDate: Date;
+    /**
+     * Las siete fechas de la semana, lunes a domingo, como `yyyy-MM-dd` en UTC.
+     *
+     * Las manda el servidor y son **las mismas** con las que consultó las clases.
+     * La grilla ya no calcula su propio lunes: cuando lo hacía, las dos puntas
+     * usaban reglas distintas y podían discrepar sin que nada fallara (BUG-17).
+     */
+    weekDates: string[];
 }
 
-export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGridViewProps) {
-    const weekDays = [1, 2, 3, 4, 5, 6, 0];
+/**
+ * Día calendario de una fecha, en UTC y como `yyyy-MM-dd`.
+ *
+ * `Lesson.date` es un `date` de Postgres —un día, sin hora—, así que llega al
+ * navegador como medianoche UTC. Leerlo en la hora local del dispositivo lo corre
+ * al día anterior en cualquier zona al oeste de Greenwich; de ahí salía el
+ * `.add(12, 'hour')` que compensaba eso acá, y que aguantaba de UTC−11 a UTC+11.
+ * Recortar el ISO no depende de ninguna zona horaria, así que no hay qué
+ * compensar ni dónde equivocarse.
+ */
+function dayKey(value: string | Date): string {
+    return new Date(value).toISOString().slice(0, 10);
+}
 
-    // Find the Monday of the current week
-    const startOfViewWeek = dayjs(currentDate).startOf('week').add(1, 'day');
+export function WeeklyGridView({ schedules, daysMapping, weekDates }: WeeklyGridViewProps) {
+    const weekDays = [1, 2, 3, 4, 5, 6, 0];
 
     return (
         <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
             <div className="min-w-[1000px] grid grid-cols-7 gap-4 items-start">
-                {weekDays.map((dayIndex) => {
+                {weekDays.map((dayIndex, columnIndex) => {
                     const dayName = daysMapping[dayIndex];
-                    
-                    // Specific date for this column
-                    const columnDate = startOfViewWeek.add((dayIndex + 6) % 7, 'day').startOf('day');
+
+                    // La fecha de la columna viene del servidor, alineada con el
+                    // rótulo del día: `weekDays` y `weekDates` van lunes a domingo.
+                    const columnDate = weekDates[columnIndex];
+                    const [, columnMonth, columnDay] = columnDate.split("-");
 
                     const daySchedules = schedules
                         .filter((s) => {
                             const isCorrectDay = s.dayOfWeek === dayIndex;
                             if (!isCorrectDay) return false;
 
-                            const courseStart = s.course.startDate ? dayjs(s.course.startDate).startOf('day') : null;
-                            const courseEnd = s.course.endDate ? dayjs(s.course.endDate).startOf('day') : null;
+                            // `yyyy-MM-dd` ordena igual como texto que como fecha.
+                            const courseStart = s.course.startDate ? dayKey(s.course.startDate) : null;
+                            const courseEnd = s.course.endDate ? dayKey(s.course.endDate) : null;
 
-                            if (courseStart && columnDate.isBefore(courseStart)) return false;
-                            if (courseEnd && columnDate.isAfter(courseEnd)) return false;
+                            if (courseStart && columnDate < courseStart) return false;
+                            if (courseEnd && columnDate > courseEnd) return false;
 
                             return true;
                         })
@@ -83,7 +103,7 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                     {dayName}
                                 </span>
                                 <span className="text-[11px] font-bold text-muted-foreground/60">
-                                    {columnDate.format('D/M')}
+                                    {Number(columnDay)}/{Number(columnMonth)}
                                 </span>
                             </div>
 
@@ -97,10 +117,10 @@ export function WeeklyGridView({ schedules, daysMapping, currentDate }: WeeklyGr
                                     </div>
                                 ) : (
                                     daySchedules.map((schedule) => {
-                                        const linkedLesson = (schedule.lessons || []).find((l: any) => 
-                                            dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
-                                        ) || (schedule.course.lessons || []).find((l: any) => 
-                                            dayjs(l.date).add(12, 'hour').isSame(columnDate, 'day')
+                                        const linkedLesson = (schedule.lessons || []).find((l: any) =>
+                                            dayKey(l.date) === columnDate
+                                        ) || (schedule.course.lessons || []).find((l: any) =>
+                                            dayKey(l.date) === columnDate
                                         );
 
                                         // «Clase Programada» es el rótulo con el que nacen las clases

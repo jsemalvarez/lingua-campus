@@ -13,7 +13,8 @@ import {
     GraduationCap,
     Clock,
     Plus,
-    ClipboardCheck
+    ClipboardCheck,
+    Activity
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -27,6 +28,7 @@ import { getActiveRole } from "@/lib/roles";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
+import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -44,6 +46,16 @@ export default async function DashboardPage() {
     // ─── GUARDIAN View ───
     if (activeRole === "GUARDIAN") {
         const guardianId = sessionUser.id;
+
+        // La portada del tutor. Es `/dashboard` y no `/guardian/dashboard`: el
+        // menú del tutor apunta acá (FEAT-11).
+        await recordActivity({
+            subjectType: "USER",
+            subjectId:   guardianId,
+            instituteId: sessionUser.instituteId,
+            roles:       userRoles,
+            section:     GUARDIAN_SECTIONS.HOME,
+        });
 
         const guardianLinks = await prisma.guardianStudentLink.findMany({
             where: { guardianId },
@@ -680,6 +692,20 @@ export default async function DashboardPage() {
                             Bienvenido/a de nuevo, {user.name.split(" ")[0]}. Esto está pasando hoy.
                         </p>
                     </div>
+
+                    {/* El panel de uso es secundario —seguimiento, no trabajo diario—
+                        así que entra por acá y no por el menú, con la misma forma que
+                        los accesos de Finanzas (FEAT-11). */}
+                    {!isSecretary && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Link href="/dashboard/usage">
+                                <Button variant="outline" className="flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5">
+                                    <Activity size={16} />
+                                    Uso del sistema
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats Grid */}
@@ -715,7 +741,7 @@ export default async function DashboardPage() {
                             <AnnualFinanceChartServer instituteId={user.instituteId} />
                         </Suspense>
                     )}
-                    <Suspense fallback={<Card className="h-[480px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
+                    <Suspense fallback={<Card className="h-[280px] w-full animate-pulse bg-muted/50 rounded-xl" />}>
                         <PlaygroundChartServer instituteId={user.instituteId} />
                     </Suspense>
                 </div>

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 
 export async function createStudentAction(formData: FormData) {
@@ -44,7 +45,7 @@ export async function createStudentAction(formData: FormData) {
         }
 
         // Generamos o usamos la contraseña proporcionada
-        const finalPassword = customPassword && customPassword.trim() !== "" ? customPassword : "estudiante123";
+        const finalPassword = customPassword && customPassword.trim() !== "" ? customPassword : DEFAULT_PASSWORDS.STUDENT_NEW;
         const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
         const newStudent = await prisma.student.create({
@@ -52,6 +53,7 @@ export async function createStudentAction(formData: FormData) {
                 name,
                 email: email || null,
                 password: hashedPassword,
+                hasDefaultPassword: isDefaultForStudent(finalPassword, dni),
                 phone: phone || null,
                 birthDate: birthDateStr ? new Date(birthDateStr) : null,
                 dni: dni || null,

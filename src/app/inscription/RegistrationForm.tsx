@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, useRef, type FormEvent } from "react";
 import { createPreEnrollmentAction } from "./actions";
 import { differenceInYears } from "date-fns";
 import { Button } from "@/components/ui/Button";
@@ -39,8 +39,74 @@ export function RegistrationForm({
         initialData ? (initialData.guardian1Name ? "minor" : "adult") : "adult"
     );
 
+    // ── El aviso de "te vas a quedar sin el correo de confirmación" (FEAT-20) ──
+    //
+    // Aparece al apretar enviar y no como un renglón fijo debajo del campo: el
+    // que iba a dejarlo vacío llega al final del formulario sin haber leído el
+    // renglón, y acá todavía puede hacer algo.
+    //
+    // **No es una obligación.** El correo no se volvió obligatorio a propósito:
+    // trabar el formulario le cobra el precio a la familia que no tiene correo,
+    // que hoy se anota igual y el instituto la llama. Las dos salidas del cartel
+    // pesan lo mismo.
+    const [avisoCorreo, setAvisoCorreo] = useState(false);
+
+    // Un `ref` y no un `useState` porque lo lee el mismo `handleSubmit` que
+    // dispara `requestSubmit()`: con estado, ese segundo envío leería todavía el
+    // valor viejo y el cartel volvería a aparecer.
+    const correoOmitido = useRef(false);
+
+    const formRef = useRef<HTMLFormElement>(null);
+    const emailAlumnoRef = useRef<HTMLInputElement>(null);
+    const emailTutorRef = useRef<HTMLInputElement>(null);
+
+    /** El campo de correo que le corresponde a este formulario según quién se anota. */
+    const campoDeCorreo = formType === "minor" ? "guardian1Email" : "email";
+
+    const irAlCampoDeCorreo = () => {
+        setAvisoCorreo(false);
+
+        // El campo puede haber quedado ocho pantallas más arriba. Sin llevarlo
+        // hasta ahí, cerrar el cartel deja a la persona mirando el botón y sin
+        // saber a dónde ir: la mitad manda igual, y el cartel no sirvió de nada.
+        const campo = formType === "minor" ? emailTutorRef.current : emailAlumnoRef.current;
+        campo?.scrollIntoView({ behavior: "smooth", block: "center" });
+        campo?.focus({ preventScroll: true });
+    };
+
+    const enviarSinCorreo = () => {
+        correoOmitido.current = true;
+        setAvisoCorreo(false);
+        formRef.current?.requestSubmit();
+    };
+
+    /**
+     * Frena el envío para mostrar el cartel, si corresponde.
+     *
+     * **Va en `onSubmit` y no adentro de la acción, y la diferencia no es de
+     * estilo.** React 19 vacía los formularios no controlados cuando una acción
+     * termina, y cortarla con un `return` cuenta como terminar: el cartel
+     * aparecía y de paso le borraba a la persona todo lo que había escrito.
+     * Frenándolo con `preventDefault` la acción no llega a correr, y el
+     * formulario queda intacto atrás del cartel.
+     *
+     * Sólo en el formulario público: en `complete-profile` la persona ya es
+     * alumno y está completando su ficha, no hay ningún acuse que perder, y
+     * pedirle un correo que no vamos a usar es ruido.
+     */
+    const frenarSiFaltaElCorreo = (e: FormEvent<HTMLFormElement>) => {
+        if (token || correoOmitido.current) return;
+
+        const cargado = ((new FormData(e.currentTarget).get(campoDeCorreo) as string) ?? "").trim();
+        if (cargado) return;
+
+        e.preventDefault();
+        setAvisoCorreo(true);
+    };
+
     const handleSubmit = async (formData: FormData) => {
         setStatus("idle");
+
         startTransition(async () => {
             const result = token 
                 ? await updateStudentFromTokenAction(formData, token)
@@ -78,7 +144,7 @@ export function RegistrationForm({
     }
 
     return (
-        <form action={handleSubmit} className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-4">
+        <form ref={formRef} onSubmit={frenarSiFaltaElCorreo} action={handleSubmit} className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-4">
             <input type="hidden" name="formType" value={formType} />
 
             {/* ── 0. Selección de Tipo de Inscripción ── */}
@@ -225,6 +291,7 @@ export function RegistrationForm({
                         <div className="relative group/input">
                             <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-primary transition-colors" />
                             <input
+                                ref={emailAlumnoRef}
                                 name="email"
                                 type="email"
                                 defaultValue={initialData?.email || ""}
@@ -232,6 +299,13 @@ export function RegistrationForm({
                                 className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                             />
                         </div>
+                        {/* En positivo y no como advertencia: da una razón para
+                            completarlo, en vez de una penalidad por no hacerlo. */}
+                        {!token && formType === "adult" && (
+                            <p className="text-xs text-muted-foreground ml-1">
+                                Acá te confirmamos que tu inscripción llegó.
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-2.5">
@@ -331,17 +405,25 @@ export function RegistrationForm({
                         </div>
 
                         <div className="flex flex-col gap-2.5">
-                            <label className="text-[0.95rem] font-bold ml-1">Email Acceso</label>
+                            <label className="text-[0.95rem] font-bold ml-1">Email</label>
                             <div className="relative group/input">
                                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-emerald-500 transition-colors" />
                                 <input
+                                    ref={emailTutorRef}
                                     name="guardian1Email"
                                     defaultValue={initialData?.guardian1Email || ""}
                                     type="email"
-                                    placeholder="Su email preferido para acceso al sistema"
+                                    placeholder="email"
                                     className="w-full pl-14 pr-6 py-4 rounded-[1.2rem] border border-input bg-white/50 dark:bg-slate-950/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-primary/10 transition-all font-semibold h-14 shadow-sm"
                                 />
                             </div>
+                            {/* En positivo y no como advertencia: da una razón para
+                                completarlo, en vez de una penalidad por no hacerlo. */}
+                            {!token && (
+                                <p className="text-xs text-muted-foreground ml-1">
+                                    Acá confirmamos que la inscripción llegó.
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -401,7 +483,7 @@ export function RegistrationForm({
                             </div>
                         </div>
                         <div className="flex flex-col gap-2.5">
-                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Email Acceso</label>
+                            <label className="text-[0.95rem] font-bold ml-1 opacity-70">Email</label>
                             <div className="relative group/input">
                                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within/input:text-blue-500 transition-colors" />
                                 <input
@@ -421,6 +503,44 @@ export function RegistrationForm({
                 {status === "error" && (
                     <div className="flex items-center gap-3 p-5 mb-8 rounded-[1.5rem] bg-red-500/10 text-red-600 dark:text-red-400 text-[0.95rem] font-bold animate-in bounce-in duration-300 border border-red-500/20">
                         <AlertCircle size={22} className="shrink-0" /> {errorMsg}
+                    </div>
+                )}
+
+                {/* Va acá, pegado al botón, porque es donde están los ojos de la
+                    persona cuando aparece. */}
+                {avisoCorreo && (
+                    <div className="p-6 mb-8 rounded-[1.5rem] bg-amber-500/10 border border-amber-500/20 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex items-start gap-3">
+                            <Mail size={22} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                            <div className="space-y-1">
+                                <p className="font-bold text-[0.95rem]">No dejaste un correo</p>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Sin correo no vamos a poder confirmarte por escrito que la
+                                    inscripción llegó. El instituto se comunica igual por teléfono.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Las dos salidas pesan lo mismo a propósito: si "enviar
+                            sin correo" fuera un enlace chiquito al costado, esto
+                            sería la obligación con pasos de más que decidimos no
+                            poner. */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+                            <button
+                                type="button"
+                                onClick={irAlCampoDeCorreo}
+                                className="h-12 rounded-[1rem] font-bold text-sm border-2 border-primary text-primary hover:bg-primary/5 transition-colors"
+                            >
+                                Agregar mi correo
+                            </button>
+                            <button
+                                type="button"
+                                onClick={enviarSinCorreo}
+                                className="h-12 rounded-[1rem] font-bold text-sm border-2 border-border hover:bg-muted transition-colors"
+                            >
+                                Enviar sin correo
+                            </button>
+                        </div>
                     </div>
                 )}
 

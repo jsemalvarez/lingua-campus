@@ -99,6 +99,11 @@ export async function saveLessonAttendanceAction(
             // Los que ya tenían fila. Conserva `id` y `createdAt`: no se borra y
             // se recrea, así que sigue constando cuándo se tomó la asistencia por
             // primera vez.
+            //
+            // Y **no toca `source` a propósito**: si la fila la creó el escáner,
+            // que la docente complete el parte no borra que hubo escaneo. Poner
+            // `'MANUAL'` acá haría que cada guardado del parte apagara la métrica
+            // de QR justo en los cursos que más lo usan.
             prisma.$executeRaw`
                 UPDATE "Attendance" a
                    SET "status" = v."status",
@@ -118,6 +123,7 @@ export async function saveLessonAttendanceAction(
                     lessonId: lessonId,
                     status: record.status,
                     notes: record.notes || null,
+                    source: "MANUAL" as const,
                 })),
                 skipDuplicates: true
             })
@@ -176,12 +182,17 @@ export async function scanAttendanceQRAction(
                 }
             });
 
+            // El escaneo deja su rastro en `source`, no en `notes`. Antes lo
+            // escribía como texto en la observación, y eso **le borraba a la
+            // docente lo que hubiera escrito** —un "faltó, avisó la madre"
+            // desaparecía cuando el chico escaneaba al llegar tarde— además de
+            // no aguantar como fuente de una métrica (BUG-12).
             if (existing) {
                 // Solo pisarlo si no era PRESENT (quizás le habían puesto Ausente por error)
                 if (existing.status !== "PRESENT") {
                     await tx.attendance.update({
                         where: { id: existing.id },
-                        data: { status: "PRESENT", notes: "Marcado vía QR Kiosk" }
+                        data: { status: "PRESENT", source: "QR" }
                     });
                 }
             } else {
@@ -190,7 +201,7 @@ export async function scanAttendanceQRAction(
                         studentId: studentId,
                         lessonId: lessonId,
                         status: "PRESENT",
-                        notes: "Marcado vía QR Kiosk"
+                        source: "QR"
                     }
                 });
             }

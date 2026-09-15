@@ -3,11 +3,12 @@
 import { useState, useTransition, useEffect } from "react";
 import { saveLessonAttendanceAction } from "./actions";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle, AlertCircle, Save, Check, X, Clock, FileWarning } from "lucide-react";
+import { CheckCircle, AlertCircle, Save, Check, X, Clock, FileWarning, QrCode } from "lucide-react";
 
 type StudentData = { id: string; name: string };
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED";
-type AttendanceRecord = { status: AttendanceStatus; notes: string | null };
+type AttendanceSource = "MANUAL" | "QR";
+type AttendanceRecord = { status: AttendanceStatus; notes: string | null; source?: AttendanceSource };
 
 export function AttendanceForm({
     lessonId,
@@ -119,7 +120,20 @@ export function AttendanceForm({
                                 return (
                                     <tr key={student.id} className="hover:bg-muted/10 transition-colors">
                                         <td className="px-5 py-4 font-semibold text-foreground">
-                                            {student.name}
+                                            <div className="flex items-center gap-2">
+                                                <span>{student.name}</span>
+                                                {/* Antes esto se veía como un texto que el escáner
+                                                    metía en la observación, y que de paso le borraba
+                                                    a la docente lo que hubiera escrito (BUG-12). */}
+                                                {existingAttendances[student.id]?.source === "QR" && (
+                                                    <span
+                                                        title="Marcado con el escáner de QR"
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20 shrink-0"
+                                                    >
+                                                        <QrCode size={11} /> QR
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-2">

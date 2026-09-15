@@ -16,14 +16,61 @@ import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ReportSignatureBox } from "./ReportSignatureBox";
+import { strokeToPath, type StrokeData } from "@/lib/reports/signatureCompare";
+import { isLegacyBatch, type BatchSignerRole } from "@/lib/reports/batchSignatures";
+
+/** Una firma del instituto que sigue valiendo para este boletín (FEAT-21). */
+type SignatureLine = {
+  role: BatchSignerRole;
+  signerName: string;
+  signedAt: string;
+  strokeData: StrokeData | null;
+};
+
+/**
+ * Dibuja el trazo en el PDF, punto por punto dentro del recuadro.
+ *
+ * Las coordenadas vienen normalizadas de 0 a 1, así que la misma firma se
+ * redibuja en cualquier tamaño. No se pasa por imagen: son unos cientos de
+ * segmentos y el PDF queda vectorial.
+ */
+function drawStrokeOnPdf(
+  doc: jsPDF,
+  stroke: StrokeData,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  doc.setDrawColor(30, 41, 59);
+  doc.setLineWidth(0.4);
+  for (const s of stroke.strokes) {
+    for (let i = 1; i < s.length; i++) {
+      const a = s[i - 1];
+      const b = s[i];
+      doc.line(x + a.x * w, y + a.y * h, x + b.x * w, y + b.y * h);
+    }
+  }
+}
 
 interface StudentReportViewerProps {
   studentName: string;
   reports: any[];
   instituteName?: string;
+  /** Quién está mirando, para saber si le toca firmar (FEAT-09). */
+  viewer?: { id: string; isStudent: boolean };
+  /** Su firma de referencia, para mostrársela mientras firma. */
+  signatureReference?: any;
 }
 
-export function StudentReportViewer({ studentName, reports, instituteName }: StudentReportViewerProps) {
+export function StudentReportViewer({
+  studentName,
+  reports,
+  instituteName,
+  viewer,
+  signatureReference
+}: StudentReportViewerProps) {
   // Group reports by course
   const reportsByCourse = useMemo(() => {
     const groups: { [courseId: string]: any[] } = {};
@@ -95,6 +142,14 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
   const categories = displayedReport?.template?.categories || [];
   const entries = displayedReport?.entries || [];
   const specialFields = displayedReport?.template?.specialFields as any || {};
+
+  // Las firmas del instituto que **siguen valiendo para este alumno**: el
+  // servidor ya descartó las que se cayeron porque le tocaron la nota (FEAT-21).
+  const signatureLines: SignatureLine[] = displayedReport?.signatureLines ?? [];
+
+  // Un firmante es un User (tutor) o un Student (el alumno de 20+ que firma solo).
+  const isViewer = (row: { userId: string | null; studentId: string | null }) =>
+    !viewer ? false : viewer.isStudent ? row.studentId === viewer.id : row.userId === viewer.id;
 
   const handleDownloadPDF = () => {
     if (!displayedReport) return;
@@ -186,21 +241,72 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
       currentY += (splitText.length * 5) + 15;
     }
 
-    // Signatures
-    if (currentY > 260) {
-      doc.addPage();
-      currentY = 30;
+    // Firmas del instituto (FEAT-21).
+    //
+    // Una tanda anterior a la funcionalidad no pudo firmarse, así que sigue
+    // imprimiendo la raya y el nombre como venía: aplicarle la regla nueva le
+    // sacaría al boletín de marzo las dos líneas que hoy tiene. En las tandas
+    // nuevas, sin firma no hay línea — una raya vacía en un boletín digital se
+    // lee como algo que falta.
+    const legacy = isLegacyBatch(displayedReport.publishedAt);
+    const firmaDocente = signatureLines.find(l => l.role === "TEACHER");
+    const firmaDireccion = signatureLines.find(l => l.role === "ADMIN");
+
+    const bloques: { x: number; centro: number; firma?: SignatureLine; pie: string }[] = [];
+
+    if (firmaDocente || legacy) {
+      bloques.push({
+        x: 14,
+        centro: 47,
+        firma: firmaDocente,
+        pie: firmaDocente
+          ? `Prof. ${firmaDocente.signerName}`
+          : `Prof. ${activeCourseInfo?.teacher?.name || "Docente"}`
+      });
     }
 
-    doc.setDrawColor(203, 213, 225);
-    doc.setLineWidth(0.5);
-    doc.line(14, currentY, 80, currentY);
-    doc.line(130, currentY, 196, currentY);
+    if (firmaDireccion || legacy) {
+      bloques.push({
+        x: 130,
+        centro: 163,
+        firma: firmaDireccion,
+        pie: firmaDireccion ? firmaDireccion.signerName : "Firma de la Institución"
+      });
+    }
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text(`Prof. ${activeCourseInfo?.teacher?.name || "Docente"}`, 35, currentY + 5, { align: "center" });
-    doc.text("Firma de la Institución", 163, currentY + 5, { align: "center" });
+    if (bloques.length > 0) {
+      if (currentY > 255) {
+        doc.addPage();
+        currentY = 40;
+      }
+
+      for (const bloque of bloques) {
+        if (bloque.firma?.strokeData) {
+          drawStrokeOnPdf(doc, bloque.firma.strokeData, bloque.x, currentY - 15, 66, 14);
+        }
+
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.5);
+        doc.line(bloque.x, currentY, bloque.x + 66, currentY);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text(bloque.pie, bloque.centro, currentY + 5, { align: "center" });
+
+        if (bloque.firma) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7);
+          doc.setTextColor(100, 116, 139);
+          doc.text(
+            `${bloque.firma.role === "ADMIN" ? "Dirección" : "Docente"} · ${dayjs(bloque.firma.signedAt).format("D/M/YYYY")}`,
+            bloque.centro,
+            currentY + 9,
+            { align: "center" }
+          );
+          doc.setTextColor(51, 65, 85);
+        }
+      }
+    }
 
     // Save
     doc.save(`boletin_${studentName.replace(/\s+/g, "_").toLowerCase()}_${courseName.replace(/\s+/g, "_").toLowerCase()}_p${displayedReport.periodIndex + 1}.pdf`);
@@ -386,6 +492,60 @@ export function StudentReportViewer({ studentName, reports, instituteName }: Stu
                 }
               </p>
             </div>
+          )}
+
+          {/* Firmas del instituto (FEAT-21) */}
+          {signatureLines.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {signatureLines.map((line) => (
+                <div
+                  key={line.role}
+                  className="p-5 rounded-2xl bg-muted/20 border border-border/30 flex flex-col items-center gap-2"
+                >
+                  {line.strokeData ? (
+                    <svg
+                      viewBox="0 0 200 60"
+                      className="w-full max-w-[200px] h-[60px] text-foreground"
+                      role="img"
+                      aria-label={`Firma de ${line.signerName}`}
+                    >
+                      <path
+                        d={strokeToPath(line.strokeData, 200, 60)}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.6}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <div className="h-[60px]" />
+                  )}
+                  <div className="w-full pt-2 border-t border-border/50 text-center">
+                    <p className="text-sm font-bold">
+                      {line.role === "TEACHER" ? `Prof. ${line.signerName}` : line.signerName}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mt-0.5">
+                      {line.role === "TEACHER" ? "Docente" : "Dirección"} ·{" "}
+                      {dayjs(line.signedAt).format("D/M/YYYY")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Firma de conformidad (FEAT-09) */}
+          {viewer && (
+            <ReportSignatureBox
+              reportId={displayedReport.id}
+              mustSign={(displayedReport.signers ?? []).some(isViewer)}
+              mySignedAt={
+                (displayedReport.signatures ?? []).find(isViewer)?.signedAt ?? null
+              }
+              alreadySignedByOther={(displayedReport.signatures ?? []).length > 0}
+              reference={signatureReference ?? null}
+            />
           )}
 
           {/* Footer Metadata */}

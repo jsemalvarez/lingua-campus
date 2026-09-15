@@ -65,6 +65,21 @@ los sufre alguien todos los días y los dos tienen la causa ya identificada:
 
 BUG-04 se puede cerrar sin depender de nadie.
 
+### 🗣️ Pedidos del cliente · 2026-09-02
+
+Siete pedidos del mismo día. **Dos no son trabajo nuevo**, y conviene contestarlos antes de ponerlos
+en la cola:
+
+| | Qué es en realidad |
+|---|---|
+| [FIN-29](#fin-29) | La cuota que no se emite al inscribir. **Es el único urgente**: es plata que no se factura y que no se ve en ninguna pantalla. |
+| [FIN-09](#fin-09) | Los deudores acotados a alumnos activos en cursos activos. Estaba decidido a medias el 16/08 y nunca se hizo; el pedido le agrega el curso. |
+| [FEAT-17](#feat-17) | Borrador de la clase y publicación. El estado ya existe dos veces en el producto —la práctica y los informes—; lo caro es lo que arrastra la liquidación de sueldos. |
+| [FEAT-18](#feat-18) | Que el listado del curso no muestre a los que dejaron. El parte y las notas ya los filtran: empareja la lista con lo que el sistema ya decidió. **Se cruza con FIN-09.** |
+| [FEAT-06](#feat-06) | Escribirle al docente del curso. Ya estaba pedido para tutores y docentes; ahora suma a los alumnos. Es el mismo corte de código. |
+| [BUG-13](#bug-13) | Cambiar de curso desde la ficha del alumno. **Ya existe y la secretaria ya puede**: falta saber con qué se topó ella. |
+| [FEAT-19](#feat-19) | Sumar un concepto de nota al boletín desde el 2° trimestre. La plantilla es una sola fila viva y sin tiempo: hacerlo hoy le cambia el informe que las familias ya firmaron. **Tiene fecha: antes de que se toque la plantilla.** |
+
 ### Tanda 1 · Pedidos del cliente que no dependen de nada
 
 Son acotados, aislados y de valor visible inmediato. Sacarlos primero compra tiempo para el trabajo
@@ -203,6 +218,9 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-08](#sec-08) | P2 | Permisos rancios en el JWT | [x] |
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
+| [SEC-11](#sec-11) | P1 | 🗣️ Obligar a cambiar la contraseña por defecto en el primer ingreso | [ ] |
+| [SEC-12](#sec-12) | P1 | El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual | [ ] |
+| [SEC-13](#sec-13) | P2 · hoy inofensivo | El login del alumno no ata la búsqueda al instituto | [ ] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
@@ -211,7 +229,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [x] |
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
-| [FIN-09](#fin-09) | P2 | Deudores incluye alumnos dados de baja | [ ] |
+| [FIN-09](#fin-09) | P2 | 🗣️ Deudores incluye alumnos dados de baja y cursos terminados | [ ] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [x] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
@@ -231,38 +249,58 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
 | [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
+| [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
+| [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
 | [BUG-04](#bug-04) | P1 | 🗣️ El rol de la secretaria se revierte a profesora | [x] |
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
-| [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [ ] |
+| [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [x] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
 | [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
 | [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
 | [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
+| [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
+| [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
+| [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
+| [BUG-15](#bug-15) | P2 | En el celular el listado de alumnos no tiene ninguna acción | [ ] |
+| [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
+| [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
+| [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
+| [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
 | [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
 | [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
-| [FEAT-06](#feat-06) | P2 | 🗣️ Que tutores y docentes puedan escribirle al docente del curso | [ ] |
+| [FEAT-06](#feat-06) | P2 | 🗣️ Que alumnos, tutores y docentes puedan escribirle al docente del curso | [~] |
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [x] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
-| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de las novedades | [ ] |
+| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de informes y novedades | [ ] |
 | [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [x] |
 | [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
 | [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
 | [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
 | [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
 | [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
+| [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
+| [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
+| [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
+| [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
+| [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
+| [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [~] |
+| [FEAT-22](#feat-22) | P2 · sube a P1 con FEAT-06 | Notificaciones push: el sobre solo no alcanza | [ ] |
+| [FEAT-23](#feat-23) | P3 | Los hilos de mensajes no se cierran nunca | [ ] |
+| [FEAT-24](#feat-24) | P3 | Buscar dentro del contenido de los mensajes | [ ] |
+| [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
 | [ARQ-04](#arq-04) | P3 | Tests automatizados | [ ] |
 | [ARQ-05](#arq-05) | P1 | Política de borrado lógico en todo el sistema | [ ] |
-| [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [ ] |
+| [ARQ-06](#arq-06) | P3 | Limpiar props de identidad sin uso en `MessagesBell` | [x] |
 | [ARQ-07](#arq-07) | P2 | Completar los tipos de sesión en `next-auth.d.ts` | [x] |
 | [ARQ-08](#arq-08) | P3 | Los archivos del Storage no se borran nunca | [ ] |
 | [ARQ-09](#arq-09) | P2 | Los errores no se registran en ningún lado | [ ] |
@@ -271,6 +309,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-12](#arq-12) | P2 | Versionar el proyecto y mostrar la versión en la app | [ ] |
 | [ARQ-13](#arq-13) | P3 | Saber qué versión está usando cada usuario | [ ] |
 | [ARQ-14](#arq-14) | P3 | La purga de un alumno no puede borrar a ningún alumno real | [ ] |
+| [ARQ-15](#arq-15) | P2 | 🗣️ La identidad está partida en dos tablas: `User` y `Student` | [ ] |
+| [ARQ-16](#arq-16) | P3 · sube con el número | Qué cuesta cada filtro del calendario | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -636,13 +676,93 @@ Todas fijas en el código, iguales para todos los institutos:
 | `docente1234` | [`teachers/actions.ts:169`](../src/app/teachers/actions.ts) | Reset de profesor |
 | `inscripcion123` | [`inscription/actions.ts:52`](../src/app/inscription/actions.ts) | Pre-inscripción pública |
 | `admin123` | [`PrismaUserRepository.ts:13`](../src/features/superadmin/infrastructure/prisma/PrismaUserRepository.ts) | Admin de instituto nuevo |
-| `student.dni` | [`students/[id]/actions.ts:148`](../src/app/students/[id]/actions.ts) | Reset de alumno (DNI como contraseña) |
+| `student.dni` | [`students/[id]/actions.ts:138`](../src/app/students/[id]/actions.ts) | Reset de alumno (DNI como contraseña) |
+| `lingua1234` | [`students/[id]/actions.ts:138`](../src/app/students/[id]/actions.ts) | Reset de alumno **sin DNI** |
 
 Combinado con [SEC-01](#sec-01), `Modern2026` era acceso efectivo de administrador.
+
+**`lingua1234` se encontró el 2026-08-24** midiendo la métrica 6 de [FEAT-11](#feat-11): es el
+respaldo del reset de alumno cuando no hay DNI que usar, y faltaba en esta lista. Cae exactamente
+sobre los alumnos con la ficha incompleta, que son los que menos mira nadie.
 
 **Cambio.** Generar contraseña aleatoria por usuario y forzar cambio en el primer ingreso. Ya existe
 el mecanismo de `StudentDataToken` — se puede reutilizar el patrón de token de un solo uso para el
 alta de credenciales. Eliminar el DNI como contraseña.
+
+**La mitad de forzar el cambio se separó en [SEC-11](#sec-11)**, y conviene hacerla primero: no
+necesita correo, así que no espera a [FEAT-05](#feat-05) como sí lo hace la contraseña aleatoria —que
+hay que poder entregarle a la persona de alguna forma.
+
+### La forma del reemplazo (2026-08-25)
+
+**Lo que lo destapa es el segundo instituto.** Mientras hay uno solo, "iguales para todos los
+institutos" es una frase sin consecuencia. Con dos, `Modern2026` es una clave que sirve en los dos, y
+la sabe cualquiera que haya dado de alta un tutor en cualquiera de ellos.
+
+**La propuesta que se evaluó:** que el superadmin configure, **por instituto y por grupo**
+—administradores, profesores, alumnos y tutores—, cuál es la contraseña por defecto de cada uno.
+
+**Se compra la mitad y se descarta la otra.**
+
+- **Separar por grupo, sí.** Que la clave de los alumnos no sea la de los administradores es una
+  mejora real y barata. Hoy `Modern2026` es de tutores y, con [SEC-01](#sec-01), fue acceso efectivo
+  de administrador.
+- **Una clave compartida por grupo, no.** Achica el radio —de todos los institutos a un grupo de un
+  instituto— pero no cambia la clase de problema: sigue siendo un secreto que conoce mucha gente. La
+  secretaría lo dice en voz alta, viaja por mensaje, y alcanza con que una persona lo sepa para entrar
+  a la cuenta de cualquiera que no la haya cambiado. La métrica 6 de [FEAT-11](#feat-11) va a decir
+  que casi nadie la cambió.
+
+**Y arrastra un problema que hoy no existe: la contraseña en claro en la base.** Para que la
+configuración sirva, alguien tiene que poder leerla — el administrador necesita decirle al tutor cuál
+es. Eso obliga a guardarla en texto plano (o cifrada de forma reversible, que para esto es casi lo
+mismo) en una columna de `Institute`. Hoy las contraseñas están mal, pero están **en el código**: no
+hay ninguna guardada en claro en la base. Esta funcionalidad la crea, y es un empeoramiento que no
+salta a la vista porque viene envuelto en una mejora.
+
+**La alternativa, que no es más cara: contraseña aleatoria por cuenta, mostrada una sola vez.**
+
+El canal de entrega **ya existe y es humano**: el modal de alta de tutor
+([`CreateGuardianModal.tsx`](../src/app/students/[id]/components/CreateGuardianModal.tsx)) hoy le
+dice al administrador *"la contraseña inicial es Modern2026"* para que se la pase. Cambiar ese texto
+por *"la contraseña es K7m-2pQx, copiala ahora"* es la misma pantalla y el mismo flujo. No hay
+secreto compartido, no hay nada en claro en la base, no hay configuración nueva en el superadmin.
+
+**Y no espera a [FEAT-05](#feat-05).** Lo que necesita correo es la **entrega automática**, no la
+contraseña aleatoria. Quien crea la cuenta ya es quien la entrega.
+
+**Dónde la configuración por instituto sí gana: los alumnos.** Ahí el argumento se da vuelta y
+conviene no aplicar la misma regla a los cuatro grupos. Se crean de a doscientos en una importación,
+son chicos de 6 a 8 años, muchos no tienen correo y el DNI ya es su identificador
+([BUG-01](#bug-01), [FEAT-05](#feat-05)). Repartir doscientas claves aleatorias de a una no es
+operable. Para ese grupo sirve un valor repartible —por instituto, o el DNI, que ya es lo que hace el
+reset—, asumiendo que es un secreto flojo y compensándolo con [SEC-11](#sec-11).
+
+**[SEC-11](#sec-11) es lo que más cambia la ecuación, y es el más barato de los tres.** Si el sistema
+obliga a cambiar la contraseña en el primer ingreso, la ventana en la que el secreto compartido sirve
+para algo se reduce a *entre que se crea la cuenta y la primera vez que entran*. Con eso, hasta una
+clave repartible deja de ser un agujero permanente.
+
+**Orden recomendado:** [SEC-11](#sec-11) primero; después aleatoria por cuenta para administradores,
+profesores y tutores; y valor configurable por instituto sólo para alumnos, si hace falta.
+
+#### Qué le hace esto a la métrica 6 de [FEAT-11](#feat-11)
+
+Menos de lo que parece, y en un punto la mejora:
+
+- **La columna `hasDefaultPassword` sobrevive a los tres escenarios.** Las diez escrituras la
+  encienden en el momento de crear la cuenta y **sin comparar nada**, así que da igual si la
+  contraseña es fija, por instituto o aleatoria.
+- **Con contraseñas aleatorias, la pasada deja de poder mirar hacia atrás**: no hay catálogo contra el
+  cual comparar. Pero la pasada existe **sólo** para las cuentas viejas, que sí tienen una de las
+  ocho. Es una razón más para correrla antes de cambiar el esquema, y la única que queda.
+- **La marca pasa a significar algo mejor**: *"todavía tiene la contraseña con la que se creó la
+  cuenta"*. Eso es un hecho registrado en el momento del alta, no una inferencia — que es exactamente
+  lo que la decisión del 2026-08-24 en [FEAT-11](#feat-11) pedía.
+- **Si se elige el camino por instituto**, el costo cae sobre
+  [`defaultPasswords.ts`](../src/lib/defaultPasswords.ts): el catálogo deja de ser una constante y
+  pasa a depender del instituto, así que `isDefaultForUser` necesita saber cuál. Vuelve a tocar las
+  diez escrituras. Es mecánico, pero hay que contarlo.
 
 ---
 
@@ -799,6 +919,143 @@ Los server actions leen `formData.get("x") as string` y confían. `parseFloat("a
 solo algunos campos se validan.
 
 **Cambio.** Esquemas `zod` por acción. Empezar por las financieras y por las que crean usuarios.
+
+---
+
+<a id="sec-11"></a>
+## SEC-11 · Obligar a cambiar la contraseña por defecto en el primer ingreso · **P1** · 🗣️ Pedido del cliente
+
+**Pedido (2026-08-24)**, saliendo de la métrica 6 de [FEAT-11](#feat-11).
+
+**Hoy no hay nada que empuje a cambiarla.** Verificado el 2026-08-24: no existe `mustChangePassword`,
+ni vencimiento, ni aviso, ni recuperación. Una cuenta creada con `Modern2026` puede seguir con
+`Modern2026` dos años después, y el sistema no se entera ni le avisa a nadie. Eso convierte a cada
+contraseña de [SEC-06](#sec-06) en un acceso permanente y compartido: la sabe quien la repartió, está
+escrita en el código, y con [SEC-01](#sec-01) ya fue acceso efectivo de administrador.
+
+**Es la mitad de [SEC-06](#sec-06) que se puede hacer ya, y ese es todo el punto de separarla.**
+SEC-06 propone dos cosas: generar contraseñas aleatorias por usuario **y** forzar el cambio en el
+primer ingreso. La primera necesita una forma de hacerle llegar la contraseña a la persona, o sea
+correo, o sea [FEAT-05](#feat-05). **La segunda no necesita nada**: la persona ya tiene la contraseña
+—se la dieron en mano—, y lo único que se agrega es que el sistema no la deje seguir hasta cambiarla.
+Sin proveedor de correo, sin SPF ni DKIM, sin esperar a nada.
+
+**Forma del cambio.**
+
+- Una marca por cuenta que diga que la contraseña vigente es una de las que reparte el sistema. Es
+  **la misma columna** que necesita la métrica 6 de [FEAT-11](#feat-11), y conviene hacerlas juntas:
+  una la enciende y la otra la apaga.
+- La encienden los seis lugares que escriben una contraseña por defecto, que ya saben cuál están
+  escribiendo. La apaga el cambio de contraseña. **Ninguno necesita comparar hashes**: comparar sólo
+  hace falta una vez, en la pasada que llena el pasado.
+- Una compuerta después del login que mande a cambiarla y no deje pasar a otra pantalla.
+
+**Dos trampas que conviene mirar antes de escribir la compuerta.**
+
+1. **Los alumnos de 6 a 8 años.** El identificador obligatorio es el DNI y muchos no tienen correo
+   ([BUG-01](#bug-01)). Una compuerta que los obligue a inventar y recordar una contraseña propia les
+   corta el acceso al módulo de práctica, y no hay recuperación que los rescate hasta que exista
+   [FEAT-05](#feat-05). **Conviene empezar por tutores y profesores**, que son los que tienen algo que
+   perder, y decidir a los alumnos aparte.
+2. **El reset del instituto vuelve a dejar la contraseña por defecto.** Si la compuerta no se
+   reactiva con el reset, alcanza con pedir un restablecimiento para volver al estado de antes.
+
+**Relacionado.** [SEC-06](#sec-06) es la otra mitad y va después. [FEAT-11](#feat-11) aporta el
+número: cuántas cuentas siguen con la contraseña por defecto, partido en alumnos, tutores y
+profesores, que es la barra de avance de este despliegue y termina en cero.
+
+---
+
+<a id="sec-12"></a>
+## SEC-12 · El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual · **P1**
+
+**Encontrado el 2026-09-09**, analizando el correo de acuse de la preinscripción pública. No es parte
+de ese trabajo: es de antes, y sale a la superficie porque ese correo tenía que decidir si copiaba el
+DNI del aspirante.
+
+**`authorize` no filtra por estado.** [`auth.ts:49`](../src/lib/auth.ts) busca al alumno por correo, o
+por DNI más instituto, y compara la contraseña. En ningún momento mira `status`. Si la contraseña da,
+emite la sesión con `roles: ["STUDENT"]` fijo. Un `PRE_INSCRIBED` y un `DELETED` entran igual que un
+alumno activo.
+
+**Y a los alumnos no los alcanza la red que sí tiene el personal.** La relectura periódica del JWT
+vacía los roles de un `User` que dejó de estar activo ([`auth.ts:144`](../src/lib/auth.ts)), pero
+está adentro de un `if (!isStudent)` ([`auth.ts:124`](../src/lib/auth.ts)) — el alumno nunca pasa por
+ahí. Su `["STUDENT"]` queda escrito en el token y no se revisa nunca más, en los 30 días que dura.
+
+**Lo que sí ataja hoy es `getAuthContext`**, que consulta la fila y devuelve `null` si el alumno no
+está `ACTIVE` ([`authz.ts:70`](../src/lib/authz.ts)). Todo lo que pasa por el helper deniega bien, y
+por eso esto no es un agujero de permisos financieros ni de administración.
+
+**Pero 23 archivos leen la sesión directo, sin pasar por el helper.** Entre ellos
+[`practice/page.tsx`](../src/app/practice/page.tsx), [`profile/page.tsx`](../src/app/profile/page.tsx)
+y las tres pantallas de [`messages/`](../src/app/messages/page.tsx). O sea que el alumno dado de baja
+entra, usa el módulo de práctica, ve su ficha y escribe mensajes.
+
+**Por qué es P1 y no defensa en profundidad.** La política del sistema es el borrado lógico
+([ARQ-05](#arq-05)): dar de baja **es** la única forma de sacar a alguien. Un borrado que no corta el
+acceso no es un borrado — el instituto cree que lo sacó y la persona sigue adentro, sin que nada en la
+pantalla se lo desmienta a ninguno de los dos.
+
+**Los dos estados llegan acá por caminos distintos.**
+
+- **`DELETED`** es el caso grave, porque es una decisión explícita del instituto que el sistema no
+  ejecuta.
+- **`PRE_INSCRIBED`** es un aspirante que el instituto todavía no aceptó ([BUG-08](#bug-08)): no es
+  alumno y no tiene por qué tener sesión. Y ahí se suma que su contraseña es `"inscripcion123"`, fija
+  y escrita en el repositorio ([SEC-06](#sec-06)), así que **con saber el DNI alcanza para entrar** —
+  y el DNI no es un secreto. Es la mitad de este ítem que además es un acceso adivinable.
+
+**Qué tiene que pasar en su lugar.** El filtro va en `authorize`, que es el único lugar donde se emite
+una sesión. Tres cosas, y ninguna es cara:
+
+1. **`status: "ACTIVE"` en la búsqueda del alumno**, con el mensaje de error de siempre. Si dijera
+   *"tu cuenta está dada de baja"*, el formulario de login pasaría a contestar quién existe en el
+   instituto y quién no.
+2. **Mirar de paso la rama de `User`**, que tampoco filtra. Hoy el usuario no activo entra y queda sin
+   roles, que es mucho más suave, pero es el mismo agujero y se arregla en la misma línea.
+3. **Sacar el `if (!isStudent)` de la relectura**, o las sesiones ya emitidas sobreviven al arreglo
+   hasta 30 días. Sin esto, el alumno que el instituto da de baja hoy con la sesión abierta sigue
+   entrando mañana.
+
+**Relacionado.** [SEC-06](#sec-06) (la contraseña fija de la preinscripción, que es lo que vuelve
+adivinable el acceso del aspirante), [ARQ-05](#arq-05) (la política de borrado lógico que esto
+incumple), [BUG-08](#bug-08) (qué es un preinscripto y por qué no es un alumno),
+[SEC-09](#sec-09) (el `middleware.ts` que no existe y que sería la otra capa).
+
+---
+
+<a id="sec-13"></a>
+## SEC-13 · El login del alumno no ata la búsqueda al instituto · **P2 · hoy inofensivo**
+
+**De dónde sale.** Apareció probando [FEAT-06](#feat-06) en stage el 2026-09-14, al preguntarse por
+qué un login por DNI podía fallar según la URL. No es de ese cambio: está desde antes.
+
+**Lo que pasa.** El alumno entra por DNI, y la búsqueda es
+[`auth.ts`](../src/lib/auth.ts): `{ dni: identifier, instituteId: instituteId }`. El
+`instituteId` viene del formulario —[`LoginForm.tsx:45`](../src/app/login/LoginForm.tsx), que manda
+`institute?.id ?? ""`— y `authorize` lo pasa por `|| undefined`. **En Prisma, un `undefined` no
+filtra: desaparece de la consulta.** O sea que cuando el instituto no resuelve del host, la búsqueda
+pasa de "este DNI en este instituto" a "este DNI en cualquier instituto", en silencio.
+
+Y el host no siempre resuelve: [`tenant.ts`](../src/lib/tenant.ts) matchea por `customDomain` o por
+subdominio, así que la URL larga de un deploy de Vercel
+(`lingua-campus-stage-git-stage-….vercel.app`) **no cae en ninguna de las dos** y devuelve `null`.
+
+**La rama por email es peor**, porque no tiene filtro de instituto ni siquiera escrito:
+`findFirst({ where: { email: identifier } })`. Y `Student` permite el mismo correo en dos institutos
+—la clave única es `@@unique([email, instituteId])`—, así que ahí el instituto **nunca** entró en la
+cuenta.
+
+**Por qué "hoy inofensivo" y no P1.** Hay un solo instituto, así que no hay otro adonde ir a parar.
+Y aun con dos, no alcanza con adivinar: la contraseña tiene que coincidir. El caso real no es un
+ataque sino una **confusión**: la misma persona dada de alta en dos institutos entrando por el
+dominio de uno y cayendo en la cuenta del otro. Sube de prioridad el día que haya un segundo cliente
+—y ese día conviene mirarlo junto con [ARQ-03](#arq-03), que es el otro lado del mismo problema.
+
+**El arreglo.** Exigir el instituto en vez de dejarlo caer: si no resolvió, el login falla con un
+error en vez de buscar más ancho. Es la misma forma que ya tiene el resto del sistema, donde el
+aislamiento entre institutos se hace a mano ([ARQ-01](#arq-01)).
 
 ---
 
@@ -1249,7 +1506,7 @@ lo va a notar, y además todavía se están migrando datos.
 ---
 
 <a id="fin-09"></a>
-## FIN-09 · Deudores incluye alumnos dados de baja · **P2**
+## FIN-09 · Deudores incluye alumnos dados de baja y cursos terminados · **P2** · 🗣️ Pedido del cliente
 
 `getDebtorsReportAction` ([`billingActions.ts:188`](../src/app/payments/billingActions.ts)) no filtra
 `student.status`. Los alumnos con `status: "DELETED"` aparecen en el reporte.
@@ -1277,6 +1534,51 @@ vuelve. Está en [FIN-26](#fin-26), junto con las otras formas de conciliar una 
 **Relacionado.** `deleteFeeAction` bloquea el borrado si `fee.payments.length > 0`
 ([`billingActions.ts:244`](../src/app/payments/billingActions.ts)), contando también los pagos
 `VOIDED`. Una cuota cuyo único pago fue anulado no se puede borrar.
+
+### 🗣️ Ampliado por el cliente — 2026-09-02 · activos, y en cursos activos
+
+**Pedido.** Que los deudores que muestra la pantalla sean los de **alumnos activos en cursos
+activos**.
+
+**Confirma la decisión del 16/08 y le suma un eje.** Aquella dejó definido el filtro por estado del
+alumno con los activos por defecto; el cliente pide eso mismo y además que el curso cuente.
+
+**Hoy no se filtra ninguna de las dos cosas.** `getDebtorsReportAction`
+([`billingActions.ts:350`](../src/app/payments/billingActions.ts)) filtra por instituto, estado de la
+cuota, importe mayor a cero y período vencido — y nada más: ni `student.status`, ni
+`enrollment.status`, ni `course.status`. Lo único que se sumó desde entonces es el filtro por mes de
+[FEAT-15](#feat-15), que corre en el cliente sobre esa misma lista. **La decisión del 16/08 nunca se
+implementó**, así que el pedido no cambia el rumbo: lo reafirma.
+
+**Son tres ejes y no uno**, y conviene nombrarlos porque no dicen lo mismo:
+
+1. **Alumno activo** — el de la decisión del 16/08: el que está en la papelera.
+2. **Inscripción activa** — el alumno sigue en el instituto, pero dejó ese curso.
+3. **Curso activo** — el curso terminó o se dio de baja, y el alumno sigue activo.
+
+**La trampa está en el 3, y es plata.** Un curso que terminó en julio con cuotas impagas es deuda
+real: si "curso activo" filtra de verdad, esa deuda desaparece de la pantalla el día que el curso se
+cierra — que es justo cuando hay que ir a cobrarla. Vale la misma regla que ya se decidió para el
+alumno de la papelera: **filtro con vista por defecto, no exclusión**. Los tres ejes en el mismo
+control, con "activos en cursos activos" como vista que abre.
+
+**Y una trampa técnica: las cuotas sueltas.** Una cuota con `enrollmentId` en `null` no tiene
+inscripción y por lo tanto tampoco tiene curso ([FIN-22](#fin-22), [FIN-23](#fin-23)): cualquier
+filtro que pase por `enrollment.course` la deja afuera **en silencio**. Son cuotas de alumnos reales
+y con deuda real —las que quedaron de cuando desinscribir borraba la fila—, así que el filtro tiene
+que contemplarlas aparte en vez de perderlas. La pantalla ya las distingue sin proponérselo: la
+etiqueta de cada cuota lleva el curso entre paréntesis
+([`debtors/page.tsx:62`](../src/app/payments/debtors/page.tsx)) y la suelta aparece sin él.
+
+**Antes de codificar conviene el número**, que además dimensiona el pedido: de las filas que hoy
+muestra deudores, cuántas son de alumnos en la papelera, cuántas de inscripciones cerradas, cuántas
+de cursos no activos y cuántas sin inscripción. Si el grueso está en el eje 1, el trabajo es el que
+ya estaba escrito el 16/08 y el resto es alcance.
+
+**Y el eje 2 no se decide solo.** El mismo día se pidió que el listado del curso deje de mostrar a
+los alumnos marcados como incompletos ([FEAT-18](#feat-18)). Las dos cosas juntas hacen desaparecer
+al que dejó el curso debiendo, que es el caso que la decisión del 16/08 quería conservar: hay que
+escribirlas mirando la otra.
 
 ---
 
@@ -2753,6 +3055,147 @@ tampoco tiene año propio, que es el otro lado de esta carencia).
 
 ---
 
+<a id="fin-29"></a>
+## FIN-29 · Inscribir a un alumno no le emite la cuota del mes · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-09-02).** Se da de alta un alumno nuevo, se lo inscribe a un curso, y no se le genera
+la cuota.
+
+**Confirmado en el código, y no es una falla: nunca existió.**
+[`createEnrollmentAction`](../src/app/enrollments/actions.ts) emite **una sola** cuota al inscribir
+—la **matrícula**, y sólo si el curso tiene `enrollmentPrice > 0`—. La cuota mensual no la emite nadie
+ahí: las `MONTHLY` salen únicamente de `generateMonthlyFeesAction`, la corrida masiva del botón
+*Generar Cuotas* de la pantalla de pagos
+([`GenerateFeesButton.tsx:54`](../src/app/payments/components/GenerateFeesButton.tsx)).
+
+**Entonces el alumno que entra después de la corrida del mes no tiene cuota de ese mes.** Y como no
+tiene cuota, tampoco figura en deudores: **no hay ninguna pantalla donde el hueco se vea**. Es la
+misma familia que los bugs de la tanda 3 —plata que no se factura y que nadie reclama, silenciosa
+porque nadie la ve—, con el agravante de que acá no hay siquiera una fila mal calculada: no hay fila.
+
+**Cuánto dura.** Hasta que alguien vuelva a generar ese mes. Repetir la corrida es seguro: el filtro
+en memoria más el `skipDuplicates` apoyado en la restricción única de [FIN-06](#fin-06) hacen que le
+cree la cuota al que faltaba y no toque al resto. Pero hay que saberlo, y nada lo sugiere: el que ya
+generó el mes no tiene motivo para volver, y el aviso de [FIN-22](#fin-22) —*"N alumnos quedaron
+afuera, revisalos antes de volver a generar"*— empuja para el otro lado.
+
+**Y hay una decisión pendiente que puede tapar esa salida.** [FIN-16](#fin-16) tiene definido limitar
+la regeneración de un mes ya cerrado. Si eso entra antes que esto, el hueco se queda sin arreglo por
+pantalla. O van en el orden inverso, o el límite de FIN-16 nace con la excepción escrita.
+
+**Lo que hay que decidir con el instituto**, y es de negocio:
+
+- **¿El que entra el 20 paga el mes entero?** Es la única pregunta que importa. **Recomendación:
+  emitir la cuota completa** y que la secretaría la ajuste cuando corresponda — editar el importe de
+  una cuota sin pagos ya existe (`editFeeAmountAction`), y borrarla deja rastro con motivo desde
+  [FEAT-10](#feat-10). Prorratear es una regla nueva, con redondeos y con la pregunta espejo de qué
+  pasa con el mes de la baja, y no es lo que pidieron.
+- **¿Y el que se inscribe el 28 de septiembre a un curso que arranca en octubre?** Ahí la cuota de
+  septiembre no corresponde. El año del curso lo da `startDate` ([FIN-28](#fin-28)); el mes hay que
+  mirarlo igual antes de emitir.
+
+**Alcance.** Todo lo que la corrida masiva ya sabe hay que repetirlo en el alta, o compartirlo:
+
+1. **`billingMode`.** Una inscripción `FULL_COURSE` no lleva cuota mensual. La corrida lo filtra; el
+   alta no puede olvidarse, o le cobra dos veces al que pagó el curso entero.
+2. **El precio** sale de `customMonthlyPrice` y, si no hay, del curso.
+3. **La cuota suelta de [FIN-22](#fin-22).** Si el alumno ya tiene una `MONTHLY` de ese período con
+   `enrollmentId` en `null`, no se le emite otra.
+4. **Curso activo y del período lectivo**, para no emitir la cuota de septiembre de un curso que
+   terminó en julio.
+
+**Que las mismas cuatro reglas vivan en dos lugares es la deuda de fondo.** Conviene una función
+única de emisión de cuota mensual: la corrida la llama en lote y el alta la llama para uno. Si se
+copian, la próxima regla se va a agregar en uno solo de los dos — que es exactamente cómo nació
+[FIN-16](#fin-16).
+
+**Dos cosas más que quedan a la vista en la misma función**, y conviene resolverlas en el mismo pase:
+
+- **La matrícula del alta ignora el precio propio de la inscripción.** Usa `course.enrollmentPrice`
+  pelado, mientras que la corrida anual sí respeta `customEnrollmentPrice`
+  ([`billingActions.ts:309`](../src/app/payments/billingActions.ts)). Una beca de matrícula cargada en
+  la inscripción no se aplica si la matrícula la emite el alta.
+- **Con la matrícula del curso en 0, el alta no emite absolutamente nada.** Y 0 es el valor con el que
+  arranca el formulario de curso ([`CourseForm.tsx:50`](../src/app/courses/new/CourseForm.tsx)),
+  coherente con que la corrida anual pida el monto a mano. Si el instituto carga los cursos así,
+  inscribir a un alumno hoy no genera ni cuota ni matrícula — que es, textual, lo que reportaron.
+
+**Verificar antes de codificar**, y son dos consultas cortas: cuántos cursos activos tienen
+`enrollmentPrice` en 0, y qué inscripciones activas de alumnos activos con `billingMode = MONTHLY` no
+tienen cuota `MONTHLY` del mes en curso. La segunda además devuelve la lista de lo que hay que emitir
+a mano para no perder el mes.
+
+**Relacionado.** [FIN-16](#fin-16) (el límite a regenerar, que hay que ordenar con esto),
+[FIN-22](#fin-22) (las cuotas sueltas que la corrida saltea), [FIN-06](#fin-06) (la restricción que
+hace repetible la corrida), [FIN-28](#fin-28) (el año del curso), [FIN-09](#fin-09) (la pantalla donde
+esto tendría que haberse visto), [BUG-08](#bug-08) (el alta por preinscripción, el otro camino por el
+que un alumno llega a un curso).
+
+---
+
+<a id="fin-30"></a>
+## FIN-30 · Volver a un curso que se dejó no tiene camino propio ni deja rastro · **P2**
+
+**Abierto el 2026-09-02**, saliendo de [FEAT-18](#feat-18): si el alumno marcado incompleto deja de
+figurar en el listado del curso, hay que poder decir **cómo vuelve**.
+
+**Volver ya funciona, y funciona bien: lo que no existe es el camino.**
+`createEnrollmentAction` ([`enrollments/actions.ts:39`](../src/app/enrollments/actions.ts)) busca la
+inscripción por `studentId_courseId` y, si la encuentra cerrada, **la reactiva** en lugar de crear
+otra. Eso conserva lo que importa —las cuotas de antes, el precio propio, la modalidad de cobro, el
+registro de examen— y no vuelve a emitir la matrícula del año si ya la tiene. Es la decisión de
+[FIN-23](#fin-23) y sigue siendo la correcta.
+
+**El problema es por dónde se llega.** El único acceso es *Inscribir Alumno* → `/enrollments/new`,
+que es la misma pantalla con la que se inscribe a alguien por primera vez: hay que saber que
+"inscribir" al que ya estuvo significa reincorporarlo. Y al terminar, el cartel dice *"¡Alumno
+inscripto exitosamente!"* ([`EnrollmentForm.tsx:184`](../src/app/enrollments/new/EnrollmentForm.tsx));
+nunca dice que reactivó la inscripción vieja con sus cuotas colgando.
+
+Desde el listado del curso no hay nada: el botón de dar de baja sólo se dibuja para las inscripciones
+`ACTIVE` ([`courses/[id]/page.tsx:432`](../src/app/courses/[id]/page.tsx)), así que la fila incompleta
+es hoy una fila sin acciones. **Con [FEAT-18](#feat-18) adelante deja de estar siquiera a la vista**,
+y el camino de vuelta pasa a depender de que alguien se acuerde de que existe.
+
+**Recomendación: que la vuelta viva donde está el alumno.** Es lo que resuelve el desplegable que ya
+recomienda FEAT-18 —*"1 dejó el curso"*—: adentro, un botón **Reincorporar** que llame a la misma
+reactivación. Las dos fichas se sostienen entre sí: la lista se limpia y el camino de vuelta queda a
+un clic del lugar donde se lo busca.
+
+**Y hay dos vueltas distintas que hoy son el mismo clic:**
+
+1. **El error.** Se marcó incompleto al alumno equivocado, hace treinta segundos. Corresponde
+   deshacer, y que no quede nada.
+2. **El regreso real.** Dejó en mayo y vuelve en agosto. No es un error: es un hueco de tres meses que
+   **tiene que poder explicarse**, sobre todo del lado de las cuotas.
+
+Hoy las dos hacen exactamente lo mismo, y ninguna deja registro.
+
+**Lo que no se guarda en ningún lado, y es lo que hay que decidir:**
+
+- **Cuándo dejó y cuándo volvió.** `Enrollment` no tiene `leftAt` ni historial de estados, y
+  `enrolledAt` conserva la fecha original —la reactivación no la toca—, así que la ficha del alumno
+  muestra el alta de la primera vez y nada más. La pantalla dice "Incompleto" pero no *desde cuándo*.
+- **Por qué faltan las cuotas del hueco.** No se generan, porque el generador mensual sólo mira las
+  inscripciones `ACTIVE` ([`billingActions.ts:40`](../src/app/payments/billingActions.ts)), y eso está
+  bien. Lo que falta es que se entienda el faltante cuando alguien mire esa ficha el año que viene.
+- **La deuda vieja vuelve con él, y eso ya está decidido.** [FIN-09](#fin-09) lo dejó escrito el
+  16/08: *"si más adelante vuelve y se lo restaura, la deuda tiene que reaparecer, y ahí el instituto
+  decide si se la perdona o se la cobra"*. Perdonarla sigue sin existir como operación
+  ([FIN-26](#fin-26)). Al reincorporar conviene **mostrar el saldo que vuelve con el alumno**, en vez
+  de que aparezca solo en deudores tres días después.
+
+**Lo mínimo que cierra esto** son dos cosas: una fecha —cuándo se marcó incompleto— y que reincorporar
+sea una acción con nombre propio. El historial completo de cambios de estado es [ARQ-10](#arq-10)
+(auditoría de las acciones del panel): si esa ficha se hace, esto viene adentro, así que no conviene
+inventar acá una tabla que después se duplique.
+
+**Relacionado.** [FEAT-18](#feat-18) (de donde salió, y dónde va el botón), [FIN-23](#fin-23) (la
+reactivación que hace posible todo esto), [FIN-24](#fin-24) (el otro movimiento del alumno entre
+cursos), [FIN-09](#fin-09) y [FIN-26](#fin-26) (la deuda que vuelve con él), [ARQ-10](#arq-10).
+
+---
+
 # Bugs funcionales
 
 <a id="bug-01"></a>
@@ -3160,6 +3603,30 @@ baja. Es previo a [BUG-05](#bug-05), pero se nota más ahora que el admin puede 
 Recomiendo la 3, y revisar con el cliente si el admin espera enterarse de mensajes nuevos en hilos
 que no son suyos.
 
+### Resuelto — 2026-09-13 en `b0303d8` · va la opción 3 · verificado en stage el 2026-09-14
+
+Entró con [FEAT-06](#feat-06), que abrió el canal de las familias y convirtió este contador en la
+herramienta de supervisión de la administración: era el momento.
+
+**El contador cuenta sólo los hilos donde la persona participa.** Los hilos del instituto siguen
+todos visibles en la bandeja del admin; lo que dejan de hacer es inflar el badge. Se sumó una regla
+que no estaba en ninguna de las tres opciones y que hacía falta igual: **los mensajes propios no
+cuentan como sin leer**, porque el que acaba de escribir ya sabe lo que escribió.
+
+**Y dejó de reusar la bandeja.** `getUnreadThreadCount` hacía `getThreadsForUser()` y contaba en
+memoria, o sea que cada vuelta del sobre levantaba todos los hilos con todos sus participantes —para
+un admin, el instituto entero, una vez por minuto y por pestaña abierta. Ahora es un `COUNT` en SQL
+sobre `ThreadParticipant`.
+
+**Medido en producción antes de tocar nada:** la administradora tenía el badge en **27** —todos los
+hilos del instituto— y participa de 4. Con la consulta nueva da **0**, que es lo correcto: de esos 4,
+en ninguno hay algo sin leer que no haya escrito ella. La misma consulta sobre el resto del padrón
+devuelve números distintos de cero (alumnos con 2 y 3 sin leer), así que no está apagada de más.
+
+**Verificado en pantalla en stage el 2026-09-14:** la administradora ve los 15 hilos del instituto
+con el badge en 0, y **abrir un hilo del que no participa no le mueve el contador**. Ver el detalle
+en [FEAT-06](#feat-06).
+
 ---
 
 <a id="bug-07"></a>
@@ -3538,10 +4005,228 @@ al instituto y un reset manual. Y desbloquea SEC-06, que es P1 de seguridad.
 alguna vez) tocan lo mismo desde otro ángulo: hoy nadie sabe cuántos tutores nunca pudieron entrar,
 que es probablemente donde está el problema real.
 
+**Al 2026-08-24 no hay nada esperando adelante de esto.** Se evaluó si la métrica 6 de
+[FEAT-11](#feat-11) obligaba a correr algo antes —la lógica era que este ítem hace que la gente
+cambie contraseñas en masa y borre la evidencia de quién nunca entró— y **la dependencia se cayó** al
+redefinir esa métrica: mide contraseñas por defecto, no ingresos, y tiene que bajar cuando alguien
+cambia la suya. También conviene mirar [SEC-11](#sec-11), que resuelve la parte del riesgo que no
+necesita correo y por eso no espera a este ítem.
+
+**Y la pregunta de "quién nunca pudo entrar" ya tiene quien la conteste**, aunque sólo hacia
+adelante: el registro de actividad de [FEAT-11](#feat-11), desplegado el 2026-08-23. Cuando este ítem
+salga, va a haber historia real para saber a quién le sirvió.
+
+### Partida en dos entregas (2026-08-26)
+
+**Por decisión del cliente**, y por urgencia: *"la prioridad hoy son los tutores que entran cada tanto
+a la plataforma y para cuando quieren volver a ingresar, se olvidaron el pass"*. Los alumnos **no se
+caen del alcance, se corren**: la parte 2 es una entrega pendiente de este mismo ítem, no una idea.
+
+Lo que hace barata la partición es que la parte 1 no toca nada que la parte 2 tenga que rehacer. Tres
+decisiones cuestan lo mismo hoy y evitan la reescritura:
+
+- El token guarda `subjectType` + `subjectId` y no un `userId` con relación. En la parte 1 esa columna
+  siempre dice `"USER"` y parece de más; es la única de las tres que después sería una migración.
+- El destinatario del correo es un dato aparte de la cuenta que se restablece. Hoy son siempre el
+  mismo; con los alumnos el correo le llega al tutor.
+- Resolver el identificador es un paso propio que devuelve candidatos y **se niega si hay más de uno**.
+
+### Hecha · parte 1: las cuentas con correo propio (2026-08-27)
+
+Commit `96a9193`. Cubre todo lo que vive en `User` — tutores, docentes y administración.
+
+**Las tres trampas de arriba se resolvieron así:**
+
+1. **Los alumnos sin correo** quedan para la parte 2. La pantalla no los deja esperando: ver abajo.
+2. **El correo no identifica a una persona sola** — pero para `User` sí, porque `email` es único
+   global. **La parte 1 no necesitó arreglar [SEC-05](#sec-05)**, y la regla del corte por más de un
+   candidato es lo que va a sostener eso cuando entren los alumnos, cuyo correo y cuyo DNI son únicos
+   sólo por instituto.
+3. **El enlace lleva el instituto** porque sale de su ficha —`customDomain`, o el subdominio— y no del
+   host del pedido: `instituteBaseUrl` en [`tenant.ts`](../src/lib/tenant.ts). Además cierra un agujero
+   que no estaba anotado: nadie puede hacer que un correo nuestro apunte a otro lado mandando un
+   `Host` cualquiera. Y como stage y producción son dos bases, cada una apunta a su entorno sin
+   ninguna variable de entorno.
+
+**Seis cosas que aparecieron al hacerlo y no estaban en la ficha:**
+
+- **El mensaje neutro deja a los chicos en silencio.** Un alumno que escribe su DNI recibe "si está
+  registrado, te llega un correo" y espera un mail que no existe. La pantalla lo distingue por la
+  forma de lo tipeado —un DNI no tiene arroba—, que no consulta ni revela nada, y le dice que se lo
+  pida al instituto.
+- **El remitente es un dato del instituto y no una constante** (`Institute.senderEmail`, con caída al
+  de la plataforma). Sale de una decisión del 2026-08-26: **un cliente premium tiene su marca y no
+  corresponde que aparezca "Lingua Campus"**. Con el dato en la ficha, ese cambio es cargar un campo.
+- **`Institute.email` no sirve de remitente.** Es el contacto de la ficha y nadie verificó que su
+  dominio nos autorice a mandar en su nombre: en el `from` es spam, o rechazo si el dominio tiene
+  DMARC. Sí es lo correcto como dirección de respuesta, y ahí se usa.
+- **El seguimiento de clics de SendGrid hay que apagarlo.** Reescribe los enlaces para que pasen por
+  un dominio suyo, así que el botón dejaría de apuntar al instituto. En un correo de recuperación eso
+  se parece a un phishing.
+- **El límite se cuenta sobre la propia tabla de tokens**, no con el mecanismo de
+  [`AiUsage`](../prisma/schema.prisma) que proponía la ficha: cada pedido ya deja una fila con su
+  fecha, así que no hace falta un contador aparte. Y se cuenta por cuenta y **no por IP**: guardar la
+  IP de cualquiera que pase por la pantalla es un dato personal que el sistema no guarda en ningún
+  lado, y de las direcciones que no existen no sale correo ni queda fila, así que no hay nada que
+  inundar.
+- **El token se marca antes de tocar la contraseña**, con un `updateMany` que exige que siguiera sin
+  usar. Comprobar y después escribir deja una ventana en la que dos clics simultáneos pasan los dos.
+
+También: **SHA-256 y no bcrypt** para el hash del token —son 32 bytes al azar, no hay diccionario que
+los adivine, y hace falta que el hash sea determinístico para buscar por índice—, y la invalidación de
+tokens pendientes quedó enganchada en el cambio desde el perfil y en los resets de profesor y de
+tutor. La contraseña nueva recalcula `hasDefaultPassword`, así que la métrica 6 de
+[FEAT-11](#feat-11) sigue diciendo la verdad.
+
+**Verificado corriendo contra la base local**, no leído: el correo sale con el nombre del instituto;
+el enlace apuntó al dominio del instituto aunque el pedido se hizo desde `localhost`; la pantalla del
+enlace nombra la cuenta; contraseñas que no coinciden no queman el token; después del cambio la nueva
+sirve y la anterior no; el enlace vuelto a abrir dice que ya se usó; un pedido nuevo invalida el
+anterior; y al cuarto pedido en la ventana no salió correo y la pantalla dijo exactamente lo mismo.
+
+**Lo que sigue pendiente y no es de programación**: crear la cuenta de SendGrid, autenticar
+`mail.<dominio del cliente>` —el subdominio y no la raíz, que es un pedido que el cliente puede
+aprobar sin miedo a romperse el correo que ya tiene— y pasarle los tres CNAME a quien le administre el
+DNS. Hasta entonces `EMAIL_PROVIDER=console` deja el flujo entero probable sin mandar nada.
+
+**Y el canal queda montado para los otros tres casos**: [FEAT-12](#feat-12), [SEC-06](#sec-06) y el
+formulario del landing pasan a ser una plantilla y una llamada.
+
+### Hecha · parte 2: los alumnos (2026-08-30)
+
+Commits `17d06bc` y `0c6a94c`. El alumno pide con su DNI o con su correo; si tiene dirección propia el
+enlace le llega a él, y si no, **le llega a su tutor**.
+
+**Los tutores se juntan de las dos fuentes que tiene el sistema** —las cuentas vinculadas por
+`GuardianStudentLink` y los correos sueltos de la ficha—, y se descartan los repetidos. Ninguna de las
+dos está garantizada: hay fichas con el correo del padre cargado a mano y sin cuenta creada, y cuentas
+de tutor creadas después sin que nadie volviera a tocar la ficha. Si hay dos tutores salen dos correos
+con **un solo enlace**, que gasta el primero que lo use.
+
+**El instituto del host ahora achica la búsqueda, pero sólo la de alumnos**, que son los que tienen
+correo y DNI únicos por instituto. La de `User` sigue abierta, que es lo que mantiene a
+[SEC-05](#sec-05) afuera de esto. Y el corte por más de un candidato sigue siendo la red: con dos
+institutos, el mismo chico anotado en los dos no recibe nada en vez de recibir el enlace equivocado.
+
+**Un error que apareció armando el caso de prueba**, y que no se habría visto sin datos reales: la
+plantilla decidía si el correo era para el dueño de la contraseña **comparando nombres**. El tutor
+cargado en la ficha puede tener el correo sin el nombre al lado —es lo más común—, y sin nombre la
+comparación daba "es la misma persona": al tutor le llegaba un *"restablecé tu contraseña"* por una
+clave que no era suya, saludándolo por el nombre de su hijo. Ahora el dato viaja explícito desde donde
+se sabe hasta la plantilla.
+
+**El número que hay que mirar antes de festejar esto.** En la base de desarrollo, **276 de 284 alumnos
+activos no tienen correo propio ni ningún tutor cargado**: para ellos la recuperación existe y no
+alcanza a nadie. Todos tienen DNI, así que el problema no es el identificador — es que la ficha está
+vacía del lado del contacto. **Eso no lo puede resolver el sistema**: es carga de datos del instituto,
+y conviene medirlo en producción y decirle el número al cliente antes de anunciarle la función. Sin
+eso, esta entrega le sirve a ocho alumnos.
+
+**Verificado corriendo** contra la base de desarrollo: un alumno sin correo propio con dos tutores
+—uno con nombre y otro sin— recibe dos correos con el mismo enlace, uno saludando por nombre y el otro
+arrancando por el motivo, los dos diciendo "la contraseña de *fulanito*"; el repetido entre la cuenta
+vinculada y la ficha se descarta; el enlace nombra al alumno en la pantalla; después de usarlo la
+copia del otro tutor dice "ya se usó"; la contraseña nueva sirve, el DNI —que era su clave por
+defecto— deja de servir, y `hasDefaultPassword` pasa a `false`. Un alumno con correo propio recibe el
+suyo, con *"restablecé **tu** contraseña"*.
+
+**Dos cosas que no se ejercitaron de punta a punta** y conviene mirar al probar en stage: que el reset
+de alumno desde la ficha invalide un enlace pendiente —la llamada está puesta y el helper está
+probado, pero hace falta una sesión de administración para dispararlo— y el corte por más de un
+candidato, que necesita dos institutos.
+
+**Sigue afuera del código**: la cuenta de SendGrid y el DNS del cliente. Y el uso que esto habilita
+más allá del olvido: hoy al alumno se le reparte `estudiante123` o su DNI, y el mismo mecanismo
+mandado al tutor es la salida de [SEC-06](#sec-06) para los chicos — que vuelve a depender de que la
+ficha tenga el correo del tutor.
+
+### Hecha · parte 3: el proveedor real es Resend (2026-09-09)
+
+Commit `365c852`. **El proveedor deja de ser SendGrid y pasa a ser Resend**, y el cambio costó un
+archivo: `ResendEmailProvider` es el tercero sobre la misma interfaz, y el factory ahora acepta
+`"console" | "resend" | "sendgrid"`. No hubo que tocar el flujo — el envío ya estaba enganchado desde
+la parte 1, y [`IEmailProvider`](../src/lib/email/IEmailProvider.ts) existía justamente para esto.
+**SendGrid queda como plan B**: el archivo no molesta, no corre, y es la salida si el dominio se cae.
+
+**La adaptación que importa: Resend no tira cuando el envío falla, devuelve `{ data, error }`.**
+Verificado con una clave inválida — el SDK loguea el 401 y retorna normal. De ese `throw` cuelga el
+`Promise.allSettled` de la acción, que es quien decide si le avisa al instituto que no salió nada.
+Sin convertirlo, un envío rechazado se contaría como exitoso y el fracaso quedaría invisible para
+todos, porque la pantalla contesta siempre lo mismo. Es el mismo agujero que el aviso a la campana
+vino a tapar, y se habría reabierto por debajo.
+
+**El seguimiento de clics ya no se apaga por mensaje**, y conviene tenerlo anotado: en SendGrid era
+una opción del envío, en Resend es una configuración **del dominio**. Tiene que quedar apagado por la
+razón de siempre —reescribe los enlaces y el botón deja de apuntar al instituto, que en un correo de
+recuperación se lee como phishing—, pero ahora eso se rompe desde el panel de Resend y **sin que
+cambie una línea de código**.
+
+**La plantilla pasó a React Email.** El HTML lo arma un componente y el texto plano se sigue
+escribiendo a mano, pero los dos salen del **mismo** saludo y del mismo motivo. Eso no es prolijidad:
+el error de la parte 2 fue exactamente que una de las dos versiones decidía por su cuenta si el correo
+era para el dueño de la contraseña o para su tutor. Ahora no puede.
+
+**La paleta es la del modo claro de `globals.css`, token por token** — y llegó ahí después de una
+vuelta. El componente entró con una paleta propia, navy y amarillo, que al verla entregada al lado del
+sitio del cliente y de la pantalla de éxito se leía como otro producto. El enlace de un correo de
+recuperación aterriza en el campus, y **parecerse a donde uno aterriza es la mitad de lo que distingue
+un correo legítimo de uno que lo imita**: el mail oscuro trabajaba en contra de eso.
+
+Copiar los tokens de la app alinea las dos superficies de una sola vez, porque **los tokens de la app
+ya son la marca del cliente**: `--c-primary` es el mismo verde que `InstituteLanding.tsx` tiene
+hardcodeado y `--c-accent` el mismo azul. Los grises salen de la app y no del landing, que usa slate
+azulados casi negros — funcionan a 48px sobre un degradé y pesan a 20px sobre blanco.
+
+**Es una copia a mano y no hay forma de evitarlo**, que es la deuda que esto deja. El correo viaja con
+todo el estilo en atributos `style`: sin hoja de estilos, sin cascada, y ningún cliente de correo
+resuelve un `var(--c-primary)`. Si cambian los tokens de `globals.css`, **hay que pasar por
+`PasswordResetEmail.tsx`**, y nada lo va a avisar. Queda dicho en el archivo.
+
+De paso quedó a la vista algo más grande: **ninguna superficie sabe de qué color es el instituto**. El
+landing tiene sus tres colores hardcodeados, las pantallas de login y recuperación un índigo
+`#4F46E5` que no aparece en ningún otro lado, y `Institute` tiene `logoUrl` y ningún campo de color.
+Hoy no molesta porque el cliente es uno solo y los tokens de la app son justo los suyos; **con el
+segundo cliente eso se rompe solo**, y ahí el correo va a heredar la marca del cliente equivocado.
+
+**La marca del cuerpo es la del instituto, no la de la plataforma** — la misma regla que ya seguía el
+remitente. Un correo firmado "Modern English School" que adentro se presenta como otra empresa se lee
+como phishing. Lingua Campus queda en el pie. Y **Exo 2 no se va a ver casi nunca**: Gmail bloquea las
+fuentes remotas, así que lo que se lee es el fallback.
+
+**Un error que traía la implementación de referencia**, y que vale anotar porque es fácil de repetir:
+elegía el remitente con `process.env.NODE_ENV === "production"`. En Vercel eso vale `production` en
+**los dos** proyectos —stage también compila en modo producción—, así que stage habría mandado desde
+la casilla de producción. El remitente sale de `EMAIL_FROM`, que es por entorno, y de
+`Institute.senderEmail`, que es por instituto; el entorno no entra al código.
+
+**Verificado renderizando** los tres casos —dueño, tutor con nombre y tutor sin nombre—: la paleta va
+inline, el `href` del botón queda intacto apuntando al instituto, y en el del tutor "tu contraseña"
+aparece cero veces. **No hubo ningún envío real todavía**: el dominio `lingua-campus.com.ar` está en
+`pending` en Resend, con los tres registros (DKIM, y el MX y el TXT de `send`) sin verificar.
+
+**El número que la parte 2 pedía medir en producción, medido (2026-09-09).** De **362 alumnos
+activos**: 14 tienen correo propio, 200 no lo tienen pero sí al menos un tutor con dirección, y **148
+no tienen ninguna** — el 41%. Es bastante mejor que el 97% de la base de desarrollo, pero sigue
+queriendo decir que **cuatro de cada diez alumnos no pueden recuperar su contraseña por esta vía**, y
+para ellos lo que se dispara es el aviso a la campana. Los 182 usuarios activos tienen todos correo.
+Sigue siendo carga de datos del instituto, y sigue conviniendo decirle el número al cliente antes de
+anunciarle la función.
+
+**Lo que falta, y no es de este ítem**: verificar el dominio en Resend, cargar `EMAIL_PROVIDER`,
+`RESEND_API_KEY` y `EMAIL_FROM` en los dos proyectos de Vercel, y dos bloqueantes que se descubrieron
+buscando dónde probar. El Supabase de stage está **pausado**. Y **producción está cinco migraciones
+atrás** —la última aplicada es del 2026-08-18—, así que ahí no existen ni `PasswordResetToken` ni
+`Institute.senderEmail`: **FEAT-05 no está desplegado en producción**. Promover a `main` corre
+`migrate deploy` con las cinco de una sola vez, sobre una base sin backups.
+
+Al probar en stage hay una trampa que ya mordió una vez: **el enlace sale de la ficha del instituto,
+no del host desde el que se pidió**. Si la ficha de stage es copia de producción, el correo de prueba
+llega con un enlace a `modernenglishschool.com.ar` — o sea, a producción, donde el token no existe.
+
 ---
 
 <a id="feat-06"></a>
-## FEAT-06 · Que tutores y docentes puedan escribirle al docente del curso · **P2** · 🗣️ Pedido del cliente
+## FEAT-06 · Que alumnos, tutores y docentes puedan escribirle al docente del curso · **P2** · 🗣️ Pedido del cliente
 
 **Pedido (2026-08-13).** Que los tutores y los docentes puedan **iniciar** conversaciones con el
 docente del curso del alumno.
@@ -3585,6 +4270,372 @@ mitad del trabajo; la otra mitad es que hoy no existe la lista de a quién podr�
 (adjuntos en el primer mensaje) tocan la misma pantalla; si se va a abrir el módulo, conviene
 mirarlos juntos. Y abrir el canal a los tutores multiplica el volumen de hilos, así que BUG-06 pasa
 de molestia a problema.
+
+### 🗣️ Ampliado — 2026-09-02 · los alumnos también
+
+**Nuevo pedido.** Que también **los alumnos** puedan escribirle al docente de su curso. El pedido del
+13/08 nombraba a los tutores y a los docentes; ahora son los tres.
+
+**Es el mismo corte de código, y ya los tenía adentro.** `createThread` bloquea `isStudent` en la
+misma línea en que bloquea al tutor ([`messages.ts:383`](../src/app/actions/messages.ts)), y el
+comentario de arriba lo dice como decisión de fase: *"En Fase 1, STUDENT y GUARDIAN no pueden iniciar
+(solo responder)"*. Levantar el corte para los dos es un cambio, no dos. Responder ya pueden: el
+alumno participa de hilos y manda mensajes en ellos, lo único que no puede es abrir uno.
+
+**Y el alumno es el más barato de los tres destinatarios.** El tutor necesita una lista que hoy no
+existe —sus alumnos vinculados → inscripciones activas → docente de cada curso—; el alumno tiene esa
+lista en su propia inscripción: el docente de sus cursos activos, y nadie más. Sigue valiendo lo otro:
+la lista **se hace cumplir en el servidor**, porque el destinatario llega en el body.
+
+**Trae una pregunta que el pedido del tutor no tenía: la edad.** Hay alumnos de 6 a 8 años, que entran
+con DNI y sin correo propio. Abrirles un canal directo con la docente es una decisión del instituto y
+no un corolario del pedido:
+
+- **¿El tutor ve lo que escribe su hijo?** Hoy un hilo tiene participantes y nada más: no hay forma de
+  que un tercero supervise sin ser participante. Sumar al tutor como participante automático es una
+  opción, y cambia lo que la docente puede contestar ahí adentro.
+- **¿Todos los alumnos, o de cierta edad para arriba?** `Student.birthDate` permitiría el corte, pero
+  es opcional y puede estar vacío en muchas fichas: antes de apoyar un permiso en ese campo hay que
+  decidir qué pasa con el alumno sin fecha de nacimiento. Es la misma línea del resto del modelo,
+  donde los obligatorios del negocio son opcionales en el schema.
+- **El volumen.** Sumar tutores ya movía a [BUG-06](#bug-06) de molestia a problema; con los alumnos
+  adentro son tres veces los hilos sobre el mismo contador roto.
+
+### Decidido — 2026-09-13 · las seis preguntas, cerradas de a una
+
+El pedido volvió por tercera vez, ahora como *"que los estudiantes y los tutores puedan iniciar
+conversación con el profesor de la clase"*. Se cerraron seis puntos con el cliente, de a uno. El
+docente→docente del pedido original **queda afuera de este paquete** (ver el final de la ficha).
+
+**1 · El hilo guarda de qué alumno habla.** Va una columna `studentId` opcional en `MessageThread`.
+El curso más el tutor alcanzan para deducir el alumno salvo con hermanos en el mismo curso — pero la
+deducción es **en vivo**, y se cae el día que el alumno se cambia de curso o se da de baja. Un hilo
+viejo tiene que poder decir de quién hablaba. Es el criterio que ya usan `ReportBatchSignature`, que
+congela `signerName` en vez de leerlo del curso, y `FeeDeletion`, que copia el nombre del alumno.
+
+La tentación que se descartó es resolverlo **sumando al alumno como participante**: en este modelo
+participar *es* poder leer, así que el tutor que escribe "Juan está desbordado" lo estaría
+escribiendo en un hilo que Juan abre. Quién es el sujeto y quién lee tienen que ser dos cosas
+distintas.
+
+De experiencia: el tutor con un solo hijo **no elige nada**; con dos o más elige el hijo y el curso
+se desprende de ahí — el tutor piensa en el hijo, no en el curso. Y la docente lo ve **en la
+bandeja**, no adentro del hilo (*"Marta González · sobre Juan Pérez · Nivel 3"*): si hay que abrir
+el hilo para saber de quién le hablan, el campo no sirvió de nada. Desde el hilo, atajo a la ficha
+del alumno.
+
+**2 · Quién ve qué.** El hilo del alumno es alumno↔docente y el del tutor es tutor↔docente, y **no
+se cruzan**: el tutor no ve lo que escribe su hijo ni el alumno lo que escribe su tutor. La
+supervisión la hace la administración, que **ya ve todos los hilos del instituto** — eso no hay que
+construirlo, está en [`getThreadsForUser`](../src/app/actions/messages.ts) y en el chequeo de
+`isInstituteAdmin` de `getThread`. Y está bien resuelto el matiz: mirar es invisible, contestar no —
+el admin que responde se suma al hilo como participante y el resto lo ve entrar.
+
+**La secretaría también lee.** Hoy el código no las distingue (`isAdmin` mete a ADMIN y a SECRETARY
+en la misma bolsa), y el cliente decidió dejarlo así y avisarle al instituto; si les incomoda, se
+quita después. Vale saber que del lado de la familia **sí se distinguen al escribir**: firman
+"Administración" y "Secretaría" respectivamente, con el rol congelado por mensaje en
+`Message.senderRole`.
+
+**Sin corte de edad**, y el argumento es del cliente: el alumno cumple años a mitad de cursada, y un
+permiso que cambia solo el día del cumpleaños es un problema esperando. De paso desaparece la
+dependencia de `Student.birthDate`, que es opcional y está vacío en muchas fichas — el problema que
+la ampliación del 02/09 dejaba abierto.
+
+**3 · El aviso es el sobre, y nada más.** Hoy **no hay ninguno**: ni `createThread` ni `sendMessage`
+escriben una `Notification` ni mandan correo, y el único indicio es el badge del sobre, que se
+refresca con un poll de 60 segundos y sólo mientras la persona está adentro de la app. No se nota
+porque la mensajería corre en un solo sentido —escribe el instituto y leen las familias, y el que
+escribe ya sabe que escribió—; al abrir el otro sentido, el mensaje de un tutor queda esperando a
+que la docente entre y mire un sobrecito.
+
+**Se evaluó escribir una `Notification` por mensaje y se descartó**, con el motivo que puso el
+cliente: *"si mandamos la notificación en la campana, ¿para qué tenemos el sobre?"*. Serían dos
+contadores del mismo hecho, y se desincronizan — leer el hilo actualiza el `lastReadAt` del
+participante y **no toca** la fila de `Notification`, así que la campana seguiría marcando pendiente
+algo ya leído y contestado. La campana es un **evento** ("se publicó un boletín"), el sobre es un
+**estado** ("tenés tres conversaciones sin leer"), y mensajería ya lleva ese estado bien.
+
+Entonces al sobre hay que darle lo que no tiene: **realtime** —el canal `user:${id}` ya existe y la
+campana ya está suscripta ([`NotificationBell.tsx`](../src/components/layout/NotificationBell.tsx)),
+así que el sobre puede colgarse del mismo y de paso desaparece el poll que para un admin levanta
+todos los hilos del instituto una vez por minuto y por pestaña—, el **contador arreglado**
+([BUG-06](#bug-06)) y un **desplegable** con los últimos hilos sin leer, con quién escribió y sobre
+qué alumno.
+
+**Sin correo.** Razón del cliente: los correos están saturados y la gente no los mira. Se suma que
+iría a la casilla personal de la docente, que es justo donde no queremos que termine lo que escribe
+una familia. **El push queda para más adelante** y está más cerca de lo que parece: la app ya es PWA
+con service worker propio (`@ducanh2912/next-pwa`, `public/sw.js`) y ya tiene el diálogo de
+instalación; falta VAPID, una tabla de suscripciones por dispositivo y el handler en el worker. Con
+una salvedad que decide si sirve: **en iPhone el push web sólo llega si la familia instaló la app**
+en la pantalla de inicio, así que la conversión de la PWA pasa a ser parte del problema.
+
+**4 · Dos destinos: el docente del curso y Administración.** Si el único destino fuera el docente,
+lo administrativo entraría igual por ahí — el tutor no separa lo pedagógico de lo de secretaría,
+escribe donde tiene un cuadrito — y la docente terminaría de mesa de entradas reenviando consultas
+de cuotas. Además la administración ya les escribe hoy, y un canal de una sola mano se iba a sentir
+como un olvido. De yapa resuelve un caso feo: **el curso puede no tener docente**, porque
+`teacherId` es opcional y [`courses/actions.ts`](../src/app/courses/actions.ts) guarda
+`teacherId || null` sin chistar; con Administración entre los destinos, ese curso no queda con un
+botón que no hace nada.
+
+**Se elige un área o un curso, nunca un nombre** ("Mi profesor de Nivel 3", "Administración"): así
+no se le muestra el padrón del instituto a nadie.
+
+**5 · Se mantiene el hilo por tema, con asunto.** Se evaluó pasarlo a un chat único por alumno y
+curso —el cliente los venía llamando "chats"— y lo descartó con el argumento correcto: el asunto es
+lo que después permite encontrar *"la respuesta sobre la tarea del martes"* sin scrollear una
+conversación única. Su lectura: tiene la dinámica de chat para escribir, contestar y ver quién está,
+y la de correo para organizar. La fricción del asunto —un tutor apurado y un chico de 8 años no
+inventan un título— se resuelve **en la pantalla**, con sugerencias tocables ("Tarea",
+"Inasistencia", "Consulta sobre la clase"), no sacando el campo.
+
+**6 · Buscador por asunto, filtros y paginación.** La bandeja **no tiene nada de eso**:
+[`MessagesInboxClient`](../src/app/messages/components/MessagesInboxClient.tsx) son 127 líneas que
+reciben la lista y la dibujan entera, y `getThreadsForUser` no tiene `take` — para un admin trae
+todos los hilos del instituto, siempre. Con el modelo de hilo por tema recién confirmado, esto deja
+de ser un lujo: sin buscador, "un hilo por tema" es sólo muchos hilos.
+
+Van **filtros por curso, por alumno y por sin leer** —los tres salen de datos que el hilo ya va a
+tener, así que son casi gratis—, **paginación**, y el buscador **sólo por asunto**: por contenido es
+índice de texto completo en Postgres, y eso se paga en infraestructura todos los meses, no una vez.
+Si el instituto lo pide, se cotiza aparte.
+
+Volumen estimado, **sin medir**: el instituto ronda las 580 personas (el mismo número que usa
+`ActivityDay` para acotar su crecimiento). Si un tercio de las familias abre un hilo por mes —y con
+dos destinos habilitados no parece exagerado—, son unos 150 hilos nuevos por mes y cerca de 1.500 en
+el año lectivo, hoy todos en una sola página y recontados cada 60 segundos.
+
+### Lo que queda afuera, anotado para no perderlo
+
+Cuatro de estos temas tienen **ficha propia desde el 2026-09-13**, para no quedar enterrados acá
+adentro: [FEAT-22](#feat-22) (push), [FEAT-23](#feat-23) (cerrar los hilos), [FEAT-24](#feat-24)
+(buscar por contenido) y [FEAT-25](#feat-25) (quién de administración contestó). Lo que sigue es el
+porqué, y lo que no tiene ficha.
+
+**El ciclo de vida de los hilos — planteado por el cliente el 2026-09-11, no se implementa ahora.**
+*"Los chats no tienen que vivir para siempre: cuando un estudiante cambia de curso, o cuando el
+curso termina, no tiene sentido que sigan accesibles."* Adentro hay dos cosas y una ya está resuelta
+sola: **abrir hilos nuevos con el docente equivocado no va a pasar**, porque la lista de
+destinatarios se arma de inscripciones activas y cursos activos, así que el docente viejo
+simplemente deja de aparecer. Lo que falta decidir es qué pasa con **los hilos ya abiertos**.
+
+La forma recomendada: **se cierran, no se borran** — sólo lectura, porque una conversación entre una
+familia y una docente es registro del instituto y acá el borrado es siempre lógico
+([ARQ-05](#arq-05)). Y **derivado, sin columna nueva**: el hilo ya sabe el curso y el alumno, así que
+*"¿sigue activa esa inscripción y sigue activo el curso?"* se contesta sola, sin proceso que correr
+ni hilos que alguien se olvide de cerrar. No contradice el punto 1: **se congela el sujeto y se
+deriva el permiso** — de quién se hablaba es un hecho del pasado y hay que guardarlo; quién puede
+escribir hoy es una pregunta del presente.
+
+**Lo único que hay que hacer desde ahora, y es gratis:** que los hilos que abren alumnos y tutores
+lleven `courseId` **siempre**. Hoy es opcional en `MessageThread` y se abren desde un curso igual,
+así que no cuesta nada — pero si entran hilos sin curso, van a ser justo los que nadie sepa cuándo
+cerrar.
+
+**El docente→docente del pedido original (13/08).** El cliente no lo nombró en ninguno de los dos
+pedidos siguientes, que hablaron de estudiantes y tutores. Sigue valiendo lo de arriba: el docente ya
+puede iniciar hilos, pero `allTeachers` se arma **sólo para administradores**, así que alcanza con
+extendérselo. Se deja afuera porque trae su propia pregunta de alcance —¿cualquier docente del
+instituto, o sólo los de los otros cursos de sus alumnos?— que no tiene nada que ver con las seis
+que se cerraron.
+
+**[BUG-06](#bug-06) deja de ser una molestia.** Con la administración como única supervisión de lo
+que escriben los alumnos, ese contador **es** la herramienta de supervisión: hoy muestra
+permanentemente todos los hilos del instituto como no leídos y nunca baja, así que no distingue un
+hilo nuevo de uno de agosto. Sube de prioridad por sí solo, y además el punto 3 lo toca igual.
+
+### Medido en producción — 2026-09-13 · el instituto escribe y la familia no lee
+
+Con las seis decisiones cerradas, se midió la base de producción para ver cuánto se usa hoy la
+mensajería y qué mueve el cambio. Consultas de sólo lectura. **Dos de los números que se dieron por
+buenos más arriba estaban mal, y van corregidos al final.**
+
+**Cuánto se usa.** 27 hilos, 61 mensajes y 118 participaciones desde el 2026-05-12. Por mes: 1 en
+mayo, 4 en junio, ninguno en julio, 11 en agosto y 11 en septiembre al día 13. **Viene creciendo
+rápido** — septiembre proyecta unos 25. No es un módulo muerto al que le estamos agregando features.
+
+**Quién escribe: los docentes, no la administración.** 44 de los 61 mensajes (72%) los mandó alguien
+con rol TEACHER, en 23 de los 27 hilos. La administración puso 3 y la secretaría 4. Era justo al
+revés de lo que se suponía al empezar la ronda.
+
+**Y las familias contestan cuando les llega.** 5 mensajes de tutores y 4 de alumnos, en 7 hilos
+distintos. El promedio es de 2,26 mensajes por hilo y sólo 8 de 27 se quedaron en un solo mensaje:
+**el 70% tiene ida y vuelta**. El canal de vuelta ya funciona para el que lo ve.
+
+**El dato más importante, y es malo.** El **80%** de las participaciones de alumnos (37 de 46) y el
+**86%** de las de tutores (38 de 44) tienen `lastReadAt` en `null`: **nunca abrieron el hilo**.
+Docentes y staff, 0%. Es lo que motiva [FEAT-22](#feat-22) y lo que le pone condición al punto 3:
+abrir el canal de ida sirve de poco si la respuesta de la docente no se lee.
+
+**Lo que confirma las decisiones:**
+
+- **`COURSE_BLAST` no se usó nunca.** Los 27 hilos son `DIRECT`, con 4,4 participantes promedio: los
+  docentes arman el envío a varios **a mano**, seleccionando alumnos, teniendo la función de curso
+  completo al lado. Conviene averiguar por qué antes de construir más pantalla — o no la encuentran,
+  o no les sirve como está.
+- **26 de 27 hilos ya llevan curso.** Exigir `courseId` en los hilos de familia no cambia la
+  costumbre, la garantiza ([FEAT-23](#feat-23)).
+- **El selector casi nunca va a preguntar.** Sólo **1** de los 205 alumnos con inscripción activa
+  está en más de un curso, y sólo **29 de 173 tutores** (17%) tienen más de un hijo. Lo decidido —no
+  preguntar cuando hay uno solo— cubre al 83% de los tutores y a prácticamente todos los alumnos.
+- **No hay un solo curso activo sin docente: 0 de 31.** El caso feo que justificaba en parte el
+  destino "Administración" **no se da hoy**. El destino se sostiene por el otro motivo: lo
+  administrativo entra igual por el canal del docente.
+- **96% de los alumnos activos sin correo** (348 de 362). Confirma que para el alumno no hay ningún
+  canal fuera de la app.
+
+**Dos correcciones a lo escrito más arriba:**
+
+1. **`birthDate` no está "vacío en muchas fichas": faltan 7 de 362 alumnos activos, el 2%.** La
+   decisión de no usar la edad sigue en pie, pero por el motivo del cliente —el alumno cumple años a
+   mitad de cursada— y no por la calidad del dato, que es buena.
+2. **La proyección de ~1.500 hilos al año estaba inflada unas seis veces.** Salía de suponer que un
+   tercio de las familias abriría un hilo por mes. Con la base real, y aun triplicando el volumen al
+   abrir el canal, da del orden de **200 a 400 hilos por año lectivo**. Consecuencia: **la paginación
+   y el buscador no son urgentes por volumen.** Entran igual —el modelo de hilo por tema los
+   necesita— pero no hay que apurarlos por miedo a que la bandeja explote. Lo mismo vale para
+   [BUG-06](#bug-06): el badge del admin muestra 27, no 1.500.
+
+**Un caso de borde que ahora tiene nombre.** Hay una persona en producción que es **tutora y docente
+a la vez**. Con el canal abierto va a poder escribirle a la docente de su hijo y recibir mensajes
+como docente, en la misma bandeja. El rol activo ya resuelve qué permisos tiene en cada momento
+([SEC-01](#sec-01)), pero es el caso que hay que probar a mano antes de salir.
+
+### Hecho — 2026-09-13 en `b0303d8` · pendiente de verificar en stage
+
+Las seis decisiones, construidas. De la ficha queda abierto sólo el docente→docente del pedido
+original del 13/08.
+
+**La columna.** `MessageThread.studentId`, opcional, con `onDelete: Restrict` —migración
+`20260913120000_add_message_thread_student`—. Los 27 hilos que ya existen quedan en `null` y **no se
+rellenan hacia atrás**: el dato no se puede reconstruir con certeza, y esta columna existe
+justamente para no deducirlo. Los hilos que el instituto le manda a **un solo** alumno también la
+llenan, así el filtro por alumno sirve de los dos lados.
+
+**La puerta de la familia es una función aparte**, `createFamilyThread`, en vez de levantar el corte
+de `createThread`. Aquella recibe ids de destinatarios sueltos, que es aceptable para quien ya ve a
+todo el instituto y no para una familia. Lo que llega acá es `"TEACHER"` o `"ADMIN"`, nunca un id: el
+destinatario real sale de recalcular el alcance con `getFamilyRecipients`, **la misma función que
+dibuja la pantalla**. Si sólo dibujara, alcanzaría con mandar otro `courseId` en el cuerpo del pedido.
+
+**El redactor.** Pantalla propia para la familia. Con un alumno y un curso no pregunta nada; con
+varios hijos se elige el hijo y el curso se desprende de ahí. Los dos destinos son botones con
+nombre de área, y el del docente se deshabilita solo cuando el curso no tiene docente activo —un
+docente dado de baja queda con `roles` vacío pero sigue colgando del curso ([SEC-01](#sec-01)), y
+escribirle sería mandarle un mensaje a una cuenta que ya no entra—. El asunto trae sugerencias
+tocables según el destino.
+
+**La bandeja.** Buscador por asunto, filtros por curso, por alumno y por sin leer, y paginación de
+20. Los filtros viven en la URL, así que la búsqueda se comparte y el botón de atrás hace lo que uno
+espera. El chip *"sobre Fulano"* va en la fila y no adentro del hilo; para el personal es además
+atajo a la ficha del alumno.
+
+**El aviso.** El sobre escucha el canal `user:${id}` que ya usaba la campana, con evento
+`new_message`. El poll de 60 segundos pasa a red de seguridad cada 5 minutos —por si Realtime está
+apagado en el proyecto, que es el caso que ya contempla `NotificationBell`— más un refresco al
+volver a la pestaña. Lo que llega por el canal sólo dice "pasó algo": el número se vuelve a pedir al
+servidor en vez de sumarlo del lado del cliente, que se despegaría con dos pestañas abiertas.
+
+**La migración corre sola en el deploy**, porque `build` hace `migrate deploy`. Es un `ADD COLUMN`
+nulable más dos índices y una clave foránea sobre una tabla de 27 filas: instantánea y sin bloqueo
+que se note. Pero es la misma que va a correr al promover a `main`.
+
+### Verificado por pantalla — 2026-09-13 · contra la base local · dos cosas que el build no veía
+
+Se sembró el escenario en la base de desarrollo: una tutora con **dos hijas**, una en un curso con
+docente y la otra en uno **sin** docente, más un alumno con una sola materia y 32 hilos de relleno
+para ver la paginación. Lo que se recorrió, con las dos correcciones que salieron, en `e745991`.
+
+**El canal en vivo del sobre no conectaba nunca, y el motivo no es el que decía el aviso.** Las dos
+campanas de la barra se suscribían al **mismo tema** `user:${id}`, y un cliente de Supabase no admite
+dos suscripciones al mismo tema: la segunda recibe `CHANNEL_ERROR` y queda muda. Como
+`NotificationBell` monta primero, la que perdía era siempre el sobre. Se descartó la primera
+sospecha —"Realtime apagado", que es lo que dice el aviso heredado— abriendo un WebSocket a mano
+contra el proyecto: responde. El sobre pasó a `user:${id}:messages` y **el aviso llega**: con la
+bandeja abierta y sin recargar, el badge de la tutora pasó de 0 a 1 al entrar un mensaje.
+
+Vale para cualquiera que agregue una tercera suscripción: **un tema por consumidor**.
+
+**El tiempo relativo de la bandeja rompía la hidratación.** El servidor renderizaba *"hace 1m"* y el
+navegador *"hace 2m"* un segundo después. Ya estaba antes de este cambio; se marca el `span` como
+diferencia esperada, que es lo que es.
+
+**Lo recorrido, y anduvo:** la tutora con dos hijas ve el selector y el curso se desprende del hijo;
+con la hija del curso sin docente, el botón del profesor **se deshabilita solo** y las sugerencias de
+asunto cambian a las administrativas; el hilo se crea con el alumno guardado y **sin la hija adentro
+como participante**; el docente lo ve en su bandeja con el chip *"sobre aitana"* y el badge en 1;
+para el personal ese chip es enlace a la ficha y para la familia no; responder baja el badge a 0 y
+levanta el de la tutora; el alumno no elige alumno y le sale su curso y su profe; el buscador por
+asunto filtra; la paginación corta en 20 y la segunda página trae las 16 restantes.
+
+**Y la prueba de [BUG-06](#bug-06) en pantalla:** la administradora ve los 36 hilos del instituto y
+el badge le queda en **cero**, con los dos desplegables —curso y alumno— ya poblados.
+
+**Lo que quedó sin verse acá:** la persona que es tutora **y** docente a la vez — en la base local no
+existía el caso con datos creíbles. Se recorrió en stage al día siguiente, más abajo.
+
+**Ojo con el `.env` de desarrollo:** `NEXT_PUBLIC_SUPABASE_URL` apunta al proyecto de **producción**
+mientras `DATABASE_URL` apunta a la base local. Para estas pruebas dio igual —el canal en vivo no
+guarda nada—, pero conviene saberlo antes de probar Storage desde local. Y `supabase-server.ts` usa
+esa misma URL con la service role key, así que **un adjunto subido desde local va al bucket de
+producción**.
+
+### Verificado en stage — 2026-09-14 · el doble rol, que local no podía mostrar
+
+Sobre datos copiados de producción, con las tres personas que ejercitan los casos. Los números se
+predijeron contra la base **antes** de abrir la pantalla, y dieron.
+
+**La tutora con tres hijos** (Pamela Paez). El selector con los tres, y al cambiar de hijo cambian el
+curso **y** el docente — son tres cursos distintos con tres docentes distintos. El hilo quedó con
+`studentId` de Thiago, participantes la madre y la docente, y **cero alumnos adentro**.
+
+**El doble rol** (Patricia Muñiz, docente y tutora de Ariana). Es el caso que justificaba probar en
+stage y salió entero:
+
+- Entra con el rol activo en **docente**, sin elegir, porque TEACHER gana por prioridad sobre
+  GUARDIAN. El panel le muestra "Mis Cursos: 1".
+- Como docente ve el redactor del personal, con **un solo curso en el desplegable** —el suyo, no los
+  31 del instituto— y **sin la pestaña de Profesores**, que es de administración.
+- Al cambiar el selector a tutora, el redactor pasa al de la familia: sin selector de hijo, *Sobre
+  Ariana Muñiz*, *Pre-adolescents 1 M-J late shift*, *Profesor del curso — Rosa Marin*.
+- **Y el mensaje queda grabado con `senderRole = GUARDIAN`**, no TEACHER. Es lo que más importa de
+  este caso: si guardara el otro rol, Rosa Marin estaría leyendo un mensaje de una colega en vez de
+  uno de una madre, y releyendo el hilo mañana nadie sabría con qué sombrero se escribió.
+
+**[BUG-06](#bug-06) en la pantalla del admin.** Ve los **15 hilos** del instituto y el badge del
+sobre le queda en **0**; antes del arreglo habría marcado 15, porque participa de 3. Abrir un hilo
+del que no participa **no le mueve el contador**, que es justamente lo que se buscaba.
+
+**Un detalle del chip del alumno, que estaba mal descrito arriba:** en la **bandeja** es una etiqueta
+para todos; el **enlace a la ficha** vive adentro del hilo y sólo para el personal. Y sigue el rol
+activo, no la lista de roles: a Patricia, mirando como tutora, el mismo chip le salió sin enlace.
+
+**El destino "Administración", que era la última rama sin ejecutar.** Se mandó uno desde Pamela sobre
+otro hijo (Thian, *Children 2 Ma - Jue*) y quedó con **tres participantes** —la madre como autora y
+las dos cuentas de administración del instituto—, con el alumno guardado, cero alumnos adentro y
+**sin el docente del curso**, que es la distinción que hace al destino. Del lado de la familia las
+dos cuentas se muestran como **"Administración"** y **"Secretaría"**: los nombres propios del
+personal no se filtran. Nota: una de las dos es docente *y* secretaria, y aun así aparece como
+"Secretaría", que es el rol por el que entró al hilo.
+
+### Lo que sigue sin ejercitarse
+
+Para que no se lea como "probado entero", que no lo está:
+
+- **El corte del servidor, a la mala.** Nunca se intentó mandar un `courseId` ajeno. Está escrito
+  para rechazarlo —el alcance se recalcula con la misma función que dibuja la pantalla, y lo que
+  viaja es `"TEACHER"`/`"ADMIN"` y jamás un id—, pero por la interfaz no hay forma de elegir un
+  curso que no sea de la familia, así que probarlo de verdad pide forjar el pedido.
+- **En stage quedaron sin recorrer** el alumno escribiendo, el aviso en vivo del sobre, el buscador
+  y la paginación —stage tiene 15 hilos y la página corta en 20—, y responder un hilo. Los cinco sí
+  se ejercitaron en local.
+- **El curso sin docente** no se puede ver en stage: no hay ninguno (0 de 31, igual que producción).
+  El botón deshabilitado se probó sólo en local, con un curso sembrado a mano.
+- **La docente que sea tutora de un alumno de su propio curso** no tendría a quién escribirle —sería
+  ella misma, y el autor se excluye de los destinatarios— y vería *"No hay a quién dirigir este
+  mensaje"*, que para ese caso es un mensaje pobre. No pasa hoy ni en stage ni en producción.
 
 ---
 
@@ -3835,8 +4886,9 @@ Para probar por pantalla, entrando como `profe@test.com`:
 
 **Pedido (2026-08-13).** Una columna de novedades donde se comunican temas, en tres niveles:
 nosotros anunciamos funcionalidades nuevas, el instituto comunica por ejemplo una salida, y el curso
-comunica una tarea puntual. Las novedades deben poder firmarse — eso es [FEAT-09](#feat-09), que
-depende de esta.
+comunica una tarea puntual. Las novedades deben poder firmarse — eso es [FEAT-09](#feat-09), que ya
+**no depende de esta**: por la decisión del 2026-08-19 arranca por los informes, y las novedades son
+su segunda etapa.
 
 **No existe nada parecido**: no hay modelo de novedades ni de anuncios en el schema.
 
@@ -3880,10 +4932,21 @@ mensajería en vez de duplicarla.
 ---
 
 <a id="feat-09"></a>
-## FEAT-09 · Firma de conformidad de las novedades · **P2** · 🗣️ Pedido del cliente
+## FEAT-09 · Firma de conformidad de informes y novedades · **P2** · 🗣️ Pedido del cliente
 
 **Pedido (2026-08-13).** Que las novedades sean "firmadas digitalmente por sus destinatarios".
-Depende de [FEAT-08](#feat-08): sin novedades no hay qué firmar.
+
+**Ampliación (2026-08-19).** El pedido se concreta sobre los **informes**: que el tutor firme cuando
+ve las notas, y que esa firma sea la devolución al instituto de que efectivamente las vio. Y suma un
+requisito nuevo: la firma es un **trazo dibujado**, y tiene que parecerse entre informe e informe —
+que no valga un círculo en uno y un cuadrado en el otro.
+
+**Decisión (2026-08-19): arranca por los informes y no espera a [FEAT-08](#feat-08).** La ficha nacía
+colgada de las novedades —"sin novedades no hay qué firmar"—, pero los informes ya existen
+([`prisma\schema.prisma:862`](../prisma/schema.prisma), `StudentReport` con su `publishedAt`), así que
+esa dependencia no era real. Queda en dos etapas: **primero informes**, después novedades cuando
+FEAT-08 exista. El modelo se diseña igual apuntando a "un documento" de tipo variable, así que sumar
+novedades, el reglamento o una autorización más adelante sale gratis.
 
 **Decisión (2026-08-13): es firma electrónica, y el objetivo es saber quién vio.** No se busca una
 autorización con valor probatorio sino que el instituto sepa si los tutores y los alumnos vieron la
@@ -3893,12 +4956,63 @@ presunción de autoría. Lo que se construye es un acuse de lectura con conformi
 
 Conviene que la interfaz diga eso mismo —"confirmo que lo leí"— y no "firma digital", por dos
 razones: es lo que realmente hace, y evita que dentro de un año alguien lo invoque como si fuera lo
-otro.
+otro. **El trazo no cambia esto**: dibujar la firma le da al acto peso de acto, pero lo que queda
+registrado sigue siendo un acuse de lectura.
+
+### El trazo y el parecido entre firmas (2026-08-19)
+
+**Contra qué protege el parecido, y contra qué no.** Para el objetivo declarado —que el instituto
+sepa que el tutor vio las notas— la comparación no aporta nada: el login ya identifica al tutor. Lo
+que el parecido cuida es que el tutor no haga un palito para sacarse el cartel de encima. Es una
+**señal de seriedad, no de seguridad**, y de ahí sale todo lo que sigue: acá nadie está falsificando,
+el problema es el descuido.
+
+**Decisión: la firma de referencia se registra en la primera firma.** No hay un paso de enrolamiento
+aparte. La primera vez que el tutor firma, ese trazo queda guardado como referencia, y contra ese se
+comparan todos los siguientes.
+
+**Decisión (2026-08-19): la referencia vive en el perfil de quien firma.** No cuelga del informe ni
+del alumno, sino de la persona. Así "¿es la primera vez que firma?" es una pregunta sobre el
+firmante, y el caso de los dos tutores se resuelve solo: si el primer informe lo firma la madre y el
+segundo el padre, cada uno tiene su propio estreno y su propia referencia. De paso, un tutor con tres
+hijos registra la firma una vez y le sirve para los informes de los tres.
+
+**Pero el firmante no siempre es un `User`.** `Student` **no** es un `User`: tiene su propio `email` y
+`password` ([`prisma\schema.prisma:106`](../prisma/schema.prisma)), y los alumnos entran con DNI. Con
+los mayores de edad firmando por sí mismos, la referencia no puede colgar de `User`. El patrón ya
+existe en el proyecto y conviene copiarlo en vez de inventar otro: `ThreadParticipant` usa
+`userId?` / `studentId?` con *"exactamente uno de los dos debe estar poblado"*
+([`prisma\schema.prisma:739`](../prisma/schema.prisma)).
+
+**El primer trazo es el que nadie hace con cuidado.** Define todas las comparaciones futuras, y lo
+hace alguien que nunca firmó ahí y no sabe que cuenta. Dos cosas, entonces: avisar en esa primera vez
+que ese trazo queda como su firma, y dejar que la vuelva a registrar desde su propio perfil cuando
+quiera — él, no la secretaría. Las firmas ya hechas no se tocan: cada una guarda su propio trazo.
+
+**Decisión: no se bloquea nunca por parecido.** Se guarda el puntaje y se le muestra al instituto en
+la misma lista donde ve quién falta. El motivo es concreto: los tutores van a firmar con el dedo en
+un celular, donde la misma persona varía muchísimo. Un umbral que rechace le traba la firma a padres
+legítimos, y ahí no hay quién destrabe — la secretaría no puede firmar por ellos, y el sistema no
+puede dejar un callejón sin salida del lado de la familia.
+
+**Mostrarle al tutor su firma anterior mientras firma.** Resuelve el grueso del problema
+círculo-contra-cuadrado sin ningún algoritmo, y es lo más barato de todo el ítem. Conviene construir
+eso primero y ver cuánto queda por resolver después.
+
+**Guardar el trazo como secuencia de puntos con tiempos, no como PNG.** Comparar imágenes es flojo;
+lo que funciona para comparar firmas es la **dinámica** del trazo —el orden, la velocidad, las
+pausas—. Además ocupa menos, y la imagen se renderiza cuando se la necesita. Si se guarda sólo el
+PNG, esa puerta queda cerrada para siempre.
 
 **Dónde sí importa la fortaleza del login.** Un acuse de lectura tolera bien que las credenciales
 sean flojas: si la secretaría conoce la contraseña del tutor ([SEC-06](#sec-06)) y no hay
 recuperación ([FEAT-05](#feat-05)), lo que se degrada es la confianza del dato, no la exposición
 legal. Con este alcance, esos dos ítems **dejan de ser requisitos previos**.
+
+**Matiz agregado el 2026-08-20.** Sigue siendo cierto para que el mecanismo funcione, pero no para
+que el **porcentaje** signifique algo: desde que el instituto va a mirar ese número y actuar sobre
+él, [SEC-06](#sec-06) pasa a ser lo que lo hace creíble. Está desarrollado más abajo, en "El tutor
+que no entra nunca".
 
 Pero conviene tener marcada la frontera: el ejemplo de la salida es una **autorización**, no un
 aviso. Si el día de mañana el instituto empieza a apoyarse en estas firmas para permisos —que es la
@@ -3911,29 +5025,227 @@ firmar. Si después alguien edita la novedad, la firma no puede seguir aparecien
 un texto que el firmante nunca vio. Las dos salidas razonables: congelar la novedad al publicarla, o
 versionarla y volver a pedir firma. Cualquiera sirve; no decidirlo es lo que no sirve.
 
+**En informes esto ya es un agujero concreto (2026-08-19).** `StudentReport` tiene `publishedAt`,
+pero **nada impide seguir editando las notas después de publicado**
+([`prisma\schema.prisma:885`](../prisma/schema.prisma), `ReportEntry`). Hoy no molesta a nadie. Con
+firma sí: el tutor firma, el profesor corrige un 7 por un 5, y queda una firma "válida" sobre un
+informe que esa persona nunca vio. Hay que resolverlo en el mismo movimiento que la firma, no
+después.
+
+**Respuesta del instituto (2026-08-20): sí se puede editar, y sólo el ADMIN.** El razonamiento es que
+los informes virtuales reemplazan a los físicos y el error humano existe; obligar a refirmar por una
+nota mal cargada es desproporcionado. La edición posterior a la publicación queda restringida al
+administrador, y **la firma del tutor sigue valiendo**.
+
+**Por qué la restricción al ADMIN es lo que sostiene la firma.** Razonamiento del cliente, y es el
+correcto: si cada profesor pudiera modificar las notas después de publicadas, la firma **sí** sería
+un adorno. Que la corrección tenga que pasar por una sola persona es lo que la mantiene siendo un
+hecho raro y deliberado en vez de la operación normal. El costo operativo es real y aceptado: el
+profesor carga las notas pero no corrige su propio error una vez publicado, se lo pide al
+administrador.
+
+**Aun así hay que dejar el rastro.** Si el hash actual difiere del hash firmado, el informe se marca
+como *modificado después de la firma*, con la fecha y quién lo hizo. **En esta primera etapa esa
+marca se muestra sólo al instituto** (decisión del 2026-08-20); mostrársela al tutor se evalúa
+después, si al instituto le parece bien. Lo importante es que **el dato se registra desde el día
+uno** — lo que se posterga es la pantalla, no el registro, así que habilitarlo más adelante no exige
+reconstruir nada hacia atrás. Por lo mismo, en esta etapa **al tutor que ya firmó tampoco se le
+notifica** la modificación: el aviso que sí va es el de publicación.
+
 **Quién firma cuando el destinatario es menor.** El instituto tiene alumnos de 6, 7 y 8 años
 ([BUG-01](#bug-01)). Para una autorización de salida el firmante tiene que ser **el tutor**, no el
 alumno. Cada novedad necesita decir a quién le exige firma, y no puede ser "todos los destinatarios"
 por defecto.
 
 **Lo que el instituto realmente necesita no es la firma: es la lista de quién falta.** Ante una
-salida, la pregunta operativa es "¿qué chicos pueden ir?". La vista de firmas pendientes por novedad,
-con nombre y curso, es el valor de esta ficha; la firma es el mecanismo. Conviene construir esa vista
-desde el principio y no como agregado.
+salida, la pregunta operativa es "¿qué chicos pueden ir?"; ante un informe, "¿qué familias se
+enteraron de las notas?". Eso es exactamente la devolución al instituto que pide el cliente: la
+vista de firmas pendientes —por curso y período en informes, por novedad en el otro caso, con nombre
+y curso— es el valor de esta ficha; la firma es el mecanismo. Conviene construir esa vista desde el
+principio y no como agregado, y es donde aparece el aviso de que una firma no se parece a las
+anteriores.
 
-**Qué guardar, con cuidado.** Quién firmó, cuándo, y el hash de lo firmado. Sobre IP y dispositivo
-hay una tensión real: [FEAT-04](#feat-04) tomó la posición de **no** guardarlos sin necesidad
-concreta, porque son datos personales y hay menores. Acá sí hay necesidad —son parte de la prueba—,
-así que la decisión es deliberada y hay que anotarla con la política de retención, no arrastrarla por
-inercia. Es el mismo terreno de [ARQ-10](#arq-10) (auditoría de acciones del panel), que también
-advierte sobre no copiar datos personales de más.
+**Qué guardar, con cuidado.** Quién firmó, cuándo, el hash de lo firmado y el trazo. Sobre IP y
+dispositivo hay una tensión real: [FEAT-04](#feat-04) tomó la posición de **no** guardarlos sin
+necesidad concreta, porque son datos personales y hay menores. Acá sí hay necesidad —son parte de la
+prueba—, así que la decisión es deliberada y hay que anotarla con la política de retención, no
+arrastrarla por inercia. **El trazo sube ese escalón**: es un dato personal, y guardado con su
+dinámica se acerca bastante a un dato biométrico de los tutores. Es el mismo terreno de
+[ARQ-10](#arq-10) (auditoría de acciones del panel), que también advierte sobre no copiar datos
+personales de más.
 
-**Los informes entran desde el día uno.** El pedido nombra "la novedad **o el informe**", así que no
-es un alcance futuro: son dos objetos firmables desde el arranque. El modelo no puede colgar de
-`Announcement` — necesita apuntar a "un documento" de tipo variable, y el módulo de informes
-([`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx),
-[`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx)) es el segundo caso a
-cubrir. Que el reglamento o una autorización se sumen después sale gratis si esto se diseña así.
+**El modelo apunta a un documento, no a una novedad.** El pedido original nombra "la novedad **o el
+informe**", y con la decisión del 2026-08-19 el informe pasa a ser el primero de los dos. El modelo
+no puede colgar de `Announcement`: necesita apuntar a "un documento" de tipo variable. Las pantallas
+del módulo de informes son
+[`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx) (el docente
+carga) y [`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx) (el tutor mira, y
+es donde va la firma).
+
+**Con cuántas firmas alcanza un informe.** Un alumno puede tener **varios tutores**:
+[`GuardianStudentLink`](../prisma/schema.prisma) es de muchos a muchos y hasta guarda el vínculo
+(madre, padre, tío). Entonces "el tutor firmó el informe" es ambiguo: ¿alcanza con que firme uno, o
+el informe queda pendiente hasta que firmen todos? No es una sutileza — define qué significa
+"pendiente" en la lista, que es el entregable de esta ficha. Y del otro lado está el alumno **sin
+ningún tutor cargado**, para el que hoy no habría quién firme.
+
+**Respuesta del instituto (2026-08-20): alcanza con que firme un tutor.** Cada informe tiene que
+tener **al menos una** firma. Simplifica bastante: por informe el estado es binario —firmado o no—,
+la lista de pendientes son los informes con cero firmas, y el porcentaje se calcula por tanda (curso
+más período) y en general.
+
+**El alumno mayor firma su propio informe. El corte es a los 20 (2026-08-20).** Hasta 19 inclusive
+firma el tutor; de 20 en adelante firma el alumno y **no se le muestra la casilla del tutor**. El
+motivo, que conviene tener escrito porque es lo que habría que revisar si algún día cambia: a los 19
+el curso lo sigue pagando el tutor en la mayoría de los casos, así que la familia todavía está
+mirando. Como **quién debe firmar se congela al publicar**, el que cumple años a mitad de año no le
+cambia el estado a los informes ya publicados.
+
+Consecuencia menor: el alumno de 20 o más que igual tenga tutores cargados **les sigue avisando** la
+publicación —el aviso va al alumno y a los tutores—, sólo que la firma que cuenta es la de él.
+
+Arrastra un detalle: `Student.birthDate` es
+**opcional** ([`prisma\schema.prisma:129`](../prisma/schema.prisma)), así que hay alumnos sobre los
+que la regla no se puede evaluar. No hace falta volver obligatoria la fecha, pero la regla sí
+necesita una respuesta para ese caso: lo prudente es **tratarlo como menor** —firma el tutor— y que
+la fecha faltante se vea en la lista de pendientes, para que alguien la cargue.
+
+**Quién debe firmar se congela al publicar.** Mismo criterio que el hash del contenido, y por la
+misma razón. Si la lista de firmantes se calcula en vivo, se mueve sola: un alumno cumple 18 en junio
+y cambia quién le debía firmar el informe de marzo; se carga un tutor nuevo en agosto y aparece como
+pendiente en un informe de marzo que nunca pudo ver. Al publicar el informe se resuelve **a quiénes
+les toca firmar** y eso queda escrito.
+
+### La pantalla del instituto (definida el 2026-08-20)
+
+**Pantalla propia, para ADMIN y SECRETARY** —el grupo `INSTITUTE_ADMINS` que ya existe desde
+[SEC-03](#sec-03)—, con los informes entregados: porcentaje de firmas por tanda y porcentaje general,
+y desde ahí se entra al informe para ver quiénes faltan. Es el entregable de la ficha, no un
+agregado. Notar que **editar el informe sigue siendo sólo del ADMIN**: la secretaría mira y persigue,
+no corrige.
+
+Dos precisiones sobre qué significan esos números, ahora que alcanza con un tutor:
+
+- Por informe el estado es **binario**. El porcentaje sólo tiene sentido sobre un conjunto: "2º
+  período, Upper-Intermediate: 18 de 24 firmados".
+- Ahí van también las dos marcas que necesitan acción: informes **modificados después de la firma**, y
+  alumnos **sin fecha de nacimiento**, que son los que no dejan resolver a quién le toca firmar.
+
+**Al que no firma nunca lo persigue el instituto a mano, desde esta pantalla** (decisión del
+2026-08-20). No hay recordatorio automático; si más adelante lo quieren, es trabajo aparte.
+
+### Aviso de publicación (pedido el 2026-08-20)
+
+Cuando el profesor publica el informe, el aviso tiene que llegarle **al alumno y a los tutores**. Es
+barato: [`Notification`](../prisma/schema.prisma) ya existe con el mismo patrón `userId?` /
+`studentId?`, más `type`, `read` y `link`. Alcanza con un tipo nuevo y una fila por destinatario
+apuntando al informe. El mismo mecanismo sirve para avisar la modificación posterior a la firma.
+
+### Decisiones nuestras (2026-08-20)
+
+**No se guardan la IP ni el dispositivo.** Queda alineado con [FEAT-04](#feat-04) y saca del medio
+toda la discusión de retención de esos datos.
+
+**Retención del trazo.** Separar dos cosas que hoy suenan iguales: la **referencia** existe para
+comparar y sirve mientras la persona siga firmando; las **firmas hechas** son el registro de quién
+vio qué, y tienen que durar lo que dure el informe. Entonces: conservar siempre el hecho —quién,
+cuándo, hash— y **soltar el trazo cuando deja de tener función**, al cortarse el último vínculo con
+el instituto y con un año lectivo de gracia, para poder mostrar firmado un informe de diciembre
+durante el año siguiente. Encaja con el borrado lógico del proyecto ([ARQ-05](#arq-05)): no se borra
+la fila, se vacía el campo del trazo.
+
+**Umbral del aviso de parecido.** El cliente delegó el criterio (2026-08-20), así que queda tomado
+como sigue. El número no se puede elegir ahora sin inventarlo. Se guarda el
+puntaje desde el día uno **sin mostrar nada**, y se mira la distribución con firmas reales antes de
+fijar el corte. Dos criterios para cuando llegue el momento: comparar **contra el propio historial de
+la persona** y no contra un número global —hay gente consistentemente irregular, y un umbral fijo la
+castiga—, y **no marcar nada con menos de tres firmas previas**, porque no hay historia suficiente.
+
+Y una decisión de producto: se muestra **una marca, no un porcentaje**. Un "72% de parecido" es un
+número que se sobreinterpreta y sobre el que se empiezan a tomar decisiones que el dato no aguanta.
+Por lo mismo **no va en las métricas generales**: el porcentaje de firmas es operativo y sirve; el
+parecido promedio no significa nada y sólo invita a comparar familias.
+
+**Secuencia: los trazos se guardan desde el día uno, la comparación va en una segunda pasada.** Es la parte con más ingeniería y la de menos valor de toda la ficha —el instituto ya sabe
+quién vio, por el acuse—, y postergarla no cuesta nada porque la historia queda guardada igual. Lo
+que sí conviene tener desde el arranque es mostrarle al tutor su firma anterior mientras firma, que
+es lo que de verdad evita el círculo y el cuadrado.
+
+### Alcance de la etapa 1
+
+Con todo lo decidido entre el 2026-08-19 y el 2026-08-20, lo que entra es:
+
+1. **Un firmable genérico**, apuntando a un documento de tipo variable, con firmante de dos lados
+   (`userId?` / `studentId?`) y la firma de referencia colgada del perfil de quien firma.
+2. **La firma en el informe del tutor**: dibuja el trazo, se le muestra al lado su firma anterior, y
+   la primera vez se le avisa que ese trazo queda como su firma. Se guarda quién, cuándo, el hash del
+   contenido y el trazo como puntos con tiempos. **Sin IP ni dispositivo.**
+3. **Resolver y congelar al publicar** a quiénes les toca firmar: hasta 19 el tutor, de 20 el alumno,
+   sin fecha de nacimiento se trata como menor.
+4. **Tres estados por informe, no dos**: firmado, pendiente y **sin firmante** — este último para el
+   alumno sin tutor cargado o cuya cuenta no puede entrar. Está desarrollado más abajo, en "El tutor
+   que no entra nunca".
+5. **La pantalla del instituto** (ADMIN y SECRETARY): porcentaje de firmas por tanda y general
+   —calculado **sobre los que pueden firmar**, con los "sin firmante" contados al lado—, quién falta,
+   informes modificados después de la firma, y alumnos sin fecha de nacimiento.
+6. **"Entregado por otro medio"**, un estado propio que carga el instituto para la familia que no va
+   a entrar nunca. Aprobado por el cliente el 2026-08-20; **falta el visto bueno del instituto**, que
+   es quien lo va a usar.
+7. **Restringir al ADMIN** la edición del informe publicado, y marcarlo como modificado cuando el
+   hash deja de coincidir.
+8. **El aviso de publicación** al alumno y a los tutores, con `Notification`.
+9. **Guardar el puntaje de parecido sin mostrarlo**, para poder calibrar el umbral más adelante.
+
+Queda para la etapa 2: las novedades ([FEAT-08](#feat-08)), la comparación de firmas visible, la
+marca de modificación para el tutor, y los recordatorios automáticos a quien no firma.
+
+**Antes de empezar conviene medir cuántos tutores entraron alguna vez** — está el porqué más abajo.
+Es una consulta de una sola vez y cambia la expectativa sobre lo que el porcentaje va a mostrar el
+primer mes.
+
+### El tutor que no entra nunca (2026-08-20)
+
+El instituto respondió que el alumno sin tutor cargado se va a ver como no firmado y que ellos
+decidirán si insisten, y agregó un hecho: **hay tutores que no van a entrar nunca a la plataforma**.
+Eso obliga a separar dos situaciones que la respuesta trata igual:
+
+| | Qué significa | Qué se hace |
+|---|---|---|
+| **Sin tutor cargado** | No hay `GuardianStudentLink`. Nadie *puede* firmar | Cargar al tutor. Insistir no aplica: no hay a quién |
+| **Tutor cargado que no entra** | Hay quién puede firmar y no lo hace | Perseguirlo, que es lo que el instituto quiere hacer |
+
+**Por eso el estado es de tres valores, no de dos: firmado, pendiente y sin firmante.** El porcentaje
+se calcula **sobre los que pueden firmar**, y los "sin firmante" se muestran al lado, contados
+aparte: *"18 de 22 firmados (82%), 2 sin firmante"*. Si se mezclan, un curso al 60% no distingue
+entre cuarenta por ciento de familias desatentas y cuarenta por ciento de cuentas que no funcionan
+—que se resuelven con acciones distintas y de personas distintas—, y un número que no se puede
+accionar termina ignorado.
+
+**Antes de construir esto conviene medir cuántos tutores entraron alguna vez.** Es lo que decide si
+la ficha entrega lo que el instituto espera: con la mayoría de los tutores adentro, esto es una nota
+al pie; con una minoría, el porcentaje de la etapa 1 va a ser sobre todo ruido y la prioridad real
+pasa a ser que los tutores entren. Hoy el sistema no lo registra —eso es [FEAT-04](#feat-04)—, pero
+hay un atajo para medirlo una vez: **contar los tutores que todavía tienen la contraseña por defecto**
+`Modern2026` ([SEC-06](#sec-06)), que son exactamente los que nunca entraron a cambiarla.
+
+**Y el número crea un incentivo que antes no existía.** El tutor que nunca entró es justo el que
+sigue teniendo una contraseña que está escrita en el código y es igual en todos los institutos. Con
+una casilla de "leído" a nadie le importaba; con un porcentaje que el instituto mira, "le firmo yo
+que ya le avisé" es una tentación de cinco segundos y completamente indetectable. Dos consecuencias: **el
+porcentaje no debería convertirse en una meta con la que se mida a la secretaría** —es una lista
+operativa, no un indicador de desempeño—, y **[SEC-06](#sec-06) deja de ser sólo higiene**: es lo que
+hace creíble el número. No bloquea la etapa 1, pero sí conviene resolverlo antes de que alguien tome
+decisiones mirando ese porcentaje.
+
+**Opción para ofrecerle al instituto: registrar "entregado por otro medio".** Para la familia que no
+va a entrar nunca, el informe en papel o el aviso en la puerta sigue existiendo. Si el sistema no
+tiene dónde anotarlo, esos informes quedan en rojo para siempre —y el número se empieza a ignorar— o
+alguien termina firmando por el tutor. Un estado propio, cargado por el instituto y visible como lo
+que es, es más honesto que cualquiera de esas dos salidas. Queda a decisión de ellos.
+
+Las preguntas abiertas de [FEAT-08](#feat-08) —a quién le llega una novedad, si caduca, quién la
+publica— son sobre **novedades, no sobre informes**, y no bloquean nada de esto: son de la segunda
+etapa.
 
 ---
 
@@ -4094,6 +5406,373 @@ Las tres primeras se contestan con datos que **ya existen** en la base — sesio
 instrumentar la aplicación, que es otro trabajo y otro costo. **Conviene separar las dos mitades**: la
 primera es barata y es la que el cliente pidió; la segunda es un proyecto.
 
+**Ampliación (2026-08-20): el cliente quiere un panel de "uso del sistema".** Es la pantalla que
+unifica lo que hoy está repartido en cuatro fichas —esta, [FEAT-04](#feat-04), [ARQ-12](#arq-12) y
+[ARQ-13](#arq-13)—, y confirma por el otro lado lo que ya decía arriba: conviene decidirlas juntas.
+Nombró dos métricas concretas:
+
+1. **Ingresos por día, separados en tutores, profesores y alumnos.** Es FEAT-04 con una dimensión de
+   tiempo. Hoy no se registra nada: hace falta un evento por ingreso. El lugar natural es el
+   `events.signIn` de NextAuth, uno solo para toda la aplicación. Y vuelve a aparecer el firmante de
+   dos lados: profesores y tutores son `User`, los alumnos son `Student`, así que el registro necesita
+   `userId?` / `studentId?` como ya hacen `Notification` y `ThreadParticipant`. **Sin IP ni
+   dispositivo**, por la posición de FEAT-04.
+2. **Cuántos usuarios tienen la app instalada y con qué versión.** Ver la nota de PWA en
+   [ARQ-13](#arq-13): la segunda mitad se puede, la primera tiene un límite que conviene conocer
+   antes de prometer el número.
+
+`recharts` ya está en el proyecto, así que los gráficos del panel no suman dependencia.
+
+**Notas prácticas para el panel (se trabaja el fin de semana del 2026-08-23).**
+
+**Un solo registro de ingreso resuelve las tres fichas.** Si el evento guarda, además de quién y
+cuándo, **el rol activo, si venía corriendo instalada y qué versión traía**, entonces FEAT-04,
+ARQ-13 y esta ficha salen todas del mismo lugar. Es exactamente lo que ARQ-13 pedía —"sólo tiene
+sentido si antes existe FEAT-11"— y evita construir dos registros paralelos. Campos: firmante de dos
+lados (`userId?` / `studentId?`), fecha, rol activo, modo de visualización, versión. **Sin IP ni
+dispositivo.**
+
+**Lo único que apura de verdad es empezar a registrar.** Las métricas de práctica, asistencia y notas
+salen de datos que ya están en la base y se pueden reconstruir hacia atrás el día que se haga la
+pantalla. Los ingresos no: lo que no se registre se pierde. Conviene enganchar `events.signIn` de
+NextAuth aunque el panel venga después.
+
+**Qué se puede saber de la instalación, y qué no.** Está desarrollado en [ARQ-13](#arq-13), pero el
+resumen para no prometer de más: **no se puede saber quién tiene la app instalada**. Se puede saber
+quién **entró desde la app instalada**, y contar instalaciones nuevas con el evento `appinstalled`.
+Las desinstalaciones son invisibles. La métrica hay que titularla por lo que mide.
+
+**La versión necesita [ARQ-12](#arq-12) antes**, aunque sea la parte mínima: hoy `package.json` dice
+`1.0.2` y nada lo lee, y desde el cliente no se puede leer — hay que inyectarla en tiempo de build.
+
+**Ojo con el par `userId?` / `studentId?` de este registro**: es uno de los cinco lugares que motivan
+[ARQ-15](#arq-15). Se construye igual —es una tabla de sólo agregar filas y migrarla después es
+cambiar una columna—, pero conviene saber que está en esa lista.
+
+### Decisión (2026-08-22): las ocho métricas, cerradas
+
+**Lo que esta ficha pedía definir antes de tocar código quedó definido.** Ocho métricas, dos zonas,
+un selector de período y una fase previa de registro que es lo único que apura.
+
+**Lo primero que sale del alcance es la versión de la aplicación por usuario.** No es un pedido del
+cliente: salió de una idea nuestra. Entonces [ARQ-13](#arq-13) no entra en la primera versión del
+panel y [ARQ-12](#arq-12) deja de ser prerrequisito de nada de acá. Lo que el cliente sí quiere, y
+reemplaza a eso en la lista, es **ver los últimos ingresos de los tutores** para saber si miran las
+asistencias y las notas.
+
+**Las cinco primeras se calculan hacia atrás sin límite.** Es lo que hace que el panel no nazca
+vacío: el día que se abra por primera vez ya tiene todo 2026 adentro. Sólo las tres de actividad
+arrancan en cero.
+
+| # | Métrica | Definición exacta | Sale de | Zona |
+|---|---|---|---|---|
+| 1 | **Clases sin parte de asistencia** | Universo: `Lesson.status = ACTIVE`, `date <= hoy`, **de cursos con al menos una inscripción activa**, tipos `CLASS`, `TP` y `EXAM`. Tres estados: completa (filas ≥ inscriptos), **incompleta**, sin ningún registro | `Attendance` | Período |
+| 2 | **Marcas con el escáner QR** | % de filas `Attendance` con `source = QR` sobre el total del período, más cursos que lo usaron | `Attendance.source` (nueva) | Período |
+| 3 | **Cursos con práctica publicada** | `LessonPractice` con contenido en **al menos uno** de los tres campos y `isPublished`. Más el número que importa: **clases publicadas con cero `PracticeSession`** | `LessonPractice`, `PracticeSession` | Período |
+| 4 | **Alumnos y su tutor** | Cinco estados sobre alumnos `ACTIVE`: con cuenta vinculada · **con datos en la ficha y sin cuenta** · sin ningún dato · mayor de 20 (firma solo) · sin `birthDate` | `GuardianStudentLink`, `Student.guardian1*`, `birthDate` | Hoy |
+| 5 | **Tutores con cuenta** | `User` con rol `GUARDIAN` del instituto, partido en con alumno vinculado / **sin ninguno** | `User`, `GuardianStudentLink` | Hoy |
+| 6 | **Cuentas con la contraseña por defecto** | Las que conservan una de las contraseñas que reparte el sistema, separadas en alumnos, tutores y profesores | Pasada única + columna, sostenida en cada escritura de contraseña | Hoy |
+| 7 | **Personas activas por día** | Personas distintas con actividad ese día, por rol activo | Registro nuevo | Período |
+| 8 | **Últimos ingresos de los tutores** | Lista, no gráfico: tutor, alumnos, último ingreso, qué miró, y **"nunca"** como estado propio | Registro nuevo + portal del tutor | Período |
+
+#### Las trampas, una por métrica
+
+Todas verificadas contra el código el 2026-08-22, y cada una cambia el número:
+
+- **Un curso sin alumnos figura "sin parte" para siempre**, por eso el universo los excluye.
+- **`Attendance.createdAt` sobrevive al regrabado** a propósito (está comentado en
+  [`attendance/actions.ts`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts)), así
+  que sirve para medir la demora de carga y no sólo la existencia del parte.
+- **El escáner deja filas sueltas y sólo `PRESENT`.** Una clase escaneada y nunca cerrada por el
+  docente cae en "incompleta", que es el caso que más vale ver y con dos estados se pierde.
+- **La marca del QR hoy es un texto en `notes`** y no aguanta como fuente de la métrica — ver
+  [BUG-12](#bug-12). De ahí sale la columna `source`.
+- **`LessonPractice` puede existir vacía** (`speakingPhrases: []` y los otros dos en `null`). Contar
+  la fila es contar una práctica que no existe.
+- **El alumno de 20+ no necesita tutor** ([FEAT-09](#feat-09)). Contarlo como faltante inventa
+  trabajo, y el que no tiene `birthDate` no se puede clasificar: por eso son cinco estados.
+- **Una persona puede ser tutora y profesora** ([SEC-01](#sec-01)). Definir si el panel cuenta
+  personas o roles, y decirlo en el título.
+- **La contraseña por defecto no es una consulta SQL.** Se guardan con `bcrypt.hash(password, 10)` y
+  salt aleatoria ([`students/[id]/actions.ts:318`](../src/app/students/[id]/actions.ts)), así que hay
+  que comparar fila por fila: con ~181 usuarios y varios candidatos por cuenta son decenas de
+  segundos, imposible al cargar la pantalla. Ver abajo la decisión del 2026-08-24, que además corrige
+  qué significa el número.
+- **Mirar no deja rastro.** Ni la asistencia ni las notas escriben nada cuando el tutor las lee, así
+  que la pregunta del cliente no tiene respuesta con los datos de hoy. Ver la fase 0.
+
+#### La forma del panel
+
+- **Pantalla propia y sólo para el `ADMIN`.** No entra en
+  [`dashboard/page.tsx`](../src/app/dashboard/page.tsx), que ya son 775 líneas y siete consultas en
+  serie, y que además contesta otra pregunta —"cómo va el instituto"— que se mira en otro momento. La
+  secretaria queda afuera porque **aparece adentro de las métricas**, con el criterio de
+  [SEC-03](#sec-03).
+- **Dos zonas rotuladas, porque la mitad de las métricas no tiene período.** "Estado de hoy" no
+  obedece al selector y lo dice; "Actividad del período" sí. Si conviven bajo el mismo control, es el
+  problema de los dos relojes de finanzas otra vez.
+- **Un solo reloj.** "Últimos 30 días" es una opción del mismo selector que el mes, no un modo
+  aparte, y todos los mosaicos de la zona de abajo obedecen lo que esté elegido. El selector de mes
+  entra desde el principio: agregarlo después es reescribir todas las consultas.
+- **Fecha de piso por métrica, y "cero" nunca se muestra como dato.** Un mosaico sin historia dice
+  *"Midiendo desde el 22/8"*, no `0`. Mismo dato, impresión opuesta: uno se lee como un sistema que
+  empezó a medir y el otro como uno que no anda.
+
+  | Métrica | Hasta dónde llega hacia atrás |
+  |---|---|
+  | 1, 3, 4, 5 | Todo el historial |
+  | 6 | Todo el historial, vía la pasada única |
+  | 2 | Desde la migración. Lo anterior, aproximado |
+  | 7, 8 | Desde que se registre. Antes, nada |
+
+- **Cada número lleva a una lista de nombres.** Un número que no se puede clicar no se acciona y
+  termina ignorado — el mismo razonamiento que ya hizo [FEAT-09](#feat-09) con las firmas.
+- **Listas de pendientes, no puntajes de personas.** *"7 clases sin parte, la más vieja del 3/8"* se
+  convierte en un mensaje; *"profesor X: 72%"* se convierte en una discusión. Vale para todo el
+  panel, y generaliza lo que FEAT-09 ya decidió para el porcentaje de firmas.
+- **El gráfico diario de activos no se muestra el primer mes.** Va a subir solo mientras la gente
+  vuelve a iniciar sesión, y eso se lee como crecimiento de uso cuando es la instrumentación
+  llenándose. Hasta los 30 días, el contador con su fecha de piso.
+
+**Fuera del panel, y a propósito:** pantallas más visitadas —es la mitad que esta misma ficha llama
+"un proyecto", y con un instituto la respuesta ya se sabe—, tiempo de permanencia, y cualquier
+ranking de personas con porcentaje. El consumo de IA es de [PED-10](#ped-10) y es del superadmin;
+entra acá el día que el plan tenga tope y le afecte al instituto ([PED-07](#ped-07)).
+
+**El mockup** de las dos pantallas —el panel y el detalle de tutores— está en
+https://claude.ai/code/artifact/72db505b-75dd-4710-945f-17314f0dd408
+
+#### Fase 0 · lo único que apura, y no tiene pantalla
+
+**Lo que no se registre se pierde**; las otras cinco métricas se reconstruyen el día que se haga la
+pantalla. Cuatro cosas chicas, ninguna con interfaz, todas acumulando desde que se despliegan:
+
+> **Estado al 2026-08-24.** Los tres puntos están hechos y verificados — `9a8e02a` (el registro de
+> actividad) y `6e5f560` (la columna `source`). El cuarto que había acá salió de la fase, por la
+> decisión del 2026-08-24 que está más abajo: no acumula nada, así que no apura. **Nada de esto junta
+> datos todavía**: el registro empieza a llenarse recién cuando está desplegado, así que el reloj
+> sigue corriendo hasta que llegue a producción.
+
+1. **`lastSeenAt` dentro de la compuerta de 5 minutos que ya existe.** El callback `jwt` de
+   [`auth.ts:97`](../src/lib/auth.ts) relee los roles cada `ROLES_REFRESH_MS` mientras la persona usa
+   la aplicación: ahí ya hay una consulta con la frecuencia justa. Escribir la actividad en esa misma
+   compuerta cuesta **una sentencia cada 5 minutos por persona activa**, sin middleware, sin tocar
+   `getAuthContext` y sin instrumentar pantallas. Y mide **uso**, no inicios de sesión — que es lo
+   que arregla la trampa del JWT de 30 días de [FEAT-04](#feat-04). Dos límites: la compuerta
+   **excluye a los alumnos** a propósito (su rol no cambia nunca), así que necesitan su propio punto;
+   y no dice *qué* miró la persona.
+2. **Tres líneas en el portal del tutor** — [`guardian/dashboard`](../src/app/guardian/dashboard/page.tsx),
+   [`guardian/academics`](../src/app/guardian/academics/page.tsx) y
+   [`guardian/payments`](../src/app/guardian/payments/page.tsx) — que registren tutor, día y sección.
+   Es lo que contesta la pregunta literal del cliente, y **no es "instrumentar la aplicación"**: es
+   instrumentar las tres pantallas donde vive la pregunta.
+3. **La columna `Attendance.source`**, con el relleno del pasado desde `notes` y sacando esa marca
+   del campo, que es [BUG-12](#bug-12).
+Había un cuarto punto —la pasada de contraseñas por defecto— que salió de esta fase. Ver abajo.
+
+### Decisión (2026-08-24): la métrica 6 mide contraseñas, no ingresos
+
+**La métrica 6 estaba mal titulada, y el título le prometía algo que no puede dar.** "Cuentas que
+nunca se usaron" se calculaba como "conserva la contraseña inicial", y esa inferencia sólo corre para
+un lado:
+
+- Si nunca entró → seguro conserva la contraseña inicial. ✅
+- Si conserva la contraseña inicial → **puede haber entrado todos los días.** ❌
+
+Verificado en el código el 2026-08-24: **no existe ninguna obligación de cambiar la contraseña.** No
+hay `mustChangePassword`, ni vencimiento, ni aviso, ni recuperación. Y cuando nada obliga, casi nadie
+cambia. El número no era un conteo sino un **techo**, y un techo tan flojo que el mosaico podía
+marcar 150 con una respuesta real de 12. Peor todavía: el reset manual del instituto vuelve a dejar
+la contraseña en una de por defecto, así que alguien que entró, la cambió, se la olvidó y pidió que
+se la restablezcan volvía a contar como "nunca entró".
+
+**La decisión del instituto es no mostrar ese dato.** Prefiere que el panel conteste quién entró y
+quién no **desde que el sistema mide**, aunque eso empiece vacío y sólo mire hacia adelante, antes que
+mostrar un número que se desarma con una sola pregunta. Es un cliente solo y sabe que esto se está
+construyendo. El argumento es de credibilidad y vale para todo el panel: un número que se cae con una
+pregunta no cuesta ese número, cuesta la confianza en los otros siete.
+
+**Lo que sí mide bien se queda, con su nombre verdadero: cuántas cuentas conservan la contraseña que
+les dio el sistema**, partido en alumnos, tutores y profesores. El instituto lo quiere ver. Es un
+número de seguridad y no de uso, no promete nada sobre ingresos, y es exactamente el trabajo pendiente
+de [SEC-06](#sec-06).
+
+**Y se cae la dependencia con [FEAT-05](#feat-05).** Lo único que obligaba a correr la pasada antes
+era congelar el techo de "nunca entró" antes de que la gente cambiara contraseñas en masa. Sin esa
+lectura no hay nada que congelar: el número tiene que **bajar** cuando alguien cambia su contraseña,
+porque bajar es justamente lo que significa que el problema se está resolviendo. FEAT-05 puede
+arrancar cuando se quiera, sin nada de esta ficha adelante.
+
+#### Cómo se calcula, corregido
+
+**Son siete valores por defecto y no tres**, y la ficha original sólo miraba los de alta.
+[SEC-06](#sec-06) los lista todos; los de **reset** cuentan igual, porque una cuenta reseteada queda
+tan abierta como una recién creada:
+
+| Grupo | De alta | De reset |
+|---|---|---|
+| Alumnos | `estudiante123` | el propio DNI, o `lingua1234` si no tiene |
+| Tutores | `Modern2026` | `tutor1234` |
+| Profesores | **ninguno** — el admin la tipea al crear la cuenta | `docente1234` |
+
+`lingua1234` ([`students/[id]/actions.ts:138`](../src/app/students/[id]/actions.ts)) no estaba en la
+lista de [SEC-06](#sec-06), y es el caso que más importa de los tres del alumno: cae justo sobre los
+que no tienen DNI cargado.
+
+**Los profesores sólo se pueden detectar por el reset**, y conviene saberlo antes de leer el número:
+un profesor cuya cuenta se creó con una contraseña floja elegida por el admin no aparece acá. El
+mosaico cuenta lo que el sistema repartió, no lo que es débil. Los preinscriptos (`inscripcion123`)
+siguen fuera: todavía no son usuarios.
+
+**La pasada llena el pasado; las escrituras la sostienen.** Una sola pasada compara fila por fila
+—decenas de segundos, y por eso no puede vivir en la pantalla— y deja el resultado en una columna.
+De ahí en adelante **no hace falta volver a comparar nunca**: los seis lugares que escriben una
+contraseña ya saben cuál están escribiendo, así que prenden o apagan la bandera de una. Es lo que
+hace que el número siga siendo verdad sin ninguna pasada periódica.
+
+**Este número es el que le da sentido a [SEC-11](#sec-11)**, que obliga a cambiar la contraseña por
+defecto en el primer ingreso: el mosaico deja de ser un diagnóstico y pasa a ser la barra de avance
+de ese despliegue, y su final natural es cero.
+
+#### Métrica 6 · **hecha** (2026-08-25)
+
+Commit `858cd06`, migración `add_default_password_flag`. La columna `hasDefaultPassword` en `User` y
+`Student`, el catálogo en [`defaultPasswords.ts`](../src/lib/defaultPasswords.ts), la pasada por
+lotes con su botón, el mosaico y el listado en `/dashboard/usage/contrasenas` con los cuatro grupos
+como filtro.
+
+**Eran diez sitios de escritura y no seis.** Faltaban el alta de administrador de instituto
+([`admin/actions.ts`](../src/app/admin/actions.ts)) y el repositorio del superadmin. Ninguno compara
+hashes: cada uno ya sabe qué contraseña escribe.
+
+**Dos cosas salieron de medir y no de estimar**, y las dos cambiaron el código:
+
+- `bcrypt.compare` con coste 10 tarda **~137 ms**, no los ~65 supuestos. El lote bajó de 25 a 12.
+- El lote pedía 12 alumnos **y** 12 usuarios en paralelo, o sea el doble del presupuesto. Ahora
+  comparten el lote y se piden en serie.
+
+**Verificado por pantalla el 2026-08-25** contra una consulta de control que prueba *todos* los
+candidatos e informa cuál coincidió, en vez de cortar en el primero: 294 cuentas a revisar, y el
+resultado **6 = 3 alumnos + 2 tutores + 0 profesores + 1 administración**. Los orígenes: 2 por el
+propio DNI, 1 de `estudiante123`, 2 de `Modern2026`, 1 de `admin123`. Los filtros del listado también.
+
+**Lo que la pantalla todavía no resuelve bien:** en el grupo de alumnos, la columna de teléfono es la
+del alumno, y a quien hay que llamar para que un chico de siete años cambie su contraseña es al
+tutor. No es un error del número, es que esa fila no lleva a quien puede accionarla.
+
+### Decisión (2026-08-24): la métrica 8 se queda como está, con el rastro indirecto
+
+Al revisar la métrica 6 apareció la pregunta de si la 8 tiene el mismo problema: también muestra
+"Nunca" cuando no encuentra rastro, y la ausencia de rastro no prueba que nadie haya entrado. **Se
+queda como está**, y la diferencia con la 6 es la que decide:
+
+- **El error de la 6 no se corregía solo**, y encima empeoraba: cada persona que cambiaba su
+  contraseña se iba del conteo sin que eso dijera nada sobre si entraba.
+- **El de la 8 se corrige solo, y rápido.** Cada ingreso escribe en el registro, así que el rastro
+  indirecto se reemplaza por uno real en cuestión de semanas, sin que nadie haga nada.
+
+Y la pantalla ya distingue las dos cosas sin cartel: **el rastro real trae los distintivos de "qué
+miró" y el indirecto no**, porque `sections` sólo lo escribe el registro. El dato sin distintivos es
+el que se levantó de la base para que la métrica no naciera vacía, y así se le explica al instituto.
+
+**La forma del registro.** Una fila por persona y por día, no por evento: acota el crecimiento sin
+depender de con qué frecuencia se escriba, y no obliga a decidir la retención antes de empezar.
+
+```
+subjectType  "USER" | "STUDENT"
+subjectId    id suelto, como AiUsage
+instituteId  ← lo que a AiUsage le falta y le impide agregar por instituto (PED-10)
+day          fecha
+role         rol activo de ese día
+logins       contador
+lastSeenAt   última actividad de ese día
+@@unique([subjectType, subjectId, day])
+```
+
+Es la forma de `AiUsage` que el proyecto ya aceptó —un contador con `subjectId` suelto—, y por eso
+esquiva [ARQ-15](#arq-15) en vez de sumarse a su lista, al revés de lo que anotaba esta ficha más
+arriba. Cota superior con los números de hoy: 580 personas × 200 días lectivos ≈ 116.000 filas al
+año, y eso suponiendo que entren todos todos los días.
+
+**Sección aparte, y medir antes:** si además se quiere actividad más fina que la compuerta de 5
+minutos, eso sí cuesta una sentencia por request y hay que medirlo contra [ARQ-02](#arq-02) y
+[ARQ-11](#arq-11) antes de escribirlo, no suponerlo.
+
+#### Fase 1 · la pantalla · **hecha** (2026-08-24)
+
+`/dashboard/usage`, sólo `ADMIN`, con entrada por un botón en el encabezado del Resumen y no por el
+menú: es seguimiento, no trabajo diario. Commits `e2ac4d4` (estado de hoy), `5a0f2d4` (actividad del
+período y el selector) y `a860fd8` (las dos del registro). Cada mosaico se verificó contra una
+consulta de control formulada distinta de la de la pantalla.
+
+**El selector es mes + año, no una lista de meses.** Una sola lista crece con el tiempo —doce
+opciones el primer año, treinta y seis al tercero—; partido, el mes son siempre doce y el año crece
+de a uno. Los años salen de la clase más vieja del instituto.
+
+**Simplificación conocida, con el cliente al tanto (2026-08-24): el gráfico diario agrupa a la
+persona multi-rol por lo que *es* y no por lo que *hizo*.** La precedencia es alumno → staff → tutor,
+y elige **uno solo** porque es un conteo de personas: contarla dos veces haría que la barra sume más
+gente de la que entró. Las listas no eligen — quien tiene rol `GUARDIAN` aparece en ellas igual.
+
+Se puede afinar sin migración: `sections` ya guarda si esa persona abrió el portal del tutor ese día,
+así que el `CASE` de la consulta podría contarla como tutor los días que va a mirar las notas de su
+hijo y como staff los días que va a trabajar. **Hoy en producción son dos personas**, medido el
+2026-08-24, así que no paga hacerlo todavía.
+
+#### Fase 2 · los listados detrás de cada número · **hecha** (2026-08-24)
+
+Commit `24fb2a2`. Completa el principio que la fase 1 dejó a medias: *"cada número lleva a una lista
+de nombres"*. Cuatro pantallas nuevas bajo `/dashboard/usage` —`alumnos`, `tutores`, `clases` y
+`practica`—, sólo `ADMIN`, con el filtro y el período en la URL.
+
+**Cuatro listados y no catorce.** El estado va como filtro adentro de la lista de su métrica, en vez
+de una pantalla por cada renglón del desglose. Quien abre "con datos y sin cuenta" muchas veces
+quiere mirar enseguida "sin ningún dato", que es el mismo trabajo con otro grado de dificultad. Por
+lo mismo **las métricas 5 y 8 comparten pantalla**: son la misma gente mirada por dos preguntas
+—si llegan a un alumno, y si entran—, y el tutor sin alumno vinculado es casi siempre el que nunca
+entró. Las métricas 1 y 2 comparten por la misma razón: son las mismas clases, miradas por el estado
+del parte y por cómo se cargó.
+
+**La clasificación se mudó a [`metricas.ts`](../src/app/dashboard/usage/metricas.ts) y el período a
+[`periodo.ts`](../src/app/dashboard/usage/periodo.ts)**, y los llaman tanto el mosaico como el
+listado. No es por no repetir código: es que un mosaico que dice 7 y una lista que trae 6 no se lee
+como un error de una de las dos, se lee como que el panel miente — y con la regla escrita dos veces
+eso pasa la primera vez que alguien toca una y no la otra, en silencio.
+
+**Dos números no se abren, a propósito.** Las marcas del escáner —"con el escáner: 2", "cargadas a
+mano: 1"— porque son marcas y el listado son clases: un número que abre una lista de otro largo se
+lee como un error del panel, así que la fila que abre es la de cursos, que termina en las clases
+escaneadas. Y **ningún número en cero enlaza**, ni el titular ni la fila: el destino sería una lista
+vacía, y un clic que no lleva a ningún lado enseña a no volver a hacer clic. El chip del filtro en
+cero se muestra igual pero no se puede apretar, porque esconderlo haría que la lista de filtros
+cambie de forma según el mes y que "ninguna incompleta" —buena noticia— sea indistinguible de "esta
+pantalla no mide eso".
+
+**Cada fila termina donde se arregla**: el alumno en su ficha, el tutor en la suya, la clase en su
+parte de asistencia, la práctica en su vista previa. Y la columna que hace utilizable a las dos
+listas de personas es el teléfono: el mosaico dice cuántos son, la lista dice a quién llamar.
+
+**Sigue valiendo que son listas de pendientes y no puntajes de personas.** El docente aparece en el
+listado de clases porque es a quien hay que avisarle de esa clase, no para sumarle un porcentaje al
+lado del nombre.
+
+**Verificado el 2026-08-24** contra una consulta de control formulada distinta —SQL crudo con `CASE`
+y subconsultas correlacionadas, contra el `findMany` + clasificación en memoria del código—: 284
+alumnos activos (6 / 258 / 0 / 20 / 0), 7 tutores con cuenta y 3 sin ningún rastro, 53 clases en el
+período (52 sin parte, 1 incompleta), 3 marcas con 2 del escáner en 1 curso.
+
+#### Lo que quedó afuera de la fase 1
+
+Las ocho métricas, las dos zonas y el selector. `recharts` ya está en el proyecto. Las consultas son
+agregaciones por instituto: `groupBy` o SQL, no `findMany` con un `reduce` en memoria como hace hoy
+[`PlaygroundChartServer`](../src/app/dashboard/components/PlaygroundChartServer.tsx), que además trae
+dos veces las mismas sesiones de 30 días para calcular dos cosas distintas.
+
+**[FEAT-16](#feat-16) le agrega una métrica más**, y es la única que se decidió sumar después de
+cerrar las ocho: la actividad del Playground, que hoy vive en el Panel de Control. Es la otra mitad
+de la métrica 3 —ésta mide lo que se publicó, aquélla lo que se practicó— y separadas ninguna de las
+dos se puede interpretar sola.
+
 **Relacionado.** [ARQ-09](#arq-09) anota que las métricas y el registro de errores son cosas
 distintas y no conviene mezclarlas: "cuántos errores hubo" sale del registro, "cuánto se usa la
 plataforma" no. Comparten, eso sí, las mismas tres decisiones caras — dónde se guarda, cuánto tiempo
@@ -4127,6 +5806,14 @@ decisión de **cómo manda correo esta aplicación**, y esa decisión no es de e
 helper de envío montado. Los otros tres pasan a ser una plantilla y una llamada. Hacer este primero
 sería resolver el problema chico y dejar el caro para después.
 
+**Al 2026-08-29 eso ya pasó: el canal de correo está montado** ([FEAT-05](#feat-05), commit
+`96a9193`). Existe [`src/lib/email/`](../src/lib/email/index.ts) con proveedor elegible por
+`EMAIL_PROVIDER`, el remitente resuelto por instituto y una plantilla de ejemplo, así que **este ítem
+ya no arrastra la decisión de cómo manda correo la aplicación**: es escribir la plantilla del aviso y
+llamar al proveedor. Lo que sigue abierto de acá es lo propio: a qué dirección se avisa —¿la de la
+ficha del instituto, configurable?— y que el cuerpo mande a la aplicación en vez de copiar los datos
+del aspirante, porque son datos de menores.
+
 **Decisiones que arrastra.** Proveedor y dominio remitente (un correo que sale de un dominio sin SPF
 y DKIM cae en spam, que es peor que no mandarlo); a qué dirección se avisa —¿la del instituto,
 configurable por instituto?—; y qué lleva el cuerpo, teniendo presente que **hay datos de menores**:
@@ -4136,6 +5823,23 @@ datos del aspirante.
 **Alternativa más barata, mientras tanto.** Un contador de pre-inscripciones sin atender en el
 dashboard del instituto resuelve buena parte del problema sin infraestructura nueva. No reemplaza al
 correo —no avisa a quien no entró—, pero es de horas y no de días.
+
+### Decidido — 2026-09-09 · sale junto con [FEAT-20](#feat-20)
+
+Lo que quedaba abierto acá se cerró al definir el acuse al aspirante, que es el correo espejo de éste:
+
+- **Se avisa a `Institute.email`**, el correo de contacto de la ficha del instituto. Es la dirección
+  que `resolveSender` ya usa como `replyTo` de todo lo que sale, así que no se agrega ningún concepto
+  nuevo. **Ojo que el campo es opcional en el schema** (`email String?`): si en producción está vacío,
+  el aviso no sale y el instituto se sigue enterando sólo por la campana — que es exactamente lo que
+  este ítem viene a arreglar. **Hay que verificar que esté cargado antes de darlo por hecho.**
+- **El cuerpo no copia los datos del aspirante** y manda a la aplicación, como esta ficha ya venía
+  diciendo por tratarse de datos de menores. FEAT-20 llegó a la misma conclusión por otro camino —la
+  dirección de destino no está verificada—, así que los dos correos se redactan igual de cortos.
+- **Se hacen en la misma pasada.** Se enganchan en el mismo punto de la misma función
+  ([`inscription/actions.ts:87`](../src/app/inscription/actions.ts)) y comparten la infraestructura de
+  [FEAT-05](#feat-05): una vez abierto el archivo, el segundo es una plantilla más. Siguen siendo
+  independientes — si uno se cae, el otro se hace igual.
 
 ---
 
@@ -4314,6 +6018,408 @@ matrícula $10.000) y con abril puesto su tarjeta dice **$15.000**, sin la matr�
 
 ---
 
+<a id="feat-16"></a>
+## FEAT-16 · Mudar la actividad del Playground al panel de uso · **P3**
+
+**Decidido el 2026-08-25.** Hoy
+[`PlaygroundChartServer`](../src/app/dashboard/components/PlaygroundChartServer.tsx) vive en el
+Panel de Control, tercero en una pila de tres gráficos grandes, y lo ven `ADMIN` y `SECRETARY`.
+
+**Ese gráfico son dos cosas pegadas, y cada una es de una pantalla distinta.**
+
+- **Sesiones por día, total y reparto entre Speaking / Listening / Chat.** Contesta *"¿los alumnos
+  practican?"*, que es una pregunta de uso. **Va al panel de [FEAT-11](#feat-11).**
+- **Accuracy promedio por curso, top 8.** No mide si se usa el sistema, mide qué tan bien les va: es
+  "cómo va el instituto", que es la pregunta del Panel de Control. **Se queda donde está.** Además es
+  un ranking de cursos con porcentaje, justo lo que FEAT-11 decidió no tener —*listas de pendientes,
+  no puntajes*—, así que mudarla rompería el criterio del panel al que iría.
+
+**El argumento decisivo es que la métrica 3 ya contesta la otra mitad de la misma pregunta.** Hoy el
+panel dice *"el docente publicó práctica en N cursos"* y *"M publicadas que nadie practicó"* —la
+oferta—, y el gráfico del Panel de Control dice cuánto se consumió —la demanda—. Separadas, ninguna
+de las dos se puede interpretar: si nadie practica, no se sabe si es porque no hay nada publicado o
+porque hay y no llega a los alumnos. Juntas, se sabe.
+
+**Tres motivos que se suman:**
+
+- **El Panel de Control ya está cargado**: 775 líneas y siete consultas en serie. Y este componente
+  **trae dos veces las mismas sesiones de 30 días** para calcular dos cosas distintas — hay que
+  arreglarlo en el mismo pase, vaya donde vaya.
+- **Son dos relojes.** El gráfico tiene su propio selector 7d/30d, del lado del cliente. Al mudarse
+  tiene que obedecer el selector mes+año del panel y perder el suyo; si conviven dos controles de
+  período en la misma pantalla, es el problema de los dos relojes de finanzas otra vez.
+- **Momento de mirada.** El Panel de Control se abre todos los días para trabajar; el panel de uso,
+  cada tanto para evaluar. "¿Los alumnos practican?" es de las segundas.
+
+**Lo que se queda en el Panel de Control: una tarjeta chica**, del tipo *"X sesiones de práctica este
+mes"*. No es un consuelo, resuelve dos cosas concretas. El Playground es el diferencial del producto
+y el panel de uso entra por un botón secundario, no por el menú: sin nada en el home, el diferencial
+deja de verse donde se mira a diario. Y **es lo único que la secretaría necesita de esto**: queda
+afuera del panel de uso por el criterio de [SEC-03](#sec-03), y el gráfico grande no es algo que mire.
+
+**El costo no es trivial y conviene saberlo antes de empezar.**
+[`PlaygroundActivityChart`](../src/app/dashboard/components/PlaygroundActivityChart.tsx) es un
+componente de cliente con estado propio y su propio filtro de período: mudarlo es reescribirle el
+manejo de período para que lea el de la URL, no mover un import.
+
+### Hecha (2026-08-25)
+
+Commit `29e2f20`. **Se hizo antes de promover [FEAT-11](#feat-11) y no después**, al revés de lo que
+decía esta ficha: como todo viaja en la misma promoción, el cliente ve el panel completo de una vez y
+se ahorra un despliegue. El riesgo que preocupaba —tocar el Panel de Control, que usa todo el mundo
+todos los días— se cubre probándolo en stage antes de promover, que es lo que había que hacer igual.
+
+**Tres cosas aparecieron al mudarlo, y las tres estaban desde antes:**
+
+- **El día se agrupaba en UTC.** `toISOString()` corría al día siguiente toda práctica hecha después
+  de las 21:00 de Argentina — en la base de desarrollo, **51 de 172 sesiones**. Ahora la conversión
+  pasa por los dos husos, como ya hacía el registro de actividad.
+- **Las barras se rotulaban con el nivel del curso**, y el nivel se repite entre secciones: salían dos
+  "Pre-adolescents 1" y dos "Upper-intermediate" con números distintos, que se lee como un error del
+  gráfico. Ahora va el nombre real del curso.
+- **La consulta traía dos veces las mismas sesiones** y las recorría en memoria. Quedó en una sola
+  agregación en la base.
+
+**Y se agregó lo que el desglose por color no decía: el número de cada día.** Una barra de tres
+cuartos de alto puede ser 6 personas o 60 según el techo del período, y el techo cambia con cada mes
+elegido — así que el gráfico sólo se podía comparar consigo mismo. El cartel sale con `group-hover` y
+con `group-focus`, o sea con el mouse y con el dedo, sin estado ni bundle de cliente. Lo comparten
+los dos gráficos diarios en [`BarrasDiarias`](../src/app/dashboard/usage/BarrasDiarias.tsx), y cada
+uno pone su unidad: **"personas" en uno y "sesiones" en el otro**, que es justamente la diferencia
+que los dos no mostraban y que hacía que se confundieran.
+
+---
+
+<a id="feat-17"></a>
+## FEAT-17 · Borrador de la clase, y publicarla cuando el docente quiera · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Que el docente pueda armar la clase como **borrador** y **publicarla cuando
+lo considere necesario**.
+
+**Hoy no hay estado intermedio: lo que se guarda, se ve.** El tema de la clase llega a cinco lugares
+apenas se guarda —el panel del alumno ([`dashboard/page.tsx:244`](../src/app/dashboard/page.tsx)), sus
+académicos ([`academics/page.tsx:83`](../src/app/academics/page.tsx)), los del tutor
+([`guardian/academics/page.tsx:60`](../src/app/guardian/academics/page.tsx)), el panel del instituto
+([`dashboard/page.tsx:620`](../src/app/dashboard/page.tsx)) y el calendario, incluido el de los pares
+de [FEAT-07](#feat-07)—, y las cinco consultas filtran lo mismo: `status: "ACTIVE"` y de hoy en
+adelante. No hay dónde poner un borrador.
+
+**Antes de diseñar nada, un dato que achica el pedido: el alumno no ve los contenidos.** De la clase
+se le muestran el **tema**, la fecha y el horario; `content` no se renderiza en ninguna pantalla de
+alumno ni de tutor — es lo que lee la IA para escribir la práctica ([PED-01](#ped-01)) y lo que ve el
+docente. Así que hoy "publicar una clase" es **publicar su título**, y —si se decide así— su práctica.
+Si lo que preocupa al docente es que le lean los contenidos mientras los escribe, eso se contesta, no
+se construye.
+
+**El estado ya existe dos veces en el producto, con dos formas distintas:**
+
+- **`LessonPractice.isPublished`** — *"El profesor activa cuando está listo"*, textual en el schema.
+  Es exactamente lo que se está pidiendo, un nivel más abajo: la práctica de la clase ya se publica
+  aparte, con su interruptor en el modal de la clase.
+- **`StudentReport.publishedAt`** — `null` es borrador, la fecha es publicado ([FEAT-09](#feat-09)).
+  Además de decir *si*, dice *cuándo*, y ese dato terminó sosteniendo todo lo demás: el congelamiento
+  de los firmantes, el aviso al tutor y la marca de edición posterior.
+
+**Recomendación: la forma de `publishedAt`**, por lo mismo que sirvió en los informes, y en **campo
+propio, no en `status`**. `Lesson.status` es `ACTIVE | DELETED` y es el borrado lógico de
+[ARQ-05](#arq-05): un borrador borrado necesita las dos cosas dichas por separado.
+
+**Y hay un tercer estado ya inventado a mano que conviene absorber.** `generateLessonsAction`
+([`lessons/actions.ts:273`](../src/app/courses/[id]/lessons/actions.ts)) crea todas las clases del
+período desde los horarios del curso con el tema en `SCHEDULED_LESSON_TOPIC` —la cadena
+`"Clase Programada"`—, y el calendario decide si la clase está cargada **comparando el título contra
+esa cadena** ([`schedule/page.tsx:355`](../src/app/schedule/page.tsx),
+[`WeeklyGridView.tsx:111`](../src/app/schedule/components/WeeklyGridView.tsx)). Mientras tanto el
+alumno ve *"Clase Programada"* en su lista de próximas clases, que es un borrador publicado sin que
+nadie lo haya decidido. Con el campo nuevo, **la clase generada nace en borrador** y esa comparación
+de strings se reemplaza por el estado real. La migración se resuelve sola: todo lo existente se
+publica en el backfill, salvo las programadas que nadie cargó.
+
+**Lo que hay que decidir con el docente y con el instituto:**
+
+- **¿Qué pasa con la asistencia y las notas de una clase en borrador?** Si se tomó asistencia, la
+  clase existió. La regla más fácil de explicar es que **tomar asistencia publica la clase**; la más
+  previsible es que no haga nada y publique el docente. Hay que elegir una: hoy las dos pantallas
+  escriben sin preguntar nada sobre el estado.
+- **¿La práctica conserva su propio interruptor?** Dos publicaciones en el mismo modal se explican
+  mal. Lo coherente es que la práctica no pueda estar publicada sobre una clase en borrador —el alumno
+  vería la práctica de una clase que no ve— y que el interruptor quede sólo para publicar la clase sin
+  la práctica.
+- **¿Se avisa al publicar?** [FEAT-09](#feat-09) le avisa al alumno y a los tutores cuando se publica
+  un informe, que son dos o tres por año. Una clase por semana y por curso es otro volumen:
+  **recomendación, no avisar**.
+- **¿El par del mismo nivel ve los borradores?** [FEAT-07](#feat-07) existe para saber en qué tema van
+  los pares. Lo razonable es que vea lo publicado, igual que el alumno.
+
+**Y una consecuencia de plata que hay que resolver en el mismo pase.** La liquidación de sueldos
+cuenta **una clase por cada fila `ACTIVE` del período** ([`payroll.ts:18`](../src/lib/payroll.ts)),
+con el criterio escrito ahí mismo: *"Una clase borrada no se dictó: no se paga"*. O sea que la
+existencia de la fila es lo que se paga: una clase generada que no se dictó **se liquida igual** si
+nadie la borró. Los borradores multiplican esas filas, así que la pregunta deja de poder postergarse:
+**¿se paga la clase programada o la clase dictada?** Si es la segunda, el borrador no cuenta y el
+criterio pasa a ser la publicación —o, mejor, la asistencia tomada—. No es algo que resuelva quien
+liquida, fila por fila: lo tiene que contemplar el sistema.
+
+**Alcance:**
+
+1. `publishedAt` en `Lesson`, su migración y el backfill.
+2. El filtro en las cinco consultas de alumno, tutor y calendario. **Que viva en un solo lugar**, como
+   el `yearlyEnrollmentTargetsWhere` de [FIN-14](#fin-14): cinco copias del mismo `where` son cinco
+   lugares donde olvidarse el día que aparezca una pantalla más.
+3. La acción de publicar —y la de volver a borrador, si se decide que exista— con
+   `requireCourseWriteAccess`, que es el corte que ya usa el resto del libro de temas.
+4. El distintivo en el libro de temas del curso, que es donde el docente ve la lista, y la decisión
+   sobre la liquidación de arriba.
+
+**Relacionado.** [FEAT-09](#feat-09) (de donde sale la forma de `publishedAt`), [PED-01](#ped-01) (el
+`isPublished` de la práctica), [FEAT-07](#feat-07) (el calendario de los pares),
+[ARQ-05](#arq-05) (`status` es el borrado lógico y no se puede mezclar), [FEAT-02](#feat-02) (el libro
+de temas paginado, donde va el distintivo).
+
+---
+
+<a id="feat-18"></a>
+## FEAT-18 · Que el listado del curso no muestre a los que dejaron · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Que en la pantalla del curso no aparezcan los alumnos marcados como
+**incompletos**, que es como queda la inscripción del que dejó el curso.
+
+**El criterio ya existe y ya está aplicado en las otras pantallas.** El parte de asistencia
+([`attendance/page.tsx:41`](../src/app/courses/[id]/lessons/[lessonId]/attendance/page.tsx)) y la
+planilla de notas ([`grades/page.tsx:41`](../src/app/courses/[id]/lessons/[lessonId]/grades/page.tsx))
+traen las inscripciones con `status: { in: ["ACTIVE", "FINISHED"] }`, y el generador mensual sólo le
+emite cuotas a las `ACTIVE` ([`billingActions.ts:39`](../src/app/payments/billingActions.ts)). El que
+dejó el curso ya desapareció de todo eso. **La única pantalla que lo sigue mostrando es el listado del
+curso**, que trae todas las inscripciones sin filtrar
+([`courses/[id]/page.tsx:83`](../src/app/courses/[id]/page.tsx)) y las distingue con un distintivo
+ámbar *"Incompleto"*. El pedido no inventa una regla: empareja la lista con lo que el sistema ya
+decidió.
+
+**Y de paso arregla un número que no cierra.** El encabezado dice *"Alumnos Inscritos (N)"* contando
+`course.enrollments.length` —todos, incompletos incluidos—, mientras que el `totalEnrolled` que usa el
+resto de la pantalla cuenta sólo los `ACTIVE`
+([`:212`](../src/app/courses/[id]/page.tsx)). Son dos números del mismo grupo en la misma pantalla. El
+subtítulo, además, ya promete lo que el pedido pide: *"Listado oficial de estudiantes activos en este
+grupo"*.
+
+**Qué no hay que filtrar de más.** `FINISHED` no es `INCOMPLETE`: al finalizar un curso,
+`finishCourseAction` pasa todas las inscripciones activas a `FINISHED`, así que filtrar los dos
+dejaría todo curso terminado con la lista vacía. El corte es sólo `INCOMPLETE`, igual que en el parte.
+
+**Recomendación: ocultar por defecto, con manera de verlos** —un *"N dejaron el curso"* que
+despliegue— y no excluirlos del todo. Tres razones concretas:
+
+1. **Es la salida que el propio sistema recomienda.** Al intentar eliminar una inscripción con cuotas
+   pagas, el error dice *"Si el alumno dejó el curso, marcá la inscripción como incompleta"*
+   ([`courses/actions.ts:259`](../src/app/courses/actions.ts)). No es un caso raro: es el camino
+   oficial.
+2. **Hoy es un estado sin vuelta desde esta pantalla.** El botón de dar de baja sólo se dibuja para
+   las inscripciones `ACTIVE` ([`:432`](../src/app/courses/[id]/page.tsx)), así que una vez marcada
+   incompleta no queda nada que tocar; si además desaparece, quien se equivocó de alumno no ve qué
+   hizo. La vuelta existe —volver a inscribirlo reactiva **la misma** inscripción con sus cuotas
+   ([FIN-23](#fin-23))—, pero hay que saberla.
+3. **Es la misma doctrina que se decidió en [FIN-09](#fin-09)**: filtro con vista por defecto, no
+   exclusión.
+
+**Ojo con el cruce con el otro pedido del mismo día.** [FIN-09](#fin-09) pide que los deudores sean
+los de alumnos activos en cursos activos. Si eso se implementa como *"inscripción activa"* y esto
+oculta al incompleto del listado, **el alumno que dejó el curso debiendo cuotas desaparece de las dos
+pantallas a la vez** y su deuda queda sólo en su ficha. Es exactamente el caso que la decisión del
+16/08 de FIN-09 dijo que no puede perderse de vista — el que se va debiendo y quizás vuelve. Las dos
+fichas se tocan acá y conviene escribirlas mirando la otra.
+
+**Alcance.** El filtro en la consulta del curso —o en memoria, que ya está a mano—, el número del
+encabezado, y dónde queda el desplegable de los que dejaron. No toca la base.
+
+**Relacionado.** [FIN-09](#fin-09) (el cruce de arriba), [FIN-23](#fin-23) (la inscripción que no se
+borra y se reactiva), [FIN-24](#fin-24) (mover de curso, la otra salida cuando el alumno no se va sino
+que cambia).
+
+### Decidido — 2026-09-02 · sin estado nuevo, y el criterio es el del parte
+
+**No se agrega un estado.** La pregunta que abrió esto era si el que abandona necesita un estado
+propio, y la respuesta es que ya lo tiene: `INCOMPLETE` significa exactamente eso y es lo único que lo
+escribe —`markEnrollmentIncompleteAction`, desde el botón del listado—. Un valor nuevo sería un
+sinónimo, y saldría gratis en la base —`Enrollment.status` es un `String` con los valores en un
+comentario, no un enum— pero habría que enseñárselo a los quince lugares que filtran por ese campo con
+listas literales, uno de ellos SQL crudo en el widget de cumpleaños que TypeScript no chequea. **Lo
+que cambia es la pantalla, no el modelo.**
+
+**Y hay una tercera pantalla que ya lo hace: la tarjeta del listado de cursos.** `/courses` trae los
+nombres y el conteo con `where: { status: "ACTIVE" }`
+([`courses/page.tsx:56`](../src/app/courses/page.tsx) y [`:61`](../src/app/courses/page.tsx)). Por eso
+hoy el mismo curso se ve con **dos números distintos**: la tarjeta dice *"Alumnos Inscriptos (3)"* y
+la pantalla de administrar, *"(4)"*. Es el mejor argumento del pedido — no es una preferencia, es una
+inconsistencia visible sin abrir el código.
+
+**Pero el `where` de la tarjeta no es el que hay que copiar.** Filtra sólo `ACTIVE`, así que en la
+pestaña de finalizados la tarjeta muestra el curso con **cero alumnos**; el comentario de esa misma
+consulta lo dice a medias (*"For finished courses, we might want to see who WAS active"*). El criterio
+bueno es el del parte, `["ACTIVE", "FINISHED"]`, y conviene emparejar la tarjeta en el mismo pase:
+quedan las tres pantallas diciendo lo mismo.
+
+**Lo único que queda por definir** es si el que dejó desaparece del todo o queda como *"1 dejó el
+curso"* desplegable. Sigue valiendo la recomendación de arriba —con vista, no excluido—, y la razón
+más concreta es que desde esa pantalla marcar incompleto no tiene vuelta: **cómo vuelve un alumno
+incompleto quedó abierto en [FIN-30](#fin-30)**, y ahí adentro es donde tiene sentido que viva el
+botón.
+
+---
+
+<a id="feat-19"></a>
+## FEAT-19 · Sumar un concepto de nota al boletín sin tocar lo ya publicado · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Sumarle un concepto de nota —*"Comprensión oral"*— a un boletín trimestral
+que **ya tiene el 1° trimestre publicado**, y que se vea **del 2° informe en adelante**. Con dos
+condiciones que puso el cliente: que **no se puedan cargar notas del concepto nuevo en el 1°
+trimestre**, y que el cambio pueda alcanzar **a un curso sí y a otro no**.
+
+**Hoy la plantilla no tiene tiempo ni dueño, y por eso el pedido no se puede hacer sin daño.**
+`CourseReportTemplate` ([`schema.prisma:969`](../prisma/schema.prisma)) es un puntero
+`courseId + templateId`, no una copia: todos los cursos vinculados miran **la misma fila viva**. Y el
+informe publicado tampoco guarda su estructura — `StudentReport` guarda notas y comentario, nada más;
+el boletín se arma en tiempo de lectura contra `template.categories` **actual**
+([`StudentReportViewer.tsx:331`](../src/components/reports/StudentReportViewer.tsx)). Agregar la
+categoría hoy, tal como está el código:
+
+- **le aparece al 1° trimestre ya publicado**, vacía, con la leyenda *"Calificación no provista para
+  este período"* ([`:380`](../src/components/reports/StudentReportViewer.tsx)), en pantalla y en el
+  PDF que la familia se descargó ([`:166`](../src/components/reports/StudentReportViewer.tsx));
+- **alcanza a todos los cursos** vinculados a esa plantilla, y a todos los años;
+- **y las firmas no se enteran.** `reportContentHash`
+  ([`signatures.ts:18`](../src/lib/reports/signatures.ts)) hashea `categoryId=valor` más el
+  comentario, y una categoría sin nota no genera fila `ReportEntry`: el hash no se mueve. El informe
+  cambia y la pantalla del instituto sigue diciendo *firmado, sin ediciones*. Es exactamente el
+  agujero que [FEAT-09](#feat-09) vino a tapar;
+- y si después **alguien carga la nota atrasada del 1°**, ahí sí cambia el hash y los informes quedan
+  marcados *"editado tras firmar"* para todo el curso, con el nombre del admin
+  ([`signatures/page.tsx:97`](../src/app/reports/signatures/page.tsx)).
+
+El pedido son en realidad **dos ejes de la misma falta**: la categoría no sabe **desde cuándo** vale
+ni **para quién**.
+
+### 1 · Desde cuándo — la vigencia de la categoría
+
+**No alcanza con el índice de período: tiene que ser un punto del calendario.** Con
+`activeFromPeriod` solo, la columna desaparecería cada enero, porque `periodIndex 1` en 2027 vuelve a
+ser el 2° trimestre y el 1° del año que viene tampoco la tendría. Van los dos campos —
+`activeFromYear` + `activeFromPeriod` — y el predicado es
+`year > afy || (year === afy && periodIndex >= afp)`. Para este pedido: `2026` y `1`.
+
+**Los cuatro lugares que hoy leen `template.categories` crudo** y tienen que respetarla:
+
+1. la planilla del docente, en el armado del estado
+   ([`ReportGradeSheet.tsx:91`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)) y
+   en las columnas ([`:406`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx));
+2. el POST de notas
+   ([`entries/route.ts:184`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts)), que
+   tiene que **rechazar** una categoría fuera de vigencia aunque le llegue igual — misma disciplina
+   que el guard de publicado que ya está ahí: la pantalla frena, el servidor decide;
+3. el visor de la familia;
+4. el PDF, que es el que queda impreso en la carpeta.
+
+**Tres propiedades salen gratis con esto:**
+
+- **El 1° trimestre no cambia de estructura**, así que el hash y las firmas quedan intactos. La
+  vigencia no es sólo la forma linda de hacerlo: es la que no rompe [FEAT-09](#feat-09).
+- **Ocultar no borra.** El POST sólo elimina los `categoryId` que le llegan con valor vacío, y una
+  categoría fuera de vigencia ya no viaja en el pedido: si alguien alcanzó a cargar una nota por
+  error, la fila sobrevive.
+- **El mismo campo resuelve dar de baja un concepto**, que hoy es imposible. Una categoría con una
+  sola nota cargada no se puede borrar nunca más
+  ([`templates/[id]/route.ts:63`](../src/app/api/reports/templates/[id]/route.ts)) — y está bien que
+  no se pueda, porque borrarla se llevaría notas puestas. Lo que falta es poder decir *"esta va hasta
+  acá"*.
+
+### 2 · Para quién — el ámbito por curso
+
+Confirmado: **hoy no se puede**, y no es un descuido chico. La categoría cuelga de la plantilla
+([`schema.prisma:949`](../prisma/schema.prisma)) y el vínculo con el curso es un puntero. Hay tres
+salidas.
+
+**(a) Sin tocar el schema: copiar la plantilla y cambiar de plantilla a mitad de año.** Al curso que
+no cambia se le deja la vieja; al que sí, se le vincula la copia, y el 2° trimestre se carga ahí.
+Funciona —el 1° queda bajo la plantilla vieja y el 2° bajo la copia, y como no comparten
+`periodIndex` el visor de la familia no se pisa—, pero **funciona de casualidad**: el visor agrupa
+por curso y busca el informe por `periodIndex` **sin mirar `templateId`**
+([`:295`](../src/components/reports/StudentReportViewer.tsx)), así que el día que alguien cargue el
+mismo período bajo las dos plantillas, una tapa a la otra. Además el panel del curso pasa a mostrar
+dos tarjetas, con el 1° colgando de una y el 2° de la otra.
+
+**(b) Ámbito por curso en la categoría.** Una tabla `ReportCategoryCourse`: sin filas, la categoría
+vale para todos los cursos; con filas, sólo para esos. Barato, sin migrar datos, no toca nada de lo
+que hoy funciona. El costo es conceptual: el editor de plantillas del instituto se convierte en una
+matriz de *"esta categoría, desde cuándo y en qué cursos"*, y escala mal si los cursos empiezan a
+divergir en serio.
+
+**(c) Instancia por curso.** Vincular una plantilla **copia** sus categorías al curso, y la planilla,
+el visor y `ReportEntry` pasan a apuntar a la categoría del curso. Es el modelo correcto: la
+plantilla del instituto queda como lo que en realidad es —un modelo, un punto de partida— y el curso
+edita lo suyo sin tocarle el boletín a nadie. Lo caro es la migración: copiar categorías por cada
+curso vinculado y **remapear los `ReportEntry` ya cargados**, sobre una base sin backup.
+
+**Recomendación.** La vigencia primero: es lo que el cliente pidió, no depende de nada y tiene fecha.
+Para el ámbito, la **(b)**, que no bloquea la (c) — cuando la instancia por curso exista, el ámbito
+de la categoría se convierte en la instancia. La **(a) no**: es la que parece gratis y es la que
+después no se desarma.
+
+### Lo que hay que decidir antes de escribir código
+
+- **¿El ámbito es una excepción sobre la plantilla del instituto (b) o una instancia del curso (c)?**
+  Cambia el tamaño de la migración, no el resultado.
+- **¿Qué pasa con una nota cargada antes de la vigencia?** Queda guardada e invisible —y sin poder
+  editarla desde ninguna pantalla—, o hay que mostrársela a alguien.
+- **Si el instituto edita el modelo después, ¿qué pasa con los cursos que ya lo tenían?** No se
+  propaga nada y se ofrece aplicarlo, o se propaga y volvemos al problema de hoy.
+
+### El editor de plantillas no avisa de nada, y esto no lo cubre todo
+
+La vigencia arregla agregar y dar de baja. **Renombrar sigue siendo retroactivo y silencioso:** la
+familia firmó *"Lectura: 8"* y pasa a ver *"Comprensión oral: 8"*, con el hash intacto, porque el
+hash guarda `categoryId`, no el nombre. Eso se tapa metiendo el nombre y el conjunto de categorías
+**adentro del hash**, o —la versión de fondo— guardando en el informe **el snapshot de la estructura
+con la que se publicó**, igual que ya congela los firmantes.
+
+Y hay tres cambios más que el PUT
+([`templates/[id]/route.ts:76`](../src/app/api/reports/templates/[id]/route.ts)) acepta sobre
+plantillas con informes publicados, sin preguntar:
+
+- **cambiar la escala** deja los valores viejos huérfanos: el boletín sigue mostrando *"8.5"* y la
+  planilla del docente lo muestra **en blanco**, porque ese valor no está entre las opciones del
+  `select` ([`:438`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)). El dato no
+  se pierde al guardar, pero es invisible para quien corrige;
+- **cambiar el rango numérico** recalcula la barra de progreso de todos los informes publicados;
+- **cambiar el tipo de período o las etiquetas** renombra períodos ya publicados y, si achica la
+  cantidad, deja los informes con `periodIndex` mayor **sin pestaña** en el visor de la familia.
+
+Lo que sí está frenado hoy: borrar una categoría con notas cargadas y borrar una plantilla con
+boletines ([`:147`](../src/app/api/reports/templates/[id]/route.ts)).
+
+**Alcance:**
+
+1. `activeFromYear` y `activeFromPeriod` en `ReportCategory`, con migración y backfill en el año y
+   período más viejos —que es lo que significa lo que hay hoy—.
+2. **Un solo helper** que conteste si una categoría corre en un `(year, periodIndex)`, y que lo usen
+   los cuatro lugares. Que viva en un lugar, como el `yearlyEnrollmentTargetsWhere` de
+   [FIN-14](#fin-14): cuatro copias del mismo criterio son cuatro lugares donde olvidarse el día que
+   aparezca una pantalla más.
+3. El guard en el POST de notas.
+4. El editor de plantillas: dónde se elige la vigencia, y **el aviso de cuántos informes publicados y
+   firmados toca el cambio** — hoy no dice nada de nada.
+5. El ámbito por curso, según lo que se decida arriba.
+
+**Cuándo.** Antes de que alguien toque esa plantilla, que es lo mismo que decir antes de cargar el 2°
+trimestre. Hasta entonces el pedido está frenado por una razón sana: hacerlo hoy le cambia el boletín
+a las familias que ya firmaron.
+
+**Relacionado.** [FEAT-09](#feat-09) (las firmas, el hash de contenido y el congelamiento de
+firmantes — es lo que esto no puede romper, y de donde sale la idea del snapshot),
+[ARQ-11](#arq-11) (la misma planilla de notas, del lado del costo de guardarla),
+[ARQ-05](#arq-05) (dar de baja una categoría es este mismo campo, no un borrado),
+[FEAT-17](#feat-17) (la misma forma: algo que vale desde un momento y no desde siempre).
+
+---
+
 <a id="bug-08"></a>
 ## BUG-08 · La preinscripción no tiene reglas: duplica alumnos y se la puede inscribir a un curso · **P1** · 🗣️ Pedido del cliente
 
@@ -4477,6 +6583,993 @@ en efectivo a alumnos que tenían saldo.
 **Relacionado.** [FIN-27](#fin-27) (el mismo formulario mostrando un estado que ya no corresponde),
 [FIN-11](#fin-11) (de donde salió), [FEAT-14](#feat-14) (el carrito rehace este flujo entero).
 
+---
+
+<a id="bug-12"></a>
+## BUG-12 · El escáner de QR pisa la observación que escribió la docente · **P3**
+
+**Visto el 2026-08-22**, definiendo la métrica de QR contra manual de [FEAT-11](#feat-11).
+
+**Qué pasa.** El kiosco de QR marca presente y escribe `notes: "Marcado vía QR Kiosk"`
+([`attendance/actions.ts:184`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts) y
+`:193`). En el camino de `update` —el alumno ya tenía fila con estado distinto de `PRESENT`— eso
+**reemplaza la observación que había**. Un *"faltó, avisó la madre"* desaparece cuando el chico
+escanea al llegar tarde, y nadie se entera de que había una nota.
+
+**Al revés no pasa**, y conviene dejarlo escrito para no volver a revisarlo: el guardado masivo de la
+docente **no** borra nada. El formulario precarga la observación existente
+([`AttendanceForm.tsx:40`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx))
+y la vuelve a mandar al guardar (`:78`), así que el `UPDATE` reescribe el mismo valor.
+
+**El problema de fondo es que `notes` es un campo del negocio usado como marca técnica.** Por eso la
+docente ve `Marcado vía QR Kiosk` escrito en el campo de observaciones de cada alumno escaneado: es
+basura visual, y está a una tecla de que alguien la borre.
+
+**Se resuelve junto con la métrica**, no aparte: la columna `Attendance.source` (`MANUAL` | `QR`) de
+la fase 0 de [FEAT-11](#feat-11) es la marca correcta. Con ella, el escáner deja de escribir en
+`notes` y el campo vuelve a ser de la docente. El relleno del pasado sale del mismo texto, sabiendo
+que es aproximado.
+
+**P3** porque no hay plata ni acceso en juego y el caso pide que coincidan un estado previo cargado a
+mano y un escaneo posterior. Pero es pérdida silenciosa de un dato que escribió una persona.
+
+**Resuelto el 2026-08-23** (`6e5f560`), junto con la columna `source` de la fase 0 de
+[FEAT-11](#feat-11), como estaba previsto. El escáner escribe `source` y no toca `notes`; el `UPDATE`
+masivo del parte no toca `source`; y un distintivo `QR` al lado del nombre reemplaza al texto que se
+sacó, para no dejar a la docente sin forma de ver qué marcas vinieron del kiosco.
+
+**Verificado en desarrollo** sembrando la forma vieja sobre una clase real: las tres filas con la
+marca pasaron a `QR` con la observación vacía, la observación de la docente quedó intacta, y después
+de regrabar el parte entero las tres siguieron en `QR`.
+
+**Lo que falta ejercitar, y necesita cámara:** el escaneo sobre un alumno que ya tiene observación
+cargada. Es el caso original de la ficha. Queda para stage.
+
+---
+
+<a id="bug-13"></a>
+## BUG-13 · La secretaria no encuentra cómo cambiar de curso a un alumno, y el botón está · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-02).** Que la secretaria pueda cambiar de curso a un alumno desde la ficha del
+alumno.
+
+**Ya puede, y hace rato.** El botón **Cambiar curso** está en cada tarjeta de curso de la ficha
+([`students/[id]/page.tsx:258`](../src/app/students/[id]/page.tsx)) y
+[`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) autoriza a `["ADMIN", "SECRETARY"]`:
+no le falta ningún permiso. Está en `main` desde la promoción del 19/08, con la etiqueta que se le
+puso el 16/08 en [FIN-23](#fin-23) **justamente porque como lápiz pelado no se lo encontraba**.
+
+**Así que lo que falta no es código: es el dato de con qué se topó ella.** Cuatro hipótesis, en orden
+de probabilidad:
+
+1. **Lo buscó en otro lado.** El único acceso vive dentro de la tarjeta del curso, en la ficha del
+   alumno. Desde el listado del curso lo que hay es desinscribir, que es el camino que le suelta las
+   cuotas al alumno ([FIN-23](#fin-23)) — el que gana cuando el bueno no se anuncia.
+2. **Estaba operando como profesora.** Los controles de la ficha se dibujan por **rol activo**
+   (`isAdmin = ["ADMIN", "SECRETARY"].includes(activeRole)`,
+   [`students/[id]/page.tsx:80`](../src/app/students/[id]/page.tsx)), no por los roles que tiene la
+   cuenta: con el selector en Profesora no hay botón. Es el residuo esperable de [BUG-04](#bug-04) —
+   lo que se arregló es que el rol se revirtiera solo, no que el selector exista.
+3. **El alumno no tenía ninguna inscripción.** Sin tarjeta no hay botón: ahí lo que aparece es
+   *"Inscribir en un Curso"*.
+4. **Quería otra cosa**: mover a un preinscripto ([BUG-08](#bug-08)), o mover a varios de una.
+
+**Qué preguntar, en una sola vuelta:** qué alumno, qué vio en la pantalla —¿la tarjeta del curso con
+el estado, o el cartel de "No inscripto"?— y qué decía el selector de rol de arriba a la derecha.
+
+**Nada se codifica hasta tener eso.** Si es la 1, lo que falta no es un permiso sino que el camino se
+encuentre, y la respuesta es de pantalla. Si es la 2, la ficha se cierra contra [BUG-04](#bug-04) y lo
+que hay que mirar es por qué la secretaria termina operando con otro rol. Si es cualquier otra, recién
+ahí hay un defecto.
+
+**Y si el camino se empieza a usar de verdad, aprieta [FIN-24](#fin-24)**, que es lo que el cambio de
+curso todavía no decide sobre las cuotas ya emitidas.
+
+**Relacionado.** [FIN-23](#fin-23) (de donde salió la etiqueta del botón), [FIN-24](#fin-24),
+[BUG-04](#bug-04), [BUG-08](#bug-08).
+
+---
+
+<a id="bug-14"></a>
+## BUG-14 · Los filtros del calendario no avisan que están filtrando · **P2**
+
+**Visto el 2026-09-02**, probando *"Ver a mis pares"* ([FEAT-07](#feat-07)): entre el clic y el
+calendario nuevo pasa un rato en el que **no pasa nada en la pantalla**. El botón queda igual, la
+grilla queda igual, y no hay manera de saber si el clic entró.
+
+**La causa es de una línea.** Los cuatro filtros de la barra —curso, profesor, aula y pares— hacen
+`router.push()` pelado
+([`ScheduleFilters.tsx:36`](../src/app/schedule/components/ScheduleFilters.tsx)), sin
+`useTransition`: el componente no tiene ningún estado "en curso" que dibujar. La navegación se
+resuelve entera en el servidor y recién vuelve con la pantalla nueva.
+
+**Y el esqueleto de carga existe, pero no aparece.** `/schedule` tiene su `loading.tsx`; lo dispara
+entrar a la ruta, no cambiarle los parámetros a una ruta ya montada. Por eso la primera carga avisa y
+el filtro no — que es también por qué esto no se notó antes.
+
+**Cambio.** `startTransition` alrededor del `router.push`, y usar `isPending` para dos cosas: marcar
+**el control que se tocó** —no un cartel arriba de todo— y bajarle la opacidad a la grilla mientras
+llega la respuesta. Va en los cuatro filtros: el reporte salió del de pares, pero los otros tres
+tienen exactamente el mismo silencio.
+
+**No es sólo cosmético, y por eso es P2:** sin señal, la reacción natural es volver a apretar, y cada
+clic de más es otra navegación entera al servidor. La pantalla se siente más lenta justo cuando ya
+estaba lenta.
+
+**Relacionado.** [ARQ-16](#arq-16) es la otra mitad del mismo reporte —cuánto tarda de verdad— y
+conviene hacerlas en este orden: esto es barato, seguro, y puede disolver la queja sin tocar una sola
+consulta. [FEAT-07](#feat-07), el filtro que lo destapó.
+
+---
+
+<a id="bug-15"></a>
+## BUG-15 · En el celular el listado de alumnos no tiene ninguna acción · **P2**
+
+**Visto el 2026-09-10**, buscando por dónde se borra la preinscripción de un chistoso. La respuesta
+—desde la ficha, con el botón *"Borrar Inscripción"* de la Zona de Peligro
+([`StudentDangerZone.tsx:116`](../src/app/students/[id]/StudentDangerZone.tsx))— **alcanza tal como
+está**: con status `PRE_INSCRIBED` ese botón hace borrado duro, que para una preinscripción falsa es
+lo que corresponde, y **no se agrega un tacho a la pestaña** (decidido el mismo día). Lo que quedó a
+la vista buscándolo es otra cosa.
+
+**La columna de acciones no existe abajo de 1024px.** El `<th>` y el `<td>` llevan
+`hidden lg:table-cell` ([`students/page.tsx:258`](../src/app/students/page.tsx) y `:381`): en un
+celular, o en una tablet en vertical, la columna no se aprieta ni se corta, no se dibuja. Y hay una
+segunda capa debajo, que es la que hace que borrar esa clase no alcance: los botones de las tres
+ramas viven en `opacity-0 group-hover:opacity-100`
+([`StudentListActions.tsx:78`](../src/app/students/components/StudentListActions.tsx)), y en una
+pantalla táctil no hay hover.
+
+**Lo que se pierde no es lo mismo en cada pestaña**, y ahí está la diferencia entre una molestia y un
+callejón sin salida:
+
+| Pestaña | Acciones de la fila | ¿Hay otra puerta? |
+|---|---|---|
+| Pre-inscriptos | link de completar datos, activar, ver ficha | **Sí.** El nombre es link a la ficha, y ahí están el banner de activar ([`page.tsx:203`](../src/app/students/[id]/page.tsx)) y el mismo botón de completar datos ([`StudentProfileView.tsx:105`](../src/app/students/[id]/StudentProfileView.tsx)). Se pierde el atajo, no la función. |
+| Activos | link de completar datos, ver ficha | **Sí**, los mismos dos. |
+| Archivados | restaurar, borrar permanentemente | **No.** |
+
+**Desde un celular, un alumno dado de baja no se puede recuperar.** `restoreStudentAction` se importa
+en un solo lugar, que es la fila del listado, y la Zona de Peligro del archivado no sirve de
+reemplazo: con status `DELETED` el botón cae en `softDeleteStudent`, o sea que vuelve a dar de baja a
+alguien que ya está de baja. La purga permanente está igual. Son las dos únicas acciones del módulo
+con una sola puerta, y es justo la que se cierra en la pantalla chica.
+
+**Cambio.** Dos cosas, y la segunda importa más que la primera:
+
+1. Que las acciones se vean abajo de `lg`. No basta con sacar el `hidden lg:table-cell`: hay que
+   resolver también el `opacity-0` donde no hay hover, o los botones quedan presentes e invisibles,
+   que es peor que ausentes.
+2. Darle a *restaurar* un lugar propio en la ficha del archivado, al lado de donde ya vive el
+   borrado. Sin eso la fila del listado sigue siendo la única puerta, y cualquier pantalla que la
+   esconda —hoy el celular, mañana otra— vuelve a dejar sin salida al alumno dado de baja.
+
+**Por qué P2 y no P1:** no se mueve plata y ninguna pantalla miente, y en la pestaña que destapó esto
+sólo se pierde un atajo. Lo que lo sostiene arriba es Archivados: la ficha es responsive, así que
+**dar de baja sí se puede desde el celular y deshacerlo no** — la asimetría exacta que el borrado
+lógico existe para no tener.
+
+**Relacionado.** [BUG-10](#bug-10) (la otra vez que la tabla no entró en la pantalla),
+[ARQ-14](#arq-14) (la purga que este listado ofrece y que no puede borrar a un alumno real),
+[ARQ-05](#arq-05) (la política de borrado lógico), [FIN-30](#fin-30) (volver después de una baja,
+que tampoco tiene camino propio).
+
+---
+
+<a id="feat-20"></a>
+## FEAT-20 · Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta · **P2**
+
+**Planteado el 2026-09-09.** El que completa el formulario público ve una pantalla que le dice
+*"Pronto nos pondremos en contacto"* y ahí termina todo. No le queda nada: ni una constancia de que su
+formulario llegó, ni un lugar donde mirar. Del otro lado, el instituto se entera por la campana
+([`inscription/actions.ts:95`](../src/app/inscription/actions.ts)), que exige que alguien entre a la
+plataforma ese día. **Entre las dos puntas hay un silencio que puede durar una semana**, y quien lo
+sufre es el que menos puede hacer algo al respecto.
+
+**El canal de correo ya está montado** desde [FEAT-05](#feat-05): proveedor elegible, remitente
+resuelto por instituto y el par plantilla + copy con HTML y texto plano saliendo del mismo lugar. Esto
+es una plantilla y una llamada. **El trabajo está en las decisiones, no en el código**, y por eso esta
+ficha es mayormente decisiones.
+
+### Es un acuse, no una copia de la ficha
+
+El pedido arrancó como *"que se le mande un correo con los datos que puso en el formulario"*. **Se
+descartó**, y es la decisión más importante de acá.
+
+El alumno queda `PRE_INSCRIBED`: es un aspirante esperando respuesta, **no está inscripto**. Un correo
+que devuelva la ficha completa se lee como una confirmación de vacante y le crea al instituto una
+expectativa que después tiene que desarmar. Y los datos no le sirven a nadie: la persona los acaba de
+tipear.
+
+**El cuerpo lleva el nombre del alumno y nada más.** El nombre sí hace falta — una madre que anota a
+dos hijos tiene que saber de cuál es este correo. El DNI, el nivel, el domicilio y el teléfono no
+entran.
+
+### Por qué el DNI no entra, aunque sea lo que la persona escribió
+
+Porque en este sistema **el DNI es media credencial**. El alumno entra con DNI más contraseña, la
+preinscripción le escribe `"inscripcion123"` —fija y escrita en el repositorio, [SEC-06](#sec-06)— y
+el login no filtra por estado, así que un preinscripto entra igual ([SEC-12](#sec-12)).
+
+La dirección de destino **no está verificada**: la escribió quien llenó el formulario. Si está mal
+tipeada, o si la puso a propósito de un tercero, el que recibe el correo se queda con la única pieza
+que le faltaba.
+
+**Esto no ata FEAT-20 a SEC-12**: justamente por no llevar el DNI, el acuse se puede hacer hoy y SEC-12
+se arregla cuando toque.
+
+### El nivel tampoco entra, por otro motivo
+
+Los tutores no saben a qué nivel se anota el chico — eso lo asigna el instituto. Ponerlo invita a una
+pregunta que el correo no puede contestar.
+
+De paso queda anotado que **el nivel se guarda como ID y no como nombre** (el `<select>` manda
+`level.id`, [`RegistrationForm.tsx:247`](../src/app/inscription/RegistrationForm.tsx)). Las pantallas
+lo resuelven, pero la notificación de la campana no: hoy la secretaria lee `Nivel: cmf3x8k2...`
+([`inscription/actions.ts:89`](../src/app/inscription/actions.ts)). **Es un bug aparte y chico**, no
+lo arregla esta ficha, pero está a la vista de quien la lea.
+
+### A quién le llega
+
+**Al alumno y al tutor 1, a los dos, los que tengan correo.** Cuando el alumno es menor los tutores
+son los que pagan el curso, así que el tutor no puede quedar afuera; y un alumno de 15 con correo
+propio tampoco. Hay que **normalizar y descartar repetidos**: es muy común que la madre ponga su
+misma dirección en el "Email Personal" del chico y otra vez en el suyo, y sin eso le llegan dos
+correos idénticos. `destinatariosDeAlumno`
+([`forgot-password/actions.ts:75`](../src/app/forgot-password/actions.ts)) ya hace exactamente eso.
+
+**El texto va en tercera persona** — *"Recibimos la preinscripción de Tomás Ferreyra a Modern English
+School"*— para que le cierre a los dos lectores. Eso ahorra toda la maquinaria de `esParaOtro` que sí
+necesitó el correo de recuperación.
+
+**Al tutor 2 no se le manda.** En el formulario está rotulado "Segundo Contacto de Emergencia", y un
+acuse no es una emergencia.
+
+### El correo no se vuelve obligatorio
+
+Se evaluó exigirlo —al alumno si es adulto, al tutor 1 si es menor— y **se descartó**. Los campos que
+el negocio pide son opcionales en el schema a propósito, y trabar el formulario le cobra el precio a
+la familia que menos puede pagarlo: la que no tiene correo hoy se anota igual y el instituto la llama.
+Después del cambio se trabaría en la pantalla y **el instituto no se enteraría de que existió**.
+
+En su lugar, tres cosas:
+
+1. **Un cartel al apretar enviar**, sólo si el campo que corresponde quedó vacío, invitando a
+   completarlo y ofreciendo mandar igual. Cuatro condiciones para que no termine siendo la obligación
+   con pasos de más:
+   - **No es un muro**: las dos salidas igual de visibles. Si "enviar sin correo" queda chiquito y
+     gris al lado de un botón grande, es una obligación disfrazada.
+   - **Aparece una sola vez.** Si vuelve a preguntar, la persona cree que el formulario está roto y
+     abandona — el peor de los dos mundos.
+   - **"Agregar mi correo" lleva el foco al campo.** En un celular ese campo quedó ocho pantallas más
+     arriba; si sólo cierra el cartel, la mitad no lo encuentra y manda igual. Es la diferencia entre
+     que el patrón convierta o no.
+   - **Apagado en `complete-profile`**, que usa el mismo componente
+     ([`page.tsx:75`](../src/app/complete-profile/[token]/page.tsx)): ahí la persona ya es alumno y no
+     hay ningún acuse que perder.
+2. **Texto de ayuda en el campo, en positivo** — *"Acá te confirmamos que tu inscripción llegó"*—, que
+   da una razón para completarlo en vez de una penalidad por no hacerlo. **Reemplaza** al renglón de
+   advertencia que se había pensado primero: anunciar el aviso antes de darlo lo vuelve repetitivo.
+3. **Que la campana lo diga.** Cuando no hay ninguna dirección, el cuerpo de la notificación que el
+   instituto ya recibe suma `· sin correo de contacto`. **Sin esto el cartel no sirve de nada**: la
+   familia sin correo es exactamente la que se queda en el silencio que esta ficha viene a cerrar, y
+   avisarle a ella que no va a recibir nada no hace que alguien la llame. La secretaria abre la
+   campana, ve cuáles hay que llamar por teléfono, y el vacío se cierra por otra vía.
+
+### El formulario es público, y eso lo vuelve un botón de mandar correo
+
+Cualquiera puede escribir la casilla de un tercero y texto libre en el nombre, y sale un correo
+firmado con el dominio del cliente. Las quejas de spam caen sobre `senderEmail` —**el mismo dominio
+por el que sale la recuperación de contraseña**— y degradan la entrega de todo junto.
+
+Juega a favor algo que no es obvio: el correo **sólo sale cuando se crea el alumno**, y
+`@@unique([dni, instituteId])` bloquea el DNI repetido. Para mandar dos veces a la misma víctima hay
+que inventar dos DNIs, y **cada envío deja una fila basura en la pestaña de preinscriptos**. El abuso
+se acumula donde el instituto lo ve.
+
+**Lo que se hace:**
+
+- **Cuerpo sin texto libre más allá del nombre.** Sin eso el correo no sirve como vehículo de mensaje:
+  el que lo recibe ve un acuse genérico de un instituto.
+- **Tope por casilla de destino.** Antes de mandar, contar cuántas preinscripciones de las últimas 24 h
+  de este instituto llevan esa misma dirección; pasado el tope, la inscripción **se guarda igual** pero
+  el correo no sale. Una consulta, sin tabla nueva.
+
+**Lo que no se hace, y por qué:**
+
+- **Límite por IP.** Obligaría a guardar la IP de cualquiera que pase por la pantalla, que es un dato
+  personal que hoy el sistema no guarda en ningún lado. Es el mismo criterio ya razonado en
+  [`passwordReset.ts:70`](../src/lib/passwordReset.ts).
+- **Captcha (Turnstile).** Corta la automatización, que es lo único que lleva esto a volumen dañino,
+  pero es una dependencia y una clave más en dos proyectos de Vercel. **Con un solo instituto y unas
+  pocas inscripciones por semana el atacante no gana nada.** Queda anotado para el día que la pestaña
+  de preinscriptos aparezca con basura.
+- **Mandar recién cuando el instituto acepta.** Cierra el abuso del todo porque cada envío lo aprueba
+  una persona, pero mata el sentido: el punto era avisar que el formulario llegó.
+
+### El que ya estaba registrado
+
+Hoy ese camino devuelve *"El DNI del alumno ya se encuentra registrado en este instituto"*
+([`inscription/actions.ts:113`](../src/app/inscription/actions.ts)), lo que convierte al formulario en
+una forma de averiguar quién es alumno ahí. **Esta parte cambia el comportamiento de algo que ya está
+en producción**, no agrega algo nuevo al lado, y es la más delicada de la ficha.
+
+- **A la persona, la misma pantalla y el mismo correo que si fuera nueva.** No se le miente: su
+  formulario llegó de verdad. Y el que estaba probando DNIs no aprende nada, porque la respuesta es
+  idéntica en los dos casos.
+- **Al instituto, la verdad completa por la campana**, distinguiendo cuál de los tres estados es. Los
+  tres piden cosas distintas: el `ACTIVE` probablemente quiere otra cosa, el `DELETED` quiere volver
+  —eso es [FIN-30](#fin-30)—, y el `PRE_INSCRIBED` está ansioso porque nadie le contestó, que es un
+  problema del instituto y no suyo.
+
+La persona no recibe la explicación: recibe la llamada. La explicación va a quien puede resolverla.
+
+> **Corrección a [BUG-08](#bug-08) — 2026-09-09.** Esa ficha dice que `Student.dni` no tiene `@unique`
+> y que por eso la preinscripción duplica alumnos. **Quedó viejo**: el schema hoy tiene
+> `@@unique([dni, instituteId])` y `@@unique([email, instituteId])`, y la acción ya atrapa el `P2002`.
+> El duplicado no se crea. Lo que sigue abierto de BUG-08 es qué se le contesta a cada lado, que es
+> justamente lo que resuelve este bloque.
+
+### Alcance
+
+**Sólo el formulario público.** El alta a mano del admin
+([`students/new/actions.ts`](../src/app/students/new/actions.ts)) y la actualización por token de
+`complete-profile` quedan afuera. La del admin es el lugar natural de un correo de bienvenida con el
+acceso, pero **ése es otro correo** y se cruza con [SEC-06](#sec-06) y [SEC-11](#sec-11).
+
+### Relacionado
+
+[FEAT-12](#feat-12) es el correo espejo —el aviso **al instituto**— y **sale en la misma pasada**: se
+engancha en el mismo punto de la misma función, con la misma infraestructura. [FEAT-05](#feat-05)
+puso el canal. [BUG-08](#bug-08) define qué es un preinscripto y comparte el bloque del duplicado.
+[SEC-12](#sec-12) salió a la superficie analizando esta ficha. [SEC-06](#sec-06) es lo que vuelve
+adivinable el acceso del aspirante.
+
+---
+
+<a id="feat-21"></a>
+## FEAT-21 · Firma de la dirección y del profesor en el boletín · **P2** · 🗣️ Pedido del cliente
+
+**Pedido (2026-09-10).** Que el profesor tenga su firma en el boletín, y la dirección también. Firman
+**una vez y se replica en todos los alumnos de ese informe**.
+
+**Punto de partida: hoy no firma nadie del instituto.** En el PDF son dos rayas con una leyenda debajo
+—*"Prof. X"* y *"Firma de la Institución"*—
+([`StudentReportViewer.tsx:210`](../src/components/reports/StudentReportViewer.tsx)), y en pantalla ni
+las rayas. La firma de conformidad de las familias ([FEAT-09](#feat-09)) es **otra cosa** y no se
+toca: aquélla es un acuse de lectura, ésta es del lado del instituto.
+
+### Qué significa cada firma, que no es lo mismo
+
+- **La dirección revisa.** La dueña ya lee las notas y los comentarios antes de que salgan; hoy lo
+  hace fuera del sistema. Su firma dice *"revisé esto"* — es una revisión **del trabajo de otro**.
+- **El profesor firma autoría.** Las notas son suyas. No revisa nada: declara que son las que puso.
+- **Y de yapa, la firma del profesor es un aviso.** En el circuito real el profesor le avisa a la
+  dueña que la tanda está lista para firmar. Esa firma *es* ese aviso, así que la lista de pendientes
+  de ella no es "todo lo sin firmar" sino **"firmadas por el profesor y todavía no por mí"**. Sale
+  gratis y es lo que le ordena los 30 cursos.
+
+**La unidad que se firma es la tanda**: curso + plantilla + año + período. En la base **no existe como
+fila**: son N `StudentReport` que comparten esas cuatro claves. Es lo que agrupa la planilla del
+docente y lo que ya agrupa la pantalla de firmas
+([`signatures/page.tsx:59`](../src/app/reports/signatures/page.tsx)).
+
+### Decidido con el cliente — 2026-09-10
+
+| | |
+|---|---|
+| **1 · No traba la publicación** | Se publica sin firma de nadie. Motivo del cliente: se está estrenando el mecanismo y conoce a la gente que lo usa. **La traba queda para la etapa 2** |
+| **2 · Editar una nota tira la firma de la dirección, y sólo en ese alumno** | La del profesor no se cae |
+| **3 · La firma de dirección es del cargo** | Cualquier ADMIN firma y el boletín imprime su nombre. La secretaría no firma |
+| **4 · Se firma hacia atrás** | Dirección, profesores y tutores |
+| **5 · No hay "firmar todo lo pendiente"** | Firma adentro de cada planilla, con las notas delante |
+| **6 · Los profesores también firman hacia atrás** | Son 7 u 8 firmas cada uno, no 30: firman por informe |
+
+**Por qué sólo se cae la de ella (decisión 2).** Si el profesor corrige una nota que él mismo puso,
+sigue siendo el autor: no hay nada que volver a declarar, y hacerlo refirmar es un trámite sin
+contenido. Ella en cambio revisó *ese* contenido, y si cambió, no lo revisó. **Y sólo en el alumno
+tocado**: le cambiaron la nota a una alumna, las otras 23 sí las revisó y no hay razón para
+castigarlas. Tirar la tanda entera por un typo es desproporcionado.
+
+**Cómo se entera ella, que es lo que hace que la decisión 2 signifique algo.** Tres momentos, porque
+cada uno atrapa un caso que los otros no:
+
+1. **Antes** — aviso al profesor en la planilla: *"este informe ya lo firmó la dirección; si guardás,
+   su firma se cae para los alumnos que modifiques"*. Avisa, no traba, siguiendo la decisión 1. Es lo
+   único que **evita** el problema.
+2. **En el momento** — notificación por la campanita, que ya existe (`NotificationBell`,
+   `createNotificationForUsers`). **Se dispara en la transición** de firmada a caída, no en cada
+   guardado: cinco correcciones seguidas mandan un aviso, no cinco.
+3. **Después** — la pantalla de firmas, donde ve el conjunto y resuelve.
+
+**Y un aviso al profesor cuando el ADMIN edita un informe publicado.** Su firma no se cae, pero se
+entera. Razonamiento del cliente: en general va a ser la confirmación de que el cambio que él pidió se
+hizo; **el caso que justifica el aviso es el otro** — que el administrador tenga un vecino cursando,
+le parezca que merece más nota y la suba sin permiso. Sin el aviso, la firma del profesor queda sobre
+una nota que no puso y él nunca se entera.
+
+**El candado que ya existe cubre sólo la mitad.** Un informe publicado lo toca únicamente el ADMIN, en
+la pantalla ([`ReportGradeSheet.tsx:248`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx))
+y en el servidor con 403
+([`entries/route.ts:136`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts)). Pero
+como la firma **no traba** (decisión 1), ella va a firmar tandas todavía sin publicar —que es el orden
+natural: el profesor carga, ella revisa, después se publica—, y ahí el profesor sigue editando sin
+restricción. Por eso la detección tiene que ser del sistema y no de que ella lo note.
+
+**Los tutores hacia atrás son la parte que más interesa (decisión 4), y ya está resuelta.** El script
+[`backfill-report-signers.js`](../scripts/backfill-report-signers.js) le agrega hash y lista de
+firmantes a los informes publicados antes de que existiera la firma, sin pisar `publishedAt`,
+resolviendo la edad con la fecha original y sin disparar el aviso de publicación. **Se corre cuando
+FEAT-09 salga a producción.** Para dirección y profesor firmar hacia atrás no necesita nada: entran a
+la planilla vieja y firman.
+
+**Por qué no un botón de firmar todo (decisión 5).** Son 30 cursos y la primera tanda va a ser larga
+—el cliente lo sabe y lo acepta—, pero un botón que firma 30 tandas de un click convierte la revisión
+en un trámite y la firma vuelve a no decir nada, que es justo lo que se estuvo cuidando. Lo que sí: la
+pantalla de firmas lista lo pendiente, linkea a cada planilla, **devuelve a la lista** después de
+firmar y muestra el avance. Con 30 cursos eso es la diferencia entre una tarde y tres.
+
+**La transición, para que ningún boletín ya emitido se vea peor (decisión 6).** Hoy el PDF imprime
+siempre las dos rayas con los nombres. La regla nueva es *sin firma no se imprime la línea*, pero
+aplicada a todo, los boletines que ya salieron **perderían** algo que hoy tienen. Entonces: **una
+tanda anterior a esta funcionalidad sigue imprimiendo la raya y el nombre hasta que se firme**; cuando
+la firman, la firma reemplaza la línea. Las tandas nuevas, sin firma no llevan línea.
+
+### El modelo
+
+Tabla nueva, `ReportBatchSignature`: `instituteId`, la clave natural de la tanda
+(`courseId` + `templateId` + `year` + `periodIndex`), `signerRole` —`"ADMIN"` o `"TEACHER"`, como
+`ThreadParticipant.actingRole` ya guarda el rol activo—, `userId`, `signerName`, `signedAt`,
+`batchHash` y `strokeData`. Con `@@unique([courseId, templateId, year, periodIndex, signerRole])`:
+una firma por rol y por tanda, y volver a firmar la reemplaza.
+
+**No puede ser una fila en `Signature`.** La pantalla del instituto hace
+`report.signatures.length > 0` ([`signatures/page.tsx:77`](../src/app/reports/signatures/page.tsx)):
+la firma del profesor daría por firmada a la familia y el porcentaje de FEAT-09 pasaría a mentir.
+
+**Por qué la clave natural y no una tabla `ReportBatch` con FK.** Es el modelo correcto y obligaría a
+backfillear todos los `StudentReport` existentes. Así es puramente aditivo: **una tabla nueva, cero
+columnas tocadas, cero filas migradas** — importa porque el `build` corre `migrate deploy`. La tanda
+como entidad real queda como refactor posterior, y ese día también le sirve a [FEAT-19](#feat-19).
+
+**La foto de lo firmado es un mapa por alumno, no un hash de la tanda.** El enunciado original decía
+`batchHash`, un sha256 sobre la lista ordenada; **al implementar no alcanza**, y por la decisión 2:
+un hash único sabe que *algo* cambió y no *a quién*, que es exactamente lo que hay que responder para
+que la firma se caiga sólo en el alumno tocado. Va entonces
+`contentHashes: { studentId: contentHash }`. Un alumno que no está en la foto —se inscribió después—
+tampoco está cubierto, que es lo correcto: la persona que firmó nunca vio sus notas.
+
+**Lo que habilita todo lo anterior: mantener `contentHash` también en los informes sin publicar.** Hoy
+sólo se escribe para los publicados
+([`entries/route.ts:231`](../src/app/api/courses/[id]/reports/[templateId]/entries/route.ts)), y sin
+eso no hay contra qué comparar en la mitad donde la firma de ella tiene más sentido. Son dos líneas.
+`lastEditedAt` / `lastEditedById` siguen siendo sólo de lo publicado, que es lo que audita ediciones
+posteriores. No rompe el filtro de la pantalla de firmas, que pide `publishedAt` **y** `contentHash`,
+pero hay que corregir el comentario de
+[`publish/route.ts:150`](../src/app/api/courses/[id]/reports/[templateId]/publish/route.ts), que
+documenta lo contrario.
+
+**El trazo se copia en la firma, no se lee de la referencia.** Mismo patrón que `Signature.strokeData`:
+si ella retoca su firma, los boletines viejos no se reescriben.
+
+**El nombre del firmante se congela.** Hoy el PDF lee `course.teacher.name` en vivo
+([`StudentReportViewer.tsx:151`](../src/components/reports/StudentReportViewer.tsx)), así que cambiar
+el profesor del curso reescribe el nombre en boletines ya emitidos. Es **anterior a esta ficha**; con
+firma se imprime el nombre congelado y al menos deja de empeorar.
+
+### Alcance
+
+1. **Pantalla "mi firma" en el perfil.** Es donde el profesor y la dirección registran la suya, y
+   cierra un hueco de FEAT-09: la interfaz ya se la promete al tutor
+   ([`ReportSignatureBox.tsx:96`](../src/components/reports/ReportSignatureBox.tsx)) y `/profile` no
+   la tiene; `getMySignatureReference` quedó escrita y sin usar. **FEAT-09 todavía no está en
+   producción, así que es el momento de cerrarlo.**
+2. La tabla, `reportBatchHash()` y el `contentHash` en borradores.
+3. **Firmar desde la planilla**, que ya pueden abrir ADMIN, SECRETARY y el docente del curso
+   ([`page.tsx:45`](../src/app/courses/[id]/reports/[templateId]/page.tsx)). Autoriza por rol activo;
+   la secretaría no firma.
+4. **Dibujar la firma** en pantalla y en el PDF. `strokeToPath`
+   ([`signatureCompare.ts:148`](../src/lib/reports/signatureCompare.ts)) ya devuelve coordenadas
+   normalizadas: en pantalla es un `<path>`, en el PDF son segmentos.
+5. **La pantalla de firmas**: estado por tanda, las tandas sin publicar que tengan firma del personal
+   —hoy quedan fuera del filtro—, el orden por "listas para firmar" y el avance.
+6. Las notificaciones: a ella cuando su firma se cae, al profesor cuando el ADMIN edita.
+7. **Retención.** El trazo del personal es el mismo tipo de dato que el del tutor: se vacía con la
+   regla que FEAT-09 ya definió, y el boletín viejo degrada a la raya con el nombre impreso.
+
+**En el texto no puede decir "firma digital"**, por lo mismo que se cuidó en FEAT-09: es una firma
+ológrafa digitalizada, y la Ley 25.506 usa ese término para otra cosa.
+
+### Lo que no se toca
+
+La firma de conformidad de las familias, el flujo de publicación y el porcentaje de firmas.
+
+### Etapa 2
+
+La traba: sin firma de la dirección no se publica. Y enchufar `specialFields.teacherSignature`
+([`ReportTemplateManager.tsx:120`](../src/features/reports/ReportTemplateManager.tsx)), que hoy se
+configura en el editor de plantillas y **nadie lee** — es configuración muerta anterior a esta ficha.
+
+### Implementado — 2026-09-10
+
+Migración `20260910120000_add_report_batch_signatures`: **una tabla nueva, cero columnas tocadas,
+cero filas migradas.** Lo construido:
+
+- [`ReportBatchSignature`](../prisma/schema.prisma) con la clave natural de la tanda y el mapa de
+  hashes por alumno.
+- [`batchSignatures.ts`](../src/lib/reports/batchSignatures.ts) con las reglas puras —qué cubre una
+  firma, qué alumnos se le cayeron, qué tanda es anterior a la funcionalidad— y
+  [`batchSignatureQuery.ts`](../src/lib/reports/batchSignatureQuery.ts) con el cruce, que **no
+  devuelve las firmas caídas**: para el boletín es como si no estuvieran.
+- [`signReportBatchAction`](../src/app/actions/batchSignatures.ts), con `unsign` para sacar la
+  propia. Autoriza la de dirección por rol activo y la del docente por ser el del curso.
+- **Firmar una tanda vieja resuelve sus firmantes.** Escribirle el hash a un informe publicado antes
+  de que la firma existiera es lo que lo mete en la pantalla de firmas de las familias, y sin
+  firmantes entraría mostrando a **todos** los alumnos como *"sin firmante"*. La acción los resuelve
+  con la **fecha original de publicación**, igual que el script. El script sigue haciendo falta para
+  habilitar todo de una; esto saca la dependencia del orden, que era la trampa: firmar antes de
+  correrlo ensuciaba la pantalla.
+- El panel de firma en la planilla
+  ([`BatchSignaturePanel.tsx`](../src/app/courses/[id]/reports/[templateId]/BatchSignaturePanel.tsx)),
+  **arriba y no en la barra del final**: con treinta cursos, que el botón esté sin scrollear es la
+  diferencia entre una tarde y tres. Ahí va también el aviso al docente de que guardar tira la firma
+  de la dirección.
+- La pantalla "Mi firma" en el perfil
+  ([`SignatureManager.tsx`](../src/components/reports/SignatureManager.tsx)), que cierra la promesa
+  de FEAT-09 y es por donde el personal registra su trazo. Con la referencia puesta, firmar una
+  tanda es un click.
+- El boletín dibuja las firmas en pantalla y en el PDF —vectorial, punto por punto, sin pasar por
+  imagen— con el corte `BATCH_SIGNATURES_SINCE` para que las tandas viejas conserven la raya.
+- La pantalla de firmas suma las tandas **sin publicar** que tengan firma del instituto, el estado
+  por tanda, y el orden que sale del circuito real: primero las que el docente ya firmó y ella no.
+- Los dos avisos, en [`batchSignatureNotices.ts`](../src/lib/reports/batchSignatureNotices.ts).
+
+**Un arreglo de FEAT-09 que salió en el camino.** El alumno de 20 o más **no podía firmar su propio
+informe**: `/academics` monta el visor sin pasarle `viewer`
+([`StudentAcademicsView.tsx`](../src/app/dashboard/components/StudentAcademicsView.tsx)), así que el
+cuadro de firma no aparecía nunca — y a él no le firma nadie más, con lo cual su informe quedaba
+pendiente para siempre. Corregido acá porque FEAT-09 todavía no salió a producción.
+
+**Un docente sólo puede firmar los cursos que tiene hoy.** El permiso sale de `course.teacherId`,
+que es el docente **actual**. Si un curso cambió de profesor durante el año, el que dictó el 1°
+trimestre no puede entrar a firmarlo y el que está ahora lo firmaría con su nombre sobre notas que
+no puso. No se resolvió: `StudentReport` no guarda quién lo dictó, y arreglarlo de verdad es darle
+al informe su propio docente. **Mientras tanto, conviene mirar si hubo cambios de docente antes del
+operativo de firma hacia atrás.**
+
+**Qué falta verificar en stage.** Con la dueña: firmar una tanda sin publicar, publicarla y
+confirmar que la firma sale en el PDF de la familia. Con un docente: que su firma aparezca en la
+lista de ella como "lista para firmar". Editar una nota de una tanda firmada y confirmar las tres
+cosas: que el boletín de **ese** alumno pierde la firma de dirección, que los demás la conservan, y
+que a ella le entra un solo aviso. Y que un boletín viejo sin firmar siga imprimiendo la raya con el
+nombre como antes.
+
+---
+
+<a id="bug-16"></a>
+## BUG-16 · El alumno y el tutor no pueden descargar el recibo de un pago · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-09-10).** Los alumnos y los tutores no pueden descargar los recibos de sus pagos.
+
+**El botón está bien; la acción que llama los echa.** `ReceiptDownloadButton` le pide los datos a
+`getReceiptDataAction`, y esa acción entra por el `getAuthAndInstitute` del módulo de pagos, que exige
+`requireRole(["ADMIN", "SECRETARY"])` ([`payments/actions.ts:18`](../src/app/payments/actions.ts)).
+`requireRole` corta dos veces ([`authz.ts:141`](../src/lib/authz.ts)): primero por `ctx.isStudent`,
+que voltea al alumno, y después por el rol activo, que voltea al tutor. Vuelve
+`{ success: false, error: "No autorizado" }` y el botón lo muestra tal cual en un `alert`
+([`ReceiptDownloadButton.tsx:60`](../src/components/financials/ReceiptDownloadButton.tsx)).
+
+**El síntoma exacto es un cartel que dice "No autorizado".** Si lo que vieron fue otra cosa —que no
+pasa nada, o que baja un PDF roto— hay un segundo problema y esta ficha no lo cubre; ver el último
+bloque.
+
+### Son dos bugs con historias distintas
+
+**El del tutor es una regresión del 2026-08-10**, commit `782f9f3`. Antes el chequeo era
+`user.role !== "SUPERADMIN" && user.instituteId`: cualquier tutor pasaba y el recibo bajaba. La
+migración a `requireRole(["ADMIN", "SECRETARY"])` le cerró la puerta.
+
+**Y no fue un descuido.** [SEC-03](#sec-03) lista textualmente `getReceiptDataAction` entre las 16
+acciones a cerrar. Pero las otras 15 escriben plata —cobran, anulan, generan cuotas, borran— y ésta es
+la única que es una **lectura que dos portales de fuera del instituto ya estaban usando**. Se fue con
+el lote.
+
+**El del alumno nunca funcionó.** [`/administration`](../src/app/administration/page.tsx) existe desde
+el 2026-04-18 con el botón puesto, y el helper viejo buscaba
+`prisma.user.findUnique({ where: { email } })`: los alumnos viven en `Student`, no en `User`, así que
+siempre devolvió `null`. Es el golpe de [ARQ-15](#arq-15), el mismo de [BUG-01](#bug-01) — lo que
+cruza las dos tablas de identidad hay que construirlo dos veces, y lo que se construye una sola vez
+deja afuera a una de las dos.
+
+**A quién le pega hoy:** a todos los tutores, en el histórico de
+[`guardian/payments`](../src/app/guardian/payments/page.tsx), y a los alumnos **mayores de edad** en
+`/administration`. Los menores no llegan: la pantalla los redirige y el `Navbar` ni les dibuja el
+acceso.
+
+### Sumar los dos roles a la lista es el arreglo equivocado
+
+Si a `getReceiptDataAction` se le agregan `GUARDIAN` y `STUDENT`, el único filtro que queda es el del
+instituto ([`payments/actions.ts:1089`](../src/app/payments/actions.ts)). Con un solo instituto eso no
+filtra nada: cualquier tutor logueado, mandando un `paymentId` que no es suyo, se baja el recibo de
+otra familia con nombre, domicilio e importe. Un server action es un POST como cualquier otro y el
+`paymentId` viaja en el cuerpo — el mismo argumento con el que se escribió SEC-03, ahora en el otro
+sentido.
+
+**El corte no es por rol, es por vínculo.** Tres caminos sobre el mismo pago:
+
+| Quién | Qué tiene que ser cierto |
+|---|---|
+| ADMIN / SECRETARY | `payment.fee.instituteId === auth.instituteId` — lo de hoy |
+| STUDENT | `payment.fee.studentId === ctx.userId` |
+| GUARDIAN | hay un `GuardianStudentLink` entre `ctx.userId` y `payment.fee.studentId` |
+
+**Cambio.** Que la acción entre por `getAuthContext()` en vez de por el helper de pagos y decida con
+esa tabla. Conviene que **viva fuera de `payments/actions.ts`**: ese módulo es la caja, y todo lo que
+está adentro asume `["ADMIN", "SECRETARY"]`. Dejar una excepción en el medio es invitar al próximo
+barrido a repetir exactamente esto.
+
+### Lo que esta ficha no arregla
+
+El PDF se arma entero en el navegador y `generatePaymentReceipt` envuelve todo en un `try` que sólo
+hace `console.error` ([`generateReceipt.ts:226`](../src/lib/pdf/generateReceipt.ts)): si falla algo
+adentro, el botón deja de girar y no pasa nada más. Desde afuera se ve igual que este bug, y no deja
+ni un rastro que se pueda pedir. No es la causa del reporte, pero es lo que lo va a tapar la próxima
+vez.
+
+**Y ya hay algo cayéndose ahí adentro, en silencio: el logo.** `institute.logoUrl` es una URL de
+Cloudinary y se la pasa como está a `doc.addImage`, que no busca nada por la red — sólo acepta base64,
+un data URI o un elemento del DOM. Tira, lo agarra el `catch` de al lado y el recibo sale con el
+nombre del instituto en texto. **Nadie se entera de que el logo nunca estuvo**, y el que emite el
+recibo tampoco, porque el fallback se ve prolijo. Arreglarlo es leer la imagen antes de armar el PDF y
+pasarla convertida.
+
+**Relacionado.** [SEC-03](#sec-03), de donde salió. [ARQ-15](#arq-15) y [BUG-01](#bug-01), la
+identidad partida en dos tablas. [FIN-19](#fin-19) toca el mismo recibo por el otro lado: el concepto
+que no nombra el curso. [ARQ-09](#arq-09), los errores que no se registran en ningún lado.
+
+---
+
+<a id="bug-17"></a>
+## BUG-17 · Las clases que cargan las docentes no aparecen en el calendario · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-09-13).** Las profesoras cargaron las clases de sus cursos y en el calendario no se
+ven. La captura que llegó muestra las 61 tarjetas de la semana, todas en gris punteado y todas
+diciendo «Pendiente».
+
+**La grilla dibujaba las siete columnas corridas un día.** En la captura, la columna rotulada **LUNES
+llevaba la fecha 15/9**, que es martes. Las tarjetas estaban bien puestas —van por `dayOfWeek` del
+horario—, pero la **fecha** contra la que cada columna buscaba su clase era la del día siguiente. La
+tarjeta de un curso de lunes preguntaba si había clase el martes. Nunca la hay.
+
+### La causa: dos puntas calculando el mismo lunes con reglas distintas
+
+El servidor sacaba su lunes con `date-fns` y `weekStartsOn: 1`
+([`schedule/page.tsx:151`](../src/app/schedule/page.tsx)), y la grilla sacaba el suyo con dayjs
+([`WeeklyGridView.tsx:52`](../src/app/schedule/components/WeeklyGridView.tsx)):
+
+```js
+const startOfViewWeek = dayjs(currentDate).startOf('week').add(1, 'day');
+```
+
+Ese `.add(1, 'day')` compensaba que dayjs arranca la semana **en domingo**. Y es cierto — mientras el
+locale sea el de fábrica:
+
+| locale de dayjs | `weekStart` | Qué hace la línea |
+| --- | --- | --- |
+| `en` (fábrica) | 0 · domingo | De lunes a sábado da el lunes correcto. **Los domingos** `startOf('week')` devuelve ese mismo domingo y el `+1` salta al lunes **siguiente**: la grilla se corre una semana entera. |
+| `es` | 1 · lunes | `startOf('week')` ya devuelve el lunes, el `+1` sobra y la grilla se corre **un día, todos los días**. |
+
+**El locale de dayjs es global de la pestaña, y lo pone otra pantalla.** `dayjs.locale("es")` se
+ejecuta al cargarse [`StudentDashboardV2View.tsx:22`](../src/app/dashboard/components/StudentDashboardV2View.tsx)
+y [`StudentAcademicsView.tsx:32`](../src/app/dashboard/components/StudentAcademicsView.tsx), que lo
+necesitan para escribir los meses en castellano. Son los dos únicos lugares del repo que lo tocan. El
+calendario nunca lo pidió: se lo encuentra puesto.
+
+En el build se ve el reparto:
+
+```
+dayjs.locale("es") aparece solo en:   app/dashboard/page-*.js
+                                      app/academics/page-*.js
+chunks de WeeklyGridView:             0 ocurrencias
+```
+
+**Por eso el bug parecía depender del dispositivo, y no depende.** Es el mismo JavaScript en Windows,
+Android e iPhone. Lo que cambia es por dónde se entró al calendario **en esa pestaña**:
+
+| Cómo se llega a `/schedule` | locale | Columna LUNES | Qué se ve |
+| --- | --- | --- | --- |
+| Login → Inicio → Calendario | `es` | 15/9 | 0 clases, todo «Pendiente» |
+| Entrada directa: marcador, recarga dura, ícono del PWA | `en` | 14/9 | las clases aparecen |
+
+Es estado, no configuración. Una recarga dura lo "arregla" y volver a pasar por Inicio lo rompe de
+nuevo — de ahí que el reporte sea tan difícil de describir y que a una persona le funcione y a otra no.
+
+### Medido contra producción
+
+Con las columnas corridas un día, sobre los 31 cursos activos de la semana del 14/09:
+
+```
+tarjetas dibujadas: 61   ·   tarjetas que enganchan clase: 0
+```
+
+Cero, siempre. No es que se vieran pocas: no se veía **ninguna**, en ninguna semana. Con las columnas
+en su lugar, esa misma semana muestra **15 tarjetas con clase, 8 con el tema escrito**; la semana
+anterior —la que las docentes habían cargado— muestra **24 con clase y 21 con tema**.
+
+### El arreglo: la semana se calcula una sola vez
+
+No se tocó el `+1`. Parchearlo dejaba viva la causa, que es que hubiera dos cuentas. **El servidor
+calcula las siete fechas y se las pasa a la grilla**, que ya no hace aritmética de fechas: dibuja lo
+que recibe. Así las dos puntas no pueden discrepar por construcción, y `dayjs` salió del componente.
+
+Dos decisiones de detalle:
+
+- **La cuenta va en UTC y sin librería.** `Lesson.date` es un `date` de Postgres —un día, sin hora—,
+  así que la semana es un rango de días calendario, no de instantes. `date-fns` calcula en la zona del
+  proceso, y eso hacía que el mismo instante cayera en semanas distintas según dónde corriera. Ahora
+  no depende ni de la zona del servidor ni de la del dispositivo.
+- **Se fue el `.add(12, 'hour')`** de la comparación de clases. Compensaba que la fecha llega como
+  medianoche UTC y se leía en hora local, y aguantaba de UTC−11 a UTC+11 — suficiente para Argentina,
+  pero una trampa esperando a alguien. Las fechas se comparan como texto `yyyy-MM-dd`, que ordena igual
+  que una fecha y no tiene zona.
+
+### Lo que esta ficha no arregla
+
+Dos cosas que aparecieron midiendo y que siguen en pie:
+
+1. **El calendario dibuja `Schedule`, no `Lesson`.** La clase es un adorno de la tarjeta del horario
+   que cae ese día de la semana. Una clase cargada en un día en que el curso no tiene horario **no
+   aparece nunca**: hoy hay 17 así en producción —15 de «Children 3 TM», que se generaron con horario
+   L-M y después el horario pasó a M-J, más dos recuperatorios—. Y si hay **dos clases el mismo día**,
+   la tarjeta muestra una sola: pasa hoy con «Upper-intermediate M-J early shift» el 08/09.
+2. **El calendario abre en la semana en curso, que es la que todavía nadie llenó.** La docente escribe
+   el tema después de dar la clase, así que la pantalla que se abre por defecto siempre muestra la
+   mayoría de las tarjetas en «Pendiente» — 46 de 61 la semana del 14/09, contra 24 con clase la
+   semana anterior. Es lo mismo que quedó anotado en [FEAT-06](#feat-06) el 2026-08-18, resuelto
+   entonces sólo para la tarjeta del par y no para la vista.
+
+### Verificado en stage el 2026-09-15 (`60cf0d5`)
+
+Los números, predichos contra la base **antes** de abrir el navegador, en los cuatro casos:
+
+- **Semana, como dirección.** Semana del 3/8: se dibujan **60 tarjetas de las 61 plantillas**
+  —«Adults Level A2» arranca el 6/8 y por eso no entra en la columna del martes—, **30 con clase** y
+  **26 con tema**. Dio exacto en las cinco columnas.
+- **Día.** Martes 4/8: «Mostrando **14** clases», 6 con tema, 1 en «sin registrar» y 7 pendientes.
+  Coincide con lo que la vista Semana muestra para ese mismo día, que es justamente el punto: las dos
+  vistas ahora cuentan lo mismo.
+- **Pares, como Agustina Melluso.** Semana del 10/8: 6 plantillas, 4 con «Otro docente», y los cuatro
+  bordes **medidos** en `rgb(148, 163, 184)` —incluidos los de «Unit 7A» y «Unit 7»—, o sea el par en
+  gris aunque tenga tema, con «Ver Temas» y nunca «Asistencia». Con `pares=0` quedan 2, las propias.
+- **El camino del reporte**: entrar por Inicio y pasar al Calendario por el menú, sin recargar. Abre
+  en LUNES 14/9 con las clases enganchadas. Era el camino que lo rompía.
+
+**Lo que quedó sin medir:** una tarjeta **propia con clase** tomando el color del curso. El curso de
+la docente de prueba corre del 6/8 al 10/12 y sus diez clases están entre el 19/3 y el 30/4 — cero
+dentro de su propio rango, que es el mismo patrón de las 17 clases huérfanas de más arriba. Esa rama
+(`linkedLesson && !isPeer`) no la tocó este cambio.
+
+**Relacionado.** [FEAT-07](#feat-07), que es donde se escribió la tarjeta del calendario y donde ya se
+había corregido el otro defecto de la vista diaria. [BUG-14](#bug-14), los filtros del calendario que
+no avisan que filtran — el mismo síntoma para el usuario: la pantalla muestra de menos sin decirlo.
+[BUG-18](#bug-18) salió de probar ésta.
+
+---
+
+<a id="bug-18"></a>
+## BUG-18 · La vista Día del calendario no ofrece tomar asistencia · **P2**
+
+**De dónde sale.** De verificar [BUG-17](#bug-17) por pantalla en stage, el 2026-09-15. Con la vista
+Día en el martes 4/8 había **14 tarjetas, 7 de ellas con la clase cargada** — y las catorce ofrecían
+el mismo botón: «Ver Curso».
+
+**La misma clase, en la vista Semana, ofrece «Asistencia»** con enlace directo a
+`/courses/:id/lessons/:lessonId/attendance`
+([`WeeklyGridView.tsx:214`](../src/app/schedule/components/WeeklyGridView.tsx)). En la vista Día el
+botón tiene sólo dos ramas, y ninguna es ésa
+([`schedule/page.tsx:440`](../src/app/schedule/page.tsx)):
+
+```tsx
+<Link href={`/courses/${schedule.course.id}`}>
+    {schedule.isPeer
+        ? <><Eye size={14} /> Ver Temas</>
+        : <><BookOpen size={14} /> Ver Curso</>}
+```
+
+**Está al revés de lo que uno esperaría.** La pantalla se llama «Clases del Día» y es la que una
+docente abre para el día que está dando; es exactamente la que no ofrece el atajo. Desde la agenda
+semanal, que es para mirar la semana, sí. Llegar igual se llega —Ver Curso → el mes → la clase →
+asistencia— pero son tres pantallas de más, todos los días.
+
+**No es una decisión, es un olvido, y hay rastro.**
+[`schedule/page.tsx:10`](../src/app/schedule/page.tsx) importa `ClipboardCheck` —el ícono que
+`WeeklyGridView` usa **exactamente** para el botón de asistencia— y no lo usa en ninguna parte del
+archivo. ESLint lo viene marcando como importación sin uso desde entonces.
+
+**El arreglo es corto: los datos ya están calculados.** La vista Día resuelve `lesson` y `hasLesson`
+([`schedule/page.tsx:376`](../src/app/schedule/page.tsx)) para decidir el color y el rótulo de la
+tarjeta; sólo falta usarlos también en el `href`. Y hay que conservar la regla del par: al par **no**
+se le ofrece asistencia, porque el servidor se la rechazaría y ofrecerla sería prometer algo que no va
+a pasar — es lo que ya hace la grilla semanal.
+
+**Relacionado.** [BUG-15](#bug-15), la misma forma en otra pantalla: una vista que no ofrece las
+acciones que la otra sí. [FEAT-07](#feat-07), de donde sale la regla del par.
+
+---
+
+<a id="bug-19"></a>
+## BUG-19 · El panel de uso declara en producción una fecha desde la que nunca midió · **P2**
+
+**De dónde sale.** Del ensayo del 2026-09-15, antes de promover el lote: backup de producción
+restaurado sobre la base de stage y redeploy con las siete migraciones pendientes. Las migraciones
+corrieron limpias. Lo que no viaja con ellas es el piso.
+
+**Los dos pisos son constantes, y la fecha que tienen es la de stage.**
+[`piso.ts:21`](../src/app/dashboard/usage/piso.ts) y [`piso.ts:31`](../src/app/dashboard/usage/piso.ts)
+fijan `PISO_QR` y `PISO_REGISTRO` al **2026-08-23**, que es el día en que `add_activity_day` y
+`add_attendance_source` entraron en la base de **stage**. En producción esas dos migraciones se
+aplican el día de la promoción: `ActivityDay` nace vacía y `Attendance.source` nace con todas las
+filas en `MANUAL`, puestas por el default de la columna y no por nadie que las haya mirado.
+
+**Tres frases de la pantalla quedan falsas el día que se promueve:**
+
+- «Midiendo desde el 23/8» — con el gráfico vacío hasta la fecha del despliegue, que se lee como que
+  en ese mes no entró nadie.
+- «Hasta el 23/8 figura el último rastro indirecto; desde esa fecha, el ingreso real» — con los 173
+  tutores en «Nunca».
+- «El origen se distingue desde el 23/8» — sobre marcas cuyo origen nunca se distinguió.
+
+**El número que lo vuelve concreto.** De las 542 marcas de asistencia de producción, **465 se
+crearon entre el 29/8 y el 14/9**: el 86% de la tabla, entera dentro del rango que la pantalla
+declara medido. Ninguna lo fue. El valor que muestran es casi seguro el correcto —en producción el
+escáner no dejó una sola marca, medido sobre `notes` antes de migrar— pero la pantalla lo afirma por
+un default, no por una medición, y ésa es la diferencia que el panel existe para no borrar.
+
+**Es exactamente lo que el propio archivo dice querer evitar:** «Cero y "no medido" son cosas
+distintas, y confundirlas es exactamente cómo el administrador termina concluyendo que en marzo no
+entraba nadie». El mecanismo está bien resuelto —una métrica sin historia dice desde cuándo mide en
+vez de mostrar un cero—; lo que quedó atado a un entorno es la constante.
+
+**El arreglo: que cada base diga su propio piso.** La fecha real ya está guardada en cada base, en
+`_prisma_migrations.finished_at` de `20260822180000_add_activity_day` y
+`20260823160000_add_attendance_source`. Derivarla de ahí hace que stage siga diciendo 23/8, que
+producción diga la fecha de su promoción, y que una base nueva no necesite que nadie se acuerde de
+tocar el archivo. `piso.ts` ya tiene la forma para recibirlo: las dos fechas viven juntas y la
+pantalla las lee por `pisoCorto()`.
+
+**Lo que esta ficha no arregla.** Las 465 marcas de producción quedan en `MANUAL` igual: el origen de
+lo que ya pasó no se puede recuperar, porque el escáner tampoco lo escribía. Mover el piso no cambia
+el dato, cambia lo que la pantalla dice sobre él.
+
+**Relacionado.** [FEAT-11](#feat-11), de donde salen las ocho métricas del panel.
+[BUG-12](#bug-12), el escáner que pisaba la observación de la docente y el motivo de que el origen
+anterior sea aproximado.
+
+---
+
+<a id="feat-22"></a>
+## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
+
+**De dónde sale.** De la ronda de decisiones de [FEAT-06](#feat-06) (2026-09-13). Ahí se descartó el
+correo —"están saturados y la gente no los mira"— y quedó el sobre como único aviso de que llegó un
+mensaje. El push quedó anotado como el reemplazo, para más adelante.
+
+**El número que lo justifica, medido en producción el 2026-09-13.** De las 118 participaciones en
+hilos, **el 80% de las de alumnos y el 86% de las de tutores tienen `lastReadAt` en `null`**: nunca
+abrieron el hilo en el que están. Las de docentes y staff, 0% — pero es esperable, son los que
+escriben. Dicho en limpio: **el instituto escribe y ocho de cada diez familias no leen.** No es un
+problema de contenido ni de adopción del módulo, que viene creciendo; es que no hay forma de que se
+enteren si no entran solas a la app.
+
+**Eso le cambia el sentido a [FEAT-06](#feat-06).** Abrir el canal de ida sirve de poco si el de
+vuelta tiene esa tasa: la familia escribe, la docente contesta, y la respuesta se queda adentro de
+una campana que nadie mira. **Este ítem sube a P1 el día que se abra el canal de las familias.**
+
+**Qué falta.** La base ya está: la app es PWA con service worker propio (`@ducanh2912/next-pwa`,
+`public/sw.js`) y ya tiene el diálogo de instalación (`@khmyznikov/pwa-install`). Falta el par de
+claves VAPID, una **tabla de suscripciones por dispositivo** —una persona puede tener varias, y
+caducan solas, así que hay que darlas de baja cuando el proveedor las rechaza— y el handler en el
+worker.
+
+**La salvedad que decide si sirve, y no es un detalle de implementación.** En iPhone el push web
+**sólo llega si la PWA está instalada** en la pantalla de inicio; en el navegador suelto no existe.
+Así que la tasa de instalación pasa a ser parte del problema: sin ella, este ítem no mueve la aguja
+en la mitad del padrón.
+
+**Y para los alumnos no compite con nada.** 348 de los 362 alumnos activos —el 96%— no tienen correo
+cargado: entran con DNI. Para ellos el push no es una alternativa al correo, es el único aviso
+posible fuera de la app.
+
+**Relacionado.** [FEAT-06](#feat-06), de donde sale. [BUG-06](#bug-06), el otro extremo del mismo
+problema: el aviso que sí existe, roto para el admin.
+
+---
+
+<a id="feat-23"></a>
+## FEAT-23 · Los hilos de mensajes no se cierran nunca · **P3**
+
+**De dónde sale.** Planteo del cliente durante la ronda de [FEAT-06](#feat-06), el 2026-09-11: *"los
+chats no tienen que vivir para siempre; cuando un estudiante cambia de curso, o cuando el curso
+termina, no tiene sentido que sigan accesibles"*. Se decidió **no implementarlo ahora** y dejarlo
+anotado.
+
+**Adentro hay dos cosas, y una se resuelve sola.** Abrir hilos *nuevos* con el docente equivocado no
+va a pasar: la lista de destinatarios se arma de inscripciones activas y cursos activos, así que el
+docente del curso que el alumno dejó simplemente no aparece. Lo que falta decidir es qué pasa con
+**los hilos ya abiertos**.
+
+**La forma recomendada: se cierran, no se borran.** Sólo lectura. Una conversación entre una familia
+y una docente es registro del instituto, y acá el borrado es siempre lógico ([ARQ-05](#arq-05)).
+
+**Y derivado, sin columna nueva.** El hilo va a saber el curso y el alumno, así que *"¿sigue activa
+esa inscripción y sigue activo el curso?"* se contesta sola, sin proceso que correr ni hilos que
+alguien se olvide de cerrar. No contradice la columna `studentId` que suma FEAT-06: **se congela el
+sujeto y se deriva el permiso** — de quién se hablaba es un hecho del pasado y hay que guardarlo;
+quién puede escribir hoy es una pregunta del presente.
+
+**El prerrequisito es gratis y hay que cumplirlo desde ahora:** que los hilos que abren alumnos y
+tutores lleven `courseId` **siempre**. Hoy es opcional en `MessageThread`, pero la costumbre ya va
+para ese lado — de los 27 hilos en producción, **26 tienen curso**. Exigirlo no cambia nada de lo
+que se viene haciendo; sólo evita que entren hilos que después nadie sepa cuándo cerrar.
+
+**Por qué P3.** El hilo más viejo en producción es del 2026-05-12 y son 27 en total. No hay volumen
+de hilos viejos que moleste todavía. Se vuelve visible cuando termine el primer ciclo lectivo
+completo con el canal de las familias abierto.
+
+---
+
+<a id="feat-24"></a>
+## FEAT-24 · Buscar dentro del contenido de los mensajes · **P3**
+
+**De dónde sale.** De la ronda de [FEAT-06](#feat-06) (2026-09-13). El buscador que entra en la
+bandeja es **sólo por asunto** — un `contains` sobre una columna. Buscar dentro del cuerpo de los
+mensajes se dejó explícitamente afuera.
+
+**Por qué se cortó ahí.** Buscar por contenido en Postgres es índice de texto completo (`tsvector` +
+índice GIN, o `pg_trgm` para búsquedas parciales). Eso se paga en almacenamiento y en cada escritura,
+todos los meses, no una vez. Decisión del cliente: si el instituto lo pide, **se cotiza como
+infraestructura adicional** — no es deuda técnica que arrastremos nosotros.
+
+**Qué tan lejos está de hacer falta.** Hoy hay **61 mensajes en total** en producción. El asunto como
+única clave de búsqueda va a alcanzar durante bastante tiempo: el modelo de un hilo por tema, que se
+confirmó en FEAT-06, existe justamente para que el asunto sea suficiente.
+
+**Cuándo mirarlo de nuevo.** Cuando alguien del instituto diga *"sé que me lo escribió pero no
+encuentro en cuál"*. Ese reclamo es el que dice que el asunto dejó de alcanzar.
+
+---
+
+<a id="feat-25"></a>
+## FEAT-25 · No se sabe quién de la administración contestó un hilo · **P3**
+
+**Lo que pasa.** Del lado de la familia, quien escribe con rol ADMIN firma **"Administración"** y
+quien escribe con rol SECRETARY firma **"Secretaría"**
+([`messages.ts`](../src/app/actions/messages.ts)). El nombre propio no aparece nunca, y eso está
+bien: del lado del instituto contesta el área, no la persona.
+
+**El problema es que tampoco aparece del lado del instituto.** Si mañana hay tres personas con rol
+ADMIN, las tres firman igual y en pantalla no hay manera de saber cuál contestó. El dato está
+guardado (`Message.senderUserId`), simplemente no se muestra a nadie.
+
+**Hoy no se da, y conviene decirlo.** En producción hay **un** usuario con rol ADMIN y **una** con
+rol SECRETARY, y nadie tiene los dos. La ambigüedad es teórica: aparece cuando el instituto sume
+gente a administración, o con el segundo instituto.
+
+**Por qué igual se anota.** Por la decisión del 2026-09-13 en [FEAT-06](#feat-06): la administración
+queda como **única supervisión** de lo que escriben los alumnos. El día que sean varias personas,
+"quién intervino en este hilo" deja de ser un detalle.
+
+**El arreglo es chico.** El armado del nombre ya tiene a la vista los roles de quien mira: alcanza
+con mostrar el nombre propio cuando el que mira es staff, y seguir mostrando "Administración" a la
+familia.
+
+**De paso, un detalle vecino.** Los mensajes anteriores a que existiera `senderRole` no tienen rol
+guardado y el nombre se deduce de los roles actuales, donde **ADMIN le gana a SECRETARY**. En
+producción es **un solo mensaje**, del 2026-05-12, y nadie tiene los dos roles — así que hoy no
+muestra mal a nadie.
+
+---
+
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
 
@@ -4612,6 +7705,13 @@ lea el código después.
 **Cambio.** Quitar las cuatro props de `MessagesBell`, ajustar el `useEffect` para depender sólo del
 intervalo, y dejar de pasarlas desde `Navbar`. Revisar si `Navbar` las sigue necesitando para otra
 cosa antes de borrarlas de ahí.
+
+### Resuelto — 2026-09-13 en `b0303d8` · pendiente de verificar en stage
+
+Cayó solo: [FEAT-06](#feat-06) reescribió el componente para que escuche el canal en vivo, y las
+props sobrantes no sobrevivieron a la reescritura. Quedan `userId` —que ahora sí se usa, es el
+nombre del canal— más las tres de presentación (`variant`, `isActive`, `label`). `Navbar` las
+seguía calculando sólo para pasárselas, así que también se fueron de ahí.
 
 ---
 
@@ -4927,6 +8027,31 @@ preguntar qué versión tiene instalada cada usuario, porque las instalaciones q
 meses. Esto es una aplicación web: en el próximo refresco, todos están en la última. La distribución
 de versiones sería casi siempre una sola barra, y no vale un desarrollo.
 
+**Corrección (2026-08-20): esto ya es una PWA, y el párrafo de arriba lo daba por sentado sin
+mirarlo.** El proyecto tiene `@ducanh2912/next-pwa` y un service worker en `public/sw.js`, más
+`@khmyznikov/pwa-install` para el prompt de instalación. Cambia el diagnóstico en dos sentidos:
+
+- **El argumento "en el próximo refresco están todos en la última" se debilita.** Un service worker
+  sirve de su caché y una app instalada no se refresca como una pestaña: un cliente puede quedar
+  atrás bastante más que unas horas. La distribución de versiones sí puede tener más de una barra.
+- **Y por eso la forma barata vale más, no menos.** El cliente rancio deja de ser el que no cerró la
+  pestaña en tres días y pasa a ser cualquiera con la app instalada. Mandar la versión en una cabecera
+  y avisar que recargue es lo primero a hacer.
+
+**Sobre "cuántos tienen la app instalada" (pedido del 2026-08-20).** Hay un límite duro que conviene
+saber antes de prometer el número: **el servidor no puede saber quién la tiene instalada**. No existe
+registro de instalaciones; de un dispositivo te enterás sólo cuando se conecta, y las
+desinstalaciones son invisibles siempre. Lo que sí se puede:
+
+- Detectar en el cliente si corre instalada (`display-mode: standalone`) y mandarlo junto con el
+  evento de ingreso. Eso da **ingresos desde la app instalada contra ingresos desde el navegador**,
+  que es un dato honesto y probablemente más útil que un conteo de instalaciones.
+- Contar instalaciones nuevas con el evento `appinstalled`.
+
+Entonces la métrica real es *"cuántos entraron desde la app instalada en los últimos N días"*, no
+*"cuántos la tienen instalada"*. Conviene que la pantalla la llame por lo que mide: si dice
+"instalaciones: 47" y son 47 activos, alguien va a decidir algo con un número que significa otra cosa.
+
 **Lo que sí tiene valor es la variante corta de esa pregunta: los clientes rancios.** Alguien con una
 pestaña abierta desde antes del despliegue sigue ejecutando JavaScript viejo contra un servidor nuevo,
 y eso **sí** produce errores reales — es primo del problema del 13/08, donde el desajuste fue entre
@@ -4944,6 +8069,12 @@ propio para un solo dato.
 
 **Recomendación.** Hacer la forma barata como parte de ARQ-12, y dejar la métrica para cuando exista
 un lugar donde ya se guarden métricas.
+
+**Decisión (2026-08-22): esto no entra en el panel de uso.** Mostrarle al administrador qué versión
+tiene cada usuario **no es un pedido del cliente** — salió de una idea nuestra. Sale del alcance de
+[FEAT-11](#feat-11), y con eso [ARQ-12](#arq-12) deja de ser prerrequisito de ese panel. Lo que sí
+conserva valor es la **forma barata** de arriba —la cabecera de versión y el aviso de recargar—, que
+no depende de ninguna métrica y resuelve el problema del cliente rancio.
 
 ---
 
@@ -4993,6 +8124,70 @@ decidir si sigue existiendo:
   caja histórica del instituto**, y eso no puede ser un efecto colateral silencioso de borrar una
   ficha.
 
+---
+
+<a id="arq-15"></a>
+## ARQ-15 · La identidad está partida en dos tablas · **P2**
+
+**Planteo (2026-08-20), y es la tercera vez.** El cliente ya había preguntado dos veces si tener
+`User` y `Student` como tablas separadas era lo correcto, y las dos veces se le respondió que sí.
+Vuelve a plantearlo ahora que los choques entre las dos aparecen seguido, y con un argumento de
+oportunidad que es correcto: **con un solo cliente, el momento más barato para cambiarlo es ahora**.
+
+**Pero la pregunta que se contestó "sí" probablemente no era esta.** Hay dos preguntas distintas
+adentro:
+
+1. *¿`Student` es una entidad propia?* **Sí, y sigue siendo sí.** Tiene inscripciones, cuotas, notas,
+   asistencias, saldo a favor. Colapsarla contra los profesores y los administradores sería el error
+   contrario.
+2. *¿Hay dos tablas de identidad?* **Sí, y ahí está el roce.** Un alumno y un tutor se autentican por
+   caminos distintos, y toda funcionalidad que cruce a los dos tiene que construirse dos veces.
+
+Las dos veces que se respondió "sí" se estaba respondiendo la primera. La que duele es la segunda.
+
+**Dónde duele, medido.** Hoy hay **tres modelos** con el par polimórfico `userId?` / `studentId?` —
+[`Notification`](../prisma/schema.prisma), `ThreadParticipant` y `Message`, que hasta lo dice en un
+comentario: *"Polimórfico: o un User (teacher, admin, guardian) o un Student"*. Con la firma de
+[FEAT-09](#feat-09) y el evento de ingreso de [FEAT-11](#feat-11) serían **cinco**. El costo no crece
+con el tamaño del negocio: crece con cada funcionalidad transversal que se agregue.
+
+**El número grande engaña, y conviene mirarlo antes de asustarse.** Hay 271 usos de `studentId` en 50
+archivos, pero la enorme mayoría son **de dominio** —una cuota es de un alumno, una nota es de un
+alumno— y no cambiarían con ninguna de las opciones sanas.
+
+**Tres opciones, no dos:**
+
+| | Qué es | Qué cuesta |
+|---|---|---|
+| Dejarlo como está | Cada funcionalidad transversal se construye con el par | Se paga de a poco y para siempre, y ya son 5 lugares |
+| Una sola tabla de usuarios con un tipo | Lo que plantea el cliente. Colapsa también la entidad de dominio | Toca los 271 usos, y `User` termina con las columnas de alumno —saldo a favor, tutores, nivel, fecha de ingreso— en nulo para cada profesor y cada admin |
+| **Separar identidad de entidad de dominio** ← recomendada | Una tabla de cuentas con **sólo** credenciales, estado e instituto. `Student` sigue existiendo entero y **apunta** a una cuenta, opcionalmente | Toca los 3 modelos polimórficos y la autenticación. Los 271 usos de dominio quedan intactos |
+
+La tercera es la que resuelve el problema real sin crear el opuesto: el par polimórfico desaparece
+porque todo lo transversal apunta a una sola tabla, `Student` conserva lo suyo, y el alumno de 6 años
+sin correo simplemente **no tiene cuenta** — que es lo que pasa hoy en la realidad y el schema ya
+admite con `email` y `password` opcionales.
+
+**Sobre el momento: el principio es correcto, el "ahora" tiene un pero concreto.** Este documento ya
+sostiene que las migraciones son baratas con un cliente y sólo se encarecen. Pero esta no es
+[FIN-05](#fin-05) (`Float` → `Decimal`): toca **autenticación**, que es justo donde acaba de aterrizar
+todo [SEC-01](#sec-01)/[SEC-02](#sec-02)/[SEC-03](#sec-03). Y sobre todo, **no hay backups**, y el
+`build` corre `migrate deploy` — la combinación que ya tumbó producción una vez. Hacer la migración
+más grande del proyecto sin backups es el bloqueante real, y resolver los backups es muchísimo más
+barato que la migración.
+
+**Secuencia recomendada:**
+
+1. **Backups primero.** No es una precaución genérica: es la condición para poder hacer esto.
+2. **Como trabajo propio y dedicado**, no mezclada con funcionalidades. Es la única forma de que si
+   sale mal se sepa qué la rompió.
+3. **No mientras haya otra cosa en curso.** Con el panel de uso y la firma en vuelo, no.
+
+**Qué hacer mientras tanto con lo que está en vuelo.** La firma y el evento de ingreso se construyen
+igual, con el par. Los dos son chicos y de sólo agregar filas, así que migrarlos después es cambiar
+una columna. No conviene frenar funcionalidades esperando esta decisión — pero sí conviene tenerla
+tomada antes de que el par aparezca en algo caro de mover.
+
 **Recomendación.** Sacarla, y si algún día hace falta la baja de datos personales, resolverla como lo
 que es —anonimizar la ficha conservando los asientos contables—, que no es lo mismo que borrar filas.
 
@@ -5017,6 +8212,51 @@ que ninguna pantalla dependa de ella antes de quitarla.
 **Relacionado.** [FIN-23](#fin-23) (de donde salió, y de cuyo `SET NULL` depende hoy),
 [ARQ-05](#arq-05) (la interfaz para restaurar lo borrado, que es el otro lado de la política de
 borrado lógico).
+
+---
+
+<a id="arq-16"></a>
+## ARQ-16 · Qué cuesta cada filtro del calendario · **P3 · sube con el número**
+
+**Visto el 2026-09-02**, junto con [BUG-14](#bug-14): al encender *"Ver a mis pares"* el calendario
+tarda lo suficiente como para que se note.
+
+**Antes de optimizar hay que medir**, porque hay dos explicaciones y llevan a arreglos opuestos.
+
+**Explicación 1: el interruptor ensancha las consultas.** `visibleCoursesFilter`
+([`peers.ts:41`](../src/lib/peers.ts)) lleva el alcance de *"mis cursos"* a *"mis cursos + todos los
+del mismo nivel"*, y ese alcance entra en las dos consultas grandes de la página: la de horarios y la
+del desplegable de cursos. Con los pares encendidos entran más filas de `Schedule`, y **cada fila
+arrastra su curso, su docente y las clases de la semana dos veces** — `schedule.lessons` y
+`course.lessons` se superponen, porque la clase atada a un horario cae en las dos
+([`schedule/page.tsx:182`](../src/app/schedule/page.tsx)). La segunda no está de más: es el respaldo
+para la clase sin horario ([`:349`](../src/app/schedule/page.tsx)). Pero se paga completa.
+
+**Explicación 2: es lo que cuesta cualquier clic de esa barra.** La página es dinámica y se rehace
+entera en el servidor en cada navegación: sesión, rol, `requireRole` —que consulta la base por diseño
+([SEC-02](#sec-02))—, `getPeerLevels`, las tres consultas de los desplegables y la de horarios. Nada
+de eso está cacheado, y encima se paga la latencia contra Supabase sin pooling ([ARQ-02](#arq-02)).
+Si es esto, prender y apagar los pares tarda lo mismo que cambiar de aula, y lo que se notó no es el
+filtro sino **el silencio** de [BUG-14](#bug-14).
+
+**La sospecha es la 2**, y hay un dato que la respalda: el instituto tiene **31 cursos activos**
+—contados contra producción el 17/08 en [FIN-28](#fin-28)—, así que "todos los del mismo nivel" son
+unos pocos cursos más, no un salto de escala. Con ese volumen ninguna de estas consultas debería
+tardar de forma perceptible.
+
+**Cómo medirlo, y alcanza con poco.** El tiempo está del lado del servidor, así que sale de la
+duración de la función en Vercel o de un `console.time` alrededor de la consulta de horarios. Hay que
+comparar dos cosas: la misma semana con `?pares=0` y con los pares encendidos, y **un filtro
+cualquiera contra otro**. Si cambiar de aula tarda lo mismo, esta ficha se cierra contra
+[ARQ-02](#arq-02) y [BUG-14](#bug-14), y no hay nada que optimizar acá.
+
+**Si el número justifica tocar algo**, en orden de barato a caro: no traer `course.lessons` cuando
+`schedule.lessons` alcanza; sacar del `include` los campos del curso y del docente que la grilla no
+dibuja —hoy entran enteros—; y recién después mirar índices, que es [ARQ-01](#arq-01).
+
+**Relacionado.** [BUG-14](#bug-14) (la otra mitad del mismo reporte, y va primero),
+[ARQ-02](#arq-02) (pooling), [ARQ-11](#arq-11) (la otra pantalla que se midió por lo que costaba),
+[FEAT-07](#feat-07).
 
 ---
 

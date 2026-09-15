@@ -1,18 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUnreadThreadCount } from "@/app/actions/messages";
+import { supabaseClient } from "@/lib/supabase-client";
 
-const POLL_INTERVAL_MS = 60_000; // 60 s
+/**
+ * Red de seguridad, no el mecanismo principal.
+ *
+ * El aviso real llega por el canal en vivo. Este intervalo existe sólo para el
+ * caso en que Realtime esté apagado en el proyecto de Supabase — que es el que
+ * ya contempla `NotificationBell`— y por eso es largo: antes era de 60 segundos
+ * y cada vuelta levantaba, para un admin, todos los hilos del instituto con sus
+ * participantes. Ahora la consulta cuenta en SQL, pero sigue sin haber motivo
+ * para preguntar seguido algo que nos van a avisar.
+ */
+const FALLBACK_POLL_MS = 5 * 60_000;
 
 interface Props {
     userId: string;
-    isStudent: boolean;
-    instituteId: string;
-    isAdmin: boolean;
     /** Visual variant: "icon" renders a square icon button (navbar right side),
      *  "mobile" renders the full bottom-tab entry */
     variant: "icon" | "mobile";
@@ -20,33 +28,66 @@ interface Props {
     label?: string;
 }
 
-export function MessagesBell({
-    userId,
-    isStudent,
-    instituteId,
-    isAdmin,
-    variant,
-    isActive,
-    label = "Mensajes",
-}: Props) {
+export function MessagesBell({ userId, variant, isActive, label = "Mensajes" }: Props) {
     const [unreadCount, setUnreadCount] = useState(0);
 
-    async function refresh() {
+    const refresh = useCallback(async () => {
         try {
-            const count = await getUnreadThreadCount();
-            setUnreadCount(count);
+            setUnreadCount(await getUnreadThreadCount());
         } catch {
             // silent — badge stays at last known value
         }
-    }
+    }, []);
 
-    // ── Initial load + polling every 60 s ──
+    // ── Carga inicial + red de seguridad ──
     useEffect(() => {
         refresh();
-        const timer = setInterval(refresh, POLL_INTERVAL_MS);
+        const timer = setInterval(refresh, FALLBACK_POLL_MS);
         return () => clearInterval(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userId, isStudent, instituteId, isAdmin]);
+    }, [userId, refresh]);
+
+    // ── Aviso en vivo ──
+    //
+    // El mensaje que llega sólo dice "pasó algo en este hilo": el contador se
+    // vuelve a pedir al servidor en vez de sumar uno de este lado. Sumar acá
+    // sería llevar una segunda cuenta que se despega de la real en cuanto haya
+    // dos pestañas abiertas.
+    //
+    // **Tema propio, separado del `user:${id}` de `NotificationBell`.** Un
+    // cliente de Supabase no admite dos suscripciones al mismo tema: la segunda
+    // recibe `CHANNEL_ERROR` y se queda muda. Las dos campanas viven en la misma
+    // barra, así que compartirlo significaba que una de las dos no andaba nunca.
+    useEffect(() => {
+        if (!supabaseClient || !userId) return;
+
+        const channel = supabaseClient
+            .channel(`user:${userId}:messages`)
+            .on("broadcast", { event: "new_message" }, () => {
+                refresh();
+            })
+            .subscribe((status, err) => {
+                if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+                    console.warn(
+                        `[MessagesBell] Canal en vivo no disponible (${status}); queda el refresco periódico`,
+                        err ?? ""
+                    );
+                }
+            });
+
+        return () => {
+            supabaseClient?.removeChannel(channel);
+        };
+    }, [userId, refresh]);
+
+    // Volver a la pestaña es el otro momento en que conviene mirar: si el aviso
+    // se perdió mientras estaba en segundo plano, acá se recupera.
+    useEffect(() => {
+        function onFocus() {
+            if (document.visibilityState === "visible") refresh();
+        }
+        document.addEventListener("visibilitychange", onFocus);
+        return () => document.removeEventListener("visibilitychange", onFocus);
+    }, [refresh]);
 
     const badge = unreadCount > 0 ? (
         <span

@@ -3,8 +3,10 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 /**
  * "Personal" es un módulo de administración: es lo que ya decide el menú y lo
@@ -65,6 +67,7 @@ export async function createTeacherAction(formData: FormData) {
                 name,
                 email,
                 password: hashedPassword,
+                hasDefaultPassword: isDefaultForUser(password),
                 phone: phone || null,
                 roles: [role as UserRole],
                 instituteId: user.instituteId,
@@ -143,13 +146,19 @@ export async function resetTeacherPassword(teacherId: string, customPassword?: s
             return { success: false, error: "Profesor no encontrado o sin permisos" };
         }
 
-        const newPassword = customPassword || "docente1234";
+        const newPassword = customPassword || DEFAULT_PASSWORDS.TEACHER_RESET;
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await prisma.user.update({
             where: { id: teacherId },
-            data: { password: hashedPassword }
+            data: { password: hashedPassword, hasDefaultPassword: isDefaultForUser(newPassword) }
         });
+
+        // El instituto le restableció la contraseña, así que cualquier enlace de
+        // recuperación que estuviera dando vueltas deja de servir (FEAT-05). Sin
+        // esto, un correo viejo todavía sin usar pisaría lo que se acaba de
+        // escribir acá.
+        await invalidateResetTokens("USER", teacherId);
 
         return { success: true, newPassword };
     } catch (e) {

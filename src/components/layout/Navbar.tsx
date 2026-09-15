@@ -140,9 +140,6 @@ export function Navbar({
                                     <>
                                         <MessagesBell
                                             userId={sessionUser.id}
-                                            isStudent={userRoles.includes("STUDENT")}
-                                            instituteId={sessionUser.instituteId ?? ""}
-                                            isAdmin={userRoles.some((r: string) => ["ADMIN", "SECRETARY", "SUPERADMIN"].includes(r))}
                                             variant="icon"
                                             isActive={pathname.startsWith("/messages")}
                                         />
@@ -225,9 +222,6 @@ export function Navbar({
                                         <MessagesBell
                                             key={href}
                                             userId={sessionUser.id}
-                                            isStudent={userRoles.includes("STUDENT")}
-                                            instituteId={sessionUser.instituteId ?? ""}
-                                            isAdmin={userRoles.some((r: string) => ["ADMIN", "SECRETARY", "SUPERADMIN"].includes(r))}
                                             variant="mobile"
                                             isActive={isActive}
                                             label={label}

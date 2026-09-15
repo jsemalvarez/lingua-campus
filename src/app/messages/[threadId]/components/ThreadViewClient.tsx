@@ -10,6 +10,7 @@ import {
     ArrowLeft,
     Send,
     Users,
+    User,
     BookOpen,
     Paperclip,
     Link2,
@@ -657,6 +658,23 @@ export function ThreadViewClient({ thread: initialThread }: Props) {
                     <h1 className="text-xl font-bold text-foreground">{thread.subject}</h1>
 
                     <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
+                        {/* De qué alumno habla el hilo. Para el personal es un
+                            atajo a la ficha; para la familia, sólo la etiqueta. */}
+                        {thread.studentName &&
+                            (thread.viewerIsStaff && thread.studentId ? (
+                                <Link
+                                    href={`/students/${thread.studentId}`}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+                                >
+                                    <User size={11} />
+                                    sobre {thread.studentName}
+                                </Link>
+                            ) : (
+                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                                    <User size={11} />
+                                    sobre {thread.studentName}
+                                </span>
+                            ))}
                         {thread.courseName && (
                             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted font-medium">
                                 <BookOpen size={11} />

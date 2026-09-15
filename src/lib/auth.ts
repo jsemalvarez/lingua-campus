@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { recordActivity } from "@/lib/activity";
 
 /**
  * Cada cuánto se releen los roles de la base hacia el JWT. Acota cuánto puede
@@ -79,8 +80,22 @@ export const authOptions: NextAuthOptions = {
                 token.instituteId   = user.instituteId;
                 token.birthDate     = user.birthDate;
                 token.rolesSyncedAt = Date.now();
+
+                // El único momento en que se sabe que alguien tipeó su
+                // contraseña, y vale para las dos tablas (FEAT-11). Antes de
+                // esto el sistema no guardaba ninguna fecha de ingreso.
+                await recordActivity({
+                    subjectType: user.roles?.includes("STUDENT") ? "STUDENT" : "USER",
+                    subjectId:   user.id,
+                    instituteId: user.instituteId,
+                    roles:       user.roles ?? [],
+                    isLogin:     true,
+                });
+
                 return token;
             }
+
+            if (!token.id) return token;
 
             // El token dura 30 días. Sin esto, a quien le agregan un rol lo
             // conserva viejo hasta cerrar sesión: la cookie de rol activo se
@@ -90,10 +105,13 @@ export const authOptions: NextAuthOptions = {
             // de la base en cada acción —, pero la interfaz sí, y es lo que ve
             // el usuario.
             //
-            // Los alumnos viven en otra tabla y su rol no cambia nunca: no hay
-            // nada que refrescar.
-            if (!token.id || token.roles?.includes("STUDENT")) return token;
-
+            // Esta misma compuerta es la que marca actividad para el panel de
+            // uso (FEAT-11): ya corría con la frecuencia justa, así que medir
+            // uso cuesta una sentencia cada cinco minutos por persona activa, y
+            // no hace falta ni middleware ni instrumentar pantallas. Los alumnos
+            // pasan por acá aunque su rol no cambie nunca — el corte por
+            // STUDENT bajó a la relectura de roles, que es lo único que no les
+            // corresponde.
             const syncedAt = token.rolesSyncedAt ?? 0;
             if (Date.now() - syncedAt < ROLES_REFRESH_MS) return token;
 
@@ -101,27 +119,39 @@ export const authOptions: NextAuthOptions = {
             // vuelve a consultar hasta que expire el intervalo.
             token.rolesSyncedAt = Date.now();
 
-            const fresh = await prisma.user.findUnique({
-                where: { id: token.id },
-                select: { roles: true, instituteId: true, status: true },
+            const isStudent = token.roles?.includes("STUDENT") ?? false;
+
+            if (!isStudent) {
+                const fresh = await prisma.user.findUnique({
+                    where: { id: token.id },
+                    select: { roles: true, instituteId: true, status: true },
+                });
+
+                // El token guarda el `id` pero no de qué tabla salió, y los
+                // alumnos viven en `Student`. A ésos los ataja el `isStudent`,
+                // así que acá sólo puede caer una fila de `User` borrada
+                // físicamente — la app sólo da de baja lógica, o sea que eso
+                // implica haber tocado la base a mano.
+                //
+                // Aun así no se blanquea: los roles del token sólo alimentan la
+                // interfaz, y dejarla sin nada con qué decidir muestra una app
+                // vacía en lugar de un error. Quien deniega es `getAuthContext`,
+                // que consulta la base en cada acción.
+                if (fresh) {
+                    // Cuenta dada de baja: se vacían los roles. Sin roles no pasa
+                    // ningún chequeo, y la interfaz deja de ofrecer lo que ya no
+                    // puede hacer.
+                    token.roles       = fresh.status === "ACTIVE" ? fresh.roles : [];
+                    token.instituteId = fresh.instituteId;
+                }
+            }
+
+            await recordActivity({
+                subjectType: isStudent ? "STUDENT" : "USER",
+                subjectId:   token.id,
+                instituteId: token.instituteId ?? null,
+                roles:       token.roles ?? [],
             });
-
-            // El token guarda el `id` pero no de qué tabla salió, y los alumnos
-            // viven en `Student`. Al que entra como alumno lo ataja el corte de
-            // arriba, así que acá sólo puede caer una fila de `User` borrada
-            // físicamente — la app sólo da de baja lógica, o sea que eso implica
-            // haber tocado la base a mano.
-            //
-            // Aun así no se blanquea: los roles del token sólo alimentan la
-            // interfaz, y dejarla sin nada con qué decidir muestra una app vacía
-            // en lugar de un error. Quien deniega es `getAuthContext`, que
-            // consulta la base en cada acción.
-            if (!fresh) return token;
-
-            // Cuenta dada de baja: se vacían los roles. Sin roles no pasa ningún
-            // chequeo, y la interfaz deja de ofrecer lo que ya no puede hacer.
-            token.roles       = fresh.status === "ACTIVE" ? fresh.roles : [];
-            token.instituteId = fresh.instituteId;
 
             return token;
         },

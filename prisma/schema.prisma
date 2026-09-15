@@ -28,6 +28,11 @@ model Institute {
   address     String?
   phone       String?
   email       String?
+  // Dirección desde la que salen los correos de este instituto (FEAT-05). Es el
+  // dominio propio del cliente, ya autenticado en el proveedor de envío. Vacío
+  // = sale por el remitente de la plataforma. No confundir con `email`, que es
+  // el contacto de la ficha y no está autenticado para mandar en su nombre.
+  senderEmail String?
   description String?
   logoUrl     String?
   facebookUrl String?
@@ -52,6 +57,9 @@ model Institute {
   levels        Level[]
   notifications Notification[]
   reportTemplates ReportTemplate[]
+  signatures    Signature[]
+  signatureReferences SignatureReference[]
+  reportBatchSignatures ReportBatchSignature[]
 }
 
 // -----------------------------------------------------------------------------
@@ -94,7 +102,21 @@ model User {
   // Messaging
   threadParticipations ThreadParticipant[]
   sentMessages         Message[]           @relation("UserSentMessages")
-  
+
+  // Firmas de conformidad (FEAT-09)
+  signatureReference SignatureReference?
+  signatures         Signature[]
+  mustSign           ReportSigner[]
+
+  // Firmas del instituto en el boletín: dirección o docente (FEAT-21)
+  reportBatchSignatures ReportBatchSignature[]
+
+  // Si la contraseña vigente es una de las que reparte el sistema (SEC-06).
+  // `null` = todavía no se revisó: el hash lleva salt aleatoria y averiguarlo
+  // cuesta un bcrypt por candidato, así que se resuelve una vez en una pasada y
+  // después lo sostiene cada escritura de contraseña, que ya sabe cuál escribe.
+  hasDefaultPassword Boolean?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -129,6 +151,10 @@ model Student {
   birthDate     DateTime?
   joinDate      DateTime @default(now())
 
+  // Ver la nota en `User.hasDefaultPassword`. Acá los candidatos incluyen el
+  // propio DNI, que es lo que escribe el reset de alumno.
+  hasDefaultPassword Boolean?
+
   // Billetera Virtual (Saldos a favor)
   creditBalance Float    @default(0)
   
@@ -154,6 +180,12 @@ model Student {
   // Messaging
   threadParticipations ThreadParticipant[]
   sentMessages         Message[]           @relation("StudentSentMessages")
+  subjectOfThreads     MessageThread[]
+
+  // Firmas de conformidad (FEAT-09) — el alumno de 20+ firma su propio informe
+  signatureReference SignatureReference?
+  signatures         Signature[]
+  mustSign           ReportSigner[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -198,6 +230,7 @@ model Course {
   threads     MessageThread[]
   reportTemplates CourseReportTemplate[]
   studentReports  StudentReport[]
+  batchSignatures ReportBatchSignature[]
 
 
   startDate   DateTime?
@@ -295,6 +328,16 @@ enum AttendanceStatus {
   ABSENT
   LATE
   JUSTIFIED
+}
+
+// De dónde salió la marca (FEAT-11).
+//
+// Antes esto se deducía de un texto en `notes` que el propio escáner escribía, y
+// eso rompía dos cosas a la vez: le pisaba la observación a la docente (BUG-12) y
+// no aguantaba como fuente de una métrica, porque el campo es libre y editable.
+enum AttendanceSource {
+  MANUAL
+  QR
 }
 
 enum LessonType {
@@ -416,6 +459,51 @@ model AiUsage {
   @@index([windowStart])
 }
 
+// Actividad diaria de cada persona, para el panel de uso (FEAT-11).
+//
+// **Una fila por persona y por día, no por evento.** Acota el crecimiento sin
+// depender de con qué frecuencia se escriba, y por eso no obliga a decidir la
+// retención antes de empezar a guardar. Cota con los números de hoy: 580
+// personas × 200 días lectivos ≈ 116.000 filas al año, y eso suponiendo que
+// entren todas todos los días.
+//
+// Sigue la forma de `AiUsage` —un contador con `subjectId` suelto, sin relación
+// con `User`/`Student`—, así que borrar a la persona no falla ni arrastra
+// historial, y la tabla **no se suma a la lista de ARQ-15**.
+//
+// A diferencia de `AiUsage`, sí guarda `instituteId`: es el hueco que PED-10 le
+// encontró a esa tabla, que no puede agregar sus filas de usuario por instituto.
+// Es nulo sólo para el SUPERADMIN, que no tiene instituto.
+//
+// **No se guardan ni IP ni dispositivo**, alineado con FEAT-04.
+model ActivityDay {
+  subjectType String   // "USER" | "STUDENT"
+  subjectId   String
+  instituteId String?
+  day         DateTime @db.Date
+
+  // Los roles que la persona tenía ese día. Desde SEC-01 una misma persona
+  // puede ser tutora y profesora: se guardan todos y el panel decide cómo
+  // agrupar, en vez de elegir uno acá y perder la otra mitad.
+  roles       String[]
+
+  // Veces que tipeó la contraseña. No es lo mismo que uso: el JWT dura 30 días,
+  // así que alguien que entra todos los días puede tener un solo login al mes.
+  // Lo que mide uso es `lastSeenAt`.
+  logins      Int      @default(0)
+
+  // Secciones del portal del tutor abiertas ese día. Es lo único que contesta
+  // "¿miran las asistencias y las notas?": leer una pantalla no deja ningún otro
+  // rastro en la base.
+  sections    String[]
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@id([subjectType, subjectId, day])
+  @@index([instituteId, day])
+}
+
 model Attendance {
   id          String   @id @default(cuid())
   studentId   String
@@ -426,6 +514,13 @@ model Attendance {
   
   status      AttendanceStatus
   notes       String?
+
+  // Si el escáner intervino en esta marca. Lo escribe sólo el kiosco, y el
+  // parte de la docente **no lo pisa**: una vez que hubo escaneo, la fila queda
+  // en `QR` aunque después se corrija el estado. Es el mismo criterio con el que
+  // `createdAt` sobrevive al regrabado, y es lo que hace que la métrica conteste
+  // "¿se usa el escáner?" en vez de "¿quién guardó último?".
+  source      AttendanceSource @default(MANUAL)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -705,6 +800,38 @@ model StudentDataToken {
 }
 
 // -----------------------------------------------------------------------------
+// PASSWORD RESET TOKENS
+// -----------------------------------------------------------------------------
+
+// Un pedido de recuperación de contraseña (FEAT-05).
+//
+// `subjectType` + `subjectId` en vez de una relación: la contraseña que se
+// restablece puede ser de un `User` o de un `Student`, que son dos tablas
+// distintas. Es el mismo par que ya usan `AiUsage` y el registro de actividad.
+// Hoy sólo se emiten para `User`; los alumnos entran después sin migración.
+//
+// Se guarda el **hash** del token y no el token. El original viaja por correo y
+// queda en la bandeja de quien lo pidió, así que la base no necesita poder
+// reconstruirlo: quien lea esta tabla no puede entrar con lo que ve.
+//
+// `consumedAt` no significa sólo "se usó": también se llena cuando el token
+// queda sin efecto por otro motivo — un pedido más nuevo que lo reemplaza, o un
+// cambio de contraseña por otra vía. Lo que marca es que ya no sirve.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  subjectType String    // "USER" | "STUDENT"
+  subjectId   String
+  instituteId String?
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([subjectType, subjectId])
+  @@index([expiresAt])
+}
+
+// -----------------------------------------------------------------------------
 // MESSAGING
 // -----------------------------------------------------------------------------
 
@@ -725,6 +852,27 @@ model MessageThread {
   courseId    String?
   course      Course?    @relation(fields: [courseId], references: [id])
 
+  // De qué alumno habla el hilo (FEAT-06). **Se escribe al crearlo y no se
+  // recalcula nunca.** El curso más el autor alcanzan para deducirlo hoy —salvo
+  // hermanos en el mismo curso—, pero la deducción es en vivo y se cae el día
+  // que el alumno se cambia de curso o se da de baja, y un hilo viejo tiene que
+  // poder decir de quién hablaba. Mismo criterio que `ReportBatchSignature`, que
+  // congela el nombre del firmante en vez de leerlo del curso.
+  //
+  // No es lo mismo que un participante: el tutor escribe **sobre** su hijo sin
+  // que el hijo lea el hilo. Resolverlo sumando al alumno como participante
+  // sería darle permiso de lectura, que es justo lo que se decidió no hacer.
+  //
+  // Nulo cuando el hilo no es sobre un alumno en particular: los envíos a un
+  // curso entero y los hilos con administración que no nombran a nadie.
+  //
+  // `Restrict` y no el `SetNull` que Prisma pone por defecto: con aquel, borrar
+  // un alumno le sacaría al hilo justamente el dato que esta columna existe para
+  // conservar, y en silencio. Es la lección de FIN-23. El borrado acá es lógico
+  // (`status`), así que en la práctica no bloquea nada.
+  studentId   String?
+  student     Student?   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -733,6 +881,8 @@ model MessageThread {
 
   @@index([instituteId])
   @@index([instituteId, updatedAt])
+  @@index([studentId])
+  @@index([courseId])
 }
 
 // Participantes del hilo (polimórfico: User o Student)
@@ -818,6 +968,7 @@ model ReportTemplate {
   categories    ReportCategory[]
   reports       StudentReport[]
   courses       CourseReportTemplate[]
+  batchSignatures ReportBatchSignature[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -873,7 +1024,21 @@ model StudentReport {
   teacherComments String?        @db.Text
   publishedAt     DateTime?      // null = Borrador | Fecha = Publicado
 
+  // Hash del contenido actual. Si no coincide con el de una firma, el informe
+  // se tocó después de que esa persona lo firmó (FEAT-09).
+  contentHash     String?
+  lastEditedAt    DateTime?      // Última edición posterior a la publicación
+  lastEditedById  String?        // Id del ADMIN que la hizo (sin FK, como operatorId)
+
+  // El instituto registra que el informe llegó por fuera de la plataforma,
+  // para la familia que no va a entrar nunca. No es una firma.
+  deliveredOtherAt   DateTime?
+  deliveredOtherById String?
+  deliveredOtherNote String?
+
   entries         ReportEntry[]
+  signers         ReportSigner[]
+  signatures      Signature[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -888,12 +1053,154 @@ model ReportEntry {
   report        StudentReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
   categoryId    String
   category      ReportCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
+
   value         String?        // Guardamos el valor como string ("8.5", "E", "A-", etc.)
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   @@unique([reportId, categoryId])
+}
+
+// -----------------------------------------------------------------------------
+// FIRMAS DE CONFORMIDAD (FEAT-09)
+// Es un acuse de lectura con conformidad explícita, no una firma digital de la
+// Ley 25.506. Sirve para que el instituto sepa quién vio las notas.
+// -----------------------------------------------------------------------------
+
+// La firma de referencia de una persona, contra la que se comparan las que
+// siguen. No hay paso de enrolamiento: se registra sola con la primera firma, y
+// la persona la puede volver a registrar desde su propio perfil. Una por
+// persona, no por alumno: un tutor con tres hijos registra una sola.
+model SignatureReference {
+  id          String   @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  // Polimórfico: o un User (tutor) o un Student (el alumno de 20+ que firma solo)
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId   String?  @unique
+  student     Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Secuencia de puntos con tiempos, no una imagen: la dinámica del trazo es lo
+  // que sirve para comparar. Se vacía al soltar el vínculo con el instituto.
+  strokeData  Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// A quién le toca firmar un informe. Se resuelve y se CONGELA al publicarlo:
+// nunca se recalcula, para que cumplir años o sumar un tutor no le cambie el
+// estado a un informe ya publicado. Cero filas = "sin firmante".
+model ReportSigner {
+  id        String        @id @default(cuid())
+  reportId  String
+  report    StudentReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([reportId, userId])
+  @@unique([reportId, studentId])
+  @@index([reportId])
+}
+
+// Un acto de firma. Alcanza con una para dar el informe por firmado.
+model Signature {
+  id          String    @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  // El documento firmado. Hoy sólo informes; una novedad suma otra columna
+  // opcional, en vez de un par tipo+id que perdería la integridad referencial
+  // que ARQ-01 ya viene reclamando.
+  reportId    String?
+  report      StudentReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  studentId   String?
+  student     Student?  @relation(fields: [studentId], references: [id])
+
+  signedAt    DateTime  @default(now())
+
+  // Hash del contenido exacto que se firmó. Si deja de coincidir con el del
+  // informe, alguien lo editó después y hay que mostrarlo así.
+  contentHash String
+
+  // El trazo de esta firma. Se vacía por retención; la fila queda siempre.
+  strokeData  Json?
+
+  // Parecido contra la referencia, de 0 a 100. Se guarda desde el día uno y no
+  // se muestra hasta calibrar el umbral con firmas reales. Nunca bloquea.
+  similarityScore Float?
+
+  @@index([reportId])
+  @@index([instituteId, signedAt])
+}
+
+// -----------------------------------------------------------------------------
+// FIRMA DEL INSTITUTO EN EL BOLETÍN (FEAT-21)
+// La dirección firma que revisó las notas y los comentarios; el docente firma
+// autoría. Es del lado del instituto: no tiene nada que ver con el acuse de
+// lectura de la familia, que es `Signature`.
+// -----------------------------------------------------------------------------
+
+// Una firma sobre una **tanda** de informes: curso + plantilla + año + período.
+// La tanda no existe como fila —son N `StudentReport` que comparten esas cuatro
+// claves—, así que la clave natural va acá repetida. Se firma una vez y la firma
+// sale en el boletín de todos los alumnos de esa tanda.
+//
+// **No puede ser una fila de `Signature`.** La pantalla del instituto cuenta
+// `report.signatures.length > 0` como "la familia firmó"; meter acá la firma del
+// docente haría mentir ese porcentaje.
+model ReportBatchSignature {
+  id          String    @id @default(cuid())
+  instituteId String
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  templateId  String
+  template    ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  year        Int
+  periodIndex Int
+
+  // "ADMIN" (la dirección) o "TEACHER". Texto y no enum, igual que
+  // `ThreadParticipant.actingRole`, que ya guarda así el rol activo.
+  signerRole  String
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  // El nombre se congela. Leerlo en vivo del curso es lo que hoy hace que
+  // cambiar el docente reescriba el nombre en boletines ya emitidos.
+  signerName  String
+
+  signedAt    DateTime  @default(now())
+
+  // Foto de lo que se firmó, **alumno por alumno**: `{ studentId: contentHash }`.
+  // Es un mapa y no un hash único de la tanda porque la decisión es por alumno:
+  // si se corrige la nota de uno, la firma de la dirección se cae en su boletín
+  // y los otros veintitrés no se enteran.
+  contentHashes Json
+
+  // El trazo, copiado de la firma de referencia al firmar. Se copia y no se lee
+  // en vivo para que retocar la firma no reescriba los boletines ya emitidos.
+  // Se vacía por retención; la fila queda siempre.
+  strokeData  Json?
+
+  // Una firma por rol y por tanda: volver a firmar reemplaza la anterior.
+  @@unique([courseId, templateId, year, periodIndex, signerRole])
+  @@index([instituteId, signedAt])
 }
 

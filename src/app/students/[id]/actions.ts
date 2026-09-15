@@ -3,7 +3,9 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 /** Ficha del alumno: los tres roles que ven "Estudiantes" en el menú. */
 const STUDENT_EDITORS = ["ADMIN", "SECRETARY", "TEACHER"] as const;
@@ -135,13 +137,22 @@ export async function resetStudentPassword(studentId: string, customPassword?: s
             return { success: false, error: "Estudiante no encontrado o sin permisos" };
         }
 
-        const newPassword = customPassword || student.dni || "lingua1234";
+        const newPassword = customPassword || student.dni || DEFAULT_PASSWORDS.STUDENT_RESET_FALLBACK;
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await prisma.student.update({
             where: { id: studentId },
-            data: { password: hashedPassword }
+            data: {
+                password: hashedPassword,
+                hasDefaultPassword: isDefaultForStudent(newPassword, student.dni),
+            }
         });
+
+        // El instituto le restableció la contraseña, así que el enlace de
+        // recuperación que estuviera en la bandeja del tutor deja de servir
+        // (FEAT-05). Sin esto, un correo viejo sin usar pisa lo que se acaba de
+        // escribir acá.
+        await invalidateResetTokens("STUDENT", studentId);
 
         return { success: true, newPassword };
     } catch {
@@ -315,7 +326,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
 
     try {
         const normalizedEmail = email.toLowerCase().trim();
-        const defaultPassword = "Modern2026";
+        const defaultPassword = DEFAULT_PASSWORDS.GUARDIAN_NEW;
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         // 1. Buscar si ya existe el usuario
@@ -345,6 +356,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
                     email: normalizedEmail,
                     name: guardianName,
                     password: hashedPassword,
+                    hasDefaultPassword: true,
                     roles: ["GUARDIAN"],
                     instituteId: user.instituteId,
                     status: "ACTIVE"

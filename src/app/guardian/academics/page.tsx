@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { GuardianAcademicsView } from "./components/GuardianAcademicsView";
+import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
+import { signatureLinesByReport } from "@/lib/reports/batchSignatureQuery";
 
 export default async function GuardianAcademicsPage() {
     const session = await getServerSession(authOptions);
@@ -20,6 +22,18 @@ export default async function GuardianAcademicsPage() {
     }
 
     const guardianId = sessionUser.id;
+    if (!guardianId) redirect("/login");
+
+    // Leer las notas y las asistencias no deja ningún rastro en la base: sin
+    // esto, la pregunta del instituto —"¿los tutores las miran?"— no tiene
+    // respuesta posible (FEAT-11).
+    await recordActivity({
+        subjectType: "USER",
+        subjectId:   guardianId,
+        instituteId: sessionUser.instituteId,
+        roles:       userRoles,
+        section:     GUARDIAN_SECTIONS.ACADEMICS,
+    });
 
     // Fetch master relation
     const guardianLinks = await prisma.guardianStudentLink.findMany({
@@ -86,7 +100,10 @@ export default async function GuardianAcademicsPage() {
                                 }
                             },
                             entries: true,
-                            course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } }
+                            course: { select: { id: true, name: true, level: true, color: true, teacher: { select: { name: true } } } },
+                            // Firma de conformidad (FEAT-09): a quién le toca y quién ya firmó.
+                            signers: { select: { userId: true, studentId: true } },
+                            signatures: { select: { userId: true, studentId: true, signedAt: true } }
                         },
                         orderBy: [{ year: "desc" }, { periodIndex: "asc" }]
                     }
@@ -99,12 +116,36 @@ export default async function GuardianAcademicsPage() {
         redirect("/dashboard"); // Si no tiene alumnos o es raro, que vaya al resúmen general a ver el alerta.
     }
 
-    const students = guardianLinks.map(l => l.student);
+    // Las firmas del instituto en el boletín (FEAT-21). Se resuelven en una sola
+    // consulta para todos los informes de todos los hijos: la tanda se
+    // identifica por cuatro columnas y no hay relación de Prisma que la cruce.
+    const signatureLines = await signatureLinesByReport(
+        guardianLinks.flatMap(l => l.student.studentReports)
+    );
+
+    const students = guardianLinks.map(l => ({
+        ...l.student,
+        studentReports: l.student.studentReports.map(r => ({
+            ...r,
+            signatureLines: signatureLines.get(r.id) ?? []
+        }))
+    }));
+
+    // La firma de referencia es de la persona, no del alumno: un tutor con tres
+    // hijos tiene una sola y le sirve para los informes de los tres.
+    const signatureReference = await prisma.signatureReference.findUnique({
+        where: { userId: guardianId },
+        select: { strokeData: true }
+    });
 
     return (
         <div className="min-h-screen bg-background">
             <Navbar currentActiveRole={role} />
-            <GuardianAcademicsView students={students} />
+            <GuardianAcademicsView
+                students={students}
+                viewerId={guardianId}
+                signatureReference={signatureReference?.strokeData ?? null}
+            />
         </div>
     );
 }

@@ -3,7 +3,9 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
+import { invalidateResetTokens } from "@/lib/passwordReset";
 
 export async function updateGuardianAction(formData: FormData) {
     const adminUser = await requireRole(["ADMIN"]);
@@ -91,13 +93,17 @@ export async function resetGuardianPassword(guardianId: string, customPassword?:
             return { success: false, error: "Tutor no encontrado o sin permisos" };
         }
 
-        const newPassword = customPassword || "tutor1234";
+        const newPassword = customPassword || DEFAULT_PASSWORDS.GUARDIAN_RESET;
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await prisma.user.update({
             where: { id: guardianId },
-            data: { password: hashedPassword }
+            data: { password: hashedPassword, hasDefaultPassword: isDefaultForUser(newPassword) }
         });
+
+        // Ver la nota en el reset de profesores: el enlace de recuperación que
+        // haya pendiente queda sin efecto (FEAT-05).
+        await invalidateResetTokens("USER", guardianId);
 
         revalidatePath(`/guardians/${guardianId}`);
         return { success: true, newPassword };

@@ -66,6 +66,8 @@ interface StudentAcademicsViewProps {
   };
   practiceMetrics: PracticeMetrics;
   reports: any[];
+  /** Su firma de referencia, para mostrársela mientras firma (FEAT-09). */
+  signatureReference?: any;
 }
 
 export function StudentAcademicsView({
@@ -76,7 +78,8 @@ export function StudentAcademicsView({
   recentGrades,
   academicStats,
   practiceMetrics,
-  reports
+  reports,
+  signatureReference
 }: StudentAcademicsViewProps) {
   
   // Lógica robusta para encontrar el curso principal
@@ -435,10 +438,15 @@ export function StudentAcademicsView({
       </div>
 
       {/* 5. BOLETÍN INSTITUCIONAL */}
-      <StudentReportViewer 
-        studentName={student.name} 
-        reports={reports || []} 
-        instituteName={student.institute?.name} 
+      {/* El alumno de 20 o más firma su propio informe (FEAT-09): sin pasarle
+          `viewer` el cuadro de firma no aparece nunca y el informe le queda
+          pendiente para siempre, porque a él no le firma nadie más. */}
+      <StudentReportViewer
+        studentName={student.name}
+        reports={reports || []}
+        instituteName={student.institute?.name}
+        viewer={{ id: student.id, isStudent: true }}
+        signatureReference={signatureReference}
       />
 
     </main>
