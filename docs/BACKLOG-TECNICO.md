@@ -3565,7 +3565,7 @@ baja. Es previo a [BUG-05](#bug-05), pero se nota más ahora que el admin puede 
 Recomiendo la 3, y revisar con el cliente si el admin espera enterarse de mensajes nuevos en hilos
 que no son suyos.
 
-### Resuelto — 2026-09-13 en `b0303d8` · va la opción 3 · pendiente de verificar en stage
+### Resuelto — 2026-09-13 en `b0303d8` · va la opción 3 · verificado en stage el 2026-09-14
 
 Entró con [FEAT-06](#feat-06), que abrió el canal de las familias y convirtió este contador en la
 herramienta de supervisión de la administración: era el momento.
@@ -3584,6 +3584,10 @@ sobre `ThreadParticipant`.
 hilos del instituto— y participa de 4. Con la consulta nueva da **0**, que es lo correcto: de esos 4,
 en ninguno hay algo sin leer que no haya escrito ella. La misma consulta sobre el resto del padrón
 devuelve números distintos de cero (alumnos con 2 y 3 sin leer), así que no está apagada de más.
+
+**Verificado en pantalla en stage el 2026-09-14:** la administradora ve los 15 hilos del instituto
+con el badge en 0, y **abrir un hilo del que no participa no le mueve el contador**. Ver el detalle
+en [FEAT-06](#feat-06).
 
 ---
 
@@ -4531,12 +4535,44 @@ asunto filtra; la paginación corta en 20 y la segunda página trae las 16 resta
 **Y la prueba de [BUG-06](#bug-06) en pantalla:** la administradora ve los 36 hilos del instituto y
 el badge le queda en **cero**, con los dos desplegables —curso y alumno— ya poblados.
 
-**Lo que sigue sin verse:** la persona que es tutora **y** docente a la vez. El rol activo la manda
-al redactor del personal por defecto, así que hay que probar el selector de rol antes de salir.
+**Lo que quedó sin verse acá:** la persona que es tutora **y** docente a la vez — en la base local no
+existía el caso con datos creíbles. Se recorrió en stage al día siguiente, más abajo.
 
 **Ojo con el `.env` de desarrollo:** `NEXT_PUBLIC_SUPABASE_URL` apunta al proyecto de **producción**
 mientras `DATABASE_URL` apunta a la base local. Para estas pruebas dio igual —el canal en vivo no
-guarda nada—, pero conviene saberlo antes de probar Storage desde local.
+guarda nada—, pero conviene saberlo antes de probar Storage desde local. Y `supabase-server.ts` usa
+esa misma URL con la service role key, así que **un adjunto subido desde local va al bucket de
+producción**.
+
+### Verificado en stage — 2026-09-14 · el doble rol, que local no podía mostrar
+
+Sobre datos copiados de producción, con las tres personas que ejercitan los casos. Los números se
+predijeron contra la base **antes** de abrir la pantalla, y dieron.
+
+**La tutora con tres hijos** (Pamela Paez). El selector con los tres, y al cambiar de hijo cambian el
+curso **y** el docente — son tres cursos distintos con tres docentes distintos. El hilo quedó con
+`studentId` de Thiago, participantes la madre y la docente, y **cero alumnos adentro**.
+
+**El doble rol** (Patricia Muñiz, docente y tutora de Ariana). Es el caso que justificaba probar en
+stage y salió entero:
+
+- Entra con el rol activo en **docente**, sin elegir, porque TEACHER gana por prioridad sobre
+  GUARDIAN. El panel le muestra "Mis Cursos: 1".
+- Como docente ve el redactor del personal, con **un solo curso en el desplegable** —el suyo, no los
+  31 del instituto— y **sin la pestaña de Profesores**, que es de administración.
+- Al cambiar el selector a tutora, el redactor pasa al de la familia: sin selector de hijo, *Sobre
+  Ariana Muñiz*, *Pre-adolescents 1 M-J late shift*, *Profesor del curso — Rosa Marin*.
+- **Y el mensaje queda grabado con `senderRole = GUARDIAN`**, no TEACHER. Es lo que más importa de
+  este caso: si guardara el otro rol, Rosa Marin estaría leyendo un mensaje de una colega en vez de
+  uno de una madre, y releyendo el hilo mañana nadie sabría con qué sombrero se escribió.
+
+**[BUG-06](#bug-06) en la pantalla del admin.** Ve los **15 hilos** del instituto y el badge del
+sobre le queda en **0**; antes del arreglo habría marcado 15, porque participa de 3. Abrir un hilo
+del que no participa **no le mueve el contador**, que es justamente lo que se buscaba.
+
+**Un detalle del chip del alumno, que estaba mal descrito arriba:** en la **bandeja** es una etiqueta
+para todos; el **enlace a la ficha** vive adentro del hilo y sólo para el personal. Y sigue el rol
+activo, no la lista de roles: a Patricia, mirando como tutora, el mismo chip le salió sin enlace.
 
 ---
 
