@@ -112,31 +112,15 @@ export function StudentReportViewer({
     }
   }, [selectedCourseId, courseReports, selectedPeriodIndex]);
 
-  if (reports.length === 0) {
-    return (
-      <Card className="p-10 border-none shadow-2xl bg-card rounded-[3rem] relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
-          <ClipboardList size={200} />
-        </div>
-        <div className="relative z-10 text-center max-w-2xl mx-auto space-y-6">
-          <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
-            <ClipboardList className="text-primary" size={32} />
-          </div>
-          <h2 className="text-3xl font-black tracking-tight">Informe Trimestral</h2>
-          <p className="text-muted-foreground font-medium leading-relaxed">
-            Actualmente no hay informes académicos publicados para ti. 
-            Tan pronto como tus profesores completen y publiquen las evaluaciones, aparecerán aquí.
-          </p>
-          <div className="pt-6 border-t border-border/50">
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-muted/30 rounded-full text-sm font-bold text-muted-foreground border border-dashed border-muted-foreground/30">
-              <Lock size={16} /> Próximamente disponible
-            </div>
-          </div>
-        </div>
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-      </Card>
-    );
-  }
+  // Sin ningún informe publicado, la sección no se dibuja (FEAT-27).
+  //
+  // Lo que había acá era un cartel —«Informe Trimestral», candado, «Próximamente
+  // disponible»— que prometía un boletín que para este alumno puede no existir
+  // nunca, y que no tenía forma de dejar de prometerlo: en abril decía lo mismo
+  // que en diciembre. No confundir con el alumno que **sí** tiene informes y
+  // mira un período todavía sin publicar: ése es un período real de la plantilla
+  // de su curso y sigue mostrándose con candado más abajo.
+  if (reports.length === 0) return null;
 
   const activeCourseInfo = displayedReport?.course;
   const categories = displayedReport?.template?.categories || [];
