@@ -295,6 +295,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-23](#feat-23) | P3 | Los hilos de mensajes no se cierran nunca | [ ] |
 | [FEAT-24](#feat-24) | P3 | Buscar dentro del contenido de los mensajes | [ ] |
 | [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
+| [FEAT-26](#feat-26) | P2 | Reponer una cuota eliminada sin pasar por un script | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -7605,6 +7606,49 @@ familia.
 guardado y el nombre se deduce de los roles actuales, donde **ADMIN le gana a SECRETARY**. En
 producción es **un solo mensaje**, del 2026-05-12, y nadie tiene los dos roles — así que hoy no
 muestra mal a nadie.
+
+---
+
+<a id="feat-26"></a>
+## FEAT-26 · Reponer una cuota eliminada sin pasar por un script · **P2**
+
+**Origen.** El 2026-09-15 el instituto pasó una lista de **nueve cuotas que había eliminado por
+error** y pidió recuperarlas. Se resolvió con
+[`scripts/restore-deleted-fees.js`](../scripts/restore-deleted-fees.js), corrido a mano contra
+producción. Que la única salida sea un script es el problema que anota esta ficha: borrar una cuota
+lo puede hacer la secretaría desde la pantalla ([SEC-03](#sec-03)), pero deshacerlo no lo puede hacer
+nadie sin nosotros.
+
+**Por qué no alcanza con la generación que ya existe.** `generateMonthlyFeesAction` no sirve para
+esto por dos razones independientes, y las dos son graves:
+
+- Es **masiva**. Genera para toda inscripción activa sin cuota del período, así que correrla para
+  recuperar el abril de un alumno le recrea la cuota a todos los demás — incluidos los becados a los
+  que se les borró bien. Convierte un problema de nueve filas en uno de todo el padrón.
+- Toma el **precio de hoy** del curso, no el que tenía la cuota. El abril que había que reponer valía
+  $61.000 y su curso hoy está $69.000: repondría una deuda que el alumno nunca contrajo.
+
+**Lo bueno es que el dato ya está.** [`FeeDeletion`](../prisma/schema.prisma) guarda la foto completa
+—alumno, tipo, año, mes, importe, curso e instituto—, que es exactamente lo que hace falta para
+volver a crear la fila. Restaurar es leer la foto, resolver la inscripción y un `create`. El script
+ya hace eso; lo que falta es que lo haga el producto.
+
+**Lo que hay que resolver, que es más que el botón:**
+
+| | |
+|---|---|
+| **La foto queda** | Hoy `/payments/deletions` seguiría mostrando el borrado aunque la cuota exista de nuevo. La pantalla necesita distinguir una eliminación repuesta de una vigente — un `restoredAt` y un `restoredById`, y que la fila lo diga. **Borrar la foto no es opción:** es el registro de que esto pasó |
+| **La cuota sin curso** | Si `courseName` es nulo la cuota no tenía inscripción, y no hay a qué colgarla. Crearla suelta es fabricar justo lo que duplica cuotas solo ([FIN-22](#fin-22)). Que la pantalla lo diga y no ofrezca reponerla |
+| **Que ya exista** | Si alguien la volvió a generar por otro camino, reponer duplicaría. La restricción única de `Fee` lo frena, pero el error tiene que leerse como "esta cuota ya está", no como una falla |
+| **Quién** | La pantalla ya es **sólo ADMIN**, y así debería quedar. La secretaría borra; deshacer un borrado es control del dueño |
+
+**Lo que el script decidió y conviene sostener.** Dos cosas que ya se pensaron ahí y valen igual para
+la pantalla: el importe sale **siempre** de la foto y nunca del precio vigente; y la cuota vuelve
+`PENDING` con `paidAmount` en 0, que es lo único que puede ser — sólo se borran cuotas impagas.
+
+**Relacionado.** [FEAT-10](#feat-10) construyó la pantalla y la tabla; esto es la acción que le
+faltaba. [ARQ-10](#arq-10) (auditoría general) es el marco donde ese `restoredAt` debería terminar
+viviendo si se encara.
 
 ---
 
