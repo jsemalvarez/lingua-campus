@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye } from "lucide-react";
-import { format, addDays, subDays, addWeeks, subWeeks, startOfWeek, isSameDay, parseISO, isValid } from "date-fns";
+import { format, addDays, subDays, addWeeks, subWeeks, isSameDay, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
 import { ScheduleFilters } from "./components/ScheduleFilters";
@@ -148,12 +148,39 @@ export default async function SchedulePage(props: PageProps) {
 
     const displayDayIndex = displayDateNoon.getUTCDay();
 
-    const weekStart = startOfWeek(displayDateNoon, { weekStartsOn: 1 });
-    const weekStartUTC = new Date(weekStart);
+    // ── La semana se calcula una sola vez, acá, y viaja a la grilla (BUG-17) ──
+    //
+    // Antes cada punta sacaba su propio lunes: el servidor con `date-fns` y
+    // `weekStartsOn: 1`, y la grilla con `dayjs().startOf('week').add(1, 'day')`.
+    // Ese `+1` compensaba que dayjs arranca la semana en domingo — pero el locale
+    // de dayjs es global del navegador, y otros módulos lo ponen en `es`, donde la
+    // semana ya arranca el lunes. Con `es` puesto el `+1` sobraba y la grilla
+    // dibujaba las siete columnas corridas un día: la tarjeta de un curso de lunes
+    // buscaba su clase en la fecha del martes y no enganchaba ninguna, nunca.
+    //
+    // La cuenta va en UTC y sin librería. `Lesson.date` es un `date` de Postgres
+    // —un día, sin hora—, así que la semana es un rango de días calendario, no de
+    // instantes: no tiene que depender ni de la zona del servidor ni de la del
+    // dispositivo que mira.
+    const weekStartUTC = new Date(displayDateNoon);
+    weekStartUTC.setUTCDate(weekStartUTC.getUTCDate() - ((weekStartUTC.getUTCDay() + 6) % 7));
     weekStartUTC.setUTCHours(0, 0, 0, 0);
-    
-    const weekEndUTC = addDays(weekStartUTC, 6);
+
+    const weekEndUTC = new Date(weekStartUTC);
+    weekEndUTC.setUTCDate(weekEndUTC.getUTCDate() + 6);
     weekEndUTC.setUTCHours(23, 59, 59, 999);
+
+    /** Las siete fechas de la semana, lunes a domingo, como `yyyy-MM-dd` en UTC. */
+    const weekDates = Array.from({ length: 7 }, (_, i) => {
+        const day = new Date(weekStartUTC);
+        day.setUTCDate(day.getUTCDate() + i);
+        return day.toISOString().slice(0, 10);
+    });
+
+    // Para rotular. El mediodía UTC es la convención que ya usa esta pantalla para
+    // que `format`, que imprime en la zona del proceso, no corra el día.
+    const weekStartNoon = new Date(weekStartUTC);
+    weekStartNoon.setUTCHours(12, 0, 0, 0);
 
     const dayStartUTC = new Date(displayDateNoon);
     dayStartUTC.setUTCHours(0, 0, 0, 0);
@@ -302,7 +329,7 @@ export default async function SchedulePage(props: PageProps) {
                             <h2 className="text-base font-bold tracking-tight text-foreground/90 capitalize">
                                 {view === "day"
                                     ? format(displayDateNoon, "EEEE d 'de' MMMM", { locale: es })
-                                    : isToday ? "Semana Actual" : `Semana del ${format(startOfWeek(displayDateNoon, { weekStartsOn: 1 }), "d 'de' MMM", { locale: es })}`}
+                                    : isToday ? "Semana Actual" : `Semana del ${format(weekStartNoon, "d 'de' MMM", { locale: es })}`}
                             </h2>
                             <span className="text-[10px] font-bold text-primary/60 tracking-widest uppercase mt-0.5">
                                 {view === "day" ? "Vista Diaria" : "Vista Semanal"}
@@ -337,7 +364,7 @@ export default async function SchedulePage(props: PageProps) {
                             </div>
                         ) : (
                             view === "week" ? (
-                                <WeeklyGridView schedules={allSchedules} daysMapping={daysMapping} currentDate={displayDateNoon} />
+                                <WeeklyGridView schedules={allSchedules} daysMapping={daysMapping} weekDates={weekDates} />
                             ) : (
                                 <div className="space-y-4">
                                     {schedules.map((schedule) => {

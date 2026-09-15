@@ -267,6 +267,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
 | [BUG-15](#bug-15) | P2 | En el celular el listado de alumnos no tiene ninguna acción | [ ] |
 | [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
+| [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7223,6 +7224,111 @@ pasarla convertida.
 **Relacionado.** [SEC-03](#sec-03), de donde salió. [ARQ-15](#arq-15) y [BUG-01](#bug-01), la
 identidad partida en dos tablas. [FIN-19](#fin-19) toca el mismo recibo por el otro lado: el concepto
 que no nombra el curso. [ARQ-09](#arq-09), los errores que no se registran en ningún lado.
+
+---
+
+<a id="bug-17"></a>
+## BUG-17 · Las clases que cargan las docentes no aparecen en el calendario · **P1** · 🗣️ Pedido del cliente
+
+**Reporte (2026-09-13).** Las profesoras cargaron las clases de sus cursos y en el calendario no se
+ven. La captura que llegó muestra las 61 tarjetas de la semana, todas en gris punteado y todas
+diciendo «Pendiente».
+
+**La grilla dibujaba las siete columnas corridas un día.** En la captura, la columna rotulada **LUNES
+llevaba la fecha 15/9**, que es martes. Las tarjetas estaban bien puestas —van por `dayOfWeek` del
+horario—, pero la **fecha** contra la que cada columna buscaba su clase era la del día siguiente. La
+tarjeta de un curso de lunes preguntaba si había clase el martes. Nunca la hay.
+
+### La causa: dos puntas calculando el mismo lunes con reglas distintas
+
+El servidor sacaba su lunes con `date-fns` y `weekStartsOn: 1`
+([`schedule/page.tsx:151`](../src/app/schedule/page.tsx)), y la grilla sacaba el suyo con dayjs
+([`WeeklyGridView.tsx:52`](../src/app/schedule/components/WeeklyGridView.tsx)):
+
+```js
+const startOfViewWeek = dayjs(currentDate).startOf('week').add(1, 'day');
+```
+
+Ese `.add(1, 'day')` compensaba que dayjs arranca la semana **en domingo**. Y es cierto — mientras el
+locale sea el de fábrica:
+
+| locale de dayjs | `weekStart` | Qué hace la línea |
+| --- | --- | --- |
+| `en` (fábrica) | 0 · domingo | De lunes a sábado da el lunes correcto. **Los domingos** `startOf('week')` devuelve ese mismo domingo y el `+1` salta al lunes **siguiente**: la grilla se corre una semana entera. |
+| `es` | 1 · lunes | `startOf('week')` ya devuelve el lunes, el `+1` sobra y la grilla se corre **un día, todos los días**. |
+
+**El locale de dayjs es global de la pestaña, y lo pone otra pantalla.** `dayjs.locale("es")` se
+ejecuta al cargarse [`StudentDashboardV2View.tsx:22`](../src/app/dashboard/components/StudentDashboardV2View.tsx)
+y [`StudentAcademicsView.tsx:32`](../src/app/dashboard/components/StudentAcademicsView.tsx), que lo
+necesitan para escribir los meses en castellano. Son los dos únicos lugares del repo que lo tocan. El
+calendario nunca lo pidió: se lo encuentra puesto.
+
+En el build se ve el reparto:
+
+```
+dayjs.locale("es") aparece solo en:   app/dashboard/page-*.js
+                                      app/academics/page-*.js
+chunks de WeeklyGridView:             0 ocurrencias
+```
+
+**Por eso el bug parecía depender del dispositivo, y no depende.** Es el mismo JavaScript en Windows,
+Android e iPhone. Lo que cambia es por dónde se entró al calendario **en esa pestaña**:
+
+| Cómo se llega a `/schedule` | locale | Columna LUNES | Qué se ve |
+| --- | --- | --- | --- |
+| Login → Inicio → Calendario | `es` | 15/9 | 0 clases, todo «Pendiente» |
+| Entrada directa: marcador, recarga dura, ícono del PWA | `en` | 14/9 | las clases aparecen |
+
+Es estado, no configuración. Una recarga dura lo "arregla" y volver a pasar por Inicio lo rompe de
+nuevo — de ahí que el reporte sea tan difícil de describir y que a una persona le funcione y a otra no.
+
+### Medido contra producción
+
+Con las columnas corridas un día, sobre los 31 cursos activos de la semana del 14/09:
+
+```
+tarjetas dibujadas: 61   ·   tarjetas que enganchan clase: 0
+```
+
+Cero, siempre. No es que se vieran pocas: no se veía **ninguna**, en ninguna semana. Con las columnas
+en su lugar, esa misma semana muestra **15 tarjetas con clase, 8 con el tema escrito**; la semana
+anterior —la que las docentes habían cargado— muestra **24 con clase y 21 con tema**.
+
+### El arreglo: la semana se calcula una sola vez
+
+No se tocó el `+1`. Parchearlo dejaba viva la causa, que es que hubiera dos cuentas. **El servidor
+calcula las siete fechas y se las pasa a la grilla**, que ya no hace aritmética de fechas: dibuja lo
+que recibe. Así las dos puntas no pueden discrepar por construcción, y `dayjs` salió del componente.
+
+Dos decisiones de detalle:
+
+- **La cuenta va en UTC y sin librería.** `Lesson.date` es un `date` de Postgres —un día, sin hora—,
+  así que la semana es un rango de días calendario, no de instantes. `date-fns` calcula en la zona del
+  proceso, y eso hacía que el mismo instante cayera en semanas distintas según dónde corriera. Ahora
+  no depende ni de la zona del servidor ni de la del dispositivo.
+- **Se fue el `.add(12, 'hour')`** de la comparación de clases. Compensaba que la fecha llega como
+  medianoche UTC y se leía en hora local, y aguantaba de UTC−11 a UTC+11 — suficiente para Argentina,
+  pero una trampa esperando a alguien. Las fechas se comparan como texto `yyyy-MM-dd`, que ordena igual
+  que una fecha y no tiene zona.
+
+### Lo que esta ficha no arregla
+
+Dos cosas que aparecieron midiendo y que siguen en pie:
+
+1. **El calendario dibuja `Schedule`, no `Lesson`.** La clase es un adorno de la tarjeta del horario
+   que cae ese día de la semana. Una clase cargada en un día en que el curso no tiene horario **no
+   aparece nunca**: hoy hay 17 así en producción —15 de «Children 3 TM», que se generaron con horario
+   L-M y después el horario pasó a M-J, más dos recuperatorios—. Y si hay **dos clases el mismo día**,
+   la tarjeta muestra una sola: pasa hoy con «Upper-intermediate M-J early shift» el 08/09.
+2. **El calendario abre en la semana en curso, que es la que todavía nadie llenó.** La docente escribe
+   el tema después de dar la clase, así que la pantalla que se abre por defecto siempre muestra la
+   mayoría de las tarjetas en «Pendiente» — 46 de 61 la semana del 14/09, contra 24 con clase la
+   semana anterior. Es lo mismo que quedó anotado en [FEAT-06](#feat-06) el 2026-08-18, resuelto
+   entonces sólo para la tarjeta del par y no para la vista.
+
+**Relacionado.** [FEAT-07](#feat-07), que es donde se escribió la tarjeta del calendario y donde ya se
+había corregido el otro defecto de la vista diaria. [BUG-14](#bug-14), los filtros del calendario que
+no avisan que filtran — el mismo síntoma para el usuario: la pantalla muestra de menos sin decirlo.
 
 ---
 
