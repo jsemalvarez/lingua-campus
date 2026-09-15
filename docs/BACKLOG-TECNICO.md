@@ -7692,11 +7692,37 @@ publicación ahora no encuentra rastro y llama al instituto. Se prefirió eso a 
 sin fecha. Si el llamado aparece, la salida no es devolver el cartel sino avisar cuando el boletín se
 publica: eso vive en [FEAT-08](#feat-08) (columna de novedades) y [FEAT-22](#feat-22) (push).
 
-### Resuelto — 2026-09-15 en `ab1e02f` · pendiente de verificar en stage
+### Resuelto — 2026-09-15 en `ab1e02f` · verificado en stage el 2026-09-15
 
-Falta verlo en pantalla, con dos alumnos: uno sin ningún informe —en su propio hub y desde la cuenta
-de su tutor, donde la sección no tiene que aparecer— y uno con informes, que tiene que seguir viendo
-todo igual, candados de período incluidos.
+Mirado en pantalla sobre el deploy `675a626`, con los tres casos y la predicción escrita antes de
+entrar:
+
+- **Alumno sin informes** (Adults Level 2, cero informes): su Hub de Progreso termina en «Práctica
+  con IA». No queda ni el cartel ni un hueco, y el resto de la página —rendimiento, docente, las 62
+  clases con su historial de asistencia— sigue entero.
+- **Su tutora**, sobre el mismo alumno: el Hub Académico termina en «Notas · Sin calificaciones».
+- **Control, alumna con 2 informes publicados**: el boletín se ve completo — «Exportar PDF», el
+  selector con el 1° y el 2° trimestre disponibles y el 3° con su candado, la grilla de conceptos,
+  el comentario del docente y el pie de emisión oficial.
+
+El tercero era el que podía delatar una rotura: confirma que lo que desapareció fue el cartel y no la
+sección.
+
+**Cómo se llegó a mirarlo, que costó más que el cambio.** Las cuentas de stage vienen del backup de
+producción y no se sabía ninguna contraseña. Dos cosas que conviene tener anotadas para la próxima:
+
+- **`hasDefaultPassword` está en `null` para las 422 cuentas de stage.** La marca no se calcula al
+  leer: la escribe una pasada, y el restore trae los datos sin ella
+  ([`defaultPasswords.ts`](../src/lib/defaultPasswords.ts), [SEC-06](#sec-06)). O sea que el panel de
+  contraseñas no sirve para orientarse en una base clonada. Es la misma forma que
+  [BUG-19](#bug-19): lo que no viaja con el backup. **No se miró si en producción está poblada.**
+- **`crypt()` de Postgres no valida los hashes de la app.** bcryptjs escribe `$2b$` y pgcrypto sólo
+  entiende `$2a$`: comparar por SQL da `false` para todo y parece que nadie conserva su contraseña.
+  Verificado con un hash de control. Si hace falta responder «¿esta cuenta tiene la default?» hay que
+  hacerlo con bcryptjs, no con SQL.
+
+Para la prueba se les puso contraseña a cuatro cuentas **de stage** —el admin del instituto, los dos
+alumnos y la tutora—; producción no se tocó. Se pierden solas en el próximo restore.
 
 ---
 
