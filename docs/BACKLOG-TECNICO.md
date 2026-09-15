@@ -6999,9 +6999,38 @@ restricción. Por eso la detección tiene que ser del sistema y no de que ella l
 **Los tutores hacia atrás son la parte que más interesa (decisión 4), y ya está resuelta.** El script
 [`backfill-report-signers.js`](../scripts/backfill-report-signers.js) le agrega hash y lista de
 firmantes a los informes publicados antes de que existiera la firma, sin pisar `publishedAt`,
-resolviendo la edad con la fecha original y sin disparar el aviso de publicación. **Se corre cuando
-FEAT-09 salga a producción.** Para dirección y profesor firmar hacia atrás no necesita nada: entran a
-la planilla vieja y firman.
+resolviendo la edad con la fecha original y sin disparar el aviso de publicación. Para dirección y
+profesor firmar hacia atrás no necesita nada: entran a la planilla vieja y firman.
+
+#### Corrido en producción el 2026-09-15
+
+El día después de promover el lote. **209 hashes escritos y 203 firmantes creados** —202 tutores y un
+alumno que ya tenía 20 a la fecha original de publicación—, repartidos en **201 informes**. Quedan
+**8 sin firmante**: alumnos sin ningún tutor cargado, a los que no hay a quién pedírsela hasta que se
+les vincule uno. Verificado en pantalla: las 28 tandas aparecen con su fecha real —del 11 de junio al
+2 de septiembre— y `publishedAt` no se movió en ninguna. La pantalla marca además **1 informe en
+«requieren atención»**, de un alumno sin fecha de nacimiento: no se pudo decidir si firmaba él, así
+que le quedaron los tutores.
+
+**Hizo falta arreglar el script antes, y el arreglo no está versionado.** Tal como estaba escribía los
+209 hashes de a uno dentro de la `$transaction`, y eso no entra en los 5 segundos que Prisma le da a
+una transacción interactiva: probado primero contra stage —que tenía los datos de producción por el
+ensayo de la promoción— falló con `P2028 Transaction already closed`, con rollback limpio. Es el mismo
+problema que [FIN-06](#fin-06) dejó escrito para los generadores masivos de cuotas, y la misma salida:
+colapsar a una sola query —un `UPDATE … FROM unnest(ids, hashes)`— en vez de agrandar el timeout.
+
+Como `/scripts` está entero en `.gitignore` —protege `scripts/.pgurl`, que tiene la clave de
+producción, en un repositorio público—, **ese arreglo vive sólo en la máquina de desarrollo y esta
+ficha es su único rastro**. Por lo mismo, el enlace al script de tres párrafos más arriba está roto en
+GitHub, igual que la mención en
+[`batchSignatures.ts:118`](../src/app/actions/batchSignatures.ts). Se arregla cambiando el ignore por
+una lista blanca (`/scripts/*` y después `!*.sh`, `!*.js`, `!*.ts`), que versiona el código y nunca
+los datos.
+
+**Una aspereza conocida:** los 8 informes sin tutor vuelven a entrar en cada corrida —el filtro es
+«publicado y sin firmantes», y firmantes no van a tener nunca— así que se les reescribe el hash cada
+vez. Es inofensivo, porque el hash es determinista; lo que el script no sabe decir es «no hay nada que
+hacer».
 
 **Por qué no un botón de firmar todo (decisión 5).** Son 30 cursos y la primera tanda va a ser larga
 —el cliente lo sabe y lo acepta—, pero un botón que firma 30 tandas de un click convierte la revisión
