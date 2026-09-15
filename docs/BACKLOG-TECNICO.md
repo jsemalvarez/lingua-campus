@@ -220,6 +220,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
 | [SEC-11](#sec-11) | P1 | 🗣️ Obligar a cambiar la contraseña por defecto en el primer ingreso | [ ] |
 | [SEC-12](#sec-12) | P1 | El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual | [ ] |
+| [SEC-13](#sec-13) | P2 · hoy inofensivo | El login del alumno no ata la búsqueda al instituto | [ ] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
@@ -1018,6 +1019,40 @@ una sesión. Tres cosas, y ninguna es cara:
 adivinable el acceso del aspirante), [ARQ-05](#arq-05) (la política de borrado lógico que esto
 incumple), [BUG-08](#bug-08) (qué es un preinscripto y por qué no es un alumno),
 [SEC-09](#sec-09) (el `middleware.ts` que no existe y que sería la otra capa).
+
+---
+
+<a id="sec-13"></a>
+## SEC-13 · El login del alumno no ata la búsqueda al instituto · **P2 · hoy inofensivo**
+
+**De dónde sale.** Apareció probando [FEAT-06](#feat-06) en stage el 2026-09-14, al preguntarse por
+qué un login por DNI podía fallar según la URL. No es de ese cambio: está desde antes.
+
+**Lo que pasa.** El alumno entra por DNI, y la búsqueda es
+[`auth.ts`](../src/lib/auth.ts): `{ dni: identifier, instituteId: instituteId }`. El
+`instituteId` viene del formulario —[`LoginForm.tsx:45`](../src/app/login/LoginForm.tsx), que manda
+`institute?.id ?? ""`— y `authorize` lo pasa por `|| undefined`. **En Prisma, un `undefined` no
+filtra: desaparece de la consulta.** O sea que cuando el instituto no resuelve del host, la búsqueda
+pasa de "este DNI en este instituto" a "este DNI en cualquier instituto", en silencio.
+
+Y el host no siempre resuelve: [`tenant.ts`](../src/lib/tenant.ts) matchea por `customDomain` o por
+subdominio, así que la URL larga de un deploy de Vercel
+(`lingua-campus-stage-git-stage-….vercel.app`) **no cae en ninguna de las dos** y devuelve `null`.
+
+**La rama por email es peor**, porque no tiene filtro de instituto ni siquiera escrito:
+`findFirst({ where: { email: identifier } })`. Y `Student` permite el mismo correo en dos institutos
+—la clave única es `@@unique([email, instituteId])`—, así que ahí el instituto **nunca** entró en la
+cuenta.
+
+**Por qué "hoy inofensivo" y no P1.** Hay un solo instituto, así que no hay otro adonde ir a parar.
+Y aun con dos, no alcanza con adivinar: la contraseña tiene que coincidir. El caso real no es un
+ataque sino una **confusión**: la misma persona dada de alta en dos institutos entrando por el
+dominio de uno y cayendo en la cuenta del otro. Sube de prioridad el día que haya un segundo cliente
+—y ese día conviene mirarlo junto con [ARQ-03](#arq-03), que es el otro lado del mismo problema.
+
+**El arreglo.** Exigir el instituto en vez de dejarlo caer: si no resolvió, el login falla con un
+error en vez de buscar más ancho. Es la misma forma que ya tiene el resto del sistema, donde el
+aislamiento entre institutos se hace a mano ([ARQ-01](#arq-01)).
 
 ---
 
@@ -4573,6 +4608,31 @@ del que no participa **no le mueve el contador**, que es justamente lo que se bu
 **Un detalle del chip del alumno, que estaba mal descrito arriba:** en la **bandeja** es una etiqueta
 para todos; el **enlace a la ficha** vive adentro del hilo y sólo para el personal. Y sigue el rol
 activo, no la lista de roles: a Patricia, mirando como tutora, el mismo chip le salió sin enlace.
+
+**El destino "Administración", que era la última rama sin ejecutar.** Se mandó uno desde Pamela sobre
+otro hijo (Thian, *Children 2 Ma - Jue*) y quedó con **tres participantes** —la madre como autora y
+las dos cuentas de administración del instituto—, con el alumno guardado, cero alumnos adentro y
+**sin el docente del curso**, que es la distinción que hace al destino. Del lado de la familia las
+dos cuentas se muestran como **"Administración"** y **"Secretaría"**: los nombres propios del
+personal no se filtran. Nota: una de las dos es docente *y* secretaria, y aun así aparece como
+"Secretaría", que es el rol por el que entró al hilo.
+
+### Lo que sigue sin ejercitarse
+
+Para que no se lea como "probado entero", que no lo está:
+
+- **El corte del servidor, a la mala.** Nunca se intentó mandar un `courseId` ajeno. Está escrito
+  para rechazarlo —el alcance se recalcula con la misma función que dibuja la pantalla, y lo que
+  viaja es `"TEACHER"`/`"ADMIN"` y jamás un id—, pero por la interfaz no hay forma de elegir un
+  curso que no sea de la familia, así que probarlo de verdad pide forjar el pedido.
+- **En stage quedaron sin recorrer** el alumno escribiendo, el aviso en vivo del sobre, el buscador
+  y la paginación —stage tiene 15 hilos y la página corta en 20—, y responder un hilo. Los cinco sí
+  se ejercitaron en local.
+- **El curso sin docente** no se puede ver en stage: no hay ninguno (0 de 31, igual que producción).
+  El botón deshabilitado se probó sólo en local, con un curso sembrado a mano.
+- **La docente que sea tutora de un alumno de su propio curso** no tendría a quién escribirle —sería
+  ella misma, y el autor se excluye de los destinatarios— y vería *"No hay a quién dirigir este
+  mensaje"*, que para ese caso es un mensaje pobre. No pasa hoy ni en stage ni en producción.
 
 ---
 
