@@ -268,6 +268,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-15](#bug-15) | P2 | En el celular el listado de alumnos no tiene ninguna acción | [ ] |
 | [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
 | [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
+| [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7326,9 +7327,72 @@ Dos cosas que aparecieron midiendo y que siguen en pie:
    semana anterior. Es lo mismo que quedó anotado en [FEAT-06](#feat-06) el 2026-08-18, resuelto
    entonces sólo para la tarjeta del par y no para la vista.
 
+### Verificado en stage el 2026-09-15 (`60cf0d5`)
+
+Los números, predichos contra la base **antes** de abrir el navegador, en los cuatro casos:
+
+- **Semana, como dirección.** Semana del 3/8: se dibujan **60 tarjetas de las 61 plantillas**
+  —«Adults Level A2» arranca el 6/8 y por eso no entra en la columna del martes—, **30 con clase** y
+  **26 con tema**. Dio exacto en las cinco columnas.
+- **Día.** Martes 4/8: «Mostrando **14** clases», 6 con tema, 1 en «sin registrar» y 7 pendientes.
+  Coincide con lo que la vista Semana muestra para ese mismo día, que es justamente el punto: las dos
+  vistas ahora cuentan lo mismo.
+- **Pares, como Agustina Melluso.** Semana del 10/8: 6 plantillas, 4 con «Otro docente», y los cuatro
+  bordes **medidos** en `rgb(148, 163, 184)` —incluidos los de «Unit 7A» y «Unit 7»—, o sea el par en
+  gris aunque tenga tema, con «Ver Temas» y nunca «Asistencia». Con `pares=0` quedan 2, las propias.
+- **El camino del reporte**: entrar por Inicio y pasar al Calendario por el menú, sin recargar. Abre
+  en LUNES 14/9 con las clases enganchadas. Era el camino que lo rompía.
+
+**Lo que quedó sin medir:** una tarjeta **propia con clase** tomando el color del curso. El curso de
+la docente de prueba corre del 6/8 al 10/12 y sus diez clases están entre el 19/3 y el 30/4 — cero
+dentro de su propio rango, que es el mismo patrón de las 17 clases huérfanas de más arriba. Esa rama
+(`linkedLesson && !isPeer`) no la tocó este cambio.
+
 **Relacionado.** [FEAT-07](#feat-07), que es donde se escribió la tarjeta del calendario y donde ya se
 había corregido el otro defecto de la vista diaria. [BUG-14](#bug-14), los filtros del calendario que
 no avisan que filtran — el mismo síntoma para el usuario: la pantalla muestra de menos sin decirlo.
+[BUG-18](#bug-18) salió de probar ésta.
+
+---
+
+<a id="bug-18"></a>
+## BUG-18 · La vista Día del calendario no ofrece tomar asistencia · **P2**
+
+**De dónde sale.** De verificar [BUG-17](#bug-17) por pantalla en stage, el 2026-09-15. Con la vista
+Día en el martes 4/8 había **14 tarjetas, 7 de ellas con la clase cargada** — y las catorce ofrecían
+el mismo botón: «Ver Curso».
+
+**La misma clase, en la vista Semana, ofrece «Asistencia»** con enlace directo a
+`/courses/:id/lessons/:lessonId/attendance`
+([`WeeklyGridView.tsx:214`](../src/app/schedule/components/WeeklyGridView.tsx)). En la vista Día el
+botón tiene sólo dos ramas, y ninguna es ésa
+([`schedule/page.tsx:440`](../src/app/schedule/page.tsx)):
+
+```tsx
+<Link href={`/courses/${schedule.course.id}`}>
+    {schedule.isPeer
+        ? <><Eye size={14} /> Ver Temas</>
+        : <><BookOpen size={14} /> Ver Curso</>}
+```
+
+**Está al revés de lo que uno esperaría.** La pantalla se llama «Clases del Día» y es la que una
+docente abre para el día que está dando; es exactamente la que no ofrece el atajo. Desde la agenda
+semanal, que es para mirar la semana, sí. Llegar igual se llega —Ver Curso → el mes → la clase →
+asistencia— pero son tres pantallas de más, todos los días.
+
+**No es una decisión, es un olvido, y hay rastro.**
+[`schedule/page.tsx:10`](../src/app/schedule/page.tsx) importa `ClipboardCheck` —el ícono que
+`WeeklyGridView` usa **exactamente** para el botón de asistencia— y no lo usa en ninguna parte del
+archivo. ESLint lo viene marcando como importación sin uso desde entonces.
+
+**El arreglo es corto: los datos ya están calculados.** La vista Día resuelve `lesson` y `hasLesson`
+([`schedule/page.tsx:376`](../src/app/schedule/page.tsx)) para decidir el color y el rótulo de la
+tarjeta; sólo falta usarlos también en el `href`. Y hay que conservar la regla del par: al par **no**
+se le ofrece asistencia, porque el servidor se la rechazaría y ofrecerla sería prometer algo que no va
+a pasar — es lo que ya hace la grilla semanal.
+
+**Relacionado.** [BUG-15](#bug-15), la misma forma en otra pantalla: una vista que no ofrece las
+acciones que la otra sí. [FEAT-07](#feat-07), de donde sale la regla del par.
 
 ---
 
