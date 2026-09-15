@@ -296,6 +296,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-24](#feat-24) | P3 | Buscar dentro del contenido de los mensajes | [ ] |
 | [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
 | [FEAT-26](#feat-26) | P2 | Reponer una cuota eliminada sin pasar por un script | [ ] |
+| [FEAT-27](#feat-27) | P3 | 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno | [x] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -7649,6 +7650,53 @@ la pantalla: el importe sale **siempre** de la foto y nunca del precio vigente; 
 **Relacionado.** [FEAT-10](#feat-10) construyó la pantalla y la tabla; esto es la acción que le
 faltaba. [ARQ-10](#arq-10) (auditoría general) es el marco donde ese `restoredAt` debería terminar
 viviendo si se encara.
+
+---
+
+<a id="feat-27"></a>
+## FEAT-27 · 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno · **P3**
+
+**De dónde sale.** Pedido del cliente del 2026-09-15. Vino junto con otro —no mostrarle la sección de
+tutores al alumno adulto—, que **no tiene ficha todavía**: el cliente lo sigue charlando y tiene
+decisiones abiertas que no son de código (con qué edad, y qué pasa con el tutor que ya está cargado).
+
+**Lo que se veía.** Con cero informes publicados, el hub del alumno y el del tutor cerraban con una
+tarjeta del ancho de la pantalla: «Informe Trimestral», *«Actualmente no hay informes académicos
+publicados para ti»* y, tras una línea divisoria, un candado con **«Próximamente disponible»**.
+
+**Por qué es una promesa y no un vacío.** «Próximamente» afirma que el boletín viene, y el cartel no
+tenía manera de dejar de afirmarlo: no dependía de ninguna fecha ni de que el curso tuviera plantilla
+vinculada. Al alumno de un curso que no publica boletines, o al que se inscribió en agosto con el
+primer período ya cerrado, le decía en diciembre exactamente lo mismo que en abril. Es la regla que
+[BUG-18](#bug-18) ya usó para el botón del par —no ofrecer lo que no va a pasar—, acá aplicada a un
+cartel en vez de a un enlace.
+
+**Lo que se hizo.** Un `return null` cuando el alumno no tiene ningún informe
+([`StudentReportViewer.tsx:123`](../src/components/reports/StudentReportViewer.tsx)): no se dibuja la
+sección entera, en las dos pantallas que usan el componente
+([`StudentAcademicsView.tsx:444`](../src/app/dashboard/components/StudentAcademicsView.tsx) y
+[`GuardianAcademicsView.tsx:287`](../src/app/guardian/academics/components/GuardianAcademicsView.tsx)).
+En las dos era la última fila, así que no queda un hueco en el medio.
+
+**Lo que no se tocó, y por qué.** Tres cosas del mismo componente se parecen y no son lo mismo:
+
+- **El selector de períodos con candado** —«2° Período 🔒»— se queda. Esos rótulos salen de la
+  plantilla del curso del alumno: el boletín existe y ese período está declarado. Describe algo real.
+- **«Calificación no provista para este período»** y **«El docente no ha registrado observaciones»**
+  están dentro de un informe publicado y son el estado real de ese informe.
+- **La rama «Selecciona un curso válido»** es otro caso: hay informes, pero no en el curso elegido.
+
+**Lo que se pierde, y se acepta.** Esa tarjeta era la única señal del producto de que los boletines
+existen. La familia a la que le dijeron «mirá el boletín en la plataforma» y entra antes de la primera
+publicación ahora no encuentra rastro y llama al instituto. Se prefirió eso a un cartel que promete
+sin fecha. Si el llamado aparece, la salida no es devolver el cartel sino avisar cuando el boletín se
+publica: eso vive en [FEAT-08](#feat-08) (columna de novedades) y [FEAT-22](#feat-22) (push).
+
+### Resuelto — 2026-09-15 en `ab1e02f` · pendiente de verificar en stage
+
+Falta verlo en pantalla, con dos alumnos: uno sin ningún informe —en su propio hub y desde la cuenta
+de su tutor, donde la sección no tiene que aparecer— y uno con informes, que tiene que seguir viendo
+todo igual, candados de período incluidos.
 
 ---
 
