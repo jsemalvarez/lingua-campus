@@ -269,6 +269,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
 | [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
 | [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
+| [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7393,6 +7394,56 @@ a pasar — es lo que ya hace la grilla semanal.
 
 **Relacionado.** [BUG-15](#bug-15), la misma forma en otra pantalla: una vista que no ofrece las
 acciones que la otra sí. [FEAT-07](#feat-07), de donde sale la regla del par.
+
+---
+
+<a id="bug-19"></a>
+## BUG-19 · El panel de uso declara en producción una fecha desde la que nunca midió · **P2**
+
+**De dónde sale.** Del ensayo del 2026-09-15, antes de promover el lote: backup de producción
+restaurado sobre la base de stage y redeploy con las siete migraciones pendientes. Las migraciones
+corrieron limpias. Lo que no viaja con ellas es el piso.
+
+**Los dos pisos son constantes, y la fecha que tienen es la de stage.**
+[`piso.ts:21`](../src/app/dashboard/usage/piso.ts) y [`piso.ts:31`](../src/app/dashboard/usage/piso.ts)
+fijan `PISO_QR` y `PISO_REGISTRO` al **2026-08-23**, que es el día en que `add_activity_day` y
+`add_attendance_source` entraron en la base de **stage**. En producción esas dos migraciones se
+aplican el día de la promoción: `ActivityDay` nace vacía y `Attendance.source` nace con todas las
+filas en `MANUAL`, puestas por el default de la columna y no por nadie que las haya mirado.
+
+**Tres frases de la pantalla quedan falsas el día que se promueve:**
+
+- «Midiendo desde el 23/8» — con el gráfico vacío hasta la fecha del despliegue, que se lee como que
+  en ese mes no entró nadie.
+- «Hasta el 23/8 figura el último rastro indirecto; desde esa fecha, el ingreso real» — con los 173
+  tutores en «Nunca».
+- «El origen se distingue desde el 23/8» — sobre marcas cuyo origen nunca se distinguió.
+
+**El número que lo vuelve concreto.** De las 542 marcas de asistencia de producción, **465 se
+crearon entre el 29/8 y el 14/9**: el 86% de la tabla, entera dentro del rango que la pantalla
+declara medido. Ninguna lo fue. El valor que muestran es casi seguro el correcto —en producción el
+escáner no dejó una sola marca, medido sobre `notes` antes de migrar— pero la pantalla lo afirma por
+un default, no por una medición, y ésa es la diferencia que el panel existe para no borrar.
+
+**Es exactamente lo que el propio archivo dice querer evitar:** «Cero y "no medido" son cosas
+distintas, y confundirlas es exactamente cómo el administrador termina concluyendo que en marzo no
+entraba nadie». El mecanismo está bien resuelto —una métrica sin historia dice desde cuándo mide en
+vez de mostrar un cero—; lo que quedó atado a un entorno es la constante.
+
+**El arreglo: que cada base diga su propio piso.** La fecha real ya está guardada en cada base, en
+`_prisma_migrations.finished_at` de `20260822180000_add_activity_day` y
+`20260823160000_add_attendance_source`. Derivarla de ahí hace que stage siga diciendo 23/8, que
+producción diga la fecha de su promoción, y que una base nueva no necesite que nadie se acuerde de
+tocar el archivo. `piso.ts` ya tiene la forma para recibirlo: las dos fechas viven juntas y la
+pantalla las lee por `pisoCorto()`.
+
+**Lo que esta ficha no arregla.** Las 465 marcas de producción quedan en `MANUAL` igual: el origen de
+lo que ya pasó no se puede recuperar, porque el escáner tampoco lo escribía. Mover el piso no cambia
+el dato, cambia lo que la pantalla dice sobre él.
+
+**Relacionado.** [FEAT-11](#feat-11), de donde salen las ocho métricas del panel.
+[BUG-12](#bug-12), el escáner que pisaba la observación de la docente y el motivo de que el origen
+anterior sea aproximado.
 
 ---
 
