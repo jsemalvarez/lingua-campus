@@ -7006,8 +7006,17 @@ profesor firmar hacia atrás no necesita nada: entran a la planilla vieja y firm
 
 El día después de promover el lote. **209 hashes escritos y 203 firmantes creados** —202 tutores y un
 alumno que ya tenía 20 a la fecha original de publicación—, repartidos en **201 informes**. Quedan
-**8 sin firmante**: alumnos sin ningún tutor cargado, a los que no hay a quién pedírsela hasta que se
-les vincule uno. Verificado en pantalla: las 28 tandas aparecen con su fecha real —del 11 de junio al
+**8 sin firmante**, y la razón no es la que parece: **7 de los 8 tienen el tutor cargado en la ficha**
+—nombre y, en 6 casos, teléfono o mail—, lo que les falta es la **cuenta**. `resolveSigners` mira
+`GuardianStudentLink`, que son cuentas de usuario, no los campos `guardian1Name` / `guardian1Phone` /
+`guardian1Email` de la ficha del alumno, que son datos de contacto. Es la misma distinción que el
+panel de uso ya muestra como «con datos, sin cuenta creada» —127 alumnos al 15/09— con el texto «se
+sabe a quién llamar y todavía no puede entrar». Sólo dos no tienen ni el dato: uno de ellos en un
+curso de adultos, donde el firmante correcto es el alumno y lo que falta es su fecha de nacimiento.
+
+**El camino de salida es crear esas cuentas y volver a correr el script**, que filtra por «publicado y
+sin firmantes»: esos informes entran de nuevo y esta vez sí resuelven firmante. Verificado en pantalla:
+las 28 tandas aparecen con su fecha real —del 11 de junio al
 2 de septiembre— y `publishedAt` no se movió en ninguna. La pantalla marca además **1 informe en
 «requieren atención»**, de un alumno sin fecha de nacimiento: no se pudo decidir si firmaba él, así
 que le quedaron los tutores.
