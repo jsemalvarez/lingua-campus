@@ -295,6 +295,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-23](#feat-23) | P3 | Los hilos de mensajes no se cierran nunca | [ ] |
 | [FEAT-24](#feat-24) | P3 | Buscar dentro del contenido de los mensajes | [ ] |
 | [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
+| [FEAT-26](#feat-26) | P2 | Reponer una cuota eliminada sin pasar por un script | [ ] |
+| [FEAT-27](#feat-27) | P3 | 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno | [x] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -6999,9 +7001,47 @@ restricción. Por eso la detección tiene que ser del sistema y no de que ella l
 **Los tutores hacia atrás son la parte que más interesa (decisión 4), y ya está resuelta.** El script
 [`backfill-report-signers.js`](../scripts/backfill-report-signers.js) le agrega hash y lista de
 firmantes a los informes publicados antes de que existiera la firma, sin pisar `publishedAt`,
-resolviendo la edad con la fecha original y sin disparar el aviso de publicación. **Se corre cuando
-FEAT-09 salga a producción.** Para dirección y profesor firmar hacia atrás no necesita nada: entran a
-la planilla vieja y firman.
+resolviendo la edad con la fecha original y sin disparar el aviso de publicación. Para dirección y
+profesor firmar hacia atrás no necesita nada: entran a la planilla vieja y firman.
+
+#### Corrido en producción el 2026-09-15
+
+El día después de promover el lote. **209 hashes escritos y 203 firmantes creados** —202 tutores y un
+alumno que ya tenía 20 a la fecha original de publicación—, repartidos en **201 informes**. Quedan
+**8 sin firmante**, y la razón no es la que parece: **7 de los 8 tienen el tutor cargado en la ficha**
+—nombre y, en 6 casos, teléfono o mail—, lo que les falta es la **cuenta**. `resolveSigners` mira
+`GuardianStudentLink`, que son cuentas de usuario, no los campos `guardian1Name` / `guardian1Phone` /
+`guardian1Email` de la ficha del alumno, que son datos de contacto. Es la misma distinción que el
+panel de uso ya muestra como «con datos, sin cuenta creada» —127 alumnos al 15/09— con el texto «se
+sabe a quién llamar y todavía no puede entrar». Sólo dos no tienen ni el dato: uno de ellos en un
+curso de adultos, donde el firmante correcto es el alumno y lo que falta es su fecha de nacimiento.
+
+**El camino de salida es crear esas cuentas y volver a correr el script**, que filtra por «publicado y
+sin firmantes»: esos informes entran de nuevo y esta vez sí resuelven firmante. Verificado en pantalla:
+las 28 tandas aparecen con su fecha real —del 11 de junio al
+2 de septiembre— y `publishedAt` no se movió en ninguna. La pantalla marca además **1 informe en
+«requieren atención»**, de un alumno sin fecha de nacimiento: no se pudo decidir si firmaba él, así
+que le quedaron los tutores.
+
+**Hizo falta arreglar el script antes, y el arreglo no está versionado.** Tal como estaba escribía los
+209 hashes de a uno dentro de la `$transaction`, y eso no entra en los 5 segundos que Prisma le da a
+una transacción interactiva: probado primero contra stage —que tenía los datos de producción por el
+ensayo de la promoción— falló con `P2028 Transaction already closed`, con rollback limpio. Es el mismo
+problema que [FIN-06](#fin-06) dejó escrito para los generadores masivos de cuotas, y la misma salida:
+colapsar a una sola query —un `UPDATE … FROM unnest(ids, hashes)`— en vez de agrandar el timeout.
+
+Como `/scripts` está entero en `.gitignore` —protege `scripts/.pgurl`, que tiene la clave de
+producción, en un repositorio público—, **ese arreglo vive sólo en la máquina de desarrollo y esta
+ficha es su único rastro**. Por lo mismo, el enlace al script de tres párrafos más arriba está roto en
+GitHub, igual que la mención en
+[`batchSignatures.ts:118`](../src/app/actions/batchSignatures.ts). Se arregla cambiando el ignore por
+una lista blanca (`/scripts/*` y después `!*.sh`, `!*.js`, `!*.ts`), que versiona el código y nunca
+los datos.
+
+**Una aspereza conocida:** los 8 informes sin tutor vuelven a entrar en cada corrida —el filtro es
+«publicado y sin firmantes», y firmantes no van a tener nunca— así que se les reescribe el hash cada
+vez. Es inofensivo, porque el hash es determinista; lo que el script no sabe decir es «no hay nada que
+hacer».
 
 **Por qué no un botón de firmar todo (decisión 5).** Son 30 cursos y la primera tanda va a ser larga
 —el cliente lo sabe y lo acepta—, pero un botón que firma 30 tandas de un click convierte la revisión
@@ -7567,6 +7607,122 @@ familia.
 guardado y el nombre se deduce de los roles actuales, donde **ADMIN le gana a SECRETARY**. En
 producción es **un solo mensaje**, del 2026-05-12, y nadie tiene los dos roles — así que hoy no
 muestra mal a nadie.
+
+---
+
+<a id="feat-26"></a>
+## FEAT-26 · Reponer una cuota eliminada sin pasar por un script · **P2**
+
+**Origen.** El 2026-09-15 el instituto pasó una lista de **nueve cuotas que había eliminado por
+error** y pidió recuperarlas. Se resolvió con
+[`scripts/restore-deleted-fees.js`](../scripts/restore-deleted-fees.js), corrido a mano contra
+producción. Que la única salida sea un script es el problema que anota esta ficha: borrar una cuota
+lo puede hacer la secretaría desde la pantalla ([SEC-03](#sec-03)), pero deshacerlo no lo puede hacer
+nadie sin nosotros.
+
+**Por qué no alcanza con la generación que ya existe.** `generateMonthlyFeesAction` no sirve para
+esto por dos razones independientes, y las dos son graves:
+
+- Es **masiva**. Genera para toda inscripción activa sin cuota del período, así que correrla para
+  recuperar el abril de un alumno le recrea la cuota a todos los demás — incluidos los becados a los
+  que se les borró bien. Convierte un problema de nueve filas en uno de todo el padrón.
+- Toma el **precio de hoy** del curso, no el que tenía la cuota. El abril que había que reponer valía
+  $61.000 y su curso hoy está $69.000: repondría una deuda que el alumno nunca contrajo.
+
+**Lo bueno es que el dato ya está.** [`FeeDeletion`](../prisma/schema.prisma) guarda la foto completa
+—alumno, tipo, año, mes, importe, curso e instituto—, que es exactamente lo que hace falta para
+volver a crear la fila. Restaurar es leer la foto, resolver la inscripción y un `create`. El script
+ya hace eso; lo que falta es que lo haga el producto.
+
+**Lo que hay que resolver, que es más que el botón:**
+
+| | |
+|---|---|
+| **La foto queda** | Hoy `/payments/deletions` seguiría mostrando el borrado aunque la cuota exista de nuevo. La pantalla necesita distinguir una eliminación repuesta de una vigente — un `restoredAt` y un `restoredById`, y que la fila lo diga. **Borrar la foto no es opción:** es el registro de que esto pasó |
+| **La cuota sin curso** | Si `courseName` es nulo la cuota no tenía inscripción, y no hay a qué colgarla. Crearla suelta es fabricar justo lo que duplica cuotas solo ([FIN-22](#fin-22)). Que la pantalla lo diga y no ofrezca reponerla |
+| **Que ya exista** | Si alguien la volvió a generar por otro camino, reponer duplicaría. La restricción única de `Fee` lo frena, pero el error tiene que leerse como "esta cuota ya está", no como una falla |
+| **Quién** | La pantalla ya es **sólo ADMIN**, y así debería quedar. La secretaría borra; deshacer un borrado es control del dueño |
+
+**Lo que el script decidió y conviene sostener.** Dos cosas que ya se pensaron ahí y valen igual para
+la pantalla: el importe sale **siempre** de la foto y nunca del precio vigente; y la cuota vuelve
+`PENDING` con `paidAmount` en 0, que es lo único que puede ser — sólo se borran cuotas impagas.
+
+**Relacionado.** [FEAT-10](#feat-10) construyó la pantalla y la tabla; esto es la acción que le
+faltaba. [ARQ-10](#arq-10) (auditoría general) es el marco donde ese `restoredAt` debería terminar
+viviendo si se encara.
+
+---
+
+<a id="feat-27"></a>
+## FEAT-27 · 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno · **P3**
+
+**De dónde sale.** Pedido del cliente del 2026-09-15. Vino junto con otro —no mostrarle la sección de
+tutores al alumno adulto—, que **no tiene ficha todavía**: el cliente lo sigue charlando y tiene
+decisiones abiertas que no son de código (con qué edad, y qué pasa con el tutor que ya está cargado).
+
+**Lo que se veía.** Con cero informes publicados, el hub del alumno y el del tutor cerraban con una
+tarjeta del ancho de la pantalla: «Informe Trimestral», *«Actualmente no hay informes académicos
+publicados para ti»* y, tras una línea divisoria, un candado con **«Próximamente disponible»**.
+
+**Por qué es una promesa y no un vacío.** «Próximamente» afirma que el boletín viene, y el cartel no
+tenía manera de dejar de afirmarlo: no dependía de ninguna fecha ni de que el curso tuviera plantilla
+vinculada. Al alumno de un curso que no publica boletines, o al que se inscribió en agosto con el
+primer período ya cerrado, le decía en diciembre exactamente lo mismo que en abril. Es la regla que
+[BUG-18](#bug-18) ya usó para el botón del par —no ofrecer lo que no va a pasar—, acá aplicada a un
+cartel en vez de a un enlace.
+
+**Lo que se hizo.** Un `return null` cuando el alumno no tiene ningún informe
+([`StudentReportViewer.tsx:123`](../src/components/reports/StudentReportViewer.tsx)): no se dibuja la
+sección entera, en las dos pantallas que usan el componente
+([`StudentAcademicsView.tsx:444`](../src/app/dashboard/components/StudentAcademicsView.tsx) y
+[`GuardianAcademicsView.tsx:287`](../src/app/guardian/academics/components/GuardianAcademicsView.tsx)).
+En las dos era la última fila, así que no queda un hueco en el medio.
+
+**Lo que no se tocó, y por qué.** Tres cosas del mismo componente se parecen y no son lo mismo:
+
+- **El selector de períodos con candado** —«2° Período 🔒»— se queda. Esos rótulos salen de la
+  plantilla del curso del alumno: el boletín existe y ese período está declarado. Describe algo real.
+- **«Calificación no provista para este período»** y **«El docente no ha registrado observaciones»**
+  están dentro de un informe publicado y son el estado real de ese informe.
+- **La rama «Selecciona un curso válido»** es otro caso: hay informes, pero no en el curso elegido.
+
+**Lo que se pierde, y se acepta.** Esa tarjeta era la única señal del producto de que los boletines
+existen. La familia a la que le dijeron «mirá el boletín en la plataforma» y entra antes de la primera
+publicación ahora no encuentra rastro y llama al instituto. Se prefirió eso a un cartel que promete
+sin fecha. Si el llamado aparece, la salida no es devolver el cartel sino avisar cuando el boletín se
+publica: eso vive en [FEAT-08](#feat-08) (columna de novedades) y [FEAT-22](#feat-22) (push).
+
+### Resuelto — 2026-09-15 en `ab1e02f` · verificado en stage el 2026-09-15
+
+Mirado en pantalla sobre el deploy `675a626`, con los tres casos y la predicción escrita antes de
+entrar:
+
+- **Alumno sin informes** (Adults Level 2, cero informes): su Hub de Progreso termina en «Práctica
+  con IA». No queda ni el cartel ni un hueco, y el resto de la página —rendimiento, docente, las 62
+  clases con su historial de asistencia— sigue entero.
+- **Su tutora**, sobre el mismo alumno: el Hub Académico termina en «Notas · Sin calificaciones».
+- **Control, alumna con 2 informes publicados**: el boletín se ve completo — «Exportar PDF», el
+  selector con el 1° y el 2° trimestre disponibles y el 3° con su candado, la grilla de conceptos,
+  el comentario del docente y el pie de emisión oficial.
+
+El tercero era el que podía delatar una rotura: confirma que lo que desapareció fue el cartel y no la
+sección.
+
+**Cómo se llegó a mirarlo, que costó más que el cambio.** Las cuentas de stage vienen del backup de
+producción y no se sabía ninguna contraseña. Dos cosas que conviene tener anotadas para la próxima:
+
+- **`hasDefaultPassword` está en `null` para las 422 cuentas de stage.** La marca no se calcula al
+  leer: la escribe una pasada, y el restore trae los datos sin ella
+  ([`defaultPasswords.ts`](../src/lib/defaultPasswords.ts), [SEC-06](#sec-06)). O sea que el panel de
+  contraseñas no sirve para orientarse en una base clonada. Es la misma forma que
+  [BUG-19](#bug-19): lo que no viaja con el backup. **No se miró si en producción está poblada.**
+- **`crypt()` de Postgres no valida los hashes de la app.** bcryptjs escribe `$2b$` y pgcrypto sólo
+  entiende `$2a$`: comparar por SQL da `false` para todo y parece que nadie conserva su contraseña.
+  Verificado con un hash de control. Si hace falta responder «¿esta cuenta tiene la default?» hay que
+  hacerlo con bcryptjs, no con SQL.
+
+Para la prueba se les puso contraseña a cuatro cuentas **de stage** —el admin del instituto, los dos
+alumnos y la tutora—; producción no se tocó. Se pierden solas en el próximo restore.
 
 ---
 
