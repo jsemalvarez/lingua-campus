@@ -15,6 +15,7 @@ import { ExamRegistrationToggle } from "./components/ExamRegistrationToggle";
 import { AppliedCreditList } from "./components/AppliedCreditList";
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
+import { muestraSeccionDeTutores } from "@/lib/tutores";
 import { formatCurrency, formatFeeLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -182,6 +183,13 @@ export default async function StudentDetailPage({
 
     const canSeeFinancials = isAdmin || isGuardian;
 
+    // El alumno grande sin tutor cargado no lleva sección de tutores (FEAT-28).
+    // Se resuelve acá y no en el componente: la cadena termina en `crypto`.
+    const mostrarTutores = muestraSeccionDeTutores(
+        { ...student, cuentasVinculadas: student.guardianLinks.length },
+        new Date()
+    );
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <Navbar currentActiveRole={activeRole} />
@@ -210,6 +218,7 @@ export default async function StudentDetailPage({
                             student={student as any}
                             userRoles={[activeRole]}
                             instituteLevels={instituteLevels}
+                            mostrarTutores={mostrarTutores}
                         />
 
                         <div className="mt-8 max-w-5xl mx-auto space-y-4">

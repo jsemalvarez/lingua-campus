@@ -297,6 +297,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
 | [FEAT-26](#feat-26) | P2 | Reponer una cuota eliminada sin pasar por un script | [ ] |
 | [FEAT-27](#feat-27) | P3 | 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno | [x] |
+| [FEAT-28](#feat-28) | P3 | 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores | [x] |
+| [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -7723,6 +7725,101 @@ producción y no se sabía ninguna contraseña. Dos cosas que conviene tener ano
 
 Para la prueba se les puso contraseña a cuatro cuentas **de stage** —el admin del instituto, los dos
 alumnos y la tutora—; producción no se tocó. Se pierden solas en el próximo restore.
+
+---
+
+<a id="feat-28"></a>
+## FEAT-28 · 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores · **P3**
+
+**De dónde sale.** Pedido del cliente del 2026-09-15, el que vino junto con
+[FEAT-27](#feat-27); la regla se cerró con él el 2026-09-16.
+
+**La regla, en una línea: se oculta sólo cuando no hay nada que mostrar.** Sin datos de contacto
+cargados **y** sin ninguna cuenta de tutor vinculada, y con el alumno de 20 o más, la sección no se
+dibuja. Con cualquiera de las dos cosas se dibuja igual, aunque el alumno tenga 60
+([`tutores.ts`](../src/lib/tutores.ts)).
+
+**Por qué no se oculta por edad sola.** Ocultar un dato cargado lo pierde de vista sin borrarlo; y
+ocultar un vínculo activo es peor, porque esa cuenta sigue viendo notas, cuotas y mensajes desde una
+pantalla a la que ya no se llega — la secretaría no tendría cómo enterarse ni cómo revocarla. Es el
+mismo criterio con el que la ficha ya decide dibujar o no las aplicaciones de saldo
+([`students/[id]/page.tsx`](../src/app/students/[id]/page.tsx)).
+
+**Por qué el corte es 20 y no 18 ni 21.** 20 es `SELF_SIGNING_AGE`, la edad desde la que el alumno
+firma su propio informe ([`signatures.ts:11`](../src/lib/reports/signatures.ts)). Con 18 habría un
+tramo de dos años en el que la ficha esconde al tutor que el panel de firmas todavía está
+persiguiendo; con 21 aparecería una segunda constante de edad para mantener sincronizada con la
+primera. El cliente dice que los alumnos terminan a los 21 y que si siguen se los carga como adultos:
+eso no obliga a mover el corte, porque el que siga teniendo tutor cargado va a ver la sección igual.
+
+**Sin fecha de nacimiento se muestra**, que es la misma decisión prudente que toma la firma. Son 6
+alumnos activos en producción.
+
+**Dónde se aplicó.** En las dos pantallas donde la sección se *lee*: la ficha del alumno
+([`StudentProfileView.tsx`](../src/app/students/[id]/StudentProfileView.tsx)) y el perfil propio del
+alumno ([`ProfileForm.tsx`](../src/app/profile/ProfileForm.tsx)). El booleano lo resuelve el servidor
+y baja como prop: la cadena de imports del helper termina en `crypto` y no puede entrar en un
+componente de cliente — el mismo cuidado que ya está escrito en
+[`defaultPasswords.ts`](../src/lib/defaultPasswords.ts).
+
+**Dónde NO se aplicó, y por qué.** En los formularios de carga —edición y alta del alumno— los campos
+siguen estando siempre:
+
+- **Ocultarlos borraría datos.** `editStudentAction` escribe `guardian1Name: guardian1Name || null`
+  sobre todo lo que el form no mande ([`actions.ts:105`](../src/app/students/[id]/actions.ts)), así
+  que el primer guardado de un alumno grande le vaciaría la ficha del tutor. (La cuenta del tutor se
+  salva: `updateGuardianEmail` corta si no viene correo nuevo.)
+- **Y dejaría sin forma de cargar un contacto de emergencia** a un adulto que sí lo quiere dar.
+
+La planilla del curso tampoco se tocó: ahí «Tutor Legal» es una columna de un listado, no una sección.
+
+**Lo que cambia en producción, medido el 2026-09-16.** De 362 alumnos activos, **23 dejan de ver la
+sección** —**7** de ellos cursando— y **28 la siguen viendo porque tienen algo cargado**. Dato que
+apareció midiendo: 7 alumnos tienen como único dato del tutor el **teléfono**, así que la regla mira
+los seis campos que la tarjeta puede dibujar y no sólo nombre y correo, que es lo que mira
+`clasificarAlumno` del panel de uso —que contesta otra pregunta—.
+
+**El caso que el cliente imaginaba no existe todavía.** Alumnos de 22 o más con datos de tutor: 11 en
+el padrón completo, **0 entre los que cursan**. Los adultos hacen cursos cortos, así que casi todos
+quedan en cursos `FINISHED`. Lo que falta para limpiarlos está en [FEAT-29](#feat-29).
+
+### Resuelto — 2026-09-16 · pendiente de verificar en stage
+
+Falta verlo en pantalla, con tres fichas: un adulto sin nada cargado —no lleva la sección—, un adulto
+con el tutor cargado —la lleva— y un menor, que la lleva siempre. Y el perfil propio del alumno
+adulto, que es la otra pantalla.
+
+---
+
+<a id="feat-29"></a>
+## FEAT-29 · Desvincular a un tutor de un alumno · **P3**
+
+**De dónde sale.** De cerrar [FEAT-28](#feat-28) con el cliente el 2026-09-16. Su idea era «eliminar
+esos datos y las cuentas» cuando un alumno se hace grande. La mitad ya se puede y la otra mitad no es
+lo que parece.
+
+**Los datos ya se limpian solos.** Nombre, celular y correo del tutor se vacían desde Editar Perfil, y
+con FEAT-28 eso alcanza para que la sección desaparezca. No hace falta construir nada.
+
+**Lo que falta es sacar el acceso, y no es «borrar la cuenta».** `GuardianStudentLink` es un permiso:
+ese usuario entra al portal y ve notas, cuotas y mensajes del alumno. Borrar la **cuenta** para
+limpiar a un alumno grande sería desastroso — **29 tutores tienen más de un hijo activo**, así que se
+le sacaría el portal al hermano menor. La acción correcta es **desvincular a ese tutor de ese
+alumno**, dejando la cuenta en pie.
+
+**Dos cosas que hay que decidir antes de escribir una línea.**
+
+1. **`GuardianStudentLink` no tiene columna de estado**, así que hoy desvincular sería un `DELETE`
+   físico, contra la política de [ARQ-05](#arq-05). O se le agrega `status`, o se asume la excepción
+   por escrito.
+2. **El firmante huérfano.** Los firmantes de un informe se congelan al publicar
+   ([`signatures.ts:78`](../src/lib/reports/signatures.ts)). Si a ese tutor le quedaba un informe ya
+   publicado sin firmar, al perder el acceso el informe queda sin nadie que pueda firmarlo. Los
+   futuros no son problema: al publicar, el alumno de 20+ ya se resuelve como su propio firmante.
+
+**Hoy no hay ni un caso que la necesite.** De los alumnos de 20 o más que cursan, **uno solo** tiene
+cuenta de tutor vinculada, y tiene 20 o 21 — está terminando, y ahí el tutor sigue siendo el contacto
+correcto. Es una funcionalidad para el día que aparezca el caso, no para limpiar lo que hay.
 
 ---
 

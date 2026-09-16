@@ -24,6 +24,8 @@ interface ProfileFormProps {
         schoolInfo?: string | null;
         registeredLevel?: string | null;
         registeredLevelName?: string | null;
+        /** Lo decide el servidor con `muestraSeccionDeTutores` (FEAT-28). */
+        mostrarTutores?: boolean;
     };
 }
 
@@ -120,8 +122,10 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                     )}
                 </div>
 
-                {/* ── SECCIÓN 2: TUTORES (Solo alumnos) ───────────────────────── */}
-                {isStudent && (
+                {/* ── SECCIÓN 2: TUTORES (Solo alumnos, y sólo si hay) ────────── */}
+                {/* El alumno grande sin tutor cargado no la ve (FEAT-28). El
+                    `!== false` es para el no-alumno, que no trae la bandera. */}
+                {isStudent && initialData.mostrarTutores !== false && (
                     <div className="pt-6 border-t border-border/50 space-y-4">
                         <h3 className="text-sm font-bold uppercase tracking-widest text-primary/70">Tutores Responsables</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

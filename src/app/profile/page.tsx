@@ -9,6 +9,7 @@ import { ChangePasswordForm } from "./ChangePasswordForm";
 import { Card } from "@/components/ui/Card";
 import { getActiveRole } from "@/lib/roles";
 import { SignatureManager } from "@/components/reports/SignatureManager";
+import { muestraSeccionDeTutores } from "@/lib/tutores";
 import type { StrokeData } from "@/lib/reports/signatureCompare";
 
 export default async function ProfilePage() {
@@ -36,10 +37,21 @@ export default async function ProfilePage() {
                 if (level) registeredLevelName = level.name;
             }
 
+            // El alumno grande sin tutor cargado no ve la sección (FEAT-28). Es
+            // la misma regla que la ficha; las cuentas vinculadas hay que
+            // contarlas aparte porque acá el alumno se trae sin sus relaciones.
+            const cuentasVinculadas = await prisma.guardianStudentLink.count({
+                where: { studentId: student.id }
+            });
+
             userData = {
                 ...student,
                 registeredLevelName,
                 isStudent: true,
+                mostrarTutores: muestraSeccionDeTutores(
+                    { ...student, cuentasVinculadas },
+                    new Date()
+                ),
             };
         }
     } else {
