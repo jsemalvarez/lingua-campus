@@ -7821,16 +7821,25 @@ sección** —**8** de ellos cursando— y **21 la siguen viendo porque tienen a
 el padrón completo, **0 entre los que cursan**. Los adultos hacen cursos cortos, así que casi todos
 quedan en cursos `FINISHED`. Lo que falta para limpiarlos está en [FEAT-29](#feat-29).
 
-### Resuelto — 2026-09-16 · verificación en stage en curso
+### Resuelto — 2026-09-16 · verificado en stage el 2026-09-16
 
-La primera versión de la regla **se corrigió mirando la pantalla**, que es justo lo que la
-verificación tiene que encontrar. Contaba teléfono y correo como datos, y la ficha de un alumno de 70
-años apareció con la sección dibujada y los dos tutores diciendo «Sin datos registrados»: tenía
-`guardian1Phone` cargado y nada más. Ver arriba y [BUG-20](#bug-20).
+**La primera versión de la regla la corrigió la pantalla**, que es exactamente lo que la verificación
+tiene que hacer. Contaba teléfono y correo como datos, y la ficha de un alumno de **70 años** apareció
+con la sección dibujada y los dos tutores diciendo «Sin datos registrados»: tenía `guardian1Phone`
+cargado y nada más. De ahí salieron el arreglo (`60ac2b6`) y [BUG-20](#bug-20).
 
-Queda por mirar el resto: el adulto con el tutor **con nombre** —la sección tiene que estar—, un
-menor —siempre está— y el perfil propio del alumno adulto, que es la otra pantalla donde la sección
-se lee.
+Los cinco casos sobre el deploy `60ac2b6`, cada uno con la predicción escrita antes de abrirlo:
+
+| Alumno | Qué tiene | Sección |
+|---|---|---|
+| 69 años | Nada cargado | **No aparece** |
+| 70 años | Sólo `guardian1Phone`, sin nombre | **No aparece** |
+| 53 años | Tutora con nombre, sin cuenta | **Aparece**, con «Habilitar Acceso» |
+| 12 años | Tutora con nombre y cuenta vinculada | **Aparece**, con el chip de la cuenta |
+| Perfil propio, 69 años | Nada cargado | **No aparece**: del domicilio salta a «Información Académica» |
+
+Los dos del medio son los que importaban: prueban que lo que desapareció fue la sección vacía y no la
+sección.
 
 ---
 
