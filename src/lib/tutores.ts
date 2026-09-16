@@ -1,5 +1,10 @@
 import { signsForThemselves } from "@/lib/reports/signatures";
 
+/** Un campo de texto que la pantalla podría dibujar. La cadena vacía no lo es. */
+function hayTexto(valor: string | null): boolean {
+    return Boolean(valor && valor.trim());
+}
+
 /**
  * Si una pantalla tiene que mostrarle a este alumno la sección de tutores
  * (FEAT-28).
@@ -37,17 +42,17 @@ export function muestraSeccionDeTutores(
 ): boolean {
     if (alumno.cuentasVinculadas > 0) return true;
 
-    // Los seis campos que la tarjeta puede llegar a dibujar. `relation` queda
-    // afuera a propósito: sin nombre no es un contacto, es un rótulo suelto.
-    const tieneDatos = Boolean(
-        alumno.guardian1Name ||
-        alumno.guardian1Phone ||
-        alumno.guardian1Email ||
-        alumno.guardian2Name ||
-        alumno.guardian2Phone ||
-        alumno.guardian2Email
-    );
-    if (tieneDatos) return true;
+    // **Sólo el nombre, y no el teléfono ni el correo.** No es un descuido: la
+    // tarjeta dibuja teléfono y correo *dentro* de la rama del nombre, así que
+    // un tutor con teléfono y sin nombre hoy no se ve —la ficha dice «Sin datos
+    // registrados» igual— y contarlo como dato dejaba la sección dibujada y
+    // vacía, que es exactamente lo que el cliente pidió sacar. Se encontró
+    // verificando FEAT-28 en stage, con un alumno de 70 años.
+    //
+    // Son 8 alumnos en producción y [BUG-20] es el arreglo de la tarjeta. **El
+    // día que la tarjeta dibuje ese teléfono, esta condición tiene que sumarlo**,
+    // o la sección volvería a esconder algo que se ve.
+    if (hayTexto(alumno.guardian1Name) || hayTexto(alumno.guardian2Name)) return true;
 
     return !signsForThemselves(alumno.birthDate, hoy);
 }

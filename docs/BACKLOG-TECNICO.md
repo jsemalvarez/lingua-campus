@@ -270,6 +270,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
 | [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
 | [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
+| [BUG-20](#bug-20) | P3 | La ficha dice «Sin datos registrados» teniendo el teléfono del tutor | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7489,6 +7490,39 @@ anterior sea aproximado.
 
 ---
 
+<a id="bug-20"></a>
+## BUG-20 · La ficha dice «Sin datos registrados» teniendo el teléfono del tutor · **P3**
+
+**De dónde sale.** De verificar [FEAT-28](#feat-28) en stage el 2026-09-16. La ficha de un alumno de
+70 años mostraba la sección de tutores con las dos tarjetas en «Sin datos registrados»; en la base
+tenía `guardian1Phone` cargado.
+
+**La tarjeta anida el contacto adentro del nombre.** En
+[`StudentProfileView.tsx`](../src/app/students/[id]/StudentProfileView.tsx) la rama es
+`guardian1Name ? (nombre + celular + email) : g1Link ? (datos de la cuenta) : «Sin datos
+registrados»`. Sin nombre y sin cuenta vinculada, el teléfono y el correo **no tienen dónde
+dibujarse**, aunque estén guardados. Lo mismo del lado del Tutor 2.
+
+**No es sólo feo, la pantalla afirma algo falso.** «Sin datos registrados» le dice a la secretaría que
+no hay a quién llamar, y hay un teléfono. Es la misma forma que [BUG-19](#bug-19): la pantalla
+declarando algo que el dato no sostiene.
+
+**Son 8 alumnos activos en producción** con teléfono o correo de tutor cargado, sin nombre y sin
+cuenta vinculada. Siete de ellos tienen 20 o más, que es lo que lo hizo visible: son justo los que
+[FEAT-28](#feat-28) estaba evaluando.
+
+**El arreglo es de la tarjeta, no del dato.** Dibujar el contacto que haya aunque falte el nombre —con
+un rótulo honesto del tipo «Tutor sin nombre cargado»—, en vez de tratar el nombre como condición
+para mostrar lo demás.
+
+**Cuidado con el orden.** Mientras la tarjeta no dibuje ese teléfono, la regla de
+[FEAT-28](#feat-28) **no** lo cuenta como dato, justamente para no dejar la sección vacía. Si se
+arregla esto, hay que sumar teléfono y correo a
+[`muestraSeccionDeTutores`](../src/lib/tutores.ts) en el mismo commit, o la sección va a esconder algo
+que pasó a verse.
+
+---
+
 <a id="feat-22"></a>
 ## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
 
@@ -7773,21 +7807,30 @@ siguen estando siempre:
 
 La planilla del curso tampoco se tocó: ahí «Tutor Legal» es una columna de un listado, no una sección.
 
-**Lo que cambia en producción, medido el 2026-09-16.** De 362 alumnos activos, **23 dejan de ver la
-sección** —**7** de ellos cursando— y **28 la siguen viendo porque tienen algo cargado**. Dato que
-apareció midiendo: 7 alumnos tienen como único dato del tutor el **teléfono**, así que la regla mira
-los seis campos que la tarjeta puede dibujar y no sólo nombre y correo, que es lo que mira
-`clasificarAlumno` del panel de uso —que contesta otra pregunta—.
+**Qué cuenta como «hay datos»: el nombre del tutor, o una cuenta vinculada.** El teléfono y el correo
+**no** alcanzan, y eso se decidió verificando, no escribiendo: la tarjeta los dibuja *dentro* de la
+rama del nombre, así que un tutor con teléfono y sin nombre no se ve igual. Contarlos dejaba la
+sección dibujada y vacía —lo que el cliente pidió sacar— en 7 alumnos. Está desarrollado en
+[BUG-20](#bug-20), y ahí queda anotado que **el día que la tarjeta dibuje ese teléfono, esta regla
+tiene que volver a contarlo**.
+
+**Lo que cambia en producción, medido el 2026-09-16.** De 362 alumnos activos, **30 dejan de ver la
+sección** —**8** de ellos cursando— y **21 la siguen viendo porque tienen algo cargado**.
 
 **El caso que el cliente imaginaba no existe todavía.** Alumnos de 22 o más con datos de tutor: 11 en
 el padrón completo, **0 entre los que cursan**. Los adultos hacen cursos cortos, así que casi todos
 quedan en cursos `FINISHED`. Lo que falta para limpiarlos está en [FEAT-29](#feat-29).
 
-### Resuelto — 2026-09-16 · pendiente de verificar en stage
+### Resuelto — 2026-09-16 · verificación en stage en curso
 
-Falta verlo en pantalla, con tres fichas: un adulto sin nada cargado —no lleva la sección—, un adulto
-con el tutor cargado —la lleva— y un menor, que la lleva siempre. Y el perfil propio del alumno
-adulto, que es la otra pantalla.
+La primera versión de la regla **se corrigió mirando la pantalla**, que es justo lo que la
+verificación tiene que encontrar. Contaba teléfono y correo como datos, y la ficha de un alumno de 70
+años apareció con la sección dibujada y los dos tutores diciendo «Sin datos registrados»: tenía
+`guardian1Phone` cargado y nada más. Ver arriba y [BUG-20](#bug-20).
+
+Queda por mirar el resto: el adulto con el tutor **con nombre** —la sección tiene que estar—, un
+menor —siempre está— y el perfil propio del alumno adulto, que es la otra pantalla donde la sección
+se lee.
 
 ---
 
