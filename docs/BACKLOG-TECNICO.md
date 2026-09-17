@@ -271,6 +271,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
 | [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
 | [BUG-20](#bug-20) | P3 | La ficha dice «Sin datos registrados» teniendo el teléfono del tutor | [ ] |
+| [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [ ] |
+| [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -300,6 +302,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-27](#feat-27) | P3 | 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno | [x] |
 | [FEAT-28](#feat-28) | P3 | 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores | [x] |
 | [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
+| [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -7523,6 +7526,96 @@ que pasó a verse.
 
 ---
 
+<a id="bug-21"></a>
+## BUG-21 · 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia · **P2**
+
+**De dónde sale.** Una madre preguntó el 2026-09-17 qué significaba la tarjeta «Asistencia» de su
+portada: si el 70% era del mes, y de dónde salía «Culture». Las dos preguntas tienen la misma
+respuesta — la tarjeta no muestra lo que su título dice.
+
+**Qué muestra en realidad.** Es la portada del tutor
+([`GuardianDashboardView.tsx:142`](../src/app/dashboard/components/GuardianDashboardView.tsx)). El
+anillo es el porcentaje de las **últimas 10 marcas de asistencia**, sin ningún corte de fecha
+([`dashboard/page.tsx:87`](../src/app/dashboard/page.tsx)). Los tres renglones de abajo son las
+**últimas 3 clases**, cada una con el `topic` que cargó el docente y el estado del alumno. «Culture»
+no es ninguna categoría del sistema: es el tema de esa clase, escrito por la profesora.
+
+Son cuatro defectos distintos en la misma tarjeta, y se pueden arreglar por separado:
+
+1. **El rótulo miente sobre el período.** Dice «Período Académico Actual» y son las últimas 10
+   marcas, vengan del mes que vengan. El producto tiene una noción real de período
+   —[`usage/periodo.ts`](../src/app/dashboard/usage/periodo.ts), la que usa el panel de uso— y la
+   tarjeta no la usa. Es la misma forma que [BUG-19](#bug-19) y [BUG-20](#bug-20): la pantalla
+   afirmando algo que el dato no sostiene.
+2. **Con dos hijos, los mezcla.** El cálculo aplana las marcas de todos los alumnos vinculados,
+   ordena por fecha y se queda con 10
+   ([`dashboard/page.tsx:147`](../src/app/dashboard/page.tsx)): un solo anillo para dos chicos, y los
+   tres renglones sin decir de quién es cada clase. **Le toca a 29 de los 174 tutores de
+   producción** — los mismos 29 de [FEAT-29](#feat-29).
+3. **La consulta del tutor no descarta las clases borradas.** Le falta el
+   `where: { lesson: { status: "ACTIVE" } }` que sí tienen la del alumno
+   ([`dashboard/page.tsx:215`](../src/app/dashboard/page.tsx)), la del hub del tutor
+   ([`guardian/academics/page.tsx:78`](../src/app/guardian/academics/page.tsx)) y la del legajo
+   ([`academics/page.tsx:41`](../src/app/academics/page.tsx)). **Hoy no cambia ningún número: hay 0
+   marcas colgando de clases borradas.** Es la fila que falta para que siga siendo cierto, no un
+   error que alguien esté viendo.
+4. **La leyenda del gráfico se encima con el texto.** El contenedor mide `h-32` (128px) y el gráfico
+   declara `min-h-[220px]`
+   ([`GuardianAttendanceChart.tsx:41`](../src/app/dashboard/components/GuardianAttendanceChart.tsx)),
+   así que la leyenda de Recharts cae sobre el tercer renglón. En la captura de la madre se lee
+   «Reading: a poem● Ausente ● Presente».
+
+**«Tarde» cuenta como presente** en el anillo, y eso hoy no mueve nada: de las 772 marcas de
+producción hay **641 presentes, 130 ausentes, 1 justificada y ninguna tarde**, aunque el parte
+ofrece los cuatro botones
+([`AttendanceForm.tsx:162`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx)).
+Conviene saberlo antes de rediseñar el número: el estado existe y nadie lo usa.
+
+**Por qué P2 y no P1.** El número es engañoso, no está roto: para el tutor de un solo hijo con
+clases recientes, «últimas 10» y «período» se parecen bastante. Lo que no se arregla solo es el
+rótulo y el caso de los hermanos.
+
+**Lo que este arreglo no resuelve.** Aunque el anillo diga la verdad, sigue sin haber dónde ver el
+detalle completo — que es lo que la madre quería en realidad. Eso es [FEAT-30](#feat-30).
+
+---
+
+<a id="bug-22"></a>
+## BUG-22 · Los cuatro contadores del Hub del alumno no comparten universo · **P3**
+
+**De dónde sale.** De buscar, para [FEAT-30](#feat-30), qué había ya parecido a un historial de
+asistencia. Lo más cercano son los cuatro números de colores del Hub de Progreso del alumno
+([`StudentAcademicsView.tsx:266`](../src/app/dashboard/components/StudentAcademicsView.tsx)): Total
+Clases, Clases Dictadas, Asistencias y Faltas.
+
+**Invitan a una cuenta que no cierra.** Se calculan en
+[`academics/page.tsx:116`](../src/app/academics/page.tsx) y salen de dos universos distintos:
+
+- **Total Clases** y **Clases Dictadas**: clases `ACTIVE` del **curso principal** (`enrollments[0]`).
+- **Asistencias** y **Faltas**: marcas del alumno en **todos sus cursos**, de toda su historia, sin
+  límite de fecha.
+
+Así que «Dictadas − Asistencias − Faltas» no da «clases sin registrar»: pueden sobrar marcas de un
+curso anterior y faltar las de las clases sin parte. Dos universos con la misma tipografía, uno al
+lado del otro.
+
+**Tres detalles más chicos, del mismo párrafo.**
+
+- **`enrollments` no filtra por estado** en esta consulta
+  ([`academics/page.tsx:26`](../src/app/academics/page.tsx)), a diferencia del dashboard
+  ([`dashboard/page.tsx:203`](../src/app/dashboard/page.tsx)). El «curso principal» puede ser uno
+  que el alumno dejó.
+- **`enrollments[0]` no tiene `orderBy`**: cuál es el primero lo decide la base. Con dos
+  inscripciones, el curso que titula la pantalla puede cambiar entre dos recargas.
+- **«Justificado» no entra en ningún contador**: Asistencias es `PRESENT`+`LATE` y Faltas es sólo
+  `ABSENT`. Hoy es exactamente 1 marca en producción.
+
+**Por qué P3.** Son números feos en una pantalla que no decide nada: no hay plata ni permisos de por
+medio. Pero **si se hace [FEAT-30](#feat-30) hay que resolverlo en el mismo trabajo**, porque la
+pantalla nueva es justamente la que vuelve verificable esta cuenta.
+
+---
+
 <a id="feat-22"></a>
 ## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
 
@@ -7872,6 +7965,64 @@ alumno**, dejando la cuenta en pie.
 **Hoy no hay ni un caso que la necesite.** De los alumnos de 20 o más que cursan, **uno solo** tiene
 cuenta de tutor vinculada, y tiene 20 o 21 — está terminando, y ahí el tutor sigue siendo el contacto
 correcto. Es una funcionalidad para el día que aparezca el caso, no para limpiar lo que hay.
+
+---
+
+<a id="feat-30"></a>
+## FEAT-30 · Que la familia vea todas las clases del curso y en cuáles estuvo · **P3**
+
+**De dónde sale.** Del 2026-09-17, de contestar la pregunta de la madre que originó
+[BUG-21](#bug-21). La idea: una pantalla donde la familia vea **todas las clases dictadas del
+curso** y, en cada una, si el alumno estuvo, llegó tarde o faltó.
+
+**Lo que hay hoy son tres vistas parciales y ninguna completa.**
+
+| Dónde | Qué muestra | Qué le falta |
+|---|---|---|
+| Portada del tutor | Anillo de las últimas 10 marcas + últimas 3 clases | Todo [BUG-21](#bug-21) |
+| Hub Académico del tutor | «Progreso de Asistencia» (% sobre las últimas 30 marcas) y «Registro de Faltas» | El registro lista **sólo lo que no es `PRESENT`** ([`GuardianAcademicsView.tsx:219`](../src/app/guardian/academics/components/GuardianAcademicsView.tsx)): se ven las faltas, nunca sobre cuántas clases |
+| Hub de Progreso del alumno | Cuatro contadores y las últimas 6 clases | [BUG-22](#bug-22); y no lo ve el tutor |
+
+**Lo que falta, en una línea, es el denominador.** «Faltó 3 veces» no significa lo mismo si el curso
+lleva 8 clases o 40, y ninguna pantalla de la familia dice sobre cuántas. Ésa es exactamente la
+pregunta que hizo la madre.
+
+**El número que decide el tamaño del pedido, medido en producción el 2026-09-17.** De las **438
+clases dictadas** en cursos con inscriptos activos (`ACTIVE`, ya pasadas, tipos `CLASS`/`TP`/`EXAM`
+— la misma definición que la métrica 1 del panel de uso, [FEAT-11](#feat-11)), **324 no tienen
+ninguna marca de asistencia: el 74%**. Y de los 30 cursos involucrados, **13 no tienen una sola
+marca en todo el curso**.
+
+**O sea que la pantalla nacería casi vacía.** No es un argumento para no hacerla: es la decisión de
+producto que hay que tomar **antes** de escribirla, porque define qué dice la fila de una clase
+dictada sin parte. Y sería la primera vez que ese agujero se le muestra a las familias: hoy vive
+sólo en el panel de uso —«Clases sin parte de asistencia»—, que lo mira el instituto.
+
+**Las dos salidas. Queda abierta, no la decide esta ficha.**
+
+- **Mostrar el hueco** («Sin registrar»). Es honesto y le pone al instituto una presión real para
+  que el parte se tome. También le muestra a la familia que tres de cada cuatro clases no se
+  registraron.
+- **Listar sólo las clases con parte.** No expone nada, y devuelve el mismo problema que la tarjeta
+  de hoy: un porcentaje sobre un denominador que la familia no puede ver.
+
+Es la misma clase de decisión que [FEAT-27](#feat-27): no tapar con un cartel lo que el sistema
+todavía no sabe.
+
+**Lo que ya está listo para colgarse.** El dato está entero y no hay que migrar nada: `Lesson` tiene
+fecha, tema, tipo y estado, y `Attendance` cuelga de la clase con su estado y su observación. La
+consulta es «las clases `ACTIVE` del curso de la inscripción, con la marca de ese alumno si
+existe» — el parte del docente dado vuelta.
+
+**Alcance sugerido, para que no se vuelva un proyecto.** La misma pantalla sirve al alumno y al
+tutor, como ya pasa con el boletín ([`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx),
+usado por las dos). Y conviene que **reemplace** al «Registro de Faltas» del Hub Académico en vez de
+sumarse: la lista completa lo contiene.
+
+**Lo que el pedido pide y los datos no van a poder llenar.** «Tarde» y «Justificado» existen en el
+parte ([`AttendanceForm.tsx:162`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx))
+y en producción tienen **0 y 1 marcas**. La pantalla los va a dibujar, pero mientras el parte se
+tome sólo con presente y ausente, la distinción «a cuáles llegó tarde» no tiene con qué llenarse.
 
 ---
 
