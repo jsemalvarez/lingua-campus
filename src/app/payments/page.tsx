@@ -400,6 +400,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                 Ver Deudores
                             </Button>
                         </Link>
+                        {/* El detalle de lo que sale, que en esta tabla queda repartido
+                            entre los cobros. La secretaría no ve egresos (SEC-03), así
+                            que tampoco ve el acceso. Ver FEAT-31. */}
+                        {!isSecretary && (
+                            <Link href="/payments/expenses">
+                                <Button variant="outline" className="flex items-center gap-2 border-rose-500/30 text-rose-600 hover:bg-rose-50">
+                                    <ArrowDownLeft size={16} />
+                                    Ver Gastos
+                                </Button>
+                            </Link>
+                        )}
                         {!isSecretary && (
                             <Link href="/payments/payroll">
                                 <Button variant="outline" className="flex items-center gap-2 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
