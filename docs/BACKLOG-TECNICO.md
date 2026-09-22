@@ -303,6 +303,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-28](#feat-28) | P3 | 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores | [x] |
 | [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
 | [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
+| [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -8023,6 +8024,63 @@ sumarse: la lista completa lo contiene.
 parte ([`AttendanceForm.tsx:162`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx))
 y en producción tienen **0 y 1 marcas**. La pantalla los va a dibujar, pero mientras el parte se
 tome sólo con presente y ausente, la distinción «a cuáles llegó tarde» no tiene con qué llenarse.
+
+---
+
+<a id="feat-31"></a>
+## FEAT-31 · Ver los gastos cargados, filtrados por mes · **P2 · 🗣️ cliente**
+
+**Pedido el 2026-09-22.** "¿Tiene alguna vista para ver los gastos que va cargando? ¿La puede filtrar
+por mes? Este fin de semana estuvo cargando gastos y no ve un detalle de lo que va cargando."
+
+**Lo que hay hoy, y por qué no alcanza.** Los gastos **sí se ven**, pero mezclados con los cobros en
+la tabla «Movimientos Recientes» de [`/payments`](../src/app/payments/page.tsx), ordenados por fecha
+y de a 20 por página. El selector de arriba dice **«Métricas de»** y es literal: mueve las tarjetas
+de KPI y nada más — la tabla se trae el libro mayor entero
+([`page.tsx:43`](../src/app/payments/page.tsx)) y lo único que la recorta es el buscador de texto,
+que no filtra ni por fecha ni por tipo de movimiento.
+
+**Por qué no los encontró, medido en producción el 2026-09-22.** No es una impresión suya: cargó
+**104 gastos el 19, 20 y 21 de septiembre** —prácticamente el año entero; de los 106 que hay en la
+base, 104 son de ese fin de semana—. Y **los 104 tienen fecha anterior al día en que los cargó**, del
+8 de enero en adelante. La tabla ordena por **la fecha del gasto**, no por cuándo se cargó, así que
+en vez de quedar juntos arriba se repartieron por todo el libro: **1673 asientos, 84 páginas de 20**.
+En septiembre, que es donde más denso está, hay **216 movimientos y apenas 10 son gastos**. Pasó el
+fin de semana cargando y el sistema no tenía dónde devolvérselo.
+
+**Qué pantalla.** Una propia, `/payments/expenses`, del mismo molde que Deudores y Cuotas Eliminadas:
+filtro de período y de categoría, el detalle, y **el total del período** — que es la parte que hoy no
+existe en ningún lado en forma de lista.
+
+**De dónde sale el número: de `Transaction`, no de `Expense`.** Es la misma fuente que la tarjeta
+«Gastos Operativos» del mes, y montarla ahí obliga a que los dos números den igual. La diferencia no
+es teórica: los **dos gastos de prueba del 27 de marzo** (categoría `NOMINA`, $299 y $200) **no
+tienen asiento** —se crearon antes del libro—, así que no están ni en la tabla ni en la tarjeta. Una
+pantalla armada sobre `Expense` los mostraría y quedaría **$499 por encima** de la tarjeta, sin que
+nadie pueda explicar de dónde sale la diferencia.
+
+**Los sueldos entran, y no es un detalle.** En producción son **39 asientos por $19.128.500**, contra
+**$21.676.656,52 de los otros 65 gastos**: casi la mitad de lo que sale. Una pantalla de gastos que
+los dejara afuera daría un "total del mes" que no es el gasto del mes, y otra vez no cerraría con la
+tarjeta. Van adentro, y la categoría «Sueldos» los separa para el que quiera verlos aparte.
+
+**Las categorías se leen de la base, no del formulario.** `Expense.category` es texto libre. El
+formulario ofrece seis ([`RegisterExpenseForm.tsx:47`](../src/app/payments/components/RegisterExpenseForm.tsx)),
+los sueldos entran con `Payroll` desde otras dos pantallas, y en la base ya hay además `NOMINA`.
+Clavar la lista de seis en el filtro dejaría categorías cargadas sin forma de elegirlas.
+
+**Arranca en el mes en curso**, al revés que Cuotas Eliminadas, que arranca sin filtro. Es la
+diferencia entre las dos preguntas: borrar una cuota es raro y hay que poder ver todo, mientras que
+acá la pregunta es «qué gasté este mes» y hay gastos todos los meses. Un mes vacío se dice con todas
+las letras —"no hay gastos cargados en *mes*"— para que no se lea como una pantalla rota.
+
+**Los anulados se listan tachados y no suman al total.** Hoy en producción **no hay ninguno**, así
+que es un camino que nace sin datos; se sostiene igual porque el día que se anule un gasto, la
+alternativa —que desaparezca— deja al dueño buscando algo que cargó y ya no está.
+
+**Lo que esta ficha no resuelve.** La tabla del libro mayor sigue sin filtro de mes ni de tipo: la
+pantalla nueva contesta por los gastos, no por los cobros. Y **los dos gastos huérfanos de marzo
+siguen invisibles** en todo el módulo — son $499 de prueba, no se tocan acá, pero quedan anotados.
 
 ---
 
