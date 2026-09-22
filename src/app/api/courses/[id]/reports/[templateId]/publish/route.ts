@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import {
@@ -104,113 +105,142 @@ export async function PATCH(
             })).map(r => r.studentId)
         );
 
-        // Perform upserts to guarantee report existence and update publishedAt
-        const updated = await prisma.$transaction(async (tx) => {
-            const reports = [];
-            for (const studentId of studentIds) {
-                const rep = await tx.studentReport.upsert({
-                    where: {
-                        studentId_courseId_year_periodIndex_templateId: {
-                            studentId,
-                            courseId,
-                            year,
-                            periodIndex,
-                            templateId
-                        }
-                    },
-                    update: {
-                        publishedAt: pubDate
-                    },
-                    create: {
+        // Guarantee report existence and update publishedAt. No bucle por alumno
+        // dentro de una `$transaction` interactiva: con cursos grandes esa cuenta
+        // de sentencias no entraba en los 5 segundos que Prisma le da a una
+        // transacción interactiva contra la base remota, y se caía con
+        // "Transaction already closed" (BUG-23). `publishedAt` es el mismo valor
+        // para toda la tanda, así que un `updateMany` alcanza para los que ya
+        // tenían fila; `createMany` para los que no.
+        const existingReports = await prisma.studentReport.findMany({
+            where: { courseId, year, periodIndex, templateId, studentId: { in: studentIds } },
+            select: { id: true, studentId: true }
+        });
+        const existingStudentIds = new Set(existingReports.map(r => r.studentId));
+        const missingStudentIds = studentIds.filter(id => !existingStudentIds.has(id));
+
+        const reportWrites: Prisma.PrismaPromise<unknown>[] = [];
+        if (existingReports.length > 0) {
+            reportWrites.push(
+                prisma.studentReport.updateMany({
+                    where: { id: { in: existingReports.map(r => r.id) } },
+                    data: { publishedAt: pubDate }
+                })
+            );
+        }
+        if (missingStudentIds.length > 0) {
+            reportWrites.push(
+                prisma.studentReport.createMany({
+                    data: missingStudentIds.map(studentId => ({
                         studentId,
                         courseId,
                         year,
                         periodIndex,
                         templateId,
                         publishedAt: pubDate
-                    }
-                });
-                reports.push(rep);
-            }
+                    }))
+                })
+            );
+        }
+        if (reportWrites.length > 0) {
+            await prisma.$transaction(reportWrites);
+        }
 
-            // Freeze who has to sign, and snapshot what they are signing.
-            // Only on publish, and only for reports that were not frozen before:
-            // re-publishing must not re-resolve signers, or a student turning 20
-            // in August would change the signer of the report signed in March.
-            //
-            // A report with zero signer rows is BOTH "sin firmante" and "not
-            // frozen yet", and that is deliberate: with no signers there are no
-            // signatures to protect, so re-resolving is safe. It also self-heals
-            // the common case — the student had no guardian loaded at publish
-            // time, someone loads one, and re-publishing makes the report
-            // signable. Do not "fix" this with an explicit frozen flag without
-            // replacing that recovery path.
-            // The hash is written on every publish, even when the template does
-            // not ask for a signature: it describes content, not policy. That
-            // makes `contentHash != null` mean "published by a version that knows
-            // about signatures", which is how the institute screen tells apart a
-            // report with nobody to sign it from one published before all this
-            // existed — the whole first term, for instance.
-            if (pubDate) {
-                const reportIds = reports.map(r => r.id);
+        const reports = await prisma.studentReport.findMany({
+            where: { courseId, year, periodIndex, templateId, studentId: { in: studentIds } },
+            select: { id: true, studentId: true, teacherComments: true }
+        });
 
-                const alreadyFrozen = new Set(
-                    (await tx.reportSigner.findMany({
-                        where: { reportId: { in: reportIds } },
-                        select: { reportId: true },
-                        distinct: ["reportId"]
-                    })).map(s => s.reportId)
-                );
+        // Freeze who has to sign, and snapshot what they are signing.
+        // Only on publish, and only for reports that were not frozen before:
+        // re-publishing must not re-resolve signers, or a student turning 20
+        // in August would change the signer of the report signed in March.
+        //
+        // A report with zero signer rows is BOTH "sin firmante" and "not
+        // frozen yet", and that is deliberate: with no signers there are no
+        // signatures to protect, so re-resolving is safe. It also self-heals
+        // the common case — the student had no guardian loaded at publish
+        // time, someone loads one, and re-publishing makes the report
+        // signable. Do not "fix" this with an explicit frozen flag without
+        // replacing that recovery path.
+        // The hash is written on every publish, even when the template does
+        // not ask for a signature: it describes content, not policy. That
+        // makes `contentHash != null` mean "published by a version that knows
+        // about signatures", which is how the institute screen tells apart a
+        // report with nobody to sign it from one published before all this
+        // existed — the whole first term, for instance.
+        //
+        // Below is two bulk statements, not a loop: each report's hash is
+        // different, so that write is a parametrized `UPDATE ... FROM (VALUES
+        // ...)` (same pattern as `saveLessonAttendanceAction`), and the signer
+        // rows go in one `createMany`. Each is idempotent on its own — a
+        // failure between them self-heals on the next publish, same as before.
+        if (pubDate && reports.length > 0) {
+            const reportIds = reports.map(r => r.id);
 
-                const entries = await tx.reportEntry.findMany({
+            const [alreadyFrozenRows, entries] = await Promise.all([
+                prisma.reportSigner.findMany({
+                    where: { reportId: { in: reportIds } },
+                    select: { reportId: true },
+                    distinct: ["reportId"]
+                }),
+                prisma.reportEntry.findMany({
                     where: { reportId: { in: reportIds } },
                     select: { reportId: true, categoryId: true, value: true }
-                });
-                const entriesByReport = new Map<string, typeof entries>();
-                for (const entry of entries) {
-                    const list = entriesByReport.get(entry.reportId) ?? [];
-                    list.push(entry);
-                    entriesByReport.set(entry.reportId, list);
-                }
-
-                const signerRows = [];
-                for (const rep of reports) {
-                    // The hash always tracks the current content, so an edit after
-                    // publishing shows up as a mismatch against the signed hash.
-                    await tx.studentReport.update({
-                        where: { id: rep.id },
-                        data: {
-                            contentHash: reportContentHash({
-                                teacherComments: rep.teacherComments,
-                                entries: entriesByReport.get(rep.id) ?? []
-                            })
-                        }
-                    });
-
-                    if (!needsSignature || alreadyFrozen.has(rep.id)) continue;
-
-                    const student = studentsById.get(rep.studentId);
-                    if (!student) continue;
-
-                    // An empty list is a valid outcome: the student has no guardian
-                    // loaded, so nobody can sign. That is the "sin firmante" state.
-                    signerRows.push(
-                        ...resolveSigners({
-                            studentId: rep.studentId,
-                            birthDate: student.birthDate,
-                            guardianIds: student.guardianLinks.map(l => l.guardianId),
-                            publishedAt: pubDate
-                        }).map(signer => ({ reportId: rep.id, ...signer }))
-                    );
-                }
-
-                if (signerRows.length > 0) {
-                    await tx.reportSigner.createMany({ data: signerRows });
-                }
+                })
+            ]);
+            const alreadyFrozen = new Set(alreadyFrozenRows.map(s => s.reportId));
+            const entriesByReport = new Map<string, typeof entries>();
+            for (const entry of entries) {
+                const list = entriesByReport.get(entry.reportId) ?? [];
+                list.push(entry);
+                entriesByReport.set(entry.reportId, list);
             }
 
-            return reports;
-        });
+            const hashValues = Prisma.join(
+                reports.map(rep => Prisma.sql`(
+                    ${rep.id}::text,
+                    ${reportContentHash({
+                        teacherComments: rep.teacherComments,
+                        entries: entriesByReport.get(rep.id) ?? []
+                    })}::text
+                )`)
+            );
+
+            const signerRows: { reportId: string; userId: string | null; studentId: string | null }[] = [];
+            for (const rep of reports) {
+                if (!needsSignature || alreadyFrozen.has(rep.id)) continue;
+
+                const student = studentsById.get(rep.studentId);
+                if (!student) continue;
+
+                // An empty list is a valid outcome: the student has no guardian
+                // loaded, so nobody can sign. That is the "sin firmante" state.
+                signerRows.push(
+                    ...resolveSigners({
+                        studentId: rep.studentId,
+                        birthDate: student.birthDate,
+                        guardianIds: student.guardianLinks.map(l => l.guardianId),
+                        publishedAt: pubDate
+                    }).map(signer => ({ reportId: rep.id, ...signer }))
+                );
+            }
+
+            const freezeWrites: Prisma.PrismaPromise<unknown>[] = [
+                prisma.$executeRaw`
+                    UPDATE "StudentReport" sr
+                       SET "contentHash" = v."contentHash"
+                      FROM (VALUES ${hashValues}) AS v("id", "contentHash")
+                     WHERE sr."id" = v."id"
+                `
+            ];
+            if (signerRows.length > 0) {
+                freezeWrites.push(prisma.reportSigner.createMany({ data: signerRows }));
+            }
+            await prisma.$transaction(freezeWrites);
+        }
+
+        const updated = reports;
 
         // Aviso de publicación al alumno y a sus tutores (FEAT-09).
         //

@@ -273,6 +273,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-20](#bug-20) | P3 | La ficha dice «Sin datos registrados» teniendo el teléfono del tutor | [ ] |
 | [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [ ] |
 | [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
+| [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7614,6 +7615,59 @@ lado del otro.
 **Por qué P3.** Son números feos en una pantalla que no decide nada: no hay plata ni permisos de por
 medio. Pero **si se hace [FEAT-30](#feat-30) hay que resolverlo en el mismo trabajo**, porque la
 pantalla nueva es justamente la que vuelve verificable esta cuenta.
+
+---
+
+<a id="bug-23"></a>
+## BUG-23 · 🗣️ Publicar boletines falla en los cursos más grandes · **P1**
+
+**De dónde sale.** El cliente reportó el error al publicar boletines (2026-09-22), con captura de
+pantalla: `Invalid prisma.reportSigner.createMany() invocation: Transaction API error: Transaction
+already closed: Could not perform operation.` No en todos los cursos — nombró Children 2 (M-J),
+Children 3 (M-J y L-M), Children 4 (L-M), Pre-adolescents 1 (M-J 18hs) y Pre-intermediate (M-J).
+
+**Causa: mismo patrón que [FIN-06](#fin-06), sin arreglar acá.**
+[`publish/route.ts:108`](../src/app/api/courses/[id]/reports/[templateId]/publish/route.ts) abría una
+`$transaction` interactiva y adentro hacía, alumno por alumno y en serie, un `upsert` de
+`StudentReport` más —al publicar— un `update` de `contentHash` y la resolución de firmantes. Varias
+sentencias por alumno, todas reteniendo la misma conexión. Prisma cierra una transacción interactiva a
+los 5 segundos; contra la base remota, esa cuenta de sentencias no entraba en el margen para los cursos
+más grandes, la transacción se cerraba sola, y el `reportSigner.createMany()` de más abajo caía con
+"Transaction already closed" — el error de la captura.
+
+**Confirmado contra producción, no supuesto.** Alumnos activos por curso:
+
+| Curso | Alumnos activos |
+|---|---|
+| Children 4 (L-M) | 12 |
+| Pre-intermediate (M-J) | 11 |
+| Children 3 (M-J, ambos turnos) | 11 |
+| Children 2 (M-J) | 11 |
+| Children 3 (L-M) | 10 |
+| Pre-adolescents 1 (M-J tarde) | 10 |
+
+Son, sin excepción, los seis cursos más grandes del instituto — el resto tiene 9 alumnos o menos.
+Coincide exactamente con lo que nombró el cliente: no es un curso puntual roto, es un umbral de tamaño
+que cualquier curso cruza tarde o temprano si crece.
+
+**Cambio.** El mismo que ya usaron [FIN-06](#fin-06) y `saveLessonAttendanceAction`
+([`attendance/actions.ts:90`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts)) para
+esta exacta falla: sacar el bucle de la transacción interactiva y colapsarlo en sentencias masivas.
+`publishedAt` es el mismo valor para toda la tanda, así que alcanza con `updateMany` para los que ya
+tenían fila y `createMany` para los que no. El `contentHash` sí es distinto por alumno — ahí va el
+`UPDATE ... FROM (VALUES ...)` parametrizado, igual que la asistencia. **No agrandar el `timeout` de
+Prisma**: el techo de duración de la función de Vercel corta antes, así que ese número no alcanza
+nunca (ya está escrito en FIN-06, y sigue valiendo acá).
+
+### Implementado — 2026-09-22
+
+`publish/route.ts` ya no abre una `$transaction` interactiva con un bucle adentro. Reports en bulto
+(`updateMany`/`createMany`), un `findMany` para recuperar los ids, y el freeze de hash y firmantes en
+un solo lote de sentencias masivas (`$executeRaw` con `VALUES` para el hash, `createMany` para los
+firmantes). El auto-sanado que ya documentaba el comentario original —una tanda sin firmantes se
+resuelve sola en la próxima publicación— sigue intacto: cada sentencia es idempotente por separado, así
+que una falla a mitad de camino se corrige repitiendo la publicación, no arrastra el estado a medio
+escribir. **Falta verificar en stage** con un curso de más de 12 alumnos.
 
 ---
 
