@@ -9140,6 +9140,86 @@ pregunta para el administrador del instituto en vez del superadmin.
 
 ---
 
+<a id="ped-11"></a>
+## PED-11 · El listening va al revés: primero el audio y después las preguntas · **P2 · 🗣️ cliente**
+
+**Pedido el 2026-09-22.** "Ponemos el audio primero y luego las preguntas, pero tendría que ser al
+revés. Primero poner las preguntas, luego escuchar el audio y luego de escuchar el audio, que puedan
+contestar."
+
+**Tiene razón, y pasaba por dos cosas distintas** en
+[`ListeningLab.tsx`](../src/components/practice/ListeningLab.tsx), las dos necesarias para que el
+alumno escuchara a ciegas:
+
+1. **Las preguntas no existían hasta el play.** El pedido a `/generate-listening-quiz` salía de
+   adentro de `playText()`. Antes de apretar el botón no había nada cargado.
+2. **Aunque hubiera, no se dibujaban.** El bloque del cuestionario estaba atado a
+   `phase === "done_listening"`, que es el estado al que se entra cuando el audio **termina**.
+
+**Qué se cambió.** El cuestionario se pide al montar el componente y se dibuja desde el arranque; los
+botones de Verdadero/Falso quedan apagados hasta que el audio terminó al menos una vez. La llave es
+`listenCount`, que ya existía y que sube sólo en el `onended` del audio: no hizo falta estado nuevo
+para "recién después de escuchar pueden contestar".
+
+**Las frases quedan a la vista mientras suena el audio** — decidido el 2026-09-22 contra la
+alternativa de esconderlas durante la reproducción. Esconderlas convierte el ejercicio en una prueba
+de memoria además de comprensión; dejarlas es la técnica estándar de *pre-listening*: saber qué
+escuchar es parte de la consigna. Además es la versión barata: un solo listado que se lee arriba y se
+contesta abajo, en lugar de una máquina de pasos.
+
+**`done_listening` desapareció.** Hacía tres cosas a la vez —fase del audio, señal de "ya escuchó" y
+compuerta del cuestionario— y esa mezcla era lo que sostenía el orden viejo. `Phase` quedó en
+`idle | playing | saving`, que es el estado del audio y nada más; lo demás lo dicen `listenCount` e
+`isEvaluated`. `"revealed"` estaba declarado y no se usaba en ninguna parte.
+
+**La cuota ahora se gasta al entrar, no al apretar play.** Armar el cuestionario descuenta una unidad
+de IA al alumno y al instituto ([`guard.ts`](../src/lib/practice/guard.ts)). Antes la pagaba el que
+escuchaba; ahora también el que abre el listening y se va. El tope del instituto son 1200 llamadas
+por día y el del alumno 150 por hora ([`quota.ts`](../src/lib/practice/quota.ts)), así que es ruido —
+pero es gasto que antes no estaba, y conviene tenerlo anotado si alguna vez el consumo aprieta
+([PED-07](#ped-07)).
+
+**En `npm run dev` se pide dos veces**, y en Vercel una. El pedido pasó de un `onClick` a un
+`useEffect`, y React los ejecuta dos veces en modo estricto, que es el default de Next en desarrollo.
+El token descarta la primera respuesta, pero la llamada se hizo y la cuota se descontó. No se blindó
+a propósito: el guard que lo evitaría también taparía la recarga legítima cuando cambia la práctica,
+y el costo es una llamada de más mientras se prueba en la máquina.
+
+**Las afirmaciones son spoiler del texto, y eso ahora importa más.** Las escribe la IA a partir del
+texto y la mitad son frases verdaderas sobre él: leerlas antes adelanta buena parte del contenido. En
+la didáctica eso es deliberado, pero acá **nadie las revisa** — se generan al vuelo, distintas para
+cada alumno, y la profesora nunca las ve. Pasaron a ser lo primero que se lee, así que su calidad
+pesa más que cuando aparecían al final. Si alguna vez molesta, el arreglo no es reordenar sino
+dejarlas guardadas y revisables, que es trabajo de otra ficha.
+
+### Escrita el 2026-09-22 · `b7cae24` · **sin verificar por pantalla**
+
+Un solo archivo, sin migración y sin tocar endpoints. Cae igual en la práctica del alumno y en la
+vista previa de la docente
+([`practice-preview`](../src/app/courses/[id]/lessons/[lessonId]/practice-preview/page.tsx)): las dos
+montan el mismo componente.
+
+**Dos agujeros que quedaron a la vista al mover el bloque adelante, y que se taparon en el mismo
+cambio:**
+
+- **El cuestionario vacío era un callejón.** Si `/generate-listening-quiz` fallaba, `questions`
+  quedaba en `[]` y la pantalla mostraba "Preparando preguntas de comprensión..." para siempre, sin
+  forma de terminar la sesión. Ahora `null` es *cargando* y `[]` es *no se pudo*, con un
+  «Volver a intentar» que siempre relee el texto original —que es el único que el servidor puede
+  releer de la base— y con el 429 de la cuota mostrado tal cual.
+- **El `catch` del TTS era mudo.** Caía en `done_listening` sin mensaje: el botón se reacomodaba solo
+  y el alumno no sabía por qué no había sonado nada. Con el cuestionario ya en pantalla eso quedaba
+  peor, así que ahora avisa.
+
+**Qué mirar en pantalla.** Que al entrar aparezcan las preguntas con el candado y la línea "se
+contestan cuando termine el audio"; que los botones de V/F estén apagados; que se enciendan **al
+terminar** el audio y no al apretar play; que las frases sigan ahí mientras suena; y que «Generar
+texto nuevo con IA» reemplace las preguntas por las del texto generado sin dejar las viejas. No se
+pudo probar local: la base de desarrollo está apagada (`ECONNREFUSED` en `127.0.0.1:5432`) y la de
+stage estaba pausada en el último deploy ([FEAT-31](#feat-31)).
+
+---
+
 ## Apéndice · Verificado y descartado
 
 Cosas que parecían problemas y no lo son. Anotadas para no volver a revisarlas:
