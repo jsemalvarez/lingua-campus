@@ -251,6 +251,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
+| [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -3203,6 +3204,74 @@ inventar acá una tabla que después se duplique.
 **Relacionado.** [FEAT-18](#feat-18) (de donde salió, y dónde va el botón), [FIN-23](#fin-23) (la
 reactivación que hace posible todo esto), [FIN-24](#fin-24) (el otro movimiento del alumno entre
 cursos), [FIN-09](#fin-09) y [FIN-26](#fin-26) (la deuda que vuelve con él), [ARQ-10](#arq-10).
+
+---
+
+<a id="fin-31"></a>
+## FIN-31 · El recibo no dice cuánto vale la cuota ni cuánto queda debiendo · **P1** · 🗣️ Pedido del cliente
+
+**Abierto el 2026-09-22**, saliendo de un cobro duplicado que el instituto encontró solo: un alumno
+con **Julio 2026 pagado dos veces**, saldo a favor sin usar y Septiembre figurando como deuda. El
+duplicado no fue un error de carga aislado — **lo habilitó el comprobante**.
+
+**El recibo nunca imprime el precio de la cuota.** Imprime lo que aportó *ese* pago, con el nombre de
+la cuota encima. En [`ReceiptDownloadButton.tsx:33`](../src/components/financials/ReceiptDownloadButton.tsx)
+el concepto se arma como `payment.amount + payment.discount - payment.surcharge` y se rotula con
+`formatFeeLabel(...)` → "CUOTA JULIO 2026". El `TOTAL` es `payment.amount`, el efectivo que entró. En
+ningún renglón aparece `originalAmount`, ni `paidAmount`, ni lo que falta.
+
+**No es que la pantalla se lo olvide: el dato no le llega.**
+[`receiptActions.ts:58`](../src/app/payments/receiptActions.ts) trae la cuota entera con un `include`
+—`originalAmount` y `paidAmount` adentro— y al armar la respuesta
+([`receiptActions.ts:95`](../src/app/payments/receiptActions.ts)) devuelve sólo el importe del pago, el
+descuento, el recargo y qué mes es. El componente **no puede mostrar el precio aunque se lo pidan**.
+Cualquier arreglo empieza ahí.
+
+**Cómo se ve el mismo mes en dos recibos distintos.** Cuota de Julio de $46.000, un alumno con $3.000
+de descuento que se tipea a mano en cada cobro (no está configurado en ningún lado: ni el curso ni la
+inscripción lo recuerdan — es [FIN-25](#fin-25)):
+
+| | Cargado | Concepto impreso | TOTAL |
+|---|---|---|---|
+| Recibo N° CMSDPWR4 · 03/08 | $43.000, sin descuento | CUOTA JULIO 2026 · **$43.000** | $43.000 |
+| Recibo N° CMSNQ05S · 10/08 | $43.000 + $3.000 de descuento | CUOTA JULIO 2026 · **$46.000** / DESCUENTO APLICADO · -$3.000 | $43.000 |
+
+El primero aportó $43.000 sobre $46.000: la cuota quedó `PARTIAL` con **$3.000 sin cubrir** y siguió
+apareciendo cobrable. El papel que se llevó la familia decía "CUOTA JULIO 2026 — $43.000 — TOTAL
+$43.000", **indistinguible de una cuota saldada**. Una semana después alguien vio Julio todavía en la
+lista, lo cobró entero —esta vez con el descuento bien puesto— y esos $43.000 se fueron a saldo a
+favor ([`actions.ts:132`](../src/app/payments/actions.ts)). El saldo a favor funcionó: **lo que falló
+fue que nadie podía enterarse de que faltaban $3.000.**
+
+**Con pagos parciales esto se multiplica.** Los parciales son un camino soportado, no un abuso:
+[`actions.ts:106`](../src/app/payments/actions.ts) acepta cualquier importe mayor a cero y
+[`actions.ts:164`](../src/app/payments/actions.ts) deja la cuota en `PARTIAL` para seguir cobrándola.
+Un padre que paga Julio en tres veces —$10.000, $20.000 y $13.000— se lleva **tres papeles que dicen
+"CUOTA JULIO 2026" con tres importes distintos**, ninguno de los cuales es el precio de la cuota, y
+ninguno dice cuánto se lleva acumulado ni cuánto falta. El tercero, que es el que cierra la cuota, es
+visualmente igual a los dos primeros: **hoy no existe forma de emitir un comprobante que diga
+"saldado"**.
+
+**Lo que tiene que mostrar el recibo**, y es lo que hay que decidir con el instituto:
+
+- **El precio real de la cuota**, que es el concepto que se está cobrando.
+- **Lo aplicado en este pago**, con el descuento y el recargo como ajustes *de ese pago*, no del precio.
+- **El saldo pendiente después de este pago** — cero incluido, dicho explícitamente cuando la cuota
+  queda saldada. Es el renglón que hubiera evitado el duplicado.
+- **Si hubo excedente y se fue a saldo a favor**, cuánto. Hoy eso vive en `Payment.notes`
+  ([`actions.ts:144`](../src/app/payments/actions.ts)) y el recibo ni lo lee.
+
+**Nota para quien lo toque.** La lógica que arma el recibo está **duplicada tal cual en dos
+componentes**: [`ReceiptDownloadButton.tsx:33-48`](../src/components/financials/ReceiptDownloadButton.tsx)
+y [`TransactionActions.tsx:40-55`](../src/app/payments/components/TransactionActions.tsx). Es el mismo
+código copiado. Arreglar uno solo deja la mitad de los recibos mal, según desde qué pantalla se
+descarguen.
+
+**Relacionado.** [FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué — mismo
+agujero, otra pantalla), [FIN-25](#fin-25) (las condiciones especiales que no se ven, y por eso se
+tipean de memoria), [FIN-26](#fin-26) (dónde se concilia la plata a favor), [FIN-27](#fin-27) y
+[FIN-11](#fin-11) (el saldo a favor: cómo se aplica y cómo se deshace), [FEAT-14](#feat-14) (el
+carrito: si se cobran varias cuotas juntas, el recibo tiene que poder explicarlo).
 
 ---
 
