@@ -276,6 +276,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [ ] |
 | [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
 | [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
+| [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7849,6 +7850,47 @@ Es la conversión de zona horaria en la vista, no el dato.
 
 ---
 
+<a id="bug-24"></a>
+## BUG-24 · El cartel de confirmación se dibuja fuera de la pantalla · **P1**
+
+**De dónde sale.** Del 2026-09-23, anulando un gasto en stage para probar [FEAT-31](#feat-31). Se
+apretó «Anular» en la tabla de Finanzas: la pantalla se oscureció y **no apareció ningún cartel**.
+La rueda del mouse tampoco movía la página. Sin salida visible: el operador tiene que recargar.
+
+**Qué pasa.** El modal es `fixed inset-0`, que debería cubrir la ventana. Medido en el navegador,
+estaba en `x: 117, y: -1640, 768 × 2486` — o sea, no en la ventana (1020 × 932) sino **1640 píxeles
+más arriba**.
+
+**La causa, que no está en el modal.** El `<main>` de la pantalla lleva
+`animate-in fade-in slide-in-from-bottom-4 duration-500`. Esa animación corre con
+`animation-fill-mode: both`, así que al terminar **el último fotograma se queda aplicado**: el
+elemento conserva `transform: matrix(1, 0, 0, 1, 0, 0)`. Es la identidad, no mueve nada — pero es un
+`transform`, y un `transform` distinto de `none` convierte al elemento en **bloque contenedor de
+todo `position: fixed` que cuelgue adentro**. El modal deja de medirse contra la ventana y pasa a
+medirse contra el `<main>`, que en Finanzas mide 2486 píxeles de alto. Queda centrado en *la
+página*, no en *la pantalla*.
+
+**Por eso aparece y desaparece según dónde estés parado**, y por eso nadie lo reportó hasta ahora:
+con la página arriba de todo, el centro del `<main>` cae dentro de la ventana y el cartel se ve bien.
+Scrolleando hasta el final de la tabla —que es exactamente lo que se hace para encontrar un
+movimiento viejo— el centro queda arriba del borde y el cartel se va de pantalla.
+
+**El alcance es más grande que esta pantalla.** Hay **35 pantallas** con `animate-in` en su `<main>`
+y **20 componentes** con modales `fixed inset-0`. Todos los que se abran desde adentro de una página
+larga tienen el mismo defecto latente; los de Finanzas son
+[`TransactionActions`](../src/app/payments/components/TransactionActions.tsx) —anular pagos, gastos y
+sueldos— y [`PayrollClient`](../src/app/payments/payroll/PayrollClient.tsx).
+
+**Es P1 porque tapa una operación de plata.** Anular es el único camino para corregir un gasto o un
+cobro mal cargado —no se borra nada, se anula—, y desde el lugar natural de la tabla no se puede
+completar. Ver [FIN-11](#fin-11), que es la funcionalidad que esto vuelve inalcanzable.
+
+**Las dos salidas, no las decide esta ficha.** Sacarle la animación al `<main>` (el `transform`
+desaparece y `fixed` vuelve a medirse contra la ventana) o montar los modales fuera del árbol, en un
+portal sobre `document.body`. La segunda arregla los 20 de una vez y no le saca la animación a nadie.
+
+---
+
 <a id="feat-22"></a>
 ## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
 
@@ -8357,9 +8399,21 @@ producción, mismos 106 gastos— y contra los números anotados arriba antes de
 03:00 UTC y esos seis —$3.242.000 de los $3.372.000 de sueldos de septiembre— se habrían caído del
 total sin avisar.
 
-**Lo que quedó sin ejercitar: el tachado.** No hay un solo gasto anulado en producción ni en stage,
-así que la fila tachada y la línea «N anulados por $X, que no suman» están escritas pero nunca se
-dibujaron.
+**El tachado se ejercitó anulando un gasto en stage**, porque no había ni uno anulado con qué
+probarlo. Se anuló el más chico de septiembre —`MATERIALES: Grafica extrema`, $12.200 del 09/09— y
+la pantalla quedó como se había predicho: el total bajó a **$5.465.269**, la línea pasó a **«9
+gastos · 1 anulado por $12.200, que no suman»**, Material Didáctico bajó de 2 · $25.469 a **1 ·
+$13.269**, y la fila quedó gris, tachada y con la etiqueta ANULADO. La tarjeta de Finanzas bajó al
+mismo **$5.465.269** y la rentabilidad subió los $12.200.
+
+**Lo que confirma que la fuente era la correcta:** anular escribe un contra-asiento `ADJUSTMENT` de
+$12.200 con fecha de hoy, y ese asiento **no aparece** en la pantalla de Gastos. Es lo que
+corresponde: revertir un gasto no es un gasto. Como la consulta pide `EXPENSE` y `PAYROLL`, queda
+afuera sin necesidad de ninguna regla extra.
+
+> **Encontrado en esa misma prueba, y no es de esta ficha:** el cartel de confirmación de la
+> anulación **se dibuja fuera de la pantalla** si la página está scrolleada. Quedó en
+> [BUG-24](#bug-24).
 
 ---
 
