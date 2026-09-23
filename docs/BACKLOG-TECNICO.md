@@ -306,7 +306,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-28](#feat-28) | P3 | 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores | [x] |
 | [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
 | [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
-| [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [~] |
+| [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -8314,7 +8314,7 @@ alternativa —que desaparezca— deja al dueño buscando algo que cargó y ya n
 pantalla nueva contesta por los gastos, no por los cobros. Y **los dos gastos huérfanos de marzo
 siguen invisibles** en todo el módulo — son $499 de prueba, no se tocan acá, pero quedan anotados.
 
-### Escrita el 2026-09-22 · `b4f1f15` · **sin verificar por pantalla**
+### Resuelta — 2026-09-22 · `b4f1f15`, `7c62113` · verificada en stage el 2026-09-23
 
 Tres archivos, sin migración:
 
@@ -8337,11 +8337,29 @@ Expensas 1 · $2.080.000, Material Didáctico 2 · $25.469. Tiene que dar **igua
 Gastos Generales $2.105.469. Con «Todo el año»: **104 gastos por $40.805.156,52**. Ninguno anulado,
 así que el camino del tachado no se va a poder ver con estos datos.
 
-**No se pudo verificar en stage.** El deploy de `b4f1f15` cortó en `prisma migrate deploy` con
-`db error: FATAL: (ENOTFOUND) tenant/user postgres.zriutdlbpovkiijzogkx not found`: la base de
-stage en Supabase está **pausada**. No llegó a compilar, así que no dice nada del código. Queda
-para probar contra la base local — con otros datos, así que los números de arriba son los de
-producción y no los que va a mostrar esa prueba.
+**El primer deploy no llegó a compilar.** `b4f1f15` cortó en `prisma migrate deploy` con
+`db error: FATAL: (ENOTFOUND) tenant/user postgres.zriutdlbpovkiijzogkx not found`, que es la base
+de stage **pausada** en Supabase. No dijo nada del código: ni siquiera llegó a `next build`.
+
+**Verificada por pantalla en stage el 2026-09-23**, con la base ya despausada —que tiene el clon de
+producción, mismos 106 gastos— y contra los números anotados arriba antes de abrir el navegador:
+
+| Caso | Dio |
+|---|---|
+| Entrar sin parámetros (septiembre 2026) | **$5.477.469 · 10 gastos**, con Sueldos 7 · $3.372.000, Alquiler / Expensas 1 · $2.080.000 y Material Didáctico 2 · $25.469 |
+| La tarjeta «Gastos Operativos (Septiembre)» de Finanzas | **el mismo $5.477.469**, partido en $3.372.000 + $2.105.469 |
+| «Todo el año» | **$40.805.156,52 · 104 gastos**, y los siete rubros suman exactamente eso (39+10+10+28+5+11+1) |
+| Categoría «Sueldos» sobre todo el año | **$19.128.500 · 39 gastos**, con el período intacto |
+| Octubre 2026 con «Sueldos» puesto | «No hay gastos de Sueldos en Octubre 2026», nombrando el filtro |
+
+**Lo que confirmó que el límite en UTC no era una precaución de más:** los **seis sueldos del
+01/09** están en la lista. Con los límites en hora de Argentina, el mes habría empezado el 1° a las
+03:00 UTC y esos seis —$3.242.000 de los $3.372.000 de sueldos de septiembre— se habrían caído del
+total sin avisar.
+
+**Lo que quedó sin ejercitar: el tachado.** No hay un solo gasto anulado en producción ni en stage,
+así que la fila tachada y la línea «N anulados por $X, que no suman» están escritas pero nunca se
+dibujaron.
 
 ---
 
