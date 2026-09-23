@@ -9442,7 +9442,7 @@ cada alumno, y la profesora nunca las ve. Pasaron a ser lo primero que se lee, a
 pesa más que cuando aparecían al final. Si alguna vez molesta, el arreglo no es reordenar sino
 dejarlas guardadas y revisables, que es trabajo de otra ficha.
 
-### Escrita el 2026-09-22 · `b7cae24` · **sin verificar por pantalla**
+### Escrita el 2026-09-22 · `b7cae24`
 
 Un solo archivo, sin migración y sin tocar endpoints. Cae igual en la práctica del alumno y en la
 vista previa de la docente
@@ -9467,6 +9467,45 @@ terminar** el audio y no al apretar play; que las frases sigan ahí mientras sue
 texto nuevo con IA» reemplace las preguntas por las del texto generado sin dejar las viejas. No se
 pudo probar local: la base de desarrollo está apagada (`ECONNREFUSED` en `127.0.0.1:5432`) y la de
 stage estaba pausada en el último deploy ([FEAT-31](#feat-31)).
+
+### Verificado en stage el 2026-09-23 · deploy `7c62113` · cuenta de admin, vista previa
+
+La clase *"adverbs of frequency - Giving directions"* de Adolescents 1, cinco preguntas. Los siete
+puntos predichos dieron:
+
+1. **Las preguntas están antes del audio**, con el candado y la línea "Leelas ahora; se contestan
+   cuando termine el audio".
+2. **El bloqueo es real y no visual.** Medido en el DOM: los **10 botones** de V/F (cinco preguntas ×
+   dos) con `disabled`, `opacity 0.5`, `cursor: not-allowed`, y **Corregir** también apagado. Se le
+   hizo clic a un «Verdadero» y no quedó ninguno seleccionado.
+3. **Durante la reproducción** el botón dice "Reproduciendo…", las cinco frases siguen en pantalla y
+   los 10 botones siguen bloqueados.
+4. **Se desbloquean al terminar**, no al apretar play: el contador pasó a "Escuchado 1 vez" y los
+   `disabled` cayeron a **0/10**.
+5. **Corregir** pintó los aciertos en verde y los errores en rojo, volvió a congelar los 10 botones,
+   destrabó "Ver el texto para comparar" —que perdió el "(Disponible al corregir)"— y cambió a
+   "Finalizar sesión".
+6. **Generar texto nuevo con IA** reemplazó las cinco preguntas por las del texto generado, encendió
+   el badge MODO IA, reseteó el contador y volvió a poner el candado.
+
+**El camino de falla se probó solo, y con un error real.** Al entrar por segunda vez,
+`/generate-listening-quiz` devolvió **500**: en los logs de Vercel, `Gemini API 503: "This model is
+currently experiencing high demand"`. La pantalla dijo "No pudimos preparar las preguntas" y ofreció
+«Volver a intentar», que a la segunda trajo las cinco preguntas. **Con el código viejo eso mismo
+habría sido el spinner eterno**, y encima después de haber escuchado el audio.
+
+**El TTS salió por el navegador** (`/api/practice/tts` → **204**, dos voces disponibles en el panel).
+Lo que se oye del lado del alumno depende de las voces que tenga su equipo; no es de esta ficha, pero
+conviene saberlo antes de leer un "no se escucha nada" como bug del módulo.
+
+**Un hallazgo que no es de acá: la IA filtra el texto original adentro del cuestionario generado.**
+El texto nuevo era sobre *Sarah*, y la primera afirmación vino `"The speaker's name is Julian."` —
+Julian es el personaje del texto **del profesor**. No es UI vieja: la respuesta del servidor ya trae
+esa frase, con `isTrue: false`, así que técnicamente es un distractor correcto. Pero el alumno que
+generó un texto nuevo nunca oyó hablar de Julian: le queda una pregunta sobre un nombre que no
+apareció en ningún lado. El prompt de `generateListeningText` le pasa el `seedText` al modelo y le
+pide preguntas sobre el texto **nuevo**; nada le impide mezclarlos. Es viejo y no lo introdujo este
+cambio — se ve ahora porque las preguntas se leen antes.
 
 ---
 
