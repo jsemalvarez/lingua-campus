@@ -276,7 +276,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [ ] |
 | [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
 | [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
-| [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [ ] |
+| [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -7875,19 +7875,53 @@ con la página arriba de todo, el centro del `<main>` cae dentro de la ventana y
 Scrolleando hasta el final de la tabla —que es exactamente lo que se hace para encontrar un
 movimiento viejo— el centro queda arriba del borde y el cartel se va de pantalla.
 
-**El alcance es más grande que esta pantalla.** Hay **35 pantallas** con `animate-in` en su `<main>`
-y **20 componentes** con modales `fixed inset-0`. Todos los que se abran desde adentro de una página
-larga tienen el mismo defecto latente; los de Finanzas son
-[`TransactionActions`](../src/app/payments/components/TransactionActions.tsx) —anular pagos, gastos y
-sueldos— y [`PayrollClient`](../src/app/payments/payroll/PayrollClient.tsx).
+**El alcance, contado bien.** Hay **35 pantallas** con `animate-in` en su `<main>` y **21 capas**
+`fixed inset-0` en el código. De ésas, cuatro son fondos decorativos con `pointer-events-none` y una
+es el respaldo del desplegable de roles, que no son modales y no tienen el problema. De los **16
+modales**, **10 ya se montaban en un portal** —[`Dialog`](../src/components/ui/Dialog.tsx), los tres
+de clases, `EditCourseModal`, `StudentListActions`, `ChangeCourseModal`, `StudentQRModal` y los dos
+de `CourseReportsPanel`—. Los que no: los **cuatro carteles de confirmación**
+—[`TransactionActions`](../src/app/payments/components/TransactionActions.tsx) (anular pagos, gastos
+y sueldos), [`PayrollClient`](../src/app/payments/payroll/PayrollClient.tsx) (pago masivo),
+[`AppliedCreditList`](../src/app/students/[id]/components/AppliedCreditList.tsx) (anular saldo
+aplicado) y [`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)
+(publicar boletines)— más `CreateScheduleModal` y `CreateTeacherModal`. Los cuatro carteles comparten
+el mismo markup: se copiaron entre sí, y el portal no estaba en la copia.
 
 **Es P1 porque tapa una operación de plata.** Anular es el único camino para corregir un gasto o un
 cobro mal cargado —no se borra nada, se anula—, y desde el lugar natural de la tabla no se puede
 completar. Ver [FIN-11](#fin-11), que es la funcionalidad que esto vuelve inalcanzable.
 
-**Las dos salidas, no las decide esta ficha.** Sacarle la animación al `<main>` (el `transform`
-desaparece y `fixed` vuelve a medirse contra la ventana) o montar los modales fuera del árbol, en un
-portal sobre `document.body`. La segunda arregla los 20 de una vez y no le saca la animación a nadie.
+**Las dos salidas.** Sacarle la animación al `<main>` (el `transform` desaparece y `fixed` vuelve a
+medirse contra la ventana) o montar los modales fuera del árbol, en un portal sobre `document.body`.
+Se eligió el portal: no le saca la animación a ninguna pantalla y es lo que diez de los dieciséis
+modales ya hacían.
+
+### Resuelto — 2026-09-23 · `08ca5ec` · verificado en stage
+
+[`Portal`](../src/components/ui/Portal.tsx) nuevo, que es el patrón que `DialogContent` ya tenía
+adentro —`createPortal` a `document.body`, con un `mounted` para el render del servidor, donde no hay
+`document`— puesto aparte para poder usarlo. Los seis modales que faltaban quedaron envueltos con él.
+Sin migración y sin tocar una sola clase de CSS: lo único que cambia es dónde se monta el nodo.
+
+**Antes y después, medidos en el navegador sobre la misma pantalla y el mismo scroll** (`scrollY`
+1848, o sea abajo de todo, que es donde fallaba):
+
+| | Dónde quedó la capa | Padre |
+|---|---|---|
+| Antes | `x: 117, y: -1640, 768 × 2486` | dentro del `<main>` |
+| Ahora | `x: 0, y: 0, 1014 × 926` | `BODY` |
+
+Los 1014 × 926 contra una ventana de 1020 × 932 son los 6 píxeles de la barra de scroll, que
+`innerWidth` cuenta y el viewport de maquetado no.
+
+**Probado además que no rompió el camino normal:** se abrió el cartel sobre `MATERIALES: Oxford` y se
+apretó **Cancelar**. El modal cerró, la fila quedó como estaba y en la base sigue habiendo **un solo
+gasto anulado** en stage, el de la prueba de [FEAT-31](#feat-31).
+
+**Lo que no se tocó.** Los cuatro fondos decorativos y el respaldo del desplegable de roles siguen
+donde estaban: no son modales y no tienen nada que cubrir. Y las 35 pantallas conservan su
+`animate-in`.
 
 ---
 
