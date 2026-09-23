@@ -3211,8 +3211,18 @@ cursos), [FIN-09](#fin-09) y [FIN-26](#fin-26) (la deuda que vuelve con él), [A
 ## FIN-31 · El recibo no dice cuánto vale la cuota ni cuánto queda debiendo · **P1** · 🗣️ Pedido del cliente
 
 **Abierto el 2026-09-22**, saliendo de un cobro duplicado que el instituto encontró solo: un alumno
-con **Julio 2026 pagado dos veces**, saldo a favor sin usar y Septiembre figurando como deuda. El
-duplicado no fue un error de carga aislado — **lo habilitó el comprobante**.
+con **Julio 2026 pagado dos veces** y saldo a favor sin usar.
+
+**El error de origen fue humano y conviene decirlo con todas las letras:** al cobrar no se miró lo que
+decía el select, que traía el dato correcto —"Cuota Julio 2026 ($46.000 pendientes)"
+([`RegisterFeeForm.tsx:199`](../src/app/payments/components/RegisterFeeForm.tsx))—. El sistema no
+causó el duplicado.
+
+**Lo que el sistema no permitió fue deducirlo después.** Entre el cobro del 03/08 y el del 10/08 nadie
+volvió a tener delante un dato que dijera que Julio estaba a medio pagar: el descuento de $3.000 no se
+ve en ningún listado (es [FIN-13](#fin-13)), el valor real de la cuota —$46.000— no aparece en ninguna
+pantalla posterior al cobro, y el recibo, que es lo único que queda en la mano de la familia y en el
+mostrador, **confunde más de lo que aclara**. Ésa es la parte que sí es del sistema, y es esta ficha.
 
 **El recibo nunca imprime el precio de la cuota.** Imprime lo que aportó *ese* pago, con el nombre de
 la cuota encima. En [`ReceiptDownloadButton.tsx:33`](../src/components/financials/ReceiptDownloadButton.tsx)
