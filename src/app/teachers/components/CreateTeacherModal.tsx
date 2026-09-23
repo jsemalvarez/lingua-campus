@@ -7,6 +7,7 @@ import { Plus, X, CheckCircle, AlertCircle, User, Mail, Lock, Phone } from "luci
 import { useRouter } from "next/navigation";
 
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
+import { Portal } from "@/components/ui/Portal";
 
 export function CreateTeacherModal() {
     const router = useRouter();
@@ -45,7 +46,11 @@ export function CreateTeacherModal() {
         );
     }
 
+    // En portal, como el resto de los modales: dibujado dentro de la pantalla que
+    // lo abre, el `<main>` con `animate-in` lo captura y deja de cubrir la
+    // ventana. Ver BUG-24.
     return (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
             <div className="bg-card w-full max-w-[500px] rounded-2xl shadow-xl border border-border/60 overflow-hidden animate-in zoom-in-95">
                 <div className="px-6 py-4 border-b border-border/40 flex items-center justify-between">
@@ -122,5 +127,6 @@ export function CreateTeacherModal() {
                 </form>
             </div>
         </div>
+        </Portal>
     );
 }

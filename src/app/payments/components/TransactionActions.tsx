@@ -7,6 +7,7 @@ import { getReceiptDataAction } from "../receiptActions";
 import { Download, Loader2 } from "lucide-react";
 import { generatePaymentReceipt } from "@/lib/pdf/generateReceipt";
 import { formatFeeLabel } from "@/lib/utils";
+import { Portal } from "@/components/ui/Portal";
 
 interface TransactionActionsProps {
     tx: {
@@ -121,8 +122,12 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
                 <XCircle size={16} />
             </button>
 
-            {/* Modal de Confirmación de Anulación */}
+            {/* Modal de Confirmación de Anulación. Va en un portal: si se
+                dibuja acá adentro, el `<main>` con `animate-in` lo captura y el
+                cartel termina centrado en la página en vez de en la pantalla.
+                Ver BUG-24. */}
             {showDeleteConfirm && (
+                <Portal>
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 whitespace-normal">
                     <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-left">
                         <div className="p-6 text-center">
@@ -166,6 +171,7 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
                         </div>
                     </div>
                 </div>
+                </Portal>
             )}
         </div>
     );
