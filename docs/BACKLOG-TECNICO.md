@@ -9505,7 +9505,62 @@ esa frase, con `isTrue: false`, así que técnicamente es un distractor correcto
 generó un texto nuevo nunca oyó hablar de Julian: le queda una pregunta sobre un nombre que no
 apareció en ningún lado. El prompt de `generateListeningText` le pasa el `seedText` al modelo y le
 pide preguntas sobre el texto **nuevo**; nada le impide mezclarlos. Es viejo y no lo introdujo este
-cambio — se ve ahora porque las preguntas se leen antes.
+cambio — se ve ahora porque las preguntas se leen antes. Ficha propia en [PED-12](#ped-12).
+
+---
+
+<a id="ped-12"></a>
+## PED-12 · El cuestionario del texto generado se contamina con el texto del profesor · **P3**
+
+**Visto en stage el 2026-09-23**, verificando [PED-11](#ped-11). El alumno apretó «Generar texto
+nuevo con IA» sobre una práctica cuyo texto original habla de **Julian**. El texto nuevo era sobre
+**Sarah**, y la primera de las cinco afirmaciones llegó así, en la respuesta del servidor:
+
+```json
+{ "statement": "The speaker's name is Julian.", "isTrue": false }
+```
+
+**Como ítem de V/F está bien formado**: la que habla es Sarah, así que `false` es la respuesta
+correcta. El problema no es la lógica, es qué mide. Es un distractor sobre un nombre que **el alumno
+nunca escuchó**: si generó el texto nuevo antes de darle play —que es lo que habilita la pantalla—
+Julian no aparece en ningún audio que haya oído. Contestar bien ahí no prueba que entendió, y
+contestar mal no prueba que no.
+
+**El mecanismo.** `generateListeningText`
+([`GeminiProvider.ts:219`](../src/lib/practice/providers/ai/GeminiProvider.ts)) le pasa el `seedText`
+al modelo y le pide, en **una sola llamada**, el texto nuevo y el cuestionario sobre el texto nuevo.
+El texto del profesor está ahí, en el contexto, y la restricción 4 —"exactly 4 to 6 True/False
+statements about the new text"— dice de qué tienen que hablar, no de dónde **no** pueden sacar el
+material. El modelo lo lee como una fuente disponible, que es lo razonable.
+
+**Es viejo, y [PED-11](#ped-11) le subió el costo.** La contaminación existía igual cuando las
+preguntas aparecían al final; lo que cambió es que ahora se leen **antes de escuchar**, y una
+pregunta previa dirige la atención: el alumno se pone a esperar un nombre que no va a venir. Pasó de
+ser una pregunta rara al final a ser una consigna equivocada al principio.
+
+**Cuánto pasa: no se midió.** La muestra es una generación y una frase de cinco. Antes de tocar nada
+conviene generar unas cuantas y contar, porque una de cada diez y una de cada dos piden arreglos
+distintos.
+
+**El arreglo está en un solo lugar.** Sólo `GeminiProvider` implementa esto —el de OpenAI tira
+`not implemented`— y sólo afecta al camino de «Generar texto nuevo con IA»: el cuestionario del texto
+original pasa por `generateListeningQuiz`, que recibe únicamente ese texto y no tiene de dónde
+filtrar nada. Dos caminos:
+
+1. **Una restricción más en el prompt**: que las afirmaciones se apoyen sólo en el texto nuevo, y que
+   no nombren personas, lugares ni datos que no aparezcan en él. Es una línea y no cuesta nada;
+   es por donde empezaría.
+2. **Partir la llamada en dos**: generar el texto y después pedirle el cuestionario a
+   `generateListeningQuiz`, que sólo ve el texto nuevo y **no puede** contaminarse. Cierra el agujero
+   por construcción, pero duplica la cuota de esa operación —dos llamadas donde hoy hay una— y suma
+   espera en la única acción del módulo que el alumno mira fijo mientras carga. Se apoya en la misma
+   discusión de [PED-07](#ped-07).
+
+La 1 es barata y puede alcanzar; la 2 es la que garantiza. Conviene medir antes de pagar la 2.
+
+**P3.** No rompe nada, el ítem es contestable y el alumno puede seguir. Pero está en el módulo que es
+el diferencial del producto, y la profesora nunca ve estas preguntas: se generan al vuelo, distintas
+para cada alumno, así que si salen mal no hay nadie del otro lado que lo note.
 
 ---
 
