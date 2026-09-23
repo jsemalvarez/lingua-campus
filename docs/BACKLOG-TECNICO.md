@@ -252,6 +252,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
+| [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -3281,7 +3282,74 @@ descarguen.
 agujero, otra pantalla), [FIN-25](#fin-25) (las condiciones especiales que no se ven, y por eso se
 tipean de memoria), [FIN-26](#fin-26) (dónde se concilia la plata a favor), [FIN-27](#fin-27) y
 [FIN-11](#fin-11) (el saldo a favor: cómo se aplica y cómo se deshace), [FEAT-14](#feat-14) (el
-carrito: si se cobran varias cuotas juntas, el recibo tiene que poder explicarlo).
+carrito: si se cobran varias cuotas juntas, el recibo tiene que poder explicarlo),
+[FIN-32](#fin-32) (el mismo incidente, un paso antes: la pantalla donde se cobra).
+
+---
+
+<a id="fin-32"></a>
+## FIN-32 · El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal · **P1** · 🗣️ Pedido del cliente
+
+**Abierto el 2026-09-22**, del mismo incidente que [FIN-31](#fin-31): el cobro del 03/08 que dejó
+Julio a medio pagar sin que nadie se enterara. FIN-31 es lo que no se puede reconstruir después;
+**ésta es la última oportunidad de verlo en el momento, y tampoco avisa**.
+
+**El formulario se arma solo.** Al elegir al alumno, `loadFees` auto-selecciona la primera cuota
+pendiente ([`RegisterFeeForm.tsx:86`](../src/app/payments/components/RegisterFeeForm.tsx)) y un
+`useEffect` carga el importe con lo que falta, `originalAmount - paidAmount`
+([`RegisterFeeForm.tsx:61`](../src/app/payments/components/RegisterFeeForm.tsx)). Está bien que lo
+haga: ahorra dos pasos en el mostrador. El efecto de fondo es que **se puede cobrar sin leer nada**, y
+el dato correcto —que la cuota es de $46.000— vive en un renglón del select que nadie tiene por qué
+abrir ([`RegisterFeeForm.tsx:199`](../src/app/payments/components/RegisterFeeForm.tsx)).
+
+**El campo dice una cosa y la mano tiene otra.** La etiqueta es *"Monto a cancelar de la deuda ($)"*
+([`RegisterFeeForm.tsx:234`](../src/app/payments/components/RegisterFeeForm.tsx)): habla de **deuda**,
+no de efectivo. El que cobra tiene $43.000 en la mano y los escribe ahí, pisando los $46.000
+precargados. Con eso el descuento de $3.000 no se carga nunca y la cuota queda `PARTIAL` sin que nadie
+haya querido hacer un pago parcial. Es exactamente lo que pasó el 03/08.
+
+**Y el renglón que podía avisar, no avisa.** Debajo del total hay una línea que se dibuja en dos
+variantes ([`RegisterFeeForm.tsx:278`](../src/app/payments/components/RegisterFeeForm.tsx)):
+
+- Si lo cobrado supera lo que falta → en ámbar: *"El excedente de $X se guardará como Saldo a Favor."*
+- **En todos los demás casos** → en gris, 10px: *"Se cancela parte de la deuda."*
+
+O sea que **un cobro que salda la cuota y uno que la deja debiendo $3.000 muestran el mismo texto**, y
+ese texto dice "parte" en los dos. No existe el renglón que diga *"queda saldada"* ni el que diga
+*"quedan $3.000 pendientes"*. El 03/08 la pantalla dijo lo mismo que hubiera dicho un cobro completo.
+
+**El aviso de excedente, además, da mal el número.** La pantalla lo calcula sobre el efectivo y el
+sistema sobre el capital:
+
+- Pantalla ([`RegisterFeeForm.tsx:282`](../src/app/payments/components/RegisterFeeForm.tsx)):
+  `totalToCollect - pendiente`, con `totalToCollect = base + recargo - descuento`.
+- Sistema ([`actions.ts:131`](../src/app/payments/actions.ts)): `capitalContribution - pendiente`, con
+  `capitalContribution = monto + descuento - recargo`.
+
+**Difieren exactamente en el descuento y el recargo.** En el cobro real del 10/08 —base $46.000,
+descuento $3.000, faltaban $3.000— la pantalla anunció un excedente de **$40.000** y el sistema
+acreditó **$43.000**. El aviso existe, se ve, y el número que muestra no es el que va a pasar.
+
+**Lo que hay que resolver:**
+
+- Que la línea de confirmación diga **en qué estado queda la cuota** —saldada, o cuánto queda
+  pendiente—, en vez de una frase que sirve para los dos casos.
+- Que el excedente anunciado sea el que el sistema va a acreditar. Hoy son dos fórmulas distintas
+  escritas en dos archivos, y la de la pantalla es la que está mal.
+- Que el campo del monto no se pueda confundir con el efectivo recibido. Ahí nace el error: quien
+  cobra piensa en lo que le dan, no en lo que cancela.
+
+**Nota al pasar.** El chequeo `totalToCollect < 0`
+([`RegisterFeeForm.tsx:133`](../src/app/payments/components/RegisterFeeForm.tsx)) no se puede cumplir
+nunca, porque `totalToCollect` sale de un `Math.max(0, ...)`
+([`RegisterFeeForm.tsx:165`](../src/app/payments/components/RegisterFeeForm.tsx)). Un descuento mayor
+que la deuda da $0 y lo termina rechazando el servidor con *"Datos del pago inválidos"*
+([`actions.ts:106`](../src/app/payments/actions.ts)), que no explica nada.
+
+**Relacionado.** [FIN-31](#fin-31) (el mismo incidente, del lado del comprobante),
+[FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué), [FIN-27](#fin-27) (la otra
+vez que esta misma pantalla dijo algo que no había pasado), [FIN-25](#fin-25) (las condiciones
+especiales que se tipean de memoria porque no están en ningún lado).
 
 ---
 
