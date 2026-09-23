@@ -65,6 +65,11 @@ export function ExpensesClient({
 
     const periodLabel = month ? `${getMonthName(month)} ${year}` : `todo ${year}`;
 
+    // Ordenadas por lo que se lee y no por el valor de la base: `Payroll` cae
+    // entre `OTROS` y `PUBLICIDAD`, y en pantalla eso pone «Sueldos» en medio de
+    // la lista sin ninguna razón visible.
+    const categoryOptions = [...categories].sort((a, b) => labelFor(a).localeCompare(labelFor(b), "es"));
+
     // Los anulados se listan pero no suman: el total tiene que poder compararse
     // contra la tarjeta "Gastos Operativos", que también los deja afuera.
     const valid = rows.filter((r) => r.status !== "VOIDED");
@@ -94,7 +99,7 @@ export function ExpensesClient({
                         <option value="" className="bg-white dark:bg-zinc-900 text-foreground font-semibold font-sans">
                             Todas las categorías
                         </option>
-                        {categories.map((c) => (
+                        {categoryOptions.map((c) => (
                             <option key={c} value={c} className="bg-white dark:bg-zinc-900 text-foreground font-semibold font-sans">
                                 {labelFor(c)}
                             </option>
