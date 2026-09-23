@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { TeacherPayrollSection } from "../../teachers/[id]/TeacherPayrollSection";
 import dayjs from "dayjs";
 import { processBulkPayrollAction } from "@/app/teachers/actions";
+import { Portal } from "@/components/ui/Portal";
 
 interface Teacher {
     id: string;
@@ -235,8 +236,12 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                                 Registrar {selectedTeachers.length} Pagos Masivos
                             </Button>
 
-                            {/* Modal de Confirmación de Pago Masivo */}
+                            {/* Modal de Confirmación de Pago Masivo. En portal: acá
+                                adentro, el `<main>` con `animate-in` lo captura y el
+                                cartel se centra en la página y no en la pantalla. Ver
+                                BUG-24. */}
                             {showConfirm && (
+                                <Portal>
                                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                                     <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
                                         <div className="p-6 text-center">
@@ -272,6 +277,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                                         </div>
                                     </div>
                                 </div>
+                                </Portal>
                             )}
                         </div>
                     </div>

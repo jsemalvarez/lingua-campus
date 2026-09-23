@@ -251,6 +251,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
+| [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
+| [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -270,6 +272,11 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
 | [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
 | [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
+| [BUG-20](#bug-20) | P3 | La ficha dice «Sin datos registrados» teniendo el teléfono del tutor | [ ] |
+| [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [ ] |
+| [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
+| [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
+| [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -297,6 +304,10 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-25](#feat-25) | P3 | No se sabe quién de la administración contestó un hilo | [ ] |
 | [FEAT-26](#feat-26) | P2 | Reponer una cuota eliminada sin pasar por un script | [ ] |
 | [FEAT-27](#feat-27) | P3 | 🗣️ La pantalla promete un boletín cuando el alumno no tiene ninguno | [x] |
+| [FEAT-28](#feat-28) | P3 | 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores | [x] |
+| [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
+| [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
+| [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -3195,6 +3206,151 @@ inventar acá una tabla que después se duplique.
 **Relacionado.** [FEAT-18](#feat-18) (de donde salió, y dónde va el botón), [FIN-23](#fin-23) (la
 reactivación que hace posible todo esto), [FIN-24](#fin-24) (el otro movimiento del alumno entre
 cursos), [FIN-09](#fin-09) y [FIN-26](#fin-26) (la deuda que vuelve con él), [ARQ-10](#arq-10).
+
+---
+
+<a id="fin-31"></a>
+## FIN-31 · El recibo no dice cuánto vale la cuota ni cuánto queda debiendo · **P1** · 🗣️ Pedido del cliente
+
+**Abierto el 2026-09-22**, saliendo de un cobro duplicado que el instituto encontró solo: un alumno
+con **Julio 2026 pagado dos veces** y saldo a favor sin usar.
+
+**El error de origen fue humano y conviene decirlo con todas las letras:** al cobrar no se miró lo que
+decía el select, que traía el dato correcto —"Cuota Julio 2026 ($46.000 pendientes)"
+([`RegisterFeeForm.tsx:199`](../src/app/payments/components/RegisterFeeForm.tsx))—. El sistema no
+causó el duplicado.
+
+**Lo que el sistema no permitió fue deducirlo después.** Entre el cobro del 03/08 y el del 10/08 nadie
+volvió a tener delante un dato que dijera que Julio estaba a medio pagar: el descuento de $3.000 no se
+ve en ningún listado (es [FIN-13](#fin-13)), el valor real de la cuota —$46.000— no aparece en ninguna
+pantalla posterior al cobro, y el recibo, que es lo único que queda en la mano de la familia y en el
+mostrador, **confunde más de lo que aclara**. Ésa es la parte que sí es del sistema, y es esta ficha.
+
+**El recibo nunca imprime el precio de la cuota.** Imprime lo que aportó *ese* pago, con el nombre de
+la cuota encima. En [`ReceiptDownloadButton.tsx:33`](../src/components/financials/ReceiptDownloadButton.tsx)
+el concepto se arma como `payment.amount + payment.discount - payment.surcharge` y se rotula con
+`formatFeeLabel(...)` → "CUOTA JULIO 2026". El `TOTAL` es `payment.amount`, el efectivo que entró. En
+ningún renglón aparece `originalAmount`, ni `paidAmount`, ni lo que falta.
+
+**No es que la pantalla se lo olvide: el dato no le llega.**
+[`receiptActions.ts:58`](../src/app/payments/receiptActions.ts) trae la cuota entera con un `include`
+—`originalAmount` y `paidAmount` adentro— y al armar la respuesta
+([`receiptActions.ts:95`](../src/app/payments/receiptActions.ts)) devuelve sólo el importe del pago, el
+descuento, el recargo y qué mes es. El componente **no puede mostrar el precio aunque se lo pidan**.
+Cualquier arreglo empieza ahí.
+
+**Cómo se ve el mismo mes en dos recibos distintos.** Cuota de Julio de $46.000, un alumno con $3.000
+de descuento que se tipea a mano en cada cobro (no está configurado en ningún lado: ni el curso ni la
+inscripción lo recuerdan — es [FIN-25](#fin-25)):
+
+| | Cargado | Concepto impreso | TOTAL |
+|---|---|---|---|
+| Recibo N° CMSDPWR4 · 03/08 | $43.000, sin descuento | CUOTA JULIO 2026 · **$43.000** | $43.000 |
+| Recibo N° CMSNQ05S · 10/08 | $43.000 + $3.000 de descuento | CUOTA JULIO 2026 · **$46.000** / DESCUENTO APLICADO · -$3.000 | $43.000 |
+
+El primero aportó $43.000 sobre $46.000: la cuota quedó `PARTIAL` con **$3.000 sin cubrir** y siguió
+apareciendo cobrable. El papel que se llevó la familia decía "CUOTA JULIO 2026 — $43.000 — TOTAL
+$43.000", **indistinguible de una cuota saldada**. Una semana después alguien vio Julio todavía en la
+lista, lo cobró entero —esta vez con el descuento bien puesto— y esos $43.000 se fueron a saldo a
+favor ([`actions.ts:132`](../src/app/payments/actions.ts)). El saldo a favor funcionó: **lo que falló
+fue que nadie podía enterarse de que faltaban $3.000.**
+
+**Con pagos parciales esto se multiplica.** Los parciales son un camino soportado, no un abuso:
+[`actions.ts:106`](../src/app/payments/actions.ts) acepta cualquier importe mayor a cero y
+[`actions.ts:164`](../src/app/payments/actions.ts) deja la cuota en `PARTIAL` para seguir cobrándola.
+Un padre que paga Julio en tres veces —$10.000, $20.000 y $13.000— se lleva **tres papeles que dicen
+"CUOTA JULIO 2026" con tres importes distintos**, ninguno de los cuales es el precio de la cuota, y
+ninguno dice cuánto se lleva acumulado ni cuánto falta. El tercero, que es el que cierra la cuota, es
+visualmente igual a los dos primeros: **hoy no existe forma de emitir un comprobante que diga
+"saldado"**.
+
+**Lo que tiene que mostrar el recibo**, y es lo que hay que decidir con el instituto:
+
+- **El precio real de la cuota**, que es el concepto que se está cobrando.
+- **Lo aplicado en este pago**, con el descuento y el recargo como ajustes *de ese pago*, no del precio.
+- **El saldo pendiente después de este pago** — cero incluido, dicho explícitamente cuando la cuota
+  queda saldada. Es el renglón que hubiera evitado el duplicado.
+- **Si hubo excedente y se fue a saldo a favor**, cuánto. Hoy eso vive en `Payment.notes`
+  ([`actions.ts:144`](../src/app/payments/actions.ts)) y el recibo ni lo lee.
+
+**Nota para quien lo toque.** La lógica que arma el recibo está **duplicada tal cual en dos
+componentes**: [`ReceiptDownloadButton.tsx:33-48`](../src/components/financials/ReceiptDownloadButton.tsx)
+y [`TransactionActions.tsx:40-55`](../src/app/payments/components/TransactionActions.tsx). Es el mismo
+código copiado. Arreglar uno solo deja la mitad de los recibos mal, según desde qué pantalla se
+descarguen.
+
+**Relacionado.** [FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué — mismo
+agujero, otra pantalla), [FIN-25](#fin-25) (las condiciones especiales que no se ven, y por eso se
+tipean de memoria), [FIN-26](#fin-26) (dónde se concilia la plata a favor), [FIN-27](#fin-27) y
+[FIN-11](#fin-11) (el saldo a favor: cómo se aplica y cómo se deshace), [FEAT-14](#feat-14) (el
+carrito: si se cobran varias cuotas juntas, el recibo tiene que poder explicarlo),
+[FIN-32](#fin-32) (el mismo incidente, un paso antes: la pantalla donde se cobra).
+
+---
+
+<a id="fin-32"></a>
+## FIN-32 · El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal · **P1** · 🗣️ Pedido del cliente
+
+**Abierto el 2026-09-22**, del mismo incidente que [FIN-31](#fin-31): el cobro del 03/08 que dejó
+Julio a medio pagar sin que nadie se enterara. FIN-31 es lo que no se puede reconstruir después;
+**ésta es la última oportunidad de verlo en el momento, y tampoco avisa**.
+
+**El formulario se arma solo.** Al elegir al alumno, `loadFees` auto-selecciona la primera cuota
+pendiente ([`RegisterFeeForm.tsx:86`](../src/app/payments/components/RegisterFeeForm.tsx)) y un
+`useEffect` carga el importe con lo que falta, `originalAmount - paidAmount`
+([`RegisterFeeForm.tsx:61`](../src/app/payments/components/RegisterFeeForm.tsx)). Está bien que lo
+haga: ahorra dos pasos en el mostrador. El efecto de fondo es que **se puede cobrar sin leer nada**, y
+el dato correcto —que la cuota es de $46.000— vive en un renglón del select que nadie tiene por qué
+abrir ([`RegisterFeeForm.tsx:199`](../src/app/payments/components/RegisterFeeForm.tsx)).
+
+**El campo dice una cosa y la mano tiene otra.** La etiqueta es *"Monto a cancelar de la deuda ($)"*
+([`RegisterFeeForm.tsx:234`](../src/app/payments/components/RegisterFeeForm.tsx)): habla de **deuda**,
+no de efectivo. El que cobra tiene $43.000 en la mano y los escribe ahí, pisando los $46.000
+precargados. Con eso el descuento de $3.000 no se carga nunca y la cuota queda `PARTIAL` sin que nadie
+haya querido hacer un pago parcial. Es exactamente lo que pasó el 03/08.
+
+**Y el renglón que podía avisar, no avisa.** Debajo del total hay una línea que se dibuja en dos
+variantes ([`RegisterFeeForm.tsx:278`](../src/app/payments/components/RegisterFeeForm.tsx)):
+
+- Si lo cobrado supera lo que falta → en ámbar: *"El excedente de $X se guardará como Saldo a Favor."*
+- **En todos los demás casos** → en gris, 10px: *"Se cancela parte de la deuda."*
+
+O sea que **un cobro que salda la cuota y uno que la deja debiendo $3.000 muestran el mismo texto**, y
+ese texto dice "parte" en los dos. No existe el renglón que diga *"queda saldada"* ni el que diga
+*"quedan $3.000 pendientes"*. El 03/08 la pantalla dijo lo mismo que hubiera dicho un cobro completo.
+
+**El aviso de excedente, además, da mal el número.** La pantalla lo calcula sobre el efectivo y el
+sistema sobre el capital:
+
+- Pantalla ([`RegisterFeeForm.tsx:282`](../src/app/payments/components/RegisterFeeForm.tsx)):
+  `totalToCollect - pendiente`, con `totalToCollect = base + recargo - descuento`.
+- Sistema ([`actions.ts:131`](../src/app/payments/actions.ts)): `capitalContribution - pendiente`, con
+  `capitalContribution = monto + descuento - recargo`.
+
+**Difieren exactamente en el descuento y el recargo.** En el cobro real del 10/08 —base $46.000,
+descuento $3.000, faltaban $3.000— la pantalla anunció un excedente de **$40.000** y el sistema
+acreditó **$43.000**. El aviso existe, se ve, y el número que muestra no es el que va a pasar.
+
+**Lo que hay que resolver:**
+
+- Que la línea de confirmación diga **en qué estado queda la cuota** —saldada, o cuánto queda
+  pendiente—, en vez de una frase que sirve para los dos casos.
+- Que el excedente anunciado sea el que el sistema va a acreditar. Hoy son dos fórmulas distintas
+  escritas en dos archivos, y la de la pantalla es la que está mal.
+- Que el campo del monto no se pueda confundir con el efectivo recibido. Ahí nace el error: quien
+  cobra piensa en lo que le dan, no en lo que cancela.
+
+**Nota al pasar.** El chequeo `totalToCollect < 0`
+([`RegisterFeeForm.tsx:133`](../src/app/payments/components/RegisterFeeForm.tsx)) no se puede cumplir
+nunca, porque `totalToCollect` sale de un `Math.max(0, ...)`
+([`RegisterFeeForm.tsx:165`](../src/app/payments/components/RegisterFeeForm.tsx)). Un descuento mayor
+que la deuda da $0 y lo termina rechazando el servidor con *"Datos del pago inválidos"*
+([`actions.ts:106`](../src/app/payments/actions.ts)), que no explica nada.
+
+**Relacionado.** [FIN-31](#fin-31) (el mismo incidente, del lado del comprobante),
+[FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué), [FIN-27](#fin-27) (la otra
+vez que esta misma pantalla dijo algo que no había pasado), [FIN-25](#fin-25) (las condiciones
+especiales que se tipean de memoria porque no están en ningún lado).
 
 ---
 
@@ -7487,6 +7643,288 @@ anterior sea aproximado.
 
 ---
 
+<a id="bug-20"></a>
+## BUG-20 · La ficha dice «Sin datos registrados» teniendo el teléfono del tutor · **P3**
+
+**De dónde sale.** De verificar [FEAT-28](#feat-28) en stage el 2026-09-16. La ficha de un alumno de
+70 años mostraba la sección de tutores con las dos tarjetas en «Sin datos registrados»; en la base
+tenía `guardian1Phone` cargado.
+
+**La tarjeta anida el contacto adentro del nombre.** En
+[`StudentProfileView.tsx`](../src/app/students/[id]/StudentProfileView.tsx) la rama es
+`guardian1Name ? (nombre + celular + email) : g1Link ? (datos de la cuenta) : «Sin datos
+registrados»`. Sin nombre y sin cuenta vinculada, el teléfono y el correo **no tienen dónde
+dibujarse**, aunque estén guardados. Lo mismo del lado del Tutor 2.
+
+**No es sólo feo, la pantalla afirma algo falso.** «Sin datos registrados» le dice a la secretaría que
+no hay a quién llamar, y hay un teléfono. Es la misma forma que [BUG-19](#bug-19): la pantalla
+declarando algo que el dato no sostiene.
+
+**Son 8 alumnos activos en producción** con teléfono o correo de tutor cargado, sin nombre y sin
+cuenta vinculada. Siete de ellos tienen 20 o más, que es lo que lo hizo visible: son justo los que
+[FEAT-28](#feat-28) estaba evaluando.
+
+**El arreglo es de la tarjeta, no del dato.** Dibujar el contacto que haya aunque falte el nombre —con
+un rótulo honesto del tipo «Tutor sin nombre cargado»—, en vez de tratar el nombre como condición
+para mostrar lo demás.
+
+**Cuidado con el orden.** Mientras la tarjeta no dibuje ese teléfono, la regla de
+[FEAT-28](#feat-28) **no** lo cuenta como dato, justamente para no dejar la sección vacía. Si se
+arregla esto, hay que sumar teléfono y correo a
+[`muestraSeccionDeTutores`](../src/lib/tutores.ts) en el mismo commit, o la sección va a esconder algo
+que pasó a verse.
+
+---
+
+<a id="bug-21"></a>
+## BUG-21 · 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia · **P2**
+
+**De dónde sale.** Una madre preguntó el 2026-09-17 qué significaba la tarjeta «Asistencia» de su
+portada: si el 70% era del mes, y de dónde salía «Culture». Las dos preguntas tienen la misma
+respuesta — la tarjeta no muestra lo que su título dice.
+
+**Qué muestra en realidad.** Es la portada del tutor
+([`GuardianDashboardView.tsx:142`](../src/app/dashboard/components/GuardianDashboardView.tsx)). El
+anillo es el porcentaje de las **últimas 10 marcas de asistencia**, sin ningún corte de fecha
+([`dashboard/page.tsx:87`](../src/app/dashboard/page.tsx)). Los tres renglones de abajo son las
+**últimas 3 clases**, cada una con el `topic` que cargó el docente y el estado del alumno. «Culture»
+no es ninguna categoría del sistema: es el tema de esa clase, escrito por la profesora.
+
+Son cuatro defectos distintos en la misma tarjeta, y se pueden arreglar por separado:
+
+1. **El rótulo miente sobre el período.** Dice «Período Académico Actual» y son las últimas 10
+   marcas, vengan del mes que vengan. El producto tiene una noción real de período
+   —[`usage/periodo.ts`](../src/app/dashboard/usage/periodo.ts), la que usa el panel de uso— y la
+   tarjeta no la usa. Es la misma forma que [BUG-19](#bug-19) y [BUG-20](#bug-20): la pantalla
+   afirmando algo que el dato no sostiene.
+2. **Con dos hijos, los mezcla.** El cálculo aplana las marcas de todos los alumnos vinculados,
+   ordena por fecha y se queda con 10
+   ([`dashboard/page.tsx:147`](../src/app/dashboard/page.tsx)): un solo anillo para dos chicos, y los
+   tres renglones sin decir de quién es cada clase. **Le toca a 29 de los 174 tutores de
+   producción** — los mismos 29 de [FEAT-29](#feat-29).
+3. **La consulta del tutor no descarta las clases borradas.** Le falta el
+   `where: { lesson: { status: "ACTIVE" } }` que sí tienen la del alumno
+   ([`dashboard/page.tsx:215`](../src/app/dashboard/page.tsx)), la del hub del tutor
+   ([`guardian/academics/page.tsx:78`](../src/app/guardian/academics/page.tsx)) y la del legajo
+   ([`academics/page.tsx:41`](../src/app/academics/page.tsx)). **Hoy no cambia ningún número: hay 0
+   marcas colgando de clases borradas.** Es la fila que falta para que siga siendo cierto, no un
+   error que alguien esté viendo.
+4. **La leyenda del gráfico se encima con el texto.** El contenedor mide `h-32` (128px) y el gráfico
+   declara `min-h-[220px]`
+   ([`GuardianAttendanceChart.tsx:41`](../src/app/dashboard/components/GuardianAttendanceChart.tsx)),
+   así que la leyenda de Recharts cae sobre el tercer renglón. En la captura de la madre se lee
+   «Reading: a poem● Ausente ● Presente».
+
+**«Tarde» cuenta como presente** en el anillo, y eso hoy no mueve nada: de las 772 marcas de
+producción hay **641 presentes, 130 ausentes, 1 justificada y ninguna tarde**, aunque el parte
+ofrece los cuatro botones
+([`AttendanceForm.tsx:162`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx)).
+Conviene saberlo antes de rediseñar el número: el estado existe y nadie lo usa.
+
+**Por qué P2 y no P1.** El número es engañoso, no está roto: para el tutor de un solo hijo con
+clases recientes, «últimas 10» y «período» se parecen bastante. Lo que no se arregla solo es el
+rótulo y el caso de los hermanos.
+
+**Lo que este arreglo no resuelve.** Aunque el anillo diga la verdad, sigue sin haber dónde ver el
+detalle completo — que es lo que la madre quería en realidad. Eso es [FEAT-30](#feat-30).
+
+---
+
+<a id="bug-22"></a>
+## BUG-22 · Los cuatro contadores del Hub del alumno no comparten universo · **P3**
+
+**De dónde sale.** De buscar, para [FEAT-30](#feat-30), qué había ya parecido a un historial de
+asistencia. Lo más cercano son los cuatro números de colores del Hub de Progreso del alumno
+([`StudentAcademicsView.tsx:266`](../src/app/dashboard/components/StudentAcademicsView.tsx)): Total
+Clases, Clases Dictadas, Asistencias y Faltas.
+
+**Invitan a una cuenta que no cierra.** Se calculan en
+[`academics/page.tsx:116`](../src/app/academics/page.tsx) y salen de dos universos distintos:
+
+- **Total Clases** y **Clases Dictadas**: clases `ACTIVE` del **curso principal** (`enrollments[0]`).
+- **Asistencias** y **Faltas**: marcas del alumno en **todos sus cursos**, de toda su historia, sin
+  límite de fecha.
+
+Así que «Dictadas − Asistencias − Faltas» no da «clases sin registrar»: pueden sobrar marcas de un
+curso anterior y faltar las de las clases sin parte. Dos universos con la misma tipografía, uno al
+lado del otro.
+
+**Tres detalles más chicos, del mismo párrafo.**
+
+- **`enrollments` no filtra por estado** en esta consulta
+  ([`academics/page.tsx:26`](../src/app/academics/page.tsx)), a diferencia del dashboard
+  ([`dashboard/page.tsx:203`](../src/app/dashboard/page.tsx)). El «curso principal» puede ser uno
+  que el alumno dejó.
+- **`enrollments[0]` no tiene `orderBy`**: cuál es el primero lo decide la base. Con dos
+  inscripciones, el curso que titula la pantalla puede cambiar entre dos recargas.
+- **«Justificado» no entra en ningún contador**: Asistencias es `PRESENT`+`LATE` y Faltas es sólo
+  `ABSENT`. Hoy es exactamente 1 marca en producción.
+
+**Por qué P3.** Son números feos en una pantalla que no decide nada: no hay plata ni permisos de por
+medio. Pero **si se hace [FEAT-30](#feat-30) hay que resolverlo en el mismo trabajo**, porque la
+pantalla nueva es justamente la que vuelve verificable esta cuenta.
+
+---
+
+<a id="bug-23"></a>
+## BUG-23 · 🗣️ Publicar boletines falla en los cursos más grandes · **P1**
+
+**De dónde sale.** El cliente reportó el error al publicar boletines (2026-09-22), con captura de
+pantalla: `Invalid prisma.reportSigner.createMany() invocation: Transaction API error: Transaction
+already closed: Could not perform operation.` No en todos los cursos — nombró Children 2 (M-J),
+Children 3 (M-J y L-M), Children 4 (L-M), Pre-adolescents 1 (M-J 18hs) y Pre-intermediate (M-J).
+
+**Causa: mismo patrón que [FIN-06](#fin-06), sin arreglar acá.**
+[`publish/route.ts:108`](../src/app/api/courses/[id]/reports/[templateId]/publish/route.ts) abría una
+`$transaction` interactiva y adentro hacía, alumno por alumno y en serie, un `upsert` de
+`StudentReport` más —al publicar— un `update` de `contentHash` y la resolución de firmantes. Varias
+sentencias por alumno, todas reteniendo la misma conexión. Prisma cierra una transacción interactiva a
+los 5 segundos; contra la base remota, esa cuenta de sentencias no entraba en el margen para los cursos
+más grandes, la transacción se cerraba sola, y el `reportSigner.createMany()` de más abajo caía con
+"Transaction already closed" — el error de la captura.
+
+**Confirmado contra producción, no supuesto.** Alumnos activos por curso:
+
+| Curso | Alumnos activos |
+|---|---|
+| Children 4 (L-M) | 12 |
+| Pre-intermediate (M-J) | 11 |
+| Children 3 (M-J, ambos turnos) | 11 |
+| Children 2 (M-J) | 11 |
+| Children 3 (L-M) | 10 |
+| Pre-adolescents 1 (M-J tarde) | 10 |
+
+Son, sin excepción, los seis cursos más grandes del instituto — el resto tiene 9 alumnos o menos.
+Coincide exactamente con lo que nombró el cliente: no es un curso puntual roto, es un umbral de tamaño
+que cualquier curso cruza tarde o temprano si crece.
+
+**Cambio.** El mismo que ya usaron [FIN-06](#fin-06) y `saveLessonAttendanceAction`
+([`attendance/actions.ts:90`](../src/app/courses/[id]/lessons/[lessonId]/attendance/actions.ts)) para
+esta exacta falla: sacar el bucle de la transacción interactiva y colapsarlo en sentencias masivas.
+`publishedAt` es el mismo valor para toda la tanda, así que alcanza con `updateMany` para los que ya
+tenían fila y `createMany` para los que no. El `contentHash` sí es distinto por alumno — ahí va el
+`UPDATE ... FROM (VALUES ...)` parametrizado, igual que la asistencia. **No agrandar el `timeout` de
+Prisma**: el techo de duración de la función de Vercel corta antes, así que ese número no alcanza
+nunca (ya está escrito en FIN-06, y sigue valiendo acá).
+
+### Implementado — 2026-09-22
+
+`publish/route.ts` ya no abre una `$transaction` interactiva con un bucle adentro. Reports en bulto
+(`updateMany`/`createMany`), un `findMany` para recuperar los ids, y el freeze de hash y firmantes en
+un solo lote de sentencias masivas (`$executeRaw` con `VALUES` para el hash, `createMany` para los
+firmantes). El auto-sanado que ya documentaba el comentario original —una tanda sin firmantes se
+resuelve sola en la próxima publicación— sigue intacto: cada sentencia es idempotente por separado, así
+que una falla a mitad de camino se corrige repitiendo la publicación, no arrastra el estado a medio
+escribir.
+
+### Verificado en stage — 2026-09-22
+
+Contra **stage con los datos de producción restaurados** (`prod-20260922-2059.dump`), publicando el 2º
+Trimestre de **Children 4 L-M, los 12 alumnos** — el curso más grande y uno de los que le fallan al
+cliente. Medido con `pg_stat_statements` reseteado antes de la publicación:
+
+| Sentencia | `calls` | `rows` |
+|---|---|---|
+| `UPDATE "StudentReport" SET "publishedAt" ... WHERE "id" IN (...)` | **1** | 12 |
+| `UPDATE "StudentReport" sr SET "contentHash" FROM (VALUES ...)` | **1** | 12 |
+| `INSERT INTO "ReportSigner" ...` | **1** | 12 |
+
+Ocho sentencias en total (5 lecturas + 3 escrituras) para 12 alumnos, **ninguna por alumno**: el conteo
+no depende del tamaño del curso, que es lo que había que probar. El código viejo emitía del orden de 40,
+todas dentro de una misma transacción interactiva.
+
+Estado final: los 12 informes con `publishedAt`, `contentHash` y firmantes congelados, y **12 hashes
+distintos** — o sea que el `VALUES` le asignó a cada informe el suyo en vez de pisar los 12 con el mismo,
+que era el riesgo propio de escribir el SQL a mano.
+
+**Se probó con "Programar Publicación" a futuro, a propósito.** El congelado de hash y firmantes —el que
+reventaba— está detrás de `if (pubDate)`, mientras que los avisos a las familias están detrás de
+`if (pubDate && pubDate <= new Date())`. Programar ejerce el código que falla y saltea los avisos: con la
+base de stage clonada de prod, cualquier publicación inmediata le habría escrito notificaciones a las
+familias reales. Verificado después: cero filas nuevas en `Notification`. **Queda sin probar en stage el
+camino de "Publicar Ahora"**, que sólo agrega ese bloque de avisos y corre fuera de la transacción.
+
+**Hallazgo al margen, no es de esta ficha.** Se programó para el `31/12/2026`, la base guardó
+`2026-12-31 00:00:00` correctamente, pero la pantalla muestra `PROGRAMADO (30/12/2026)`: un día menos.
+Es la conversión de zona horaria en la vista, no el dato.
+
+---
+
+<a id="bug-24"></a>
+## BUG-24 · El cartel de confirmación se dibuja fuera de la pantalla · **P1**
+
+**De dónde sale.** Del 2026-09-23, anulando un gasto en stage para probar [FEAT-31](#feat-31). Se
+apretó «Anular» en la tabla de Finanzas: la pantalla se oscureció y **no apareció ningún cartel**.
+La rueda del mouse tampoco movía la página. Sin salida visible: el operador tiene que recargar.
+
+**Qué pasa.** El modal es `fixed inset-0`, que debería cubrir la ventana. Medido en el navegador,
+estaba en `x: 117, y: -1640, 768 × 2486` — o sea, no en la ventana (1020 × 932) sino **1640 píxeles
+más arriba**.
+
+**La causa, que no está en el modal.** El `<main>` de la pantalla lleva
+`animate-in fade-in slide-in-from-bottom-4 duration-500`. Esa animación corre con
+`animation-fill-mode: both`, así que al terminar **el último fotograma se queda aplicado**: el
+elemento conserva `transform: matrix(1, 0, 0, 1, 0, 0)`. Es la identidad, no mueve nada — pero es un
+`transform`, y un `transform` distinto de `none` convierte al elemento en **bloque contenedor de
+todo `position: fixed` que cuelgue adentro**. El modal deja de medirse contra la ventana y pasa a
+medirse contra el `<main>`, que en Finanzas mide 2486 píxeles de alto. Queda centrado en *la
+página*, no en *la pantalla*.
+
+**Por eso aparece y desaparece según dónde estés parado**, y por eso nadie lo reportó hasta ahora:
+con la página arriba de todo, el centro del `<main>` cae dentro de la ventana y el cartel se ve bien.
+Scrolleando hasta el final de la tabla —que es exactamente lo que se hace para encontrar un
+movimiento viejo— el centro queda arriba del borde y el cartel se va de pantalla.
+
+**El alcance, contado bien.** Hay **35 pantallas** con `animate-in` en su `<main>` y **21 capas**
+`fixed inset-0` en el código. De ésas, cuatro son fondos decorativos con `pointer-events-none` y una
+es el respaldo del desplegable de roles, que no son modales y no tienen el problema. De los **16
+modales**, **10 ya se montaban en un portal** —[`Dialog`](../src/components/ui/Dialog.tsx), los tres
+de clases, `EditCourseModal`, `StudentListActions`, `ChangeCourseModal`, `StudentQRModal` y los dos
+de `CourseReportsPanel`—. Los que no: los **cuatro carteles de confirmación**
+—[`TransactionActions`](../src/app/payments/components/TransactionActions.tsx) (anular pagos, gastos
+y sueldos), [`PayrollClient`](../src/app/payments/payroll/PayrollClient.tsx) (pago masivo),
+[`AppliedCreditList`](../src/app/students/[id]/components/AppliedCreditList.tsx) (anular saldo
+aplicado) y [`ReportGradeSheet`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)
+(publicar boletines)— más `CreateScheduleModal` y `CreateTeacherModal`. Los cuatro carteles comparten
+el mismo markup: se copiaron entre sí, y el portal no estaba en la copia.
+
+**Es P1 porque tapa una operación de plata.** Anular es el único camino para corregir un gasto o un
+cobro mal cargado —no se borra nada, se anula—, y desde el lugar natural de la tabla no se puede
+completar. Ver [FIN-11](#fin-11), que es la funcionalidad que esto vuelve inalcanzable.
+
+**Las dos salidas.** Sacarle la animación al `<main>` (el `transform` desaparece y `fixed` vuelve a
+medirse contra la ventana) o montar los modales fuera del árbol, en un portal sobre `document.body`.
+Se eligió el portal: no le saca la animación a ninguna pantalla y es lo que diez de los dieciséis
+modales ya hacían.
+
+### Resuelto — 2026-09-23 · `08ca5ec` · verificado en stage
+
+[`Portal`](../src/components/ui/Portal.tsx) nuevo, que es el patrón que `DialogContent` ya tenía
+adentro —`createPortal` a `document.body`, con un `mounted` para el render del servidor, donde no hay
+`document`— puesto aparte para poder usarlo. Los seis modales que faltaban quedaron envueltos con él.
+Sin migración y sin tocar una sola clase de CSS: lo único que cambia es dónde se monta el nodo.
+
+**Antes y después, medidos en el navegador sobre la misma pantalla y el mismo scroll** (`scrollY`
+1848, o sea abajo de todo, que es donde fallaba):
+
+| | Dónde quedó la capa | Padre |
+|---|---|---|
+| Antes | `x: 117, y: -1640, 768 × 2486` | dentro del `<main>` |
+| Ahora | `x: 0, y: 0, 1014 × 926` | `BODY` |
+
+Los 1014 × 926 contra una ventana de 1020 × 932 son los 6 píxeles de la barra de scroll, que
+`innerWidth` cuenta y el viewport de maquetado no.
+
+**Probado además que no rompió el camino normal:** se abrió el cartel sobre `MATERIALES: Oxford` y se
+apretó **Cancelar**. El modal cerró, la fila quedó como estaba y en la base sigue habiendo **un solo
+gasto anulado** en stage, el de la prueba de [FEAT-31](#feat-31).
+
+**Lo que no se tocó.** Los cuatro fondos decorativos y el respaldo del desplegable de roles siguen
+donde estaban: no son modales y no tienen nada que cubrir. Y las 35 pantallas conservan su
+`animate-in`.
+
+---
+
 <a id="feat-22"></a>
 ## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
 
@@ -7723,6 +8161,293 @@ producción y no se sabía ninguna contraseña. Dos cosas que conviene tener ano
 
 Para la prueba se les puso contraseña a cuatro cuentas **de stage** —el admin del instituto, los dos
 alumnos y la tutora—; producción no se tocó. Se pierden solas en el próximo restore.
+
+---
+
+<a id="feat-28"></a>
+## FEAT-28 · 🗣️ El alumno grande sin tutor cargado no lleva sección de tutores · **P3**
+
+**De dónde sale.** Pedido del cliente del 2026-09-15, el que vino junto con
+[FEAT-27](#feat-27); la regla se cerró con él el 2026-09-16.
+
+**La regla, en una línea: se oculta sólo cuando no hay nada que mostrar.** Sin datos de contacto
+cargados **y** sin ninguna cuenta de tutor vinculada, y con el alumno de 20 o más, la sección no se
+dibuja. Con cualquiera de las dos cosas se dibuja igual, aunque el alumno tenga 60
+([`tutores.ts`](../src/lib/tutores.ts)).
+
+**Por qué no se oculta por edad sola.** Ocultar un dato cargado lo pierde de vista sin borrarlo; y
+ocultar un vínculo activo es peor, porque esa cuenta sigue viendo notas, cuotas y mensajes desde una
+pantalla a la que ya no se llega — la secretaría no tendría cómo enterarse ni cómo revocarla. Es el
+mismo criterio con el que la ficha ya decide dibujar o no las aplicaciones de saldo
+([`students/[id]/page.tsx`](../src/app/students/[id]/page.tsx)).
+
+**Por qué el corte es 20 y no 18 ni 21.** 20 es `SELF_SIGNING_AGE`, la edad desde la que el alumno
+firma su propio informe ([`signatures.ts:11`](../src/lib/reports/signatures.ts)). Con 18 habría un
+tramo de dos años en el que la ficha esconde al tutor que el panel de firmas todavía está
+persiguiendo; con 21 aparecería una segunda constante de edad para mantener sincronizada con la
+primera. El cliente dice que los alumnos terminan a los 21 y que si siguen se los carga como adultos:
+eso no obliga a mover el corte, porque el que siga teniendo tutor cargado va a ver la sección igual.
+
+**Sin fecha de nacimiento se muestra**, que es la misma decisión prudente que toma la firma. Son 6
+alumnos activos en producción.
+
+**Dónde se aplicó.** En las dos pantallas donde la sección se *lee*: la ficha del alumno
+([`StudentProfileView.tsx`](../src/app/students/[id]/StudentProfileView.tsx)) y el perfil propio del
+alumno ([`ProfileForm.tsx`](../src/app/profile/ProfileForm.tsx)). El booleano lo resuelve el servidor
+y baja como prop: la cadena de imports del helper termina en `crypto` y no puede entrar en un
+componente de cliente — el mismo cuidado que ya está escrito en
+[`defaultPasswords.ts`](../src/lib/defaultPasswords.ts).
+
+**Dónde NO se aplicó, y por qué.** En los formularios de carga —edición y alta del alumno— los campos
+siguen estando siempre:
+
+- **Ocultarlos borraría datos.** `editStudentAction` escribe `guardian1Name: guardian1Name || null`
+  sobre todo lo que el form no mande ([`actions.ts:105`](../src/app/students/[id]/actions.ts)), así
+  que el primer guardado de un alumno grande le vaciaría la ficha del tutor. (La cuenta del tutor se
+  salva: `updateGuardianEmail` corta si no viene correo nuevo.)
+- **Y dejaría sin forma de cargar un contacto de emergencia** a un adulto que sí lo quiere dar.
+
+La planilla del curso tampoco se tocó: ahí «Tutor Legal» es una columna de un listado, no una sección.
+
+**Qué cuenta como «hay datos»: el nombre del tutor, o una cuenta vinculada.** El teléfono y el correo
+**no** alcanzan, y eso se decidió verificando, no escribiendo: la tarjeta los dibuja *dentro* de la
+rama del nombre, así que un tutor con teléfono y sin nombre no se ve igual. Contarlos dejaba la
+sección dibujada y vacía —lo que el cliente pidió sacar— en 7 alumnos. Está desarrollado en
+[BUG-20](#bug-20), y ahí queda anotado que **el día que la tarjeta dibuje ese teléfono, esta regla
+tiene que volver a contarlo**.
+
+**Lo que cambia en producción, medido el 2026-09-16.** De 362 alumnos activos, **30 dejan de ver la
+sección** —**8** de ellos cursando— y **21 la siguen viendo porque tienen algo cargado**.
+
+**El caso que el cliente imaginaba no existe todavía.** Alumnos de 22 o más con datos de tutor: 11 en
+el padrón completo, **0 entre los que cursan**. Los adultos hacen cursos cortos, así que casi todos
+quedan en cursos `FINISHED`. Lo que falta para limpiarlos está en [FEAT-29](#feat-29).
+
+### Resuelto — 2026-09-16 · verificado en stage el 2026-09-16
+
+**La primera versión de la regla la corrigió la pantalla**, que es exactamente lo que la verificación
+tiene que hacer. Contaba teléfono y correo como datos, y la ficha de un alumno de **70 años** apareció
+con la sección dibujada y los dos tutores diciendo «Sin datos registrados»: tenía `guardian1Phone`
+cargado y nada más. De ahí salieron el arreglo (`60ac2b6`) y [BUG-20](#bug-20).
+
+Los cinco casos sobre el deploy `60ac2b6`, cada uno con la predicción escrita antes de abrirlo:
+
+| Alumno | Qué tiene | Sección |
+|---|---|---|
+| 69 años | Nada cargado | **No aparece** |
+| 70 años | Sólo `guardian1Phone`, sin nombre | **No aparece** |
+| 53 años | Tutora con nombre, sin cuenta | **Aparece**, con «Habilitar Acceso» |
+| 12 años | Tutora con nombre y cuenta vinculada | **Aparece**, con el chip de la cuenta |
+| Perfil propio, 69 años | Nada cargado | **No aparece**: del domicilio salta a «Información Académica» |
+
+Los dos del medio son los que importaban: prueban que lo que desapareció fue la sección vacía y no la
+sección.
+
+---
+
+<a id="feat-29"></a>
+## FEAT-29 · Desvincular a un tutor de un alumno · **P3**
+
+**De dónde sale.** De cerrar [FEAT-28](#feat-28) con el cliente el 2026-09-16. Su idea era «eliminar
+esos datos y las cuentas» cuando un alumno se hace grande. La mitad ya se puede y la otra mitad no es
+lo que parece.
+
+**Los datos ya se limpian solos.** Nombre, celular y correo del tutor se vacían desde Editar Perfil, y
+con FEAT-28 eso alcanza para que la sección desaparezca. No hace falta construir nada.
+
+**Lo que falta es sacar el acceso, y no es «borrar la cuenta».** `GuardianStudentLink` es un permiso:
+ese usuario entra al portal y ve notas, cuotas y mensajes del alumno. Borrar la **cuenta** para
+limpiar a un alumno grande sería desastroso — **29 tutores tienen más de un hijo activo**, así que se
+le sacaría el portal al hermano menor. La acción correcta es **desvincular a ese tutor de ese
+alumno**, dejando la cuenta en pie.
+
+**Dos cosas que hay que decidir antes de escribir una línea.**
+
+1. **`GuardianStudentLink` no tiene columna de estado**, así que hoy desvincular sería un `DELETE`
+   físico, contra la política de [ARQ-05](#arq-05). O se le agrega `status`, o se asume la excepción
+   por escrito.
+2. **El firmante huérfano.** Los firmantes de un informe se congelan al publicar
+   ([`signatures.ts:78`](../src/lib/reports/signatures.ts)). Si a ese tutor le quedaba un informe ya
+   publicado sin firmar, al perder el acceso el informe queda sin nadie que pueda firmarlo. Los
+   futuros no son problema: al publicar, el alumno de 20+ ya se resuelve como su propio firmante.
+
+**Hoy no hay ni un caso que la necesite.** De los alumnos de 20 o más que cursan, **uno solo** tiene
+cuenta de tutor vinculada, y tiene 20 o 21 — está terminando, y ahí el tutor sigue siendo el contacto
+correcto. Es una funcionalidad para el día que aparezca el caso, no para limpiar lo que hay.
+
+---
+
+<a id="feat-30"></a>
+## FEAT-30 · Que la familia vea todas las clases del curso y en cuáles estuvo · **P3**
+
+**De dónde sale.** Del 2026-09-17, de contestar la pregunta de la madre que originó
+[BUG-21](#bug-21). La idea: una pantalla donde la familia vea **todas las clases dictadas del
+curso** y, en cada una, si el alumno estuvo, llegó tarde o faltó.
+
+**Lo que hay hoy son tres vistas parciales y ninguna completa.**
+
+| Dónde | Qué muestra | Qué le falta |
+|---|---|---|
+| Portada del tutor | Anillo de las últimas 10 marcas + últimas 3 clases | Todo [BUG-21](#bug-21) |
+| Hub Académico del tutor | «Progreso de Asistencia» (% sobre las últimas 30 marcas) y «Registro de Faltas» | El registro lista **sólo lo que no es `PRESENT`** ([`GuardianAcademicsView.tsx:219`](../src/app/guardian/academics/components/GuardianAcademicsView.tsx)): se ven las faltas, nunca sobre cuántas clases |
+| Hub de Progreso del alumno | Cuatro contadores y las últimas 6 clases | [BUG-22](#bug-22); y no lo ve el tutor |
+
+**Lo que falta, en una línea, es el denominador.** «Faltó 3 veces» no significa lo mismo si el curso
+lleva 8 clases o 40, y ninguna pantalla de la familia dice sobre cuántas. Ésa es exactamente la
+pregunta que hizo la madre.
+
+**El número que decide el tamaño del pedido, medido en producción el 2026-09-17.** De las **438
+clases dictadas** en cursos con inscriptos activos (`ACTIVE`, ya pasadas, tipos `CLASS`/`TP`/`EXAM`
+— la misma definición que la métrica 1 del panel de uso, [FEAT-11](#feat-11)), **324 no tienen
+ninguna marca de asistencia: el 74%**. Y de los 30 cursos involucrados, **13 no tienen una sola
+marca en todo el curso**.
+
+**O sea que la pantalla nacería casi vacía.** No es un argumento para no hacerla: es la decisión de
+producto que hay que tomar **antes** de escribirla, porque define qué dice la fila de una clase
+dictada sin parte. Y sería la primera vez que ese agujero se le muestra a las familias: hoy vive
+sólo en el panel de uso —«Clases sin parte de asistencia»—, que lo mira el instituto.
+
+**Las dos salidas. Queda abierta, no la decide esta ficha.**
+
+- **Mostrar el hueco** («Sin registrar»). Es honesto y le pone al instituto una presión real para
+  que el parte se tome. También le muestra a la familia que tres de cada cuatro clases no se
+  registraron.
+- **Listar sólo las clases con parte.** No expone nada, y devuelve el mismo problema que la tarjeta
+  de hoy: un porcentaje sobre un denominador que la familia no puede ver.
+
+Es la misma clase de decisión que [FEAT-27](#feat-27): no tapar con un cartel lo que el sistema
+todavía no sabe.
+
+**Lo que ya está listo para colgarse.** El dato está entero y no hay que migrar nada: `Lesson` tiene
+fecha, tema, tipo y estado, y `Attendance` cuelga de la clase con su estado y su observación. La
+consulta es «las clases `ACTIVE` del curso de la inscripción, con la marca de ese alumno si
+existe» — el parte del docente dado vuelta.
+
+**Alcance sugerido, para que no se vuelva un proyecto.** La misma pantalla sirve al alumno y al
+tutor, como ya pasa con el boletín ([`StudentReportViewer`](../src/components/reports/StudentReportViewer.tsx),
+usado por las dos). Y conviene que **reemplace** al «Registro de Faltas» del Hub Académico en vez de
+sumarse: la lista completa lo contiene.
+
+**Lo que el pedido pide y los datos no van a poder llenar.** «Tarde» y «Justificado» existen en el
+parte ([`AttendanceForm.tsx:162`](../src/app/courses/[id]/lessons/[lessonId]/attendance/AttendanceForm.tsx))
+y en producción tienen **0 y 1 marcas**. La pantalla los va a dibujar, pero mientras el parte se
+tome sólo con presente y ausente, la distinción «a cuáles llegó tarde» no tiene con qué llenarse.
+
+---
+
+<a id="feat-31"></a>
+## FEAT-31 · Ver los gastos cargados, filtrados por mes · **P2 · 🗣️ cliente**
+
+**Pedido el 2026-09-22.** "¿Tiene alguna vista para ver los gastos que va cargando? ¿La puede filtrar
+por mes? Este fin de semana estuvo cargando gastos y no ve un detalle de lo que va cargando."
+
+**Lo que hay hoy, y por qué no alcanza.** Los gastos **sí se ven**, pero mezclados con los cobros en
+la tabla «Movimientos Recientes» de [`/payments`](../src/app/payments/page.tsx), ordenados por fecha
+y de a 20 por página. El selector de arriba dice **«Métricas de»** y es literal: mueve las tarjetas
+de KPI y nada más — la tabla se trae el libro mayor entero
+([`page.tsx:43`](../src/app/payments/page.tsx)) y lo único que la recorta es el buscador de texto,
+que no filtra ni por fecha ni por tipo de movimiento.
+
+**Por qué no los encontró, medido en producción el 2026-09-22.** No es una impresión suya: cargó
+**104 gastos el 19, 20 y 21 de septiembre** —prácticamente el año entero; de los 106 que hay en la
+base, 104 son de ese fin de semana—. Y **los 104 tienen fecha anterior al día en que los cargó**, del
+8 de enero en adelante. La tabla ordena por **la fecha del gasto**, no por cuándo se cargó, así que
+en vez de quedar juntos arriba se repartieron por todo el libro: **1673 asientos, 84 páginas de 20**.
+En septiembre, que es donde más denso está, hay **216 movimientos y apenas 10 son gastos**. Pasó el
+fin de semana cargando y el sistema no tenía dónde devolvérselo.
+
+**Qué pantalla.** Una propia, `/payments/expenses`, del mismo molde que Deudores y Cuotas Eliminadas:
+filtro de período y de categoría, el detalle, y **el total del período** — que es la parte que hoy no
+existe en ningún lado en forma de lista.
+
+**De dónde sale el número: de `Transaction`, no de `Expense`.** Es la misma fuente que la tarjeta
+«Gastos Operativos» del mes, y montarla ahí obliga a que los dos números den igual. La diferencia no
+es teórica: los **dos gastos de prueba del 27 de marzo** (categoría `NOMINA`, $299 y $200) **no
+tienen asiento** —se crearon antes del libro—, así que no están ni en la tabla ni en la tarjeta. Una
+pantalla armada sobre `Expense` los mostraría y quedaría **$499 por encima** de la tarjeta, sin que
+nadie pueda explicar de dónde sale la diferencia.
+
+**Los sueldos entran, y no es un detalle.** En producción son **39 asientos por $19.128.500**, contra
+**$21.676.656,52 de los otros 65 gastos**: casi la mitad de lo que sale. Una pantalla de gastos que
+los dejara afuera daría un "total del mes" que no es el gasto del mes, y otra vez no cerraría con la
+tarjeta. Van adentro, y la categoría «Sueldos» los separa para el que quiera verlos aparte.
+
+**Las categorías se leen de la base, no del formulario.** `Expense.category` es texto libre. El
+formulario ofrece seis ([`RegisterExpenseForm.tsx:47`](../src/app/payments/components/RegisterExpenseForm.tsx)),
+los sueldos entran con `Payroll` desde otras dos pantallas, y en la base ya hay además `NOMINA`.
+Clavar la lista de seis en el filtro dejaría categorías cargadas sin forma de elegirlas.
+
+**Arranca en el mes en curso**, al revés que Cuotas Eliminadas, que arranca sin filtro. Es la
+diferencia entre las dos preguntas: borrar una cuota es raro y hay que poder ver todo, mientras que
+acá la pregunta es «qué gasté este mes» y hay gastos todos los meses. Un mes vacío se dice con todas
+las letras —"no hay gastos cargados en *mes*"— para que no se lea como una pantalla rota.
+
+**Los anulados se listan tachados y no suman al total.** Hoy en producción **no hay ninguno**, así
+que es un camino que nace sin datos; se sostiene igual porque el día que se anule un gasto, la
+alternativa —que desaparezca— deja al dueño buscando algo que cargó y ya no está.
+
+**Lo que esta ficha no resuelve.** La tabla del libro mayor sigue sin filtro de mes ni de tipo: la
+pantalla nueva contesta por los gastos, no por los cobros. Y **los dos gastos huérfanos de marzo
+siguen invisibles** en todo el módulo — son $499 de prueba, no se tocan acá, pero quedan anotados.
+
+### Resuelta — 2026-09-22 · `b4f1f15`, `7c62113` · verificada en stage el 2026-09-23
+
+Tres archivos, sin migración:
+
+- [`expenses/page.tsx`](../src/app/payments/expenses/page.tsx) — `requireRole(["ADMIN"])`, consulta
+  el libro mayor filtrado por período y categoría, y arma la lista de categorías desde los gastos
+  que tienen asiento.
+- [`expenses/ExpensesClient.tsx`](../src/app/payments/expenses/ExpensesClient.tsx) — los dos
+  selectores, el total del período con el desglose por categoría, y el detalle.
+- [`payments/page.tsx`](../src/app/payments/page.tsx) — el acceso «Ver Gastos», oculto para la
+  secretaría.
+
+**Los límites del período se arman en UTC**, no en hora local: el gasto con fecha cargada a mano se
+guarda como medianoche UTC, y un límite en hora de Argentina —el 1° a las 03:00 UTC— deja afuera
+todo lo del primer día del mes. En Vercel no se notaría, porque corre en UTC; en desarrollo, sí.
+
+**Los números predichos contra producción, anotados antes de mirar la pantalla.** Entrando sin
+parámetros, que es septiembre 2026: **$5.477.469 en 10 gastos** — Sueldos 7 · $3.372.000, Alquiler /
+Expensas 1 · $2.080.000, Material Didáctico 2 · $25.469. Tiene que dar **igual que la tarjeta
+«Gastos Operativos (Septiembre)»** de Finanzas, que reparte los mismos pesos en Sueldos $3.372.000 y
+Gastos Generales $2.105.469. Con «Todo el año»: **104 gastos por $40.805.156,52**. Ninguno anulado,
+así que el camino del tachado no se va a poder ver con estos datos.
+
+**El primer deploy no llegó a compilar.** `b4f1f15` cortó en `prisma migrate deploy` con
+`db error: FATAL: (ENOTFOUND) tenant/user postgres.zriutdlbpovkiijzogkx not found`, que es la base
+de stage **pausada** en Supabase. No dijo nada del código: ni siquiera llegó a `next build`.
+
+**Verificada por pantalla en stage el 2026-09-23**, con la base ya despausada —que tiene el clon de
+producción, mismos 106 gastos— y contra los números anotados arriba antes de abrir el navegador:
+
+| Caso | Dio |
+|---|---|
+| Entrar sin parámetros (septiembre 2026) | **$5.477.469 · 10 gastos**, con Sueldos 7 · $3.372.000, Alquiler / Expensas 1 · $2.080.000 y Material Didáctico 2 · $25.469 |
+| La tarjeta «Gastos Operativos (Septiembre)» de Finanzas | **el mismo $5.477.469**, partido en $3.372.000 + $2.105.469 |
+| «Todo el año» | **$40.805.156,52 · 104 gastos**, y los siete rubros suman exactamente eso (39+10+10+28+5+11+1) |
+| Categoría «Sueldos» sobre todo el año | **$19.128.500 · 39 gastos**, con el período intacto |
+| Octubre 2026 con «Sueldos» puesto | «No hay gastos de Sueldos en Octubre 2026», nombrando el filtro |
+
+**Lo que confirmó que el límite en UTC no era una precaución de más:** los **seis sueldos del
+01/09** están en la lista. Con los límites en hora de Argentina, el mes habría empezado el 1° a las
+03:00 UTC y esos seis —$3.242.000 de los $3.372.000 de sueldos de septiembre— se habrían caído del
+total sin avisar.
+
+**El tachado se ejercitó anulando un gasto en stage**, porque no había ni uno anulado con qué
+probarlo. Se anuló el más chico de septiembre —`MATERIALES: Grafica extrema`, $12.200 del 09/09— y
+la pantalla quedó como se había predicho: el total bajó a **$5.465.269**, la línea pasó a **«9
+gastos · 1 anulado por $12.200, que no suman»**, Material Didáctico bajó de 2 · $25.469 a **1 ·
+$13.269**, y la fila quedó gris, tachada y con la etiqueta ANULADO. La tarjeta de Finanzas bajó al
+mismo **$5.465.269** y la rentabilidad subió los $12.200.
+
+**Lo que confirma que la fuente era la correcta:** anular escribe un contra-asiento `ADJUSTMENT` de
+$12.200 con fecha de hoy, y ese asiento **no aparece** en la pantalla de Gastos. Es lo que
+corresponde: revertir un gasto no es un gasto. Como la consulta pide `EXPENSE` y `PAYROLL`, queda
+afuera sin necesidad de ninguna regla extra.
+
+> **Encontrado en esa misma prueba, y no es de esta ficha:** el cartel de confirmación de la
+> anulación **se dibuja fuera de la pantalla** si la página está scrolleada. Quedó en
+> [BUG-24](#bug-24).
 
 ---
 
@@ -8750,6 +9475,180 @@ consumo* (necesita las dos cosas y además ser exacto). La tercera es [PED-07](#
 que lo que falta ahí es la decisión comercial, no el mecanismo. Si el consumo se va a facturar, los
 dos son el mismo trabajo y conviene mirarlos juntos. [FEAT-11](#feat-11) es la versión de esta
 pregunta para el administrador del instituto en vez del superadmin.
+
+---
+
+<a id="ped-11"></a>
+## PED-11 · El listening va al revés: primero el audio y después las preguntas · **P2 · 🗣️ cliente**
+
+**Pedido el 2026-09-22.** "Ponemos el audio primero y luego las preguntas, pero tendría que ser al
+revés. Primero poner las preguntas, luego escuchar el audio y luego de escuchar el audio, que puedan
+contestar."
+
+**Tiene razón, y pasaba por dos cosas distintas** en
+[`ListeningLab.tsx`](../src/components/practice/ListeningLab.tsx), las dos necesarias para que el
+alumno escuchara a ciegas:
+
+1. **Las preguntas no existían hasta el play.** El pedido a `/generate-listening-quiz` salía de
+   adentro de `playText()`. Antes de apretar el botón no había nada cargado.
+2. **Aunque hubiera, no se dibujaban.** El bloque del cuestionario estaba atado a
+   `phase === "done_listening"`, que es el estado al que se entra cuando el audio **termina**.
+
+**Qué se cambió.** El cuestionario se pide al montar el componente y se dibuja desde el arranque; los
+botones de Verdadero/Falso quedan apagados hasta que el audio terminó al menos una vez. La llave es
+`listenCount`, que ya existía y que sube sólo en el `onended` del audio: no hizo falta estado nuevo
+para "recién después de escuchar pueden contestar".
+
+**Las frases quedan a la vista mientras suena el audio** — decidido el 2026-09-22 contra la
+alternativa de esconderlas durante la reproducción. Esconderlas convierte el ejercicio en una prueba
+de memoria además de comprensión; dejarlas es la técnica estándar de *pre-listening*: saber qué
+escuchar es parte de la consigna. Además es la versión barata: un solo listado que se lee arriba y se
+contesta abajo, en lugar de una máquina de pasos.
+
+**`done_listening` desapareció.** Hacía tres cosas a la vez —fase del audio, señal de "ya escuchó" y
+compuerta del cuestionario— y esa mezcla era lo que sostenía el orden viejo. `Phase` quedó en
+`idle | playing | saving`, que es el estado del audio y nada más; lo demás lo dicen `listenCount` e
+`isEvaluated`. `"revealed"` estaba declarado y no se usaba en ninguna parte.
+
+**La cuota ahora se gasta al entrar, no al apretar play.** Armar el cuestionario descuenta una unidad
+de IA al alumno y al instituto ([`guard.ts`](../src/lib/practice/guard.ts)). Antes la pagaba el que
+escuchaba; ahora también el que abre el listening y se va. El tope del instituto son 1200 llamadas
+por día y el del alumno 150 por hora ([`quota.ts`](../src/lib/practice/quota.ts)), así que es ruido —
+pero es gasto que antes no estaba, y conviene tenerlo anotado si alguna vez el consumo aprieta
+([PED-07](#ped-07)).
+
+**En `npm run dev` se pide dos veces**, y en Vercel una. El pedido pasó de un `onClick` a un
+`useEffect`, y React los ejecuta dos veces en modo estricto, que es el default de Next en desarrollo.
+El token descarta la primera respuesta, pero la llamada se hizo y la cuota se descontó. No se blindó
+a propósito: el guard que lo evitaría también taparía la recarga legítima cuando cambia la práctica,
+y el costo es una llamada de más mientras se prueba en la máquina.
+
+**Las afirmaciones son spoiler del texto, y eso ahora importa más.** Las escribe la IA a partir del
+texto y la mitad son frases verdaderas sobre él: leerlas antes adelanta buena parte del contenido. En
+la didáctica eso es deliberado, pero acá **nadie las revisa** — se generan al vuelo, distintas para
+cada alumno, y la profesora nunca las ve. Pasaron a ser lo primero que se lee, así que su calidad
+pesa más que cuando aparecían al final. Si alguna vez molesta, el arreglo no es reordenar sino
+dejarlas guardadas y revisables, que es trabajo de otra ficha.
+
+### Escrita el 2026-09-22 · `b7cae24`
+
+Un solo archivo, sin migración y sin tocar endpoints. Cae igual en la práctica del alumno y en la
+vista previa de la docente
+([`practice-preview`](../src/app/courses/[id]/lessons/[lessonId]/practice-preview/page.tsx)): las dos
+montan el mismo componente.
+
+**Dos agujeros que quedaron a la vista al mover el bloque adelante, y que se taparon en el mismo
+cambio:**
+
+- **El cuestionario vacío era un callejón.** Si `/generate-listening-quiz` fallaba, `questions`
+  quedaba en `[]` y la pantalla mostraba "Preparando preguntas de comprensión..." para siempre, sin
+  forma de terminar la sesión. Ahora `null` es *cargando* y `[]` es *no se pudo*, con un
+  «Volver a intentar» que siempre relee el texto original —que es el único que el servidor puede
+  releer de la base— y con el 429 de la cuota mostrado tal cual.
+- **El `catch` del TTS era mudo.** Caía en `done_listening` sin mensaje: el botón se reacomodaba solo
+  y el alumno no sabía por qué no había sonado nada. Con el cuestionario ya en pantalla eso quedaba
+  peor, así que ahora avisa.
+
+**Qué mirar en pantalla.** Que al entrar aparezcan las preguntas con el candado y la línea "se
+contestan cuando termine el audio"; que los botones de V/F estén apagados; que se enciendan **al
+terminar** el audio y no al apretar play; que las frases sigan ahí mientras suena; y que «Generar
+texto nuevo con IA» reemplace las preguntas por las del texto generado sin dejar las viejas. No se
+pudo probar local: la base de desarrollo está apagada (`ECONNREFUSED` en `127.0.0.1:5432`) y la de
+stage estaba pausada en el último deploy ([FEAT-31](#feat-31)).
+
+### Verificado en stage el 2026-09-23 · deploy `7c62113` · cuenta de admin, vista previa
+
+La clase *"adverbs of frequency - Giving directions"* de Adolescents 1, cinco preguntas. Los siete
+puntos predichos dieron:
+
+1. **Las preguntas están antes del audio**, con el candado y la línea "Leelas ahora; se contestan
+   cuando termine el audio".
+2. **El bloqueo es real y no visual.** Medido en el DOM: los **10 botones** de V/F (cinco preguntas ×
+   dos) con `disabled`, `opacity 0.5`, `cursor: not-allowed`, y **Corregir** también apagado. Se le
+   hizo clic a un «Verdadero» y no quedó ninguno seleccionado.
+3. **Durante la reproducción** el botón dice "Reproduciendo…", las cinco frases siguen en pantalla y
+   los 10 botones siguen bloqueados.
+4. **Se desbloquean al terminar**, no al apretar play: el contador pasó a "Escuchado 1 vez" y los
+   `disabled` cayeron a **0/10**.
+5. **Corregir** pintó los aciertos en verde y los errores en rojo, volvió a congelar los 10 botones,
+   destrabó "Ver el texto para comparar" —que perdió el "(Disponible al corregir)"— y cambió a
+   "Finalizar sesión".
+6. **Generar texto nuevo con IA** reemplazó las cinco preguntas por las del texto generado, encendió
+   el badge MODO IA, reseteó el contador y volvió a poner el candado.
+
+**El camino de falla se probó solo, y con un error real.** Al entrar por segunda vez,
+`/generate-listening-quiz` devolvió **500**: en los logs de Vercel, `Gemini API 503: "This model is
+currently experiencing high demand"`. La pantalla dijo "No pudimos preparar las preguntas" y ofreció
+«Volver a intentar», que a la segunda trajo las cinco preguntas. **Con el código viejo eso mismo
+habría sido el spinner eterno**, y encima después de haber escuchado el audio.
+
+**El TTS salió por el navegador** (`/api/practice/tts` → **204**, dos voces disponibles en el panel).
+Lo que se oye del lado del alumno depende de las voces que tenga su equipo; no es de esta ficha, pero
+conviene saberlo antes de leer un "no se escucha nada" como bug del módulo.
+
+**Un hallazgo que no es de acá: la IA filtra el texto original adentro del cuestionario generado.**
+El texto nuevo era sobre *Sarah*, y la primera afirmación vino `"The speaker's name is Julian."` —
+Julian es el personaje del texto **del profesor**. No es UI vieja: la respuesta del servidor ya trae
+esa frase, con `isTrue: false`, así que técnicamente es un distractor correcto. Pero el alumno que
+generó un texto nuevo nunca oyó hablar de Julian: le queda una pregunta sobre un nombre que no
+apareció en ningún lado. El prompt de `generateListeningText` le pasa el `seedText` al modelo y le
+pide preguntas sobre el texto **nuevo**; nada le impide mezclarlos. Es viejo y no lo introdujo este
+cambio — se ve ahora porque las preguntas se leen antes. Ficha propia en [PED-12](#ped-12).
+
+---
+
+<a id="ped-12"></a>
+## PED-12 · El cuestionario del texto generado se contamina con el texto del profesor · **P3**
+
+**Visto en stage el 2026-09-23**, verificando [PED-11](#ped-11). El alumno apretó «Generar texto
+nuevo con IA» sobre una práctica cuyo texto original habla de **Julian**. El texto nuevo era sobre
+**Sarah**, y la primera de las cinco afirmaciones llegó así, en la respuesta del servidor:
+
+```json
+{ "statement": "The speaker's name is Julian.", "isTrue": false }
+```
+
+**Como ítem de V/F está bien formado**: la que habla es Sarah, así que `false` es la respuesta
+correcta. El problema no es la lógica, es qué mide. Es un distractor sobre un nombre que **el alumno
+nunca escuchó**: si generó el texto nuevo antes de darle play —que es lo que habilita la pantalla—
+Julian no aparece en ningún audio que haya oído. Contestar bien ahí no prueba que entendió, y
+contestar mal no prueba que no.
+
+**El mecanismo.** `generateListeningText`
+([`GeminiProvider.ts:219`](../src/lib/practice/providers/ai/GeminiProvider.ts)) le pasa el `seedText`
+al modelo y le pide, en **una sola llamada**, el texto nuevo y el cuestionario sobre el texto nuevo.
+El texto del profesor está ahí, en el contexto, y la restricción 4 —"exactly 4 to 6 True/False
+statements about the new text"— dice de qué tienen que hablar, no de dónde **no** pueden sacar el
+material. El modelo lo lee como una fuente disponible, que es lo razonable.
+
+**Es viejo, y [PED-11](#ped-11) le subió el costo.** La contaminación existía igual cuando las
+preguntas aparecían al final; lo que cambió es que ahora se leen **antes de escuchar**, y una
+pregunta previa dirige la atención: el alumno se pone a esperar un nombre que no va a venir. Pasó de
+ser una pregunta rara al final a ser una consigna equivocada al principio.
+
+**Cuánto pasa: no se midió.** La muestra es una generación y una frase de cinco. Antes de tocar nada
+conviene generar unas cuantas y contar, porque una de cada diez y una de cada dos piden arreglos
+distintos.
+
+**El arreglo está en un solo lugar.** Sólo `GeminiProvider` implementa esto —el de OpenAI tira
+`not implemented`— y sólo afecta al camino de «Generar texto nuevo con IA»: el cuestionario del texto
+original pasa por `generateListeningQuiz`, que recibe únicamente ese texto y no tiene de dónde
+filtrar nada. Dos caminos:
+
+1. **Una restricción más en el prompt**: que las afirmaciones se apoyen sólo en el texto nuevo, y que
+   no nombren personas, lugares ni datos que no aparezcan en él. Es una línea y no cuesta nada;
+   es por donde empezaría.
+2. **Partir la llamada en dos**: generar el texto y después pedirle el cuestionario a
+   `generateListeningQuiz`, que sólo ve el texto nuevo y **no puede** contaminarse. Cierra el agujero
+   por construcción, pero duplica la cuota de esa operación —dos llamadas donde hoy hay una— y suma
+   espera en la única acción del módulo que el alumno mira fijo mientras carga. Se apoya en la misma
+   discusión de [PED-07](#ped-07).
+
+La 1 es barata y puede alcanzar; la 2 es la que garantiza. Conviene medir antes de pagar la 2.
+
+**P3.** No rompe nada, el ítem es contestable y el alumno puede seguir. Pero está en el módulo que es
+el diferencial del producto, y la profesora nunca ve estas preguntas: se generan al vuelo, distintas
+para cada alumno, así que si salen mal no hay nadie del otro lado que lo note.
 
 ---
 

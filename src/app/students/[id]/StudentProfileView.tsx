@@ -39,14 +39,17 @@ interface Level {
     name: string;
 }
 
-export function StudentProfileView({ 
-    student, 
+export function StudentProfileView({
+    student,
     userRoles,
-    instituteLevels
-}: { 
-    student: StudentData; 
+    instituteLevels,
+    mostrarTutores
+}: {
+    student: StudentData;
     userRoles: string[];
     instituteLevels: Level[];
+    /** Lo decide el servidor con `muestraSeccionDeTutores` (FEAT-28). */
+    mostrarTutores: boolean;
 }) {
     const [isEditing, setIsEditing] = useState(false);
 
@@ -167,6 +170,10 @@ export function StudentProfileView({
                     </div>
                 </Card>
 
+                {/* Sin tutor cargado y con el alumno ya grande, la sección no se
+                    dibuja (FEAT-28). El cuerpo queda con su sangría original para
+                    que el envoltorio no se lleve puesto el diff de la tarjeta. */}
+                {mostrarTutores && (
                 <Card className="p-6 border-border/40 shadow-sm leading-relaxed">
                     <h3 className="text-lg font-bold flex items-center gap-2 border-b border-border/40 pb-4 mb-4 text-foreground/90">
                         <UserCheck className="text-primary" /> Tutores Legales
@@ -337,6 +344,7 @@ export function StudentProfileView({
 
                     </div>
                 </Card>
+                )}
             </div>
 
         </div>

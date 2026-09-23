@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BatchSignaturePanel, type BatchSignatureRow } from "./BatchSignaturePanel";
+import { Portal } from "@/components/ui/Portal";
 
 interface Category {
     id: string;
@@ -586,8 +587,11 @@ export function ReportGradeSheet({
                 </div>
             )}
 
-            {/* Modal de Publicación */}
+            {/* Modal de Publicación. En portal: acá adentro, el `<main>` con
+                `animate-in` lo captura y el cartel se centra en la página en vez
+                de en la pantalla. Ver BUG-24. */}
             {isPublishOpen && (
+                <Portal>
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div 
                         className="absolute inset-0 cursor-pointer" 
@@ -689,6 +693,7 @@ export function ReportGradeSheet({
                         </div>
                     </div>
                 </div>
+                </Portal>
             )}
         </div>
     );

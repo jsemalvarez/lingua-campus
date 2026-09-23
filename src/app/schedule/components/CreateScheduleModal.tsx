@@ -5,6 +5,7 @@ import { createScheduleAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { Plus, X, Calendar, Clock, MapPin, CheckCircle, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Portal } from "@/components/ui/Portal";
 
 interface CourseOption {
     id: string;
@@ -49,7 +50,11 @@ export function CreateScheduleModal({ courses }: { courses: CourseOption[] }) {
         );
     }
 
+    // En portal, como el resto de los modales: dibujado dentro de la pantalla que
+    // lo abre, el `<main>` con `animate-in` lo captura y deja de cubrir la
+    // ventana. Ver BUG-24.
     return (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
             <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl border border-border/60 overflow-hidden animate-in zoom-in-95">
                 <div className="px-6 py-4 border-b border-border/40 flex items-center justify-between">
@@ -126,5 +131,6 @@ export function CreateScheduleModal({ courses }: { courses: CourseOption[] }) {
                 </form>
             </div>
         </div>
+        </Portal>
     );
 }

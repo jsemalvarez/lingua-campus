@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import { Card } from "@/components/ui/Card";
 import { voidPaymentAction } from "@/app/payments/actions";
 import { formatCurrency } from "@/lib/utils";
+import { Portal } from "@/components/ui/Portal";
 
 /**
  * Los pagos con método SALDO del alumno, con su botón de anular.
@@ -90,7 +91,11 @@ export function AppliedCreditList({ payments }: { payments: AppliedCredit[] }) {
                 ))}
             </div>
 
+            {/* En portal: si se dibuja acá adentro, el `<main>` con `animate-in`
+                lo captura y el cartel queda centrado en la página en vez de en la
+                pantalla. Ver BUG-24. */}
             {confirming && (
+                <Portal>
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-left">
                         <div className="p-6 text-center">
@@ -131,6 +136,7 @@ export function AppliedCreditList({ payments }: { payments: AppliedCredit[] }) {
                         </div>
                     </div>
                 </div>
+                </Portal>
             )}
         </Card>
     );
