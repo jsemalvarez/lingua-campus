@@ -7814,7 +7814,38 @@ un solo lote de sentencias masivas (`$executeRaw` con `VALUES` para el hash, `cr
 firmantes). El auto-sanado que ya documentaba el comentario original —una tanda sin firmantes se
 resuelve sola en la próxima publicación— sigue intacto: cada sentencia es idempotente por separado, así
 que una falla a mitad de camino se corrige repitiendo la publicación, no arrastra el estado a medio
-escribir. **Falta verificar en stage** con un curso de más de 12 alumnos.
+escribir.
+
+### Verificado en stage — 2026-09-22
+
+Contra **stage con los datos de producción restaurados** (`prod-20260922-2059.dump`), publicando el 2º
+Trimestre de **Children 4 L-M, los 12 alumnos** — el curso más grande y uno de los que le fallan al
+cliente. Medido con `pg_stat_statements` reseteado antes de la publicación:
+
+| Sentencia | `calls` | `rows` |
+|---|---|---|
+| `UPDATE "StudentReport" SET "publishedAt" ... WHERE "id" IN (...)` | **1** | 12 |
+| `UPDATE "StudentReport" sr SET "contentHash" FROM (VALUES ...)` | **1** | 12 |
+| `INSERT INTO "ReportSigner" ...` | **1** | 12 |
+
+Ocho sentencias en total (5 lecturas + 3 escrituras) para 12 alumnos, **ninguna por alumno**: el conteo
+no depende del tamaño del curso, que es lo que había que probar. El código viejo emitía del orden de 40,
+todas dentro de una misma transacción interactiva.
+
+Estado final: los 12 informes con `publishedAt`, `contentHash` y firmantes congelados, y **12 hashes
+distintos** — o sea que el `VALUES` le asignó a cada informe el suyo en vez de pisar los 12 con el mismo,
+que era el riesgo propio de escribir el SQL a mano.
+
+**Se probó con "Programar Publicación" a futuro, a propósito.** El congelado de hash y firmantes —el que
+reventaba— está detrás de `if (pubDate)`, mientras que los avisos a las familias están detrás de
+`if (pubDate && pubDate <= new Date())`. Programar ejerce el código que falla y saltea los avisos: con la
+base de stage clonada de prod, cualquier publicación inmediata le habría escrito notificaciones a las
+familias reales. Verificado después: cero filas nuevas en `Notification`. **Queda sin probar en stage el
+camino de "Publicar Ahora"**, que sólo agrega ese bloque de avisos y corre fuera de la transacción.
+
+**Hallazgo al margen, no es de esta ficha.** Se programó para el `31/12/2026`, la base guardó
+`2026-12-31 00:00:00` correctamente, pero la pantalla muestra `PROGRAMADO (30/12/2026)`: un día menos.
+Es la conversión de zona horaria en la vista, no el dato.
 
 ---
 
