@@ -90,6 +90,22 @@ export function GuardianAcademicsView({
                 </div>
             )}
 
+            {/* El boletín va primero (FEAT-32). Era la última fila: en el celular
+                quedaba debajo de «Próximas Clases» —que sola mide como mínimo
+                680 px—, las faltas y las notas, y encima la firma de conformidad
+                va al final del boletín. En la primera semana de la firma, de 12
+                tutores que abrieron esta página firmaron 2. Sin informes
+                publicados el visor no dibuja nada (FEAT-27) y la página arranca
+                por el curso, como antes. */}
+            <StudentReportViewer
+                key={selectedStudentId}
+                studentName={currentStudent.name}
+                reports={currentStudent.studentReports || []}
+                instituteName={currentStudent.institute?.name}
+                viewer={{ id: viewerId, isStudent: false }}
+                signatureReference={signatureReference}
+            />
+
             {/* ROW 1: Proficiency & Course Summary Layer */}
             <div className="grid lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2 p-6 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg bg-gradient-to-r from-card to-card/50 relative overflow-hidden rounded-[2rem]">
@@ -282,16 +298,6 @@ export function GuardianAcademicsView({
 
                 </div>
             </div>
-
-            {/* ROW 4: Boletín Institucional */}
-            <StudentReportViewer
-                key={selectedStudentId}
-                studentName={currentStudent.name}
-                reports={currentStudent.studentReports || []}
-                instituteName={currentStudent.institute?.name}
-                viewer={{ id: viewerId, isStudent: false }}
-                signatureReference={signatureReference}
-            />
 
         </main>
     );

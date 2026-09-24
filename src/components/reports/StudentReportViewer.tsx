@@ -54,6 +54,23 @@ function drawStrokeOnPdf(
   }
 }
 
+/**
+ * El informe con el que abre el visor: el del último año y, dentro de él, el del
+ * período más alto (FEAT-32).
+ *
+ * No depende del orden en que llegan, a propósito. Las dos páginas los mandan con
+ * el período ascendente, y tomar el primero de la lista abría el boletín en el 1°
+ * trimestre con el 2° ya publicado —y al alumno que se cambió de curso a mitad de
+ * año, en el curso que dejó—. Entre cursos distintos el período no es del todo
+ * comparable, porque cada plantilla tiene los suyos; para elegir con cuál abrir,
+ * alcanza.
+ */
+function masReciente<T extends { year: number; periodIndex: number }>(reports: T[]): T {
+  return reports.reduce((a, b) =>
+    b.year > a.year || (b.year === a.year && b.periodIndex > a.periodIndex) ? b : a
+  );
+}
+
 interface StudentReportViewerProps {
   studentName: string;
   reports: any[];
@@ -85,12 +102,14 @@ export function StudentReportViewer({
   }, [reports]);
 
   const courseIds = Object.keys(reportsByCourse);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(courseIds[0] || "");
+  // Abre en el curso del informe más reciente, no en el del primero de la lista.
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(
+    reports.length > 0 ? masReciente(reports).courseId : ""
+  );
 
-  // If course changed, reset period
   const courseReports = reportsByCourse[selectedCourseId] || [];
-  const latestReport = courseReports[0]; // ordered desc by year, periodIndex asc/desc?
-  
+  const latestReport = courseReports.length > 0 ? masReciente(courseReports) : undefined;
+
   // Find all unique periods for the selected course based on the template
   const periodLabels = latestReport?.template?.periodLabels || [];
   const [selectedPeriodIndex, setSelectedPeriodIndex] = useState<number>(
@@ -102,13 +121,13 @@ export function StudentReportViewer({
     (r) => r.periodIndex === selectedPeriodIndex
   );
 
-  // Fallback to first available report if selected period is not active/available
+  // Si el período elegido no está publicado en este curso, se muestra el más reciente.
   const displayedReport = activeReport || latestReport;
 
-  // Sync state if selected course has no report for the selected period
+  // Al cambiar a un curso que no tiene el período elegido, se pasa a su más reciente.
   React.useEffect(() => {
     if (courseReports.length > 0 && !courseReports.some(r => r.periodIndex === selectedPeriodIndex)) {
-      setSelectedPeriodIndex(courseReports[0].periodIndex);
+      setSelectedPeriodIndex(masReciente(courseReports).periodIndex);
     }
   }, [selectedCourseId, courseReports, selectedPeriodIndex]);
 
