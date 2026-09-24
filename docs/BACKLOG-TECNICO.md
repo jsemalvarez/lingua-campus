@@ -261,7 +261,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [x] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
 | [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
-| [BUG-09](#bug-09) | P3 | Los meses salen en inglés en la liquidación de sueldos | [ ] |
+| [BUG-09](#bug-09) | P3 | Los meses salen en inglés en todo lo que no es del alumno, empezando por la liquidación | [ ] |
 | [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
 | [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
@@ -308,6 +308,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
 | [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
 | [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
+| [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [~] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -6643,7 +6644,7 @@ estado en los generadores, que es la otra mitad de la incoherencia).
 ---
 
 <a id="bug-09"></a>
-## BUG-09 · Los meses salen en inglés en la liquidación de sueldos · **P3**
+## BUG-09 · Los meses salen en inglés en todo lo que no es del alumno, empezando por la liquidación · **P3**
 
 **Visto el 2026-08-16** verificando [SEC-03](#sec-03) en stage. En `/payments/payroll` el selector de
 período ofrece `January … December`, y el comprobante que se genera queda con el mes en inglés: el
@@ -6663,6 +6664,26 @@ que es probablemente por qué llegó hasta acá.
 
 **P3 porque es cosmético y no afecta ningún importe.** Pero es de la pantalla del dueño, y el dueño
 es quien mira los sueldos.
+
+### La causa, y no es sólo la liquidación — 2026-09-23
+
+Encontrado verificando [FEAT-32](#feat-32) contra la base local: el boletín del tutor dice
+**«Publicado: 20 de August, 2026»**. No es un `toLocaleString` sin locale: **`dayjs.locale("es")` se
+ejecuta sólo en dos vistas del alumno**
+([`StudentAcademicsView.tsx:32`](../src/app/dashboard/components/StudentAcademicsView.tsx) y
+[`StudentDashboardV2View.tsx:22`](../src/app/dashboard/components/StudentDashboardV2View.tsx)), como
+efecto de importar esos módulos. Toda pantalla que no pase por ellas formatea los meses con el idioma
+por defecto de dayjs, que es el inglés. **Y se ve en local**, al revés de lo que dice arriba.
+
+**El alcance es todo lo que no es del alumno.** La liquidación sale de ahí
+([`PayrollClient.tsx:132`](../src/app/payments/payroll/PayrollClient.tsx) arma la descripción con
+`format("MMMM")`), y lo mismo pasa en el portal del tutor —la portada, las clases y las faltas de
+Progreso, el pie del boletín y el «Confirmaste que lo leíste» de la firma—, en la ficha del alumno,
+en el legajo del docente y en la tabla de movimientos de Finanzas.
+
+**El arreglo va en un solo lugar que carguen todas las pantallas**, en el cliente y en el servidor, en
+vez de en dos vistas del alumno. Sigue abierta la decisión de arriba sobre las descripciones de
+sueldos que ya quedaron escritas en inglés.
 
 ---
 
@@ -8448,6 +8469,108 @@ afuera sin necesidad de ninguna regla extra.
 > **Encontrado en esa misma prueba, y no es de esta ficha:** el cartel de confirmación de la
 > anulación **se dibuja fuera de la pantalla** si la página está scrolleada. Quedó en
 > [BUG-24](#bug-24).
+
+---
+
+<a id="feat-32"></a>
+## FEAT-32 · 🗣️ El boletín del tutor está al final de la página y abre en el primer período · **P1**
+
+**Pedido el 2026-09-23.** Que los informes estén en la parte superior de la página de los tutores.
+
+**Dónde están hoy.** El tutor tiene tres páginas —Resumen, Progreso y Administración— y los informes
+viven **sólo en Progreso, como última fila**
+([`GuardianAcademicsView.tsx:287`](../src/app/guardian/academics/components/GuardianAcademicsView.tsx)).
+En el celular, antes del boletín vienen la tarjeta del curso, el anillo de asistencia, «Próximas
+Clases» —que mide como mínimo 680 px—, el Registro de Faltas y las Notas. Y dentro del boletín la
+firma de conformidad ([FEAT-09](#feat-09)) va al final, después de la grilla de conceptos, el
+comentario del docente y las firmas del instituto. Ni la portada ni el legajo muestran informes.
+
+**Lo que el pedido no nombra: el boletín abre en el primer período, no en el último.** La página
+ordena los informes con el período ascendente
+([`guardian/academics/page.tsx:108`](../src/app/guardian/academics/page.tsx)) y el visor abre en el
+primero de la lista ([`StudentReportViewer.tsx:92`](../src/components/reports/StudentReportViewer.tsx)),
+al que el código llama `latestReport` con un comentario que duda: *«periodIndex asc/desc?»*. El 2°
+trimestre se publicó el 22 y el 23 de septiembre, y al tutor el boletín le abre en el de junio. **Le
+pasa a 160 de los 209 alumnos con informes**: los que ya tienen dos períodos del mismo curso. El Hub
+del alumno usa el mismo visor con el mismo orden ([`academics/page.tsx:76`](../src/app/academics/page.tsx))
+y tiene el mismo defecto. El panel de firmas del instituto es el único que ordena al revés
+([`reports/signatures/page.tsx:90`](../src/app/reports/signatures/page.tsx)).
+
+**Y al que cambió de curso le abre en el curso que dejó.** Hay **6 alumnos con informes en dos
+cursos**. En 5 el patrón es el mismo: el 1° trimestre en un curso donde ya no figuran inscriptos y el
+2° en el curso activo. El visor abre en el curso del primer informe de la lista, que es el viejo. El
+sexto cursa dos cursos a la vez, con un 2° trimestre publicado en cada uno.
+
+**Es P1 porque el instituto está persiguiendo ahora las firmas** de un trimestre que se publicó ayer,
+y el visor se lo esconde al tutor detrás de una pestaña.
+
+**Medido en producción el 2026-09-23**, desde el 15/09, que es desde cuando existe la firma y se
+registra qué sección abre el tutor:
+
+- **21 tutores entraron**, y a los 21 les toca firmar al menos un informe.
+- **9 no abrieron nunca Progreso.**
+- **12 lo abrieron, y firmaron 2.**
+- En total hay **4 informes firmados de 371** que esperan firma: 197 del 1° trimestre, publicados del
+  11/06 al 02/09, y 183 del 2°, publicados el 22 y el 23/09, menos 9 que no tienen firmante.
+- El aviso de publicación no los está trayendo: **de 205 avisos a tutores, 2 figuran leídos**.
+
+**Son dos fugas, y el pedido ataca una.** Los que llegan a Progreso y se van sin firmar —10 de 12—
+son los de esta ficha. Los que no llegan nunca —9 de 21— necesitarían que el informe aparezca donde
+entran, que es la portada.
+
+### Decidido — 2026-09-23 · va A: sólo Progreso
+
+- **A, la que va.** El boletín pasa a ser lo primero de Progreso, debajo del encabezado y del
+  selector de hijos; el resto de la página baja sin cambios. Y el visor abre en el informe más
+  reciente —el del último año y el período más alto—, eligiendo con él también el curso. Es un bug y
+  se arregla en el componente, así que le llega también al Hub del alumno; **el orden de la página
+  del alumno no se toca**, porque el pedido es de los tutores.
+- **B, la que queda afuera.** Un bloque arriba de la portada que aparezca sólo cuando hay informes
+  esperando la firma del tutor, con una línea por informe y un «Ver y firmar» que abra Progreso en
+  ese hijo, curso y período. Es lo que alcanzaría a los 9 que nunca abren Progreso, y no lleva
+  migración. Si después de A el número de los que no llegan sigue igual, es el paso siguiente.
+
+**Descartado: copiar el boletín entero a la portada.** Pondría la firma en dos lugares, y con dos o
+tres hijos —cada uno con su selector de curso y período— el boletín se come la portada.
+
+**El aviso de publicación sigue diciendo la verdad.** Dice *«Al final del informe podés confirmar que
+lo leíste»* ([`publish/route.ts:287`](../src/app/api/courses/[id]/reports/[templateId]/publish/route.ts)):
+la firma sigue al final del informe; lo que se mueve es el informe dentro de la página.
+
+### Hecho — 2026-09-23 · `b3fb053` · verificado por pantalla contra la base local · falta stage
+
+Dos archivos, sin migración:
+
+- [`GuardianAcademicsView.tsx`](../src/app/guardian/academics/components/GuardianAcademicsView.tsx) — el
+  visor pasa de la última fila a la primera, debajo del encabezado y del selector de hijos.
+- [`StudentReportViewer.tsx`](../src/components/reports/StudentReportViewer.tsx) — `masReciente()`
+  elige el informe con el que abre, curso incluido, sin depender del orden en que llegan. Al cambiar a
+  un curso que no tiene el período elegido, también salta al más reciente de ese curso.
+
+**Verificado por pantalla contra la base local**, con la tutora de prueba `tutor@test.com` —un hijo en
+Children 2 con el 1° y el 2° trimestre publicados— y lo esperado anotado antes de abrir el navegador.
+Los dos informes se distinguen a simple vista: el 1° tiene todo en 4 y el 2°, todo en 1.
+
+| Caso | Dio |
+|---|---|
+| Entrar a Progreso | El boletín es el primer bloque debajo del encabezado: **2° Trimestre** marcado, las cuatro notas en 1, el 3° con candado. Sin casilla de firma, porque esa tutora no es firmante |
+| Tocar el 1° Trimestre | Las notas en 4: el selector sigue andando |
+| Un informe viejo en Children 3 (1° trimestre, junio) | Aparecen las dos pestañas de curso y abre igual en **Children 2 · 2° Trimestre**. Al tocar Children 3 salta solo a su 1° Trimestre |
+| Ese mismo informe pasado a 3° trimestre, en el segundo curso de la lista | Abre en **Children 3 · 3° Trimestre**. El código anterior abría en el primero de la lista: Children 2 · 1° Trimestre |
+| Celular, 375 × 812 | El boletín empieza a los **307 px**, dentro de la primera pantalla. Antes empezaba a los **2.065 px** —dos pantallas y media más abajo—, medido con los mismos bloques que ahora le quedan debajo |
+
+El informe de prueba se creó para esos dos casos y se borró después: 19 informes en la base y 2 del
+alumno, antes y después. Sin errores en la consola ni en el servidor.
+
+**Lo que quedó sin ejercitar.** La casilla de firma no se vio, porque la tutora de prueba no es
+firmante: dentro del boletín queda donde estaba, así que sube lo mismo que el boletín, 1.758 px en el
+celular. Tampoco se vio la tutora con hijos sin informes —donde el visor no dibuja nada y la página
+arranca por el curso, como antes—, ni el Hub del alumno, que recibe el cambio de período por
+compartir el visor. **Falta stage**, que tiene los datos reales que la base local no: 113 informes del
+2° trimestre, firmantes pendientes y 3 alumnos con informes en dos cursos.
+
+> **Encontrado en esta prueba, y no es de esta ficha:** el pie del boletín dice **«Publicado: 20 de
+> August, 2026»**. Es el mismo defecto que [BUG-09](#bug-09), con la causa que esa ficha no tenía.
 
 ---
 
