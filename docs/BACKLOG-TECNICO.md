@@ -9535,6 +9535,23 @@ adicionales de un punto gramatical, o un texto de lectura. Cada una tiene una fo
 eso" no es una funcionalidad, es cinco. Conviene que la profesora diga cuáles pide de verdad y con
 qué frecuencia, antes de decidir qué genera el sistema.
 
+**Lo que definió el usuario (2026-09-26).** Una **página de recursos para el docente**, donde el
+material de práctica que ya arma la IA ([PED-01](#ped-01)) es un recurso más. Lo nuevo es un
+generador de actividades para la clase:
+
+- contenido listo para **apps de terceros**, como trivias para Kahoot;
+- **buscar palabras** de la clase en una canción o en fragmentos de películas;
+- unas **ocho herramientas** en total, de las que por ahora se nombraron esas;
+- el docente elige el **objetivo** de la actividad —pronunciación, gramática— y otros detalles que
+  lo ayudan a armar la clase.
+
+Las dos preguntas de abajo siguen abiertas, y se suma una: **las canciones y las películas no pueden
+salir de la IA sola.** Buscar una palabra en la letra de un tema o en una escena necesita una fuente
+—letras, subtítulos— con sus propios términos de uso y derechos de autor, y un modelo que las
+recite de memoria inventa o copia. Hay que decidir de dónde sale ese contenido antes de prometer la
+herramienta. En el rediseño de la landing se anuncia como "próximamente", dentro del módulo
+pedagógico.
+
 **Dos preguntas que cambian el diseño por completo:**
 
 1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
