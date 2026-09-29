@@ -30,6 +30,38 @@
   --color-border: var(--c-border);
   --color-input: var(--c-input);
   --color-ring: var(--c-ring);
+
+  /* Dirección Cálida: la landing, y más adelante el rediseño del campus. */
+  --color-lc-cream: #fff6ea;
+  --color-lc-ink: #1f1a3d;
+  --color-lc-violet: #4b3ef0;
+  --color-lc-violet-deep: #3b2fc9;
+  --color-lc-violet-soft: #ece9ff;
+  --color-lc-violet-light: #8b82ff;
+  --color-lc-coral: #ff6b4a;
+  --color-lc-coral-deep: #c2410c;
+  --color-lc-coral-soft: #ffe6dc;
+  --color-lc-peach: #ffd8c4;
+  --color-lc-yellow: #ffc53d;
+  --color-lc-yellow-deep: #8a5a00;
+  --color-lc-yellow-soft: #fff1c9;
+  --color-lc-green: #2db88a;
+  --color-lc-green-deep: #16704f;
+  --color-lc-green-soft: #d8f3e8;
+  --color-lc-sky-deep: #1d5fbf;
+  --color-lc-sky-soft: #dcebff;
+  --color-lc-text: #5e5873;
+  --color-lc-subtle: #6e6884;
+  --color-lc-body: #3a3350;
+  --color-lc-lavender: #cfc9e6;
+  --color-lc-mist: #a9a2c8;
+}
+
+/* Las fuentes de la dirección Cálida llegan como variables de next/font desde la
+   landing: `inline` hace que la utilidad lea la variable donde se usa y no en :root. */
+@theme inline {
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
