@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { LogoMark } from "./LogoMark";
+import { FOUNDER_PER_STUDENT, money } from "./prices";
 import { Seal } from "./Seal";
 import { Section, Sparkle, Underlined } from "./ui";
 
 // Programa de fundadores: cinco lugares, Modern English School es el Nº 01. El fundador
-// paga la mitad de la lista y lo pierde si se da de baja (decidido el 27/09/2026).
+// paga el mismo precio por alumno en cualquier tramo, por los cuatro módulos y los que
+// vengan (FOUNDER_PER_STUDENT en `prices.ts`, decidido el 29/09/2026), y lo pierde si
+// se da de baja.
 
 export function Founders() {
   return (
@@ -31,12 +34,11 @@ export function Founders() {
           <FoundersSealMobile />
 
           <div className="flex flex-col gap-3">
-            <Benefit number="1" title="Los cuatro módulos, a mitad de precio">
-              $&nbsp;1.300 por alumno que cursa, en lugar de $&nbsp;2.600.
+            <Benefit number="1" title="Los cuatro módulos, a precio de fundador">
+              {money(FOUNDER_PER_STUDENT)} por alumno que cursa, por mes.
             </Benefit>
-            <Benefit number="2" title="La mitad, siempre">
-              Si los precios se actualizan, el tuyo sigue siendo la mitad. Vale mientras sigas con nosotros: si te das de
-              baja, se pierde aunque vuelvas.
+            <Benefit number="2" title="Tu lugar, mientras sigas">
+              El precio de fundador vale mientras sigas con nosotros: si te das de baja, se pierde aunque vuelvas.
             </Benefit>
             <Benefit number="3" title="Los módulos que vengan, incluidos">
               El próximo: capacitación en IA para institutos de idiomas.

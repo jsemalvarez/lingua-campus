@@ -10,8 +10,7 @@ const QUESTIONS = [
   },
   {
     q: "¿Cuánto cuesta?",
-    // Espacio duro después del «$», para que no quede solo al final de un renglón.
-    a: "Cada módulo cuesta $ 800 por alumno que cursa, por mes, más una cuota base de $ 30.000. Con dos módulos, $ 1.400 por alumno; con los cuatro, $ 2.600 y sin cuota base.",
+    a: "Se contrata desde dos módulos y se paga por alumno que cursa, por mes. El precio por alumno depende de cuántos alumnos cursan; los valores de cada tramo están en Precios. Para más de 500 alumnos, armamos un presupuesto a medida.",
   },
   {
     q: "¿La IA reemplaza al docente?",

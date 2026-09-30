@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { FOUNDER_PER_STUDENT, MAX_STUDENTS, MIN_MODULES, monthlyPrice, money } from "./prices";
 
-// Calculadora de la sección Precios. Precio por alumno que cursa, según cuántos módulos
-// se elijan; la cuota base se bonifica con los cuatro. El fundador paga la mitad de la
-// lista de los cuatro módulos (ver la memoria de precios y fundadores).
+// Calculadora de la sección Precios. Las reglas (tramos, mínimo de dos módulos, tope del
+// tramo y precio de fundador) están en `prices.ts`.
 
 const MODULES = [
   { id: "ped", name: "Pedagógico", on: "border-lc-coral-deep bg-lc-coral-soft text-lc-coral-deep" },
@@ -16,14 +16,8 @@ const MODULES = [
 
 type ModuleId = (typeof MODULES)[number]["id"];
 
-const PER_STUDENT = [0, 800, 1400, 2200, 2600];
-const BASE_FEE = 30000;
-
-// Espacio duro después del «$», para que no quede solo al final de un renglón.
-const money = (value: number) => `$ ${value.toLocaleString("es-AR")}`;
-
 export function PricingCalculator() {
-  const [students, setStudents] = useState(150);
+  const [students, setStudents] = useState(100);
   const [selected, setSelected] = useState<Record<ModuleId, boolean>>({
     ped: true,
     ges: true,
@@ -32,10 +26,9 @@ export function PricingCalculator() {
   });
 
   const count = MODULES.filter((module) => selected[module.id]).length;
-  const perStudent = PER_STUDENT[count];
-  const baseFee = count > 0 && count < 4 ? BASE_FEE : 0;
-  const total = perStudent * students + baseFee;
-  const allFour = PER_STUDENT[4];
+  const enough = count >= MIN_MODULES;
+  const price = monthlyPrice(students, count);
+  const allFour = monthlyPrice(students, 4);
 
   return (
     <div className="flex flex-col gap-[22px] rounded-[28px] bg-white px-5 py-[22px] text-lc-ink lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-9 lg:rounded-[32px] lg:px-9 lg:py-8">
@@ -45,7 +38,7 @@ export function PricingCalculator() {
             Calculá cuánto pagarías
           </h3>
           <p className="m-0 text-[14.5px] leading-normal text-lc-subtle lg:text-[15px]">
-            Por alumno: un módulo $&nbsp;800, dos módulos $&nbsp;1.400, y los cuatro $&nbsp;2.600 sin cuota base.
+            Desde dos módulos. El precio por alumno depende de cuántos alumnos cursan.
           </p>
         </div>
 
@@ -90,7 +83,7 @@ export function PricingCalculator() {
             id="lc-alumnos"
             type="range"
             min={10}
-            max={500}
+            max={MAX_STUDENTS}
             step={5}
             value={students}
             onChange={(event) => setStudents(Number(event.target.value))}
@@ -110,29 +103,29 @@ export function PricingCalculator() {
       >
         <span className="text-[14px] font-bold text-lc-subtle">Pagarías por mes</span>
         <span className="font-display text-[46px] font-extrabold leading-none tracking-[-0.035em] text-lc-ink lg:text-[54px]">
-          {money(total)}
+          {enough ? money(price.total) : "—"}
         </span>
-        <div className="flex flex-col gap-[5px] text-[14px] text-lc-body lg:text-[14.5px]">
-          <span>
-            {count === 1 ? "1 módulo" : `${count} módulos`}: {money(perStudent)} × {students} alumnos
-          </span>
-          <span>Cuota base: {count === 0 ? "—" : baseFee ? money(baseFee) : "bonificada"}</span>
-        </div>
-        {count > 0 && count < 4 && (
-          <span className="rounded-[14px] bg-lc-violet-soft px-3 py-[9px] text-[13.5px] font-semibold leading-[1.45] text-lc-violet-deep lg:text-[14px]">
-            Con los cuatro módulos: {money(allFour * students)} por mes, sin cuota base.
+        {enough ? (
+          <div className="flex flex-col gap-[5px] text-[14px] text-lc-body lg:text-[14.5px]">
+            <span>
+              {count} módulos: {money(price.perStudent)} × {students} alumnos
+            </span>
+            {price.cap !== null && <span>Tope del tramo: {money(price.cap)}</span>}
+          </div>
+        ) : (
+          <span className="text-[13.5px] font-semibold leading-[1.45] text-lc-coral-deep lg:text-[14px]">
+            Elegí al menos dos módulos.
           </span>
         )}
-        {count === 0 && (
-          <span className="text-[13.5px] font-semibold leading-[1.45] text-lc-coral-deep lg:text-[14px]">
-            Elegí al menos un módulo.
+        {enough && count < 4 && (
+          <span className="rounded-[14px] bg-lc-violet-soft px-3 py-[9px] text-[13.5px] font-semibold leading-[1.45] text-lc-violet-deep lg:text-[14px]">
+            Con los cuatro módulos: {money(allFour.total)} por mes.
           </span>
         )}
         <div className="mt-1 flex flex-col items-start gap-[7px] border-t-[1.5px] border-dashed border-[#e8dcc8] pt-3 lg:mt-auto lg:flex-row lg:items-center lg:gap-2.5">
           <span className="rounded-full bg-lc-yellow px-2.5 py-1 text-[12px] font-extrabold text-lc-ink">Fundador</span>
           <span className="text-[14px] leading-[1.45] text-lc-body lg:text-[14.5px]">
-            Los cuatro a mitad de precio: <strong className="text-lc-ink">{money((allFour / 2) * students)}</strong> por
-            mes
+            Los cuatro módulos: <strong className="text-lc-ink">{money(FOUNDER_PER_STUDENT * students)}</strong> por mes
           </span>
         </div>
       </div>

@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { ArrowRight, Globe, GraduationCap, Layers, Smartphone, Sparkles, Wallet } from "lucide-react";
 import { PricingCalculator } from "./PricingCalculator";
+import { TIERS, money, perStudent } from "./prices";
 import { Section, Underlined } from "./ui";
 
-// Precios: por módulo y por alumno que cursa. La cuota base se bonifica con los cuatro.
+// Precios: desde dos módulos, por alumno que cursa, con un precio por alumno según el
+// tramo. Sin cuota base: la base del campus va con cualquier plan. Reglas en `prices.ts`.
 
 export function Pricing() {
   return (
@@ -20,8 +22,8 @@ export function Pricing() {
             Elegí tus módulos y pagá por alumno que <Underlined>cursa.</Underlined>
           </h2>
           <p className="m-0 max-w-[740px] text-pretty text-[16.5px] leading-[1.55] text-lc-lavender lg:text-[19px] lg:leading-[1.6]">
-            Cada módulo tiene su precio por alumno inscripto en un curso activo, por mes. Con dos pagás menos, y con los
-            cuatro, además, no hay cuota base.
+            Desde dos módulos, con un precio por alumno inscripto en un curso activo, por mes, según cuántos alumnos
+            cursan.
           </p>
         </header>
 
@@ -40,11 +42,8 @@ export function Pricing() {
             </span>
           </div>
           <div className="flex flex-col items-start gap-2 border-t-[1.5px] border-dashed border-white/[0.18] pt-3.5 lg:shrink-0 lg:items-end lg:gap-1.5 lg:border-t-0 lg:pt-0">
-            <span className="font-display text-[26px] font-extrabold tracking-[-0.02em] lg:text-[28px]">
-              $&nbsp;30.000 <span className="font-body text-[14.5px] font-medium text-lc-lavender lg:text-[15px]">por mes</span>
-            </span>
             <span className="rounded-full bg-lc-yellow-soft px-[11px] py-1 text-[12.5px] font-extrabold text-lc-yellow-deep">
-              Con los cuatro módulos, no la pagás
+              Incluida en todos los planes
             </span>
           </div>
         </div>
@@ -86,6 +85,8 @@ export function Pricing() {
           </ModuleCard>
         </div>
 
+        <PriceTable />
+
         <PricingCalculator />
 
         <div className="flex flex-col gap-4 rounded-[24px] bg-white/[0.06] p-5 lg:flex-row lg:items-center lg:gap-[18px] lg:px-[26px] lg:py-5">
@@ -116,8 +117,8 @@ export function Pricing() {
         </div>
 
         <p className="m-0 mt-1 text-center text-[13px] leading-normal text-lc-mist lg:text-[13.5px]">
-          Precios en pesos argentinos, por mes. Se cuenta cada alumno inscripto en un curso activo. [Final o + IVA: A
-          DEFINIR]
+          Precios en pesos argentinos, por mes. Se cuenta cada alumno inscripto en un curso activo. Cerca del final de
+          un tramo, nunca se paga más que con el primer alumno del tramo siguiente. [Final o + IVA: A DEFINIR]
         </p>
       </div>
     </Section>
@@ -164,10 +165,57 @@ function ModuleCard({
         {name}
       </h3>
       <div className="flex flex-col gap-2 text-[14.5px] leading-[1.4] text-lc-body lg:gap-[9px]">{children}</div>
-      <div className="flex items-baseline gap-2 border-t-[1.5px] border-dashed border-[#ece6dc] pt-3 lg:mt-auto lg:flex-col lg:items-start lg:gap-0.5 lg:pt-3.5">
-        <span className="font-display text-[24px] font-extrabold tracking-[-0.02em] lg:text-[28px]">$&nbsp;800</span>
-        <span className="text-[13px] text-lc-subtle">por alumno que cursa, por mes</span>
-      </div>
+    </div>
+  );
+}
+
+const MODULE_COUNTS = [2, 3, 4] as const;
+
+function PriceTable() {
+  return (
+    <div className="rounded-[24px] bg-white px-4 pb-2 pt-[22px] text-lc-ink lg:rounded-[28px] lg:px-8 lg:pb-3 lg:pt-7">
+      <table className="w-full border-collapse">
+        <caption className="mb-3 px-1 text-left font-display text-[22px] font-extrabold tracking-[-0.02em] lg:mb-4 lg:px-0 lg:text-[25px]">
+          Precio por alumno, por mes
+        </caption>
+        <thead>
+          <tr className="text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-lc-subtle lg:text-[12.5px] lg:tracking-[0.08em]">
+            <th scope="col" className="px-1 pb-2.5 text-left font-extrabold lg:px-0">
+              Alumnos
+            </th>
+            {MODULE_COUNTS.map((count) => (
+              <th key={count} scope="col" className="px-1 pb-2.5 text-right font-extrabold lg:px-0">
+                {count} módulos
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {TIERS.map((tier) => (
+            <tr key={tier.upTo} className="border-t-[1.5px] border-dashed border-[#ece6dc]">
+              <th scope="row" className="px-1 py-3 text-left text-[14.5px] font-bold lg:px-0 lg:py-3.5 lg:text-[16px]">
+                {tier.label}
+              </th>
+              {MODULE_COUNTS.map((count) => (
+                <td
+                  key={count}
+                  className="whitespace-nowrap px-1 py-3 text-right font-display text-[16px] font-extrabold tracking-[-0.01em] lg:px-0 lg:py-3.5 lg:text-[20px]"
+                >
+                  {money(perStudent(tier, count))}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr className="border-t-[1.5px] border-dashed border-[#ece6dc]">
+            <th scope="row" className="px-1 py-3 text-left text-[14.5px] font-bold lg:px-0 lg:py-3.5 lg:text-[16px]">
+              Más de 500
+            </th>
+            <td colSpan={3} className="px-1 py-3 text-right text-[14.5px] text-lc-body lg:px-0 lg:py-3.5 lg:text-[15.5px]">
+              Presupuesto a medida
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
