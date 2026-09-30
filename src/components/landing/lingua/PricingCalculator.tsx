@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
-import { FOUNDER_PER_STUDENT, MAX_STUDENTS, MIN_MODULES, monthlyPrice, money } from "./prices";
+import { MAX_STUDENTS, MIN_MODULES, monthlyPrice, money } from "./prices";
 
-// Calculadora de la sección Precios. Las reglas (tramos, mínimo de dos módulos, tope del
-// tramo y precio de fundador) están en `prices.ts`.
+// Calculadora de la sección Precios. Las reglas (tramos, mínimo de dos módulos y tope del
+// tramo) están en `prices.ts`. No muestra el precio de fundador al lado: la comparación
+// la hace el visitante, no la página.
 
 const MODULES = [
   { id: "ped", name: "Pedagógico", on: "border-lc-coral-deep bg-lc-coral-soft text-lc-coral-deep" },
@@ -122,12 +123,6 @@ export function PricingCalculator() {
             Con los cuatro módulos: {money(allFour.total)} por mes.
           </span>
         )}
-        <div className="mt-1 flex flex-col items-start gap-[7px] border-t-[1.5px] border-dashed border-[#e8dcc8] pt-3 lg:mt-auto lg:flex-row lg:items-center lg:gap-2.5">
-          <span className="rounded-full bg-lc-yellow px-2.5 py-1 text-[12px] font-extrabold text-lc-ink">Fundador</span>
-          <span className="text-[14px] leading-[1.45] text-lc-body lg:text-[14.5px]">
-            Los cuatro módulos: <strong className="text-lc-ink">{money(FOUNDER_PER_STUDENT * students)}</strong> por mes
-          </span>
-        </div>
       </div>
     </div>
   );
