@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowRight, Globe, GraduationCap, Layers, Smartphone, Sparkles, Wallet } from "lucide-react";
 import { PricingCalculator } from "./PricingCalculator";
-import { TIERS, money, perStudent } from "./prices";
+import { TIERS, money, type Tier } from "./prices";
 import { Section, Underlined } from "./ui";
 
 // Precios: desde dos módulos, por alumno que cursa, con un precio por alumno según el
@@ -169,7 +169,12 @@ function ModuleCard({
   );
 }
 
-const MODULE_COUNTS = [2, 3, 4] as const;
+// Tres módulos no tiene precio propio (es el de dos más uno), así que no va en la tabla.
+const COLUMNS: { label: string; price: (tier: Tier) => number }[] = [
+  { label: "Por módulo", price: (tier) => tier.perModule },
+  { label: "2 módulos", price: (tier) => tier.two },
+  { label: "4 módulos", price: (tier) => tier.four },
+];
 
 function PriceTable() {
   return (
@@ -183,9 +188,9 @@ function PriceTable() {
             <th scope="col" className="px-1 pb-2.5 text-left font-extrabold lg:px-0">
               Alumnos
             </th>
-            {MODULE_COUNTS.map((count) => (
-              <th key={count} scope="col" className="px-1 pb-2.5 text-right font-extrabold lg:px-0">
-                {count} módulos
+            {COLUMNS.map((column) => (
+              <th key={column.label} scope="col" className="px-1 pb-2.5 text-right font-extrabold lg:px-0">
+                {column.label}
               </th>
             ))}
           </tr>
@@ -196,12 +201,12 @@ function PriceTable() {
               <th scope="row" className="px-1 py-3 text-left text-[14.5px] font-bold lg:px-0 lg:py-3.5 lg:text-[16px]">
                 {tier.label}
               </th>
-              {MODULE_COUNTS.map((count) => (
+              {COLUMNS.map((column) => (
                 <td
-                  key={count}
+                  key={column.label}
                   className="whitespace-nowrap px-1 py-3 text-right font-display text-[16px] font-extrabold tracking-[-0.01em] lg:px-0 lg:py-3.5 lg:text-[20px]"
                 >
-                  {money(perStudent(tier, count))}
+                  {money(column.price(tier))}
                 </td>
               ))}
             </tr>

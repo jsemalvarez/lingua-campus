@@ -17,7 +17,7 @@ export const TIERS = [
 // Desde acá, presupuesto a medida.
 export const MAX_STUDENTS = TIERS[TIERS.length - 1].upTo;
 
-type Tier = (typeof TIERS)[number];
+export type Tier = (typeof TIERS)[number];
 
 export function perStudent(tier: Tier, modules: number): number {
   if (modules === 2) return tier.two;
