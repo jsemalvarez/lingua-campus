@@ -37,8 +37,8 @@ export function Founders() {
             <Benefit number="1" title="Los cuatro módulos, a precio de fundador">
               {money(FOUNDER_PER_STUDENT)} por alumno que cursa, por mes.
             </Benefit>
-            <Benefit number="2" title="Tu lugar, mientras sigas">
-              El precio de fundador vale mientras sigas con nosotros: si te das de baja, se pierde aunque vuelvas.
+            <Benefit number="2" title="Beneficio fundador sin limite de tiempo">
+              El precio de fundador es valido mientras no te des de baja.
             </Benefit>
             <Benefit number="3" title="Los módulos que vengan, incluidos">
               El próximo: capacitación en IA para institutos de idiomas.
