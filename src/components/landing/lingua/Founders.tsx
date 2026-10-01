@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
+import { FOUNDER_SPOTS, FREE_SPOTS, NEXT_FREE_SPOT, spotNumber } from "./founderSpots";
 import { LogoMark } from "./LogoMark";
 import { FOUNDER_PER_STUDENT, money } from "./prices";
 import { Seal } from "./Seal";
@@ -8,7 +9,8 @@ import { Section, Sparkle, Underlined } from "./ui";
 // Programa de fundadores: cinco lugares, Modern English School es el Nº 01. El fundador
 // paga el mismo precio por alumno en cualquier tramo, por los cuatro módulos y los que
 // vengan (FOUNDER_PER_STUDENT en `prices.ts`, decidido el 29/09/2026), y lo pierde si
-// se da de baja.
+// se da de baja. El sello invita al primer lugar libre y el contador sale de la misma
+// lista (`founderSpots.ts`).
 
 export function Founders() {
   return (
@@ -37,8 +39,8 @@ export function Founders() {
             <Benefit number="1" title="Los cuatro módulos, a precio de fundador">
               {money(FOUNDER_PER_STUDENT)} por alumno que cursa, por mes.
             </Benefit>
-            <Benefit number="2" title="Beneficio fundador sin limite de tiempo">
-              El precio de fundador es valido mientras no te des de baja.
+            <Benefit number="2" title="Beneficio fundador sin límite de tiempo">
+              El precio de fundador es válido mientras no te des de baja.
             </Benefit>
             <Benefit number="3" title="Los módulos que vengan, incluidos">
               El próximo: capacitación en IA para institutos de idiomas.
@@ -62,7 +64,9 @@ export function Founders() {
             </a>
             <span className="whitespace-nowrap text-[15.5px] font-bold text-white lg:text-[16px]">
               Quedan{" "}
-              <span className="rounded-full bg-lc-yellow px-2.5 py-[3px] text-lc-ink lg:px-[11px]">4 de 5</span>{" "}
+              <span className="rounded-full bg-lc-yellow px-2.5 py-[3px] text-lc-ink lg:px-[11px]">
+                {FREE_SPOTS} de {FOUNDER_SPOTS.length}
+              </span>{" "}
               lugares
             </span>
           </div>
@@ -99,7 +103,7 @@ function SealNumber({ size }: { size: "xl" | "lg" }) {
       <span
         className={`font-display font-extrabold leading-[0.9] tracking-[-0.05em] ${big ? "text-[100px]" : "text-[68px]"}`}
       >
-        02
+        {spotNumber(NEXT_FREE_SPOT)}
       </span>
       <span className={`font-bold ${big ? "text-[14px]" : "text-[12px]"}`}>puede ser el tuyo</span>
     </Seal>

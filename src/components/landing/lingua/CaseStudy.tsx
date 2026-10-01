@@ -1,10 +1,12 @@
 import Image from "next/image";
 import { LogoMark } from "./LogoMark";
+import { ReservedSpot } from "./ReservedSpot";
 import { Seal } from "./Seal";
 import { MES_LOGO_URL, Section, Tag } from "./ui";
 
 // El caso de Modern English School, fundador Nº 01. Patricia está de acuerdo con que se
 // la muestre como cliente fundador. Los números salen de producción y llevan su fecha.
+// Debajo va el lugar de fundador reservado (`ReservedSpot`), si hay uno.
 
 const STATS = [
   { value: "205", label: "alumnos cursando", className: "bg-lc-violet-soft", number: "text-lc-violet-deep" },
@@ -120,6 +122,8 @@ export function CaseStudy() {
         <p className="m-0 -mt-2 text-[13px] leading-normal text-lc-subtle lg:-mt-7 lg:text-[13.5px]">
           Datos de Lingua Campus al 27 de septiembre de 2026.
         </p>
+
+        <ReservedSpot />
       </div>
     </Section>
   );
