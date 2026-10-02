@@ -8658,9 +8658,9 @@ que confirmar en stage cuál de los dos caminos se toma hoy **(sin verificar en 
 | Archivo | Línea | Entidad |
 |---|---|---|
 | [`students/[id]/actions.ts`](../src/app/students/[id]/actions.ts) | 264-268 | Alumno + asistencias + notas + inscripciones + cuotas |
-| [`courses/actions.ts`](../src/app/courses/actions.ts) | 85 | Curso |
-| [`courses/actions.ts`](../src/app/courses/actions.ts) | 145 | Horario |
-| [`courses/actions.ts`](../src/app/courses/actions.ts) | 251 | Inscripción |
+| [`courses/actions.ts`](../src/app/courses/actions.ts) | 68 | Curso — se lleva los boletines, ver [abajo](#arq-05-curso) |
+| [`courses/actions.ts`](../src/app/courses/actions.ts) | 128 | Horario |
+| [`courses/actions.ts`](../src/app/courses/actions.ts) | 266-267 | Inscripción + sus cuotas |
 | [`courses/[id]/lessons/actions.ts`](../src/app/courses/[id]/lessons/actions.ts) | 175, 213 | Práctica y clase — ver [BUG-02](#bug-02) / [BUG-03](#bug-03) |
 | [`enrollments/actions.ts`](../src/app/enrollments/actions.ts) | 202 | Cuota |
 | [`payments/billingActions.ts`](../src/app/payments/billingActions.ts) | 248 | Cuota |
@@ -8689,6 +8689,40 @@ que confirmar en stage cuál de los dos caminos se toma hoy **(sin verificar en 
 **Nota sobre alcance.** Es un cambio transversal y no debería hacerse de una sola vez. Sugerencia de
 orden: primero alumno y clase (los de mayor impacto y los que motivaron la decisión), después cursos
 e inscripciones, y por último catálogos (aulas, niveles) e informes.
+
+<a id="arq-05-curso"></a>
+### El curso borrado se lleva los boletines firmados — 2026-10-02
+
+Salió armando la sección de soporte de la landing: «se borró un curso» parecía una urgencia que se
+podía atender un fin de semana, y no se puede. `deleteCourseAction`
+([`courses/actions.ts:68`](../src/app/courses/actions.ts)) hace `prisma.course.delete`, y lo que pasa
+depende de las claves foráneas. Esto está leído de las migraciones **(sin verificar en runtime)**:
+
+| Lo que cuelga del curso | Al borrar el curso |
+|---|---|
+| Inscripciones, horarios y clases | `RESTRICT`: el borrado falla |
+| Hilos de mensajes | `SET NULL`: el hilo queda sin curso |
+| Boletines del curso (`StudentReport`), y con ellos sus notas, firmantes y firmas | `CASCADE`: se borran |
+| Plantillas asignadas (`CourseReportTemplate`) y firmas por lote (`ReportBatchSignature`) | `CASCADE`: se borran |
+
+Un curso en uso no se puede borrar, y eso protege. El problema es el camino que sí deja borrar:
+sacar a los alumnos con `removeStudentFromCourseAction` (línea 266-267: borra la inscripción y sus
+cuotas) y los horarios con `removeCourseScheduleAction` (línea 128) **no toca los boletines**. Si el
+curso además no tiene clases cargadas —lo común mientras las docentes no cargan las clases—, después
+de eso el borrado pasa y se lleva los boletines publicados, **con las firmas de las familias**. No
+hay forma de recuperarlos más que desde un backup.
+
+Además, el mensaje de error dice «Revisa que no tenga alumnos inscriptos» también cuando lo que
+frena son los horarios o las clases.
+
+**Sugerencia.** Adelantar el curso en el orden de este ítem, junto con alumno y clase: lo que arrastra
+son documentos firmados.
+
+**Criterio de aceptación de esta parte.**
+
+- Borrar un curso lo marca como borrado y no toca boletines, firmas ni firmas por lote.
+- Sacar a un alumno de un curso no borra su inscripción ni sus cuotas (va con el resto de la tabla).
+- Si algo impide borrar, el mensaje dice qué.
 
 ---
 
