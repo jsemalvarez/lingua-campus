@@ -1,0 +1,53 @@
+/* Landing de Lingua Campus (dirección Cálida). */
+
+@keyframes lc-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes lc-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-10px) rotate(-4deg); }
+}
+
+@keyframes lc-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.lc-rise { animation: lc-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.lc-float { animation: lc-float 6s ease-in-out infinite; }
+.lc-spin { animation: lc-spin 36s linear infinite; transform-origin: 50% 50%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-rise, .lc-float, .lc-spin { animation: none; }
+}
+
+/* El body del campus cambia de color con el modo oscuro y, en el celular, reserva
+   lugar abajo para la barra de navegación. La landing no tiene ninguna de las dos. */
+body:has(.lc-landing) {
+  background-color: #fff6ea;
+}
+
+@media (max-width: 767px) {
+  body:has(.lc-landing) {
+    padding-bottom: 0;
+  }
+}
+
+.lc-landing :focus-visible {
+  outline-color: #4b3ef0;
+}
+
+/* Las secciones recortan los adornos que se salen del borde. Con `overflow: hidden` la
+   sección queda como contenedor con scroll y el foco la puede correr de costado; `clip`
+   recorta igual sin scroll. `hidden` queda para los navegadores que no conocen `clip`. */
+.lc-clip {
+  overflow: hidden;
+}
+
+@supports (overflow: clip) {
+  .lc-clip {
+    overflow: clip;
+  }
+}

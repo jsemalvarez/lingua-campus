@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useResourcesIsNew } from "@/lib/resourcesSeen";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle, Brain, Mail, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, DollarSign, Clock, BookOpen, LogOut, LogIn, UserCircle, Settings, HelpCircle, Brain, Mail, ClipboardList, Shapes } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTenant } from "@/components/providers/TenantProvider";
 import Image from "next/image";
@@ -70,6 +71,7 @@ export function Navbar({
         { href: "/students", label: "Estudiantes", icon: Users, roles: ["ADMIN", "SECRETARY", "TEACHER", "SUPERADMIN"] },
         { href: "/courses", label: "Cursos", icon: BookOpen, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
         { href: "/schedule", label: "Calendario", icon: Clock, roles: ["ADMIN", "TEACHER", "SECRETARY", "SUPERADMIN"] },
+        { href: "/resources", label: "Recursos", icon: Shapes, roles: ["TEACHER"] },
         { href: "/guardian/academics", label: "Progreso", icon: GraduationCap, roles: ["GUARDIAN"] },
         { href: "/guardian/payments", label: "Administración", icon: DollarSign, roles: ["GUARDIAN"] },
         { href: "/payments", label: "Finanzas", icon: DollarSign, roles: ["ADMIN", "SECRETARY", "SUPERADMIN"] },
@@ -79,6 +81,9 @@ export function Navbar({
 
     // Mobile bottom tab uses the same links as desktop (no /messages — it's in the top bar)
     const allNavLinksMobile = [...allNavLinks];
+
+    // Punto de «nuevo» sobre Recursos hasta que el docente abre la página en este dispositivo.
+    const resourcesIsNew = useResourcesIsNew();
 
     // Calcular edad si es estudiante
     let isMinor = true;
@@ -228,6 +233,7 @@ export function Navbar({
                                         />
                                     );
                                 }
+                                const showNewDot = href === "/resources" && resourcesIsNew && !isActive;
                                 return (
                                     <Link
                                         key={href}
@@ -239,12 +245,16 @@ export function Navbar({
                                         )}
                                     >
                                         <div className={cn(
-                                            "flex flex-col items-center justify-center w-12 h-10 rounded-xl transition-all",
+                                            "relative flex flex-col items-center justify-center w-12 h-10 rounded-xl transition-all",
                                             isActive && "bg-primary/5"
                                         )}>
                                             <Icon size={20} />
+                                            {showNewDot && (
+                                                <span className="absolute top-1.5 right-2.5 size-2 rounded-full bg-orange-500 ring-2 ring-background" />
+                                            )}
                                         </div>
                                         <span className="text-[10px] hidden md:block mt-1 font-medium px-1 text-center leading-tight">{label}</span>
+                                        {showNewDot && <span className="sr-only">Nuevo</span>}
                                     </Link>
                                 );
                             })}

@@ -36,8 +36,10 @@ export async function generateMetadata({
   }
 
   return {
-    title: "Lingua Campus — Gestión Administrativa",
-    description: "Plataforma de multi-tenant gestión para institutos de idiomas.",
+    // `absolute`: el título ya lleva la marca y no tiene que pasar por la plantilla del layout.
+    title: { absolute: "Lingua Campus · Práctica con IA y gestión para institutos de inglés" },
+    description:
+      "Con el tema de cada clase, la IA arma la práctica de tus alumnos, y la administración del instituto está en el mismo sistema: cuotas, asistencia, boletines y el portal de las familias.",
   };
 }
 
