@@ -8,6 +8,7 @@ import { YourBrand } from "./lingua/YourBrand";
 import { CaseStudy } from "./lingua/CaseStudy";
 import { Founders } from "./lingua/Founders";
 import { Pricing } from "./lingua/Pricing";
+import { Onboarding } from "./lingua/Onboarding";
 import { Faq } from "./lingua/Faq";
 import { Contact } from "./lingua/Contact";
 import { Footer } from "./lingua/Footer";
@@ -28,6 +29,7 @@ export default function LinguaCampusLanding() {
         <CaseStudy />
         <Founders />
         <Pricing />
+        <Onboarding />
         <Faq />
         <Contact />
       </main>
