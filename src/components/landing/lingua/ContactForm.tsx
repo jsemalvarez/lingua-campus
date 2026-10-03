@@ -2,12 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
-import { CONTACT_EMAIL } from "./ui";
 
 // Formulario de Contacto: la alternativa a WhatsApp. Lo manda FormSubmit al correo del
-// proyecto; la primera vez, FormSubmit pide activar ese correo con un mail de confirmación.
+// proyecto. En lugar del correo va el alias que FormSubmit dio al activarlo, así la
+// dirección no queda a la vista en el pedido.
 
-const ENDPOINT = `https://formsubmit.co/ajax/${CONTACT_EMAIL}`;
+const ENDPOINT = "https://formsubmit.co/ajax/19f014da3abd7885fa79883150d78527";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
