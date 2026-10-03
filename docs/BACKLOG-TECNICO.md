@@ -9586,12 +9586,54 @@ recite de memoria inventa o copia. Hay que decidir de dónde sale ese contenido 
 herramienta. En el rediseño de la landing se anuncia como "próximamente", dentro del módulo
 pedagógico.
 
+**El pedido, en las palabras del usuario (2026-10-03):** que los docentes puedan **armar la clase**
+con los recursos de la página de recursos, en función del tema.
+
+**La referencia: Langboost App (relevada el 2026-10-03).** [langboost.app](https://langboost.app)
+arma la clase en tres pasos: el tema con idioma, nivel, duración y foco; un paso de **vocabulario
+sugerido para tildar** (diez palabras según el tema, que el docente destilda o completa); y una
+revisión. Devuelve objetivos ("vas a poder…"), **cuatro momentos —inicio, actividad principal,
+cierre, tarea— con tres ideas cada uno para elegir una**, y una biblioteca: palabras con traducción y
+ejemplo, frases, notas de gramática, preguntas para conversar y un texto corto con preguntas. Cada
+idea dice herramienta y minutos, y despliega el contenido listo para pegar en esa herramienta: las
+preguntas de Kahoot con la correcta marcada, las tarjetas de Quizlet, la consigna de Padlet. Una idea
+de la actividad principal es siempre **"tu material de siempre"** —el libro—, con un consejo para
+engancharlo al tema. Usa las mismas herramientas que la página de recursos, que salieron de un video
+suyo.
+
+Lo que se toma: los momentos con ideas a elegir, el contenido listo por herramienta, el vocabulario
+confirmado antes de generar como fuente de todo lo demás, la idea del libro y la entrada por foco
+—que es el "objetivo" de la actividad que pidió el usuario el 2026-09-26—.
+
+Lo que se hace distinto, porque es donde el campus ya sabe más que Langboost:
+
+- **Grupos, no un alumno.** Langboost está pensado para clases particulares ("contale al alumno").
+  En el instituto son grupos, hay chicos de 6 a 8 sin email y Kahoot gratis llega a 10 jugadores:
+  las ideas tienen que saberlo, y la página de recursos ya tiene, por herramienta, si los alumnos
+  necesitan cuenta.
+- **Nada se carga a mano.** La clase ya tiene tema (`Lesson.topic`, que nace como "Clase
+  Programada" desde el horario), el curso tiene nivel (`Course.level`) y el horario dice cuánto dura
+  (`Schedule.startTime`/`endTime`). Langboost pone minutos en cada idea pero no los suma; acá se
+  pueden sumar contra la duración real.
+- **Abrir con el contenido puesto.** Su "Abrir" lleva a la portada de la herramienta y el contenido
+  se pega a mano, en formatos que la herramienta no importa (a Quizlet le da una lista vertical).
+  YouGlish y PlayPhrase se pueden abrir con la palabra puesta, y Quizlet importa texto con tabulador.
+- **Las canciones siguen sin fuente.** La idea de LingoClip le pide al alumno que elija él la
+  canción: Langboost tampoco resolvió lo que esta ficha ya marcaba.
+- **La tarea puede ser la práctica de [PED-01](#ped-01).** Y la biblioteca se parece a lo que hoy
+  carga el docente para la práctica —un texto para el listening, frases para pronunciar—: armar la
+  clase y armar la práctica pueden salir del mismo paso.
+
+**Decidido (2026-10-03): lo que arma el docente queda guardado en la clase.** Contesta la primera
+pregunta de abajo. Langboost lo muestra por la negativa: en su plan gratis la clase no se guarda, y
+doce ideas sin guardar son algo para leer, no para llevar al aula.
+
 **Dos preguntas que cambian el diseño por completo:**
 
 1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
    (`LessonResource`) y decidir quién lo ve — ¿sólo quien lo generó, todo el instituto, los alumnos?
    Si es de un solo uso, alcanza con generarlo y ofrecer copiarlo o bajarlo en PDF, y no hay
-   migración.
+   migración. **Decidido el 2026-10-03: se guarda.** Sigue abierto quién lo ve.
 2. **¿En qué formato sale?** Texto para copiar y pegar es lo más barato. Un PDF armado ya es otro
    trabajo, aunque el proyecto tiene `jspdf` y lo usa para recibos e informes, así que hay de dónde
    agarrarse.
