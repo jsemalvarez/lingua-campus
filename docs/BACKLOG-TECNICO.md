@@ -309,6 +309,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
 | [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
 | [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [~] |
+| [FEAT-33](#feat-33) | P3 | 🗣️ Incorporar las clases particulares al sistema | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -8571,6 +8572,49 @@ compartir el visor. **Falta stage**, que tiene los datos reales que la base loca
 
 > **Encontrado en esta prueba, y no es de esta ficha:** el pie del boletín dice **«Publicado: 20 de
 > August, 2026»**. Es el mismo defecto que [BUG-09](#bug-09), con la causa que esa ficha no tenía.
+
+---
+
+<a id="feat-33"></a>
+## FEAT-33 · Incorporar las clases particulares al sistema · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-10-03).** Poder llevar en el sistema las clases particulares que da el instituto. Sin
+apuro: se anota para cuando haya lugar.
+
+**Hoy se puede cargar una a medias, como un curso de un solo alumno.** Nada lo impide —el curso no
+exige nivel, aula ni cantidad mínima de alumnos—, y todo lo que cuelga del curso —parte, notas,
+práctica, mensajes al profesor, boletín— no depende de cuántos alumnos tenga. Lo que no encaja son tres
+cosas, y las tres son de plata o de agenda:
+
+1. **El cobro es mensual o por curso completo, y nada más.** `BillingMode` tiene `MONTHLY` y
+   `FULL_COURSE` ([`schema.prisma:248`](../prisma/schema.prisma)). Una particular suele cobrarse por
+   clase o por paquete de clases, y eso no existe: habría que meterla como cuota mensual con un precio
+   que no es el que se cobra, o cargarla a mano como ingreso suelto.
+2. **Al profesor se le paga por el horario fijo del curso.** La liquidación toma la duración de cada
+   clase de su `Schedule` ([`payroll.ts:38`](../src/lib/payroll.ts)) y la multiplica por **una sola**
+   tarifa por hora del docente (`hourlyRate`). Una particular que se acuerda semana a semana no tiene
+   horario fijo, y una clase sin horario **suma 0 minutos**: en la ficha del docente se ve con un aviso
+   ámbar ([`TeacherPayrollSection.tsx:345`](../src/app/teachers/[id]/TeacherPayrollSection.tsx)), y
+   en la liquidación general cuenta como clase pero no suma plata
+   ([`payroll.ts:143`](../src/lib/payroll.ts)). Si además la particular se le paga distinto que la
+   hora de grupo, hoy no hay dónde decirlo.
+3. **La agenda.** La carga de clases y el calendario se apoyan en los horarios del curso
+   ([`CreateLessonModal.tsx:149`](../src/app/courses/[id]/lessons/components/CreateLessonModal.tsx)):
+   sirven para lo que se repite cada semana, no para una clase que se mueve.
+
+**Lo que hay que preguntarle al instituto antes de diseñar:**
+
+- Cómo se cobran: por clase, por paquete o por mes.
+- Cómo se le pagan al profesor: a la misma tarifa que la hora de grupo o a otra.
+- Si tienen horario fijo o se acuerdan cada vez.
+- Si el alumno de la particular es además alumno de un curso, o sólo de la particular.
+
+**Y medir antes de preguntar:** si el instituto ya está cargando alguna como curso de un solo alumno,
+o las lleva fuera del sistema. Lo que ya haya cargado dice cuál de los tres puntos le duele.
+
+**Relacionado.** [FEAT-17](#feat-17) (el borrador de la clase, que también arrastra la liquidación),
+[FEAT-14](#feat-14) (el carrito: un paquete de clases es varias cuotas en un solo cobro),
+[FIN-29](#fin-29) (la cuota que se emite al inscribir, que una particular por clase no seguiría).
 
 ---
 
