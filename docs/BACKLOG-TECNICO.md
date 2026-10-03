@@ -9633,7 +9633,9 @@ doce ideas sin guardar son algo para leer, no para llevar al aula.
 1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
    (`LessonResource`) y decidir quién lo ve — ¿sólo quien lo generó, todo el instituto, los alumnos?
    Si es de un solo uso, alcanza con generarlo y ofrecer copiarlo o bajarlo en PDF, y no hay
-   migración. **Decidido el 2026-10-03: se guarda.** Sigue abierto quién lo ve.
+   migración. **Decidido el 2026-10-03: se guarda, y lo ven el docente del curso y la
+   administración del instituto; los alumnos no.** Lo del alumno ya es la práctica de
+   [PED-01](#ped-01), que puede ser el momento "tarea" de la clase sin que vea el resto.
 2. **¿En qué formato sale?** Texto para copiar y pegar es lo más barato. Un PDF armado ya es otro
    trabajo, aunque el proyecto tiene `jspdf` y lo usa para recibos e informes, así que hay de dónde
    agarrarse.
