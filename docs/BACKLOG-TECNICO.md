@@ -9672,6 +9672,20 @@ Lo que se hace distinto, porque es donde el campus ya sabe más que Langboost:
 pregunta de abajo. Langboost lo muestra por la negativa: en su plan gratis la clase no se guarda, y
 doce ideas sin guardar son algo para leer, no para llevar al aula.
 
+**Decidido (2026-10-03): se arma desde la clase misma, en una página de la clase que reemplaza a
+los modales de crear y editar clase.** Los modales
+([`CreateLessonModal`](../src/app/courses/[id]/lessons/components/CreateLessonModal.tsx),
+[`EditLessonModal`](../src/app/courses/[id]/lessons/components/EditLessonModal.tsx)) ya estaban al
+límite: el botón de generar práctica sólo aparece al editar —hay que crear la clase, cerrar y volver
+a abrirla—, la IA lee lo guardado y no lo que se está escribiendo, y mientras genera no se puede
+guardar. La página ordena lo que piensa el docente: la clase (tema y contenidos), las palabras de la
+clase con el foco, armar la clase en cuatro momentos y la práctica de los alumnos, que es la tarea.
+Las palabras se cargan una vez y alimentan el armado y la práctica. Va en
+`/courses/[id]/lessons/[lessonId]`, donde ya viven asistencia, notas y la vista previa de la
+práctica. TP y examen siguen con el modal: no tienen práctica ni armado. Se diseña entera en el
+lienzo y se construye en dos pasos: primero la página con lo que hace hoy el modal, después el
+armado encima.
+
 **Dos preguntas que cambian el diseño por completo:**
 
 1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
