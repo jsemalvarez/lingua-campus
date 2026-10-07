@@ -5,6 +5,13 @@ import { revalidatePath } from "next/cache";
 import { requireCourseWriteAccess } from "@/lib/lessonAccess";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 
+/**
+ * Crea una clase, un TP o un examen desde el libro de temas.
+ *
+ * La práctica ya no viaja acá: desde PED-09 la clase se crea con fecha, horario y
+ * tema, y lo demás —contenidos, práctica— se carga en la página de la clase, que
+ * se abre con el `lessonId` que devuelve esta acción.
+ */
 export async function createLessonAction(formData: FormData) {
 
     const courseId = formData.get("courseId") as string;
@@ -13,12 +20,6 @@ export async function createLessonAction(formData: FormData) {
     const content = formData.get("content") as string;
     const type = (formData.get("type") as any) || "CLASS";
     const scheduleId = formData.get("scheduleId") as string;
-
-    // Practice fields (only relevant for CLASS type)
-    const speakingPhrasesRaw = formData.get("speakingPhrases") as string;
-    const listeningText = formData.get("listeningText") as string;
-    const chatScenario = formData.get("chatScenario") as string;
-    const practicePublished = formData.get("practicePublished") === "true";
 
     if (!courseId || !dateStr || !topic) {
         return { success: false, error: "Faltan datos requeridos (Fecha y Tema)" };
@@ -33,15 +34,7 @@ export async function createLessonAction(formData: FormData) {
         // Store as UTC noon to avoid timezone shift on the date boundary anywhere in the world
         const date = new Date(`${dateStr}T12:00:00Z`);
 
-        // Parse speaking phrases: split by newline, trim, remove empty lines
-        const speakingPhrases = speakingPhrasesRaw
-            ? speakingPhrasesRaw.split("\n").map((p) => p.trim()).filter(Boolean)
-            : [];
-
-        // Only create LessonPractice if it's a CLASS and has at least one phrase
-        const hasPractice = type === "CLASS" && speakingPhrases.length > 0;
-
-        await prisma.lesson.create({
+        const lesson = await prisma.lesson.create({
             data: {
                 courseId,
                 date,
@@ -49,27 +42,24 @@ export async function createLessonAction(formData: FormData) {
                 content: content || null,
                 type,
                 scheduleId: scheduleId || null,
-                ...(hasPractice && {
-                    practice: {
-                        create: {
-                            speakingPhrases,
-                            listeningText: listeningText || null,
-                            chatScenario: chatScenario || null,
-                            isPublished: practicePublished,
-                        }
-                    }
-                })
-            }
+            },
+            select: { id: true }
         });
 
         revalidatePath(`/courses/${courseId}`);
-        return { success: true };
+        return { success: true, lessonId: lesson.id };
     } catch (error: any) {
         console.error("Error creating lesson:", error);
         return { success: false, error: error.message || "No se pudo crear la clase" };
     }
 }
 
+/**
+ * Edita un TP o un examen desde su modal. Las clases se editan en su página
+ * (PED-09) y su práctica la guarda `saveLessonPracticeAction`: esta acción ya no
+ * toca `LessonPractice`, así que aunque alguien la llamara con una clase, no le
+ * vaciaría la práctica.
+ */
 export async function editLessonAction(formData: FormData) {
 
     const lessonId = formData.get("lessonId") as string;
@@ -79,12 +69,6 @@ export async function editLessonAction(formData: FormData) {
     const content = formData.get("content") as string;
     const type = (formData.get("type") as any) || "CLASS";
     const scheduleId = formData.get("scheduleId") as string;
-
-    // Practice fields
-    const speakingPhrasesRaw = formData.get("speakingPhrases") as string;
-    const listeningText = formData.get("listeningText") as string;
-    const chatScenario = formData.get("chatScenario") as string;
-    const practicePublished = formData.get("practicePublished") === "true";
 
     if (!lessonId || !courseId || !dateStr || !topic) {
         return { success: false, error: "Faltan datos requeridos (Fecha y Tema)" };
@@ -115,14 +99,6 @@ export async function editLessonAction(formData: FormData) {
             return { success: false, error: "La clase fue eliminada" };
         }
 
-        // Parse speaking phrases
-        const speakingPhrases = speakingPhrasesRaw
-            ? speakingPhrasesRaw.split("\n").map((p) => p.trim()).filter(Boolean)
-            : [];
-
-        const hasPractice = type === "CLASS" && speakingPhrases.length > 0;
-
-        // Update lesson core fields
         await prisma.lesson.update({
             where: { id: lessonId },
             data: {
@@ -133,43 +109,6 @@ export async function editLessonAction(formData: FormData) {
                 scheduleId: scheduleId || null,
             }
         });
-
-        if (hasPractice) {
-            // Upsert: create if doesn't exist, update if it does
-            await prisma.lessonPractice.upsert({
-                where: { lessonId },
-                create: {
-                    lessonId,
-                    speakingPhrases,
-                    listeningText: listeningText || null,
-                    chatScenario: chatScenario || null,
-                    isPublished: practicePublished,
-                },
-                update: {
-                    speakingPhrases,
-                    listeningText: listeningText || null,
-                    chatScenario: chatScenario || null,
-                    isPublished: practicePublished,
-                }
-            });
-        } else if (type === "CLASS" && speakingPhrases.length === 0) {
-            // El docente vació las frases. Antes se borraba el `LessonPractice`,
-            // y eso fallaba en cuanto algún alumno ya lo había practicado
-            // (BUG-03): `PracticeSession` lo referencia sin cascade.
-            //
-            // Se vacía el contenido y se despublica, pero la fila queda. Para el
-            // docente el efecto es el mismo —la práctica desaparece del curso—,
-            // y las sesiones que los alumnos ya hicieron siguen en pie.
-            await prisma.lessonPractice.updateMany({
-                where: { lessonId },
-                data: {
-                    speakingPhrases: [],
-                    listeningText: null,
-                    chatScenario: null,
-                    isPublished: false,
-                }
-            });
-        }
 
         revalidatePath(`/courses/${courseId}`);
         return { success: true };

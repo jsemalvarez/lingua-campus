@@ -29,6 +29,7 @@ import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
 import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
+import { isScheduledPlaceholder } from "@/lib/practice/draft";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -514,37 +515,48 @@ export default async function DashboardPage() {
                                             </Link>
                                         </div>
                                     </div>
-                                ) : myUpcomingLessons.map((lesson) => (
-                                    <div
-                                        key={lesson.id}
-                                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-all border-l-4 group relative"
-                                        style={{ borderLeftColor: lesson.course.color || "#3b82f6" }}
-                                    >
-                                        <div className="flex flex-col gap-0.5">
-                                            <Link href={`/courses/${lesson.courseId}`} className="hover:underline decoration-primary/30 underline-offset-2 transition-all">
-                                                <span className="font-bold text-sm text-foreground/90">{lesson.course.level || lesson.course.name}</span>
-                                            </Link>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                <span className="flex items-center gap-1"><Clock size={12} /> {lesson.schedule?.startTime || '--:--'}</span>
-                                                {lesson.schedule?.room && (
-                                                    <span className="flex items-center gap-1">• {lesson.schedule.room}</span>
-                                                )}
-                                            </div>
-                                            <span className="text-[11px] text-muted-foreground/80 line-clamp-1">{lesson.topic}</span>
-                                        </div>
+                                ) : myUpcomingLessons.map((lesson) => {
+                                    // Las clases se abren en su página (PED-09); los TP y
+                                    // los exámenes no tienen, y siguen yendo al curso.
+                                    const isClass = lesson.type === "CLASS";
+                                    const href = isClass
+                                        ? `/courses/${lesson.courseId}/lessons/${lesson.id}`
+                                        : `/courses/${lesson.courseId}`;
+                                    const withoutTopic = isClass && isScheduledPlaceholder(lesson.topic);
 
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <Link href={`/courses/${lesson.courseId}/lessons/${lesson.id}/attendance`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                                <Button variant="outline" size="sm" className="h-8 px-2 text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1.5 flex items-center shadow-sm">
-                                                    <ClipboardCheck size={14} /> Asis.
+                                    return (
+                                        <div
+                                            key={lesson.id}
+                                            className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-all border-l-4 relative"
+                                            style={{ borderLeftColor: lesson.course.color || "#3b82f6" }}
+                                        >
+                                            <Link href={href} className="flex min-w-0 flex-1 flex-col gap-1">
+                                                <span className="flex items-baseline justify-between gap-2">
+                                                    <span className="font-bold text-sm text-foreground/90 truncate">{lesson.course.level || lesson.course.name}</span>
+                                                    <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
+                                                        {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })}
+                                                        {lesson.schedule?.startTime ? ` · ${lesson.schedule.startTime}` : ""}
+                                                        {lesson.schedule?.room ? ` · ${lesson.schedule.room}` : ""}
+                                                    </span>
+                                                </span>
+                                                {withoutTopic ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="text-[12px] italic text-muted-foreground line-clamp-1">Programada, todavía sin tema</span>
+                                                        <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border">Sin tema</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[12px] text-foreground/80 line-clamp-1">{lesson.topic}</span>
+                                                )}
+                                            </Link>
+
+                                            <Link href={`/courses/${lesson.courseId}/lessons/${lesson.id}/attendance`} className="shrink-0">
+                                                <Button variant="outline" size="sm" className="h-8 px-2 text-[11px] font-bold bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1.5 flex items-center shadow-sm">
+                                                    <ClipboardCheck size={14} /> Asistencia
                                                 </Button>
                                             </Link>
-                                            <div className="text-[10px] font-bold tabular-nums bg-muted px-2 py-1.5 rounded-md sm:group-hover:hidden transition-all whitespace-nowrap">
-                                                {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
-                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </Card>
                     </div>
