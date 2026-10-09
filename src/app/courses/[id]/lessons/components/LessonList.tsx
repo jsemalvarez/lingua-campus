@@ -2,8 +2,9 @@
 
 import { CreateLessonModal } from "./CreateLessonModal";
 import { GenerateLessonsModal } from "./GenerateLessonsModal";
-import { ClipboardCheck, Calendar, BookOpen, FileText, Sparkles, ChevronRight } from "lucide-react";
+import { ClipboardCheck, Calendar, BookOpen, FileText, Sparkles, ChevronRight, Check } from "lucide-react";
 import { isScheduledPlaceholder } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
 import { EditLessonModal } from "./EditLessonModal";
 import { DeleteLessonButton } from "./DeleteLessonButton";
 import Link from "next/link";
@@ -34,6 +35,8 @@ interface Lesson {
     content: string | null;
     scheduleId: string | null;
     practice: LessonPractice | null;
+    /** Cuántos momentos del armado tienen idea elegida (PED-09). */
+    plan?: { chosen: number } | null;
 }
 
 interface LessonListProps {
@@ -122,6 +125,14 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
                                             {withoutTopic && (
                                                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-muted text-muted-foreground border border-border">
                                                     Sin tema
+                                                </span>
+                                            )}
+
+                                            {/* El armado es del docente y la administración: el par no lo ve. */}
+                                            {isClass && isTeacherOrAdmin && isPlanComplete(lesson.plan?.chosen ?? 0) && (
+                                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-[#ebf7f4] dark:bg-primary/10 text-[#1f7360] dark:text-primary border border-[#bfe5da] dark:border-primary/40">
+                                                    <Check size={10} strokeWidth={3} />
+                                                    Armada
                                                 </span>
                                             )}
 

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import prisma from "@/lib/prisma";
 import { requireLessonReadAccess } from "@/lib/lessonAccess";
+import { sanitizePlan } from "@/lib/lessonPlan/plan";
 import { LessonPageView } from "./LessonPageView";
 
 export const metadata = {
@@ -10,8 +11,9 @@ export const metadata = {
 
 /**
  * La página de la clase (PED-09): reemplaza a los modales de crear y editar
- * clase. Junta lo que el docente piensa de una clase —qué se da y la práctica
- * que les queda a los alumnos— en un lugar que guarda solo.
+ * clase. Junta lo que el docente piensa de una clase —qué se da, las palabras,
+ * cómo la arma en cuatro momentos y la práctica que les queda a los alumnos— en
+ * un lugar que guarda solo.
  *
  * La ven el docente del curso y la administración del instituto, decidido el
  * 2026-10-03. Los pares del mismo nivel no entran (la lista de niveles va vacía,
@@ -40,6 +42,7 @@ export default async function LessonPage(props: { params: Promise<{ id: string; 
             practice: {
                 select: { speakingPhrases: true, listeningText: true, chatScenario: true, isPublished: true },
             },
+            plan: { select: { focus: true, words: true, moments: true, ideasBasis: true } },
             course: {
                 select: {
                     name: true,
@@ -98,6 +101,9 @@ export default async function LessonPage(props: { params: Promise<{ id: string; 
                           }
                         : null
                 }
+                // Se valida también al leer: lo que no tenga la forma de hoy no
+                // llega a la pantalla.
+                plan={sanitizePlan(lesson.plan ?? {})}
             />
         </div>
     );

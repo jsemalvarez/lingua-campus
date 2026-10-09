@@ -1,10 +1,11 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { Clock, MapPin, User, BookOpen, ClipboardCheck, Eye } from "lucide-react";
+import { Clock, MapPin, User, BookOpen, ClipboardCheck, Eye, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
 
 interface Schedule {
     id: string;
@@ -33,6 +34,7 @@ interface Schedule {
         date: string | Date;
         topic: string;
         content?: string | null;
+        plan?: { chosen: number } | null;
     }[];
     /** Clase de otro docente del mismo nivel: se ve, no se toca (FEAT-07). */
     isPeer?: boolean;
@@ -185,12 +187,20 @@ export function WeeklyGridView({ schedules, daysMapping, weekDates, canOpenLesso
                                                         </div>
                                                         
                                                         {registeredTopic ? (
-                                                            <div className="flex items-center gap-1.5 text-[10px] text-primary/70 font-bold shrink-0">
-                                                                <BookOpen size={10} className="shrink-0" />
-                                                                <span className="truncate italic">
-                                                                    {registeredTopic}
-                                                                </span>
-                                                            </div>
+                                                            <>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-primary/70 font-bold shrink-0">
+                                                                    <BookOpen size={10} className="shrink-0" />
+                                                                    <span className="truncate italic">
+                                                                        {registeredTopic}
+                                                                    </span>
+                                                                </div>
+                                                                {/* El armado es de quien la dicta (PED-09): sólo en las que se abren. */}
+                                                                {lessonHref && isPlanComplete(linkedLesson?.plan?.chosen ?? 0) && (
+                                                                    <span className="inline-flex items-center gap-0.5 rounded-full border border-[#bfe5da] bg-[#ebf7f4] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7360] dark:border-primary/40 dark:bg-primary/10 dark:text-primary">
+                                                                        <Check size={10} strokeWidth={3} /> Armada
+                                                                    </span>
+                                                                )}
+                                                            </>
                                                         ) : (
                                                             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 font-bold shrink-0">
                                                                 <span className="truncate italic">

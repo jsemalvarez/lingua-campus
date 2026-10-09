@@ -14,7 +14,8 @@ import {
     Clock,
     Plus,
     ClipboardCheck,
-    Activity
+    Activity,
+    Check
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -30,6 +31,7 @@ import { StudentDashboardV2View } from "./components/StudentDashboardV2View";
 import { BirthdayWidgetServer, BirthdayWidgetTeacherServer } from "./components/BirthdayWidgetServer";
 import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
 import { isScheduledPlaceholder } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -408,9 +410,16 @@ export default async function DashboardPage() {
             take: 10,
             include: {
                 course: { select: { name: true, level: true, color: true } },
-                schedule: { select: { startTime: true, endTime: true, room: true } }
+                schedule: { select: { startTime: true, endTime: true, room: true } },
+                plan: { select: { chosen: true } },
+                practice: { select: { isPublished: true, speakingPhrases: true, listeningText: true, chatScenario: true } }
             }
         });
+
+        // Las clases que todavía no están armadas en sus cuatro momentos (PED-09).
+        const lessonsToPrepare = myUpcomingLessons.filter(
+            (lesson) => lesson.type === "CLASS" && !isPlanComplete(lesson.plan?.chosen ?? 0)
+        ).length;
 
         const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -501,6 +510,11 @@ export default async function DashboardPage() {
                                 <h3 className="font-semibold text-lg flex items-center gap-2">
                                     <Clock className="text-blue-500" size={20} /> Mis Próximas Clases
                                 </h3>
+                                {lessonsToPrepare > 0 && (
+                                    <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-400">
+                                        {lessonsToPrepare} para preparar
+                                    </span>
+                                )}
                             </div>
                             <div className="space-y-3">
                                 {myUpcomingLessons.length === 0 ? (
@@ -523,6 +537,11 @@ export default async function DashboardPage() {
                                         ? `/courses/${lesson.courseId}/lessons/${lesson.id}`
                                         : `/courses/${lesson.courseId}`;
                                     const withoutTopic = isClass && isScheduledPlaceholder(lesson.topic);
+                                    const ready = isClass && isPlanComplete(lesson.plan?.chosen ?? 0);
+                                    // Igual que el libro de temas: una práctica vaciada no cuenta.
+                                    const practice = lesson.practice && (lesson.practice.speakingPhrases.length > 0 || !!lesson.practice.listeningText || !!lesson.practice.chatScenario)
+                                        ? lesson.practice
+                                        : null;
 
                                     return (
                                         <div
@@ -546,6 +565,30 @@ export default async function DashboardPage() {
                                                     </span>
                                                 ) : (
                                                     <span className="text-[12px] text-foreground/80 line-clamp-1">{lesson.topic}</span>
+                                                )}
+                                                {isClass && !withoutTopic && (
+                                                    <span className="flex flex-wrap gap-1.5">
+                                                        {ready ? (
+                                                            <span className="inline-flex items-center gap-1 rounded-full border border-[#bfe5da] bg-[#ebf7f4] px-2 py-0.5 text-[10.5px] font-bold text-[#1f7360] dark:border-primary/40 dark:bg-primary/10 dark:text-primary">
+                                                                <Check size={11} strokeWidth={3} /> Armada
+                                                            </span>
+                                                        ) : (
+                                                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-400">
+                                                                Sin armar
+                                                            </span>
+                                                        )}
+                                                        {practice && (
+                                                            practice.isPublished ? (
+                                                                <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10.5px] font-bold text-violet-700 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-300">
+                                                                    Práctica activa
+                                                                </span>
+                                                            ) : (
+                                                                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-400">
+                                                                    Práctica en borrador
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </span>
                                                 )}
                                             </Link>
 

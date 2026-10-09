@@ -1,15 +1,18 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireLessonWriteAccess } from "@/lib/lessonAccess";
+import { countChosen, isPlanEmpty, sanitizePlan } from "@/lib/lessonPlan/plan";
 
 /**
  * Guardado de la página de la clase (PED-09). La página guarda sola, de a una
  * parte por vez: lo que el docente escribe en «La clase» viaja por
- * `saveLessonDetailsAction` y lo de «La práctica de los alumnos» por
- * `saveLessonPracticeAction`. Cada una manda la parte entera, no el campo que
- * cambió, así que un guardado que llega tarde no deja la fila a medias.
+ * `saveLessonDetailsAction`, las palabras y el armado por `saveLessonPlanAction`
+ * y lo de «La práctica de los alumnos» por `saveLessonPracticeAction`. Cada una
+ * manda la parte entera, no el campo que cambió, así que un guardado que llega
+ * tarde no deja la fila a medias.
  *
  * Reemplazan a lo que hacían `createLessonAction` y `editLessonAction` con la
  * práctica cuando todo vivía en el modal.
@@ -137,4 +140,47 @@ export async function saveLessonPracticeAction(input: {
 
     revalidatePath(`/courses/${courseId}`);
     return { success: true, isPublished };
+}
+
+/**
+ * Guarda el armado de la clase: el foco, las palabras y los momentos (PED-09).
+ * Llega el documento entero y se valida entero con `sanitizePlan`: viene del
+ * navegador, así que se recorta a la forma y a los topes de `plan.ts` antes de
+ * tocar la base. `chosen` se calcula acá y no se acepta del cliente.
+ */
+export async function saveLessonPlanAction(input: {
+    lessonId: string;
+    courseId: string;
+    plan: unknown;
+}): Promise<Result> {
+    const { lessonId, courseId } = input;
+
+    const access = await requireLessonWriteAccess(lessonId, courseId, "el armado de la clase");
+    if ("error" in access) return { success: false, error: access.error };
+
+    if (!(await findClass(lessonId, courseId))) {
+        return { success: false, error: "La clase no está disponible." };
+    }
+
+    const plan = sanitizePlan(input.plan);
+    const existing = await prisma.lessonPlan.findUnique({ where: { lessonId }, select: { id: true } });
+
+    // Una clase que nunca se armó no necesita fila.
+    if (!existing && isPlanEmpty(plan)) return { success: true };
+
+    const data = {
+        focus: plan.focus,
+        words: plan.words as Prisma.InputJsonValue,
+        moments: plan.moments ? (plan.moments as Prisma.InputJsonValue) : Prisma.DbNull,
+        ideasBasis: plan.ideasBasis,
+        chosen: countChosen(plan.moments),
+    };
+    await prisma.lessonPlan.upsert({
+        where: { lessonId },
+        create: { lessonId, ...data },
+        update: data,
+    });
+
+    revalidatePath(`/courses/${courseId}`);
+    return { success: true };
 }

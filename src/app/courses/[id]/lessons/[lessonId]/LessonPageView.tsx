@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -12,7 +12,6 @@ import {
     Check,
     ClipboardCheck,
     Clock,
-    CloudCheck,
     Eye,
     Headphones,
     Loader2,
@@ -24,19 +23,34 @@ import {
     Wand2,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import { practiceApiError } from "@/components/practice/apiError";
+import { ToolGuide } from "@/app/resources/components/ResourcesView";
+import { TOOLS } from "@/app/resources/tools";
 import { checkDraftInputs, isScheduledPlaceholder, SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import {
+    campusIdea,
+    countChosen,
+    durationMinutes,
+    emptyMoments,
+    ideasBasisOf,
+    MAX_WORDS,
+    MOMENT_IDS,
+    newIdeaId,
+    selectedIdea,
+    type ExternalTool,
+    type MomentId,
+    type PlanData,
+    type PlanIdea,
+    type PlanMoments,
+    type PlanWord,
+} from "@/lib/lessonPlan/plan";
 import { cn } from "@/lib/utils";
-import { saveLessonDetailsAction, saveLessonPracticeAction } from "./actions";
+import { saveLessonDetailsAction, saveLessonPlanAction, saveLessonPracticeAction } from "./actions";
+import { MomentsSection, PlanSummary, WordsSection, type IdeasState, type OwnIdeaInput } from "./LessonPlanSections";
+import { ErrorNote, FIELD, MUTED, PRIMARY_TEXT, SaveStatus, SectionHeader } from "./ui";
+import { isUnsaved, useAutosave } from "./useAutosave";
 
-/**
- * Los mismos ajustes de contraste que la página de recursos: en modo claro el
- * gris `muted-foreground` y el verde `primary` no llegan a 4,5:1 con texto chico.
- */
-const MUTED = "text-neutral-500 dark:text-muted-foreground";
-const PRIMARY_TEXT = "text-[#1f7360] dark:text-primary";
-const FIELD =
-    "w-full rounded-lg border border-neutral-300 bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-neutral-400 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-border sm:text-[15px]";
 const PRACTICE_FIELD =
     "w-full rounded-lg border border-violet-200 bg-background px-3.5 py-2.5 text-base leading-relaxed text-foreground outline-none transition-colors placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-violet-900/60 sm:text-sm";
 
@@ -59,12 +73,15 @@ type Props = {
     };
     lesson: { topic: string; content: string; dateKey: string; scheduleId: string | null };
     practice: { speakingPhrases: string; listeningText: string; chatScenario: string; isPublished: boolean } | null;
+    plan: PlanData;
 };
 
-export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, course, lesson, practice }: Props) {
+type AiBusy = "words" | "ideas" | MomentId | null;
+
+export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, course, lesson, practice, plan }: Props) {
     const router = useRouter();
 
-    // ── La clase ──────────────────────────────────────────────────────────────
+    // ── 1. La clase ───────────────────────────────────────────────────────────
     // Una clase generada desde el horario nace con «Clase Programada» de tema:
     // acá se muestra vacía, y vacía se vuelve a guardar con ese rótulo.
     const [topic, setTopic] = useState(isScheduledPlaceholder(lesson.topic) ? "" : lesson.topic);
@@ -85,8 +102,200 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
         [lessonId, courseId]
     );
     const detailsSave = useAutosave(details, saveDetails, canWrite);
+    const readiness = checkDraftInputs(topic || SCHEDULED_LESSON_TOPIC, content);
 
-    // ── La práctica ───────────────────────────────────────────────────────────
+    // ── 2 y 3. Las palabras y el armado ──────────────────────────────────────
+    const [focus, setFocus] = useState(plan.focus);
+    const [words, setWords] = useState<PlanWord[]>(plan.words);
+    const [moments, setMoments] = useState<PlanMoments | null>(plan.moments);
+    const [ideasBasis, setIdeasBasis] = useState(plan.ideasBasis);
+
+    const planValue = useMemo<PlanData>(() => ({ focus, words, moments, ideasBasis }), [focus, words, moments, ideasBasis]);
+    const savePlan = useCallback(
+        async (value: PlanData) => {
+            const res = await saveLessonPlanAction({ lessonId, courseId, plan: value });
+            return res.success ? null : res.error;
+        },
+        [lessonId, courseId]
+    );
+    const planSave = useAutosave(planValue, savePlan, canWrite);
+
+    const [aiBusy, setAiBusy] = useState<AiBusy>(null);
+    const [wordsError, setWordsError] = useState<string | null>(null);
+    const [momentErrors, setMomentErrors] = useState<Partial<Record<MomentId, string>>>({});
+    const [confirmIdeas, setConfirmIdeas] = useState(false);
+    const [guideTool, setGuideTool] = useState<ExternalTool | null>(null);
+
+    const chosenWords = words.filter((w) => w.on).length;
+    const chosenMoments = countChosen(moments);
+    const hasAiIdeas = moments !== null && MOMENT_IDS.some((id) => moments[id].ideas.some((i) => !i.own && i.tool !== "campus"));
+    const ideasState: IdeasState = !hasAiIdeas ? "none" : ideasBasis === ideasBasisOf(focus, words) ? "fresh" : "stale";
+
+    const planBlocked = readiness.ready
+        ? null
+        : readiness.missing === "topic"
+          ? "Para que la IA sugiera palabras e ideas, primero poné el tema de la clase."
+          : "Para que la IA sugiera palabras e ideas, contá en Contenidos qué se da en la clase: es lo que lee.";
+    const askBlocked = planBlocked ?? (chosenWords === 0 ? "Elegí al menos una palabra de la clase para pedir ideas." : null);
+
+    // El servidor arma los pedidos con lo guardado: primero se guarda lo pendiente.
+    const saveBeforeAsking = async () => {
+        const [savedDetails, savedPlan] = await Promise.all([detailsSave.flush(), planSave.flush()]);
+        return savedDetails && savedPlan;
+    };
+    const notSaved = "No se pudo guardar la clase, así que la IA no tiene de dónde partir. Revisá el aviso de arriba.";
+
+    const askPlan = async (path: "words" | "ideas", body: Record<string, unknown>) =>
+        fetch(`/api/lesson-plan/${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lessonId, courseId, ...body }),
+        });
+
+    const suggestWords = async () => {
+        if (aiBusy || planBlocked) return;
+        setAiBusy("words");
+        setWordsError(null);
+        try {
+            if (!(await saveBeforeAsking())) return setWordsError(notSaved);
+            const res = await askPlan("words", {});
+            if (!res.ok) return setWordsError(await planApiError(res, "No pudimos sugerir las palabras. Probá de nuevo en un momento."));
+            const data = (await res.json()) as { words: string[] };
+            // Se quedan las tildadas y las propias; las destildadas dejan lugar.
+            setWords((current) => {
+                const keep = current.filter((w) => w.on || w.own);
+                const taken = new Set(keep.map((w) => w.text.toLowerCase()));
+                const fresh = data.words.filter((text) => !taken.has(text.toLowerCase())).map((text) => ({ text, on: true }));
+                return [...keep, ...fresh].slice(0, MAX_WORDS);
+            });
+        } catch {
+            setWordsError("No pudimos sugerir las palabras. Probá de nuevo en un momento.");
+        } finally {
+            setAiBusy(null);
+        }
+    };
+
+    const proposeIdeas = async (confirmed: boolean) => {
+        if (aiBusy || askBlocked) return;
+        const hasChoices = moments !== null && MOMENT_IDS.some((id) => {
+            const idea = selectedIdea(moments[id]);
+            return idea !== null && !idea.own;
+        });
+        if (hasChoices && !confirmed) return setConfirmIdeas(true);
+
+        setConfirmIdeas(false);
+        setAiBusy("ideas");
+        setWordsError(null);
+        setMomentErrors({});
+        const basis = ideasBasisOf(focus, words);
+        try {
+            if (!(await saveBeforeAsking())) return setWordsError(notSaved);
+            const res = await askPlan("ideas", {});
+            if (!res.ok) return setWordsError(await planApiError(res, "No pudimos escribir las ideas. Probá de nuevo en un momento."));
+            const data = (await res.json()) as { moments: Partial<Record<MomentId, PlanIdea[]>> };
+            // Las ideas que escribió el docente se quedan, y si había elegido una
+            // de ésas, sigue elegida.
+            setMoments((current) => {
+                const next = emptyMoments();
+                for (const id of MOMENT_IDS) {
+                    const own = current?.[id].ideas.filter((i) => i.own) ?? [];
+                    const chosen = current ? selectedIdea(current[id]) : null;
+                    next[id] = { ideas: [...(data.moments[id] ?? []), ...own], selectedId: chosen?.own ? chosen.id : null };
+                }
+                return next;
+            });
+            setIdeasBasis(basis);
+            document.getElementById("armar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch {
+            setWordsError("No pudimos escribir las ideas. Probá de nuevo en un momento.");
+        } finally {
+            setAiBusy(null);
+        }
+    };
+
+    const moreIdeas = async (id: MomentId) => {
+        if (aiBusy || askBlocked) return;
+        setAiBusy(id);
+        setMomentErrors((errors) => ({ ...errors, [id]: undefined }));
+        const basis = ideasBasisOf(focus, words);
+        const fail = (message: string) => setMomentErrors((errors) => ({ ...errors, [id]: message }));
+        try {
+            if (!(await saveBeforeAsking())) return fail(notSaved);
+            const res = await askPlan("ideas", { moment: id });
+            if (!res.ok) return fail(await planApiError(res, "No pudimos traer otras ideas. Probá de nuevo en un momento."));
+            const data = (await res.json()) as { moments: Partial<Record<MomentId, PlanIdea[]>> };
+            const fresh = data.moments[id] ?? [];
+            // La elegida, la propia y la práctica del campus se quedan; las otras
+            // se cambian por las nuevas.
+            setMoments((current) => {
+                const base = current ?? emptyMoments();
+                const moment = base[id];
+                const chosen = selectedIdea(moment);
+                const kept = moment.ideas.filter((i) => i.own || i.tool === "campus" || i.id === chosen?.id);
+                const keptAi = kept.filter((i) => !i.own && i.tool !== "campus");
+                const room = Math.max(1, (id === "tarea" ? 2 : 3) - keptAi.length);
+                const hasMaterial = kept.some((i) => i.tool === "material");
+                const incoming = fresh.filter((i) => !(hasMaterial && i.tool === "material")).slice(0, room);
+                const ideas = [...kept.filter((i) => !i.own), ...incoming, ...kept.filter((i) => i.own)];
+                return { ...base, [id]: { ideas, selectedId: moment.selectedId } };
+            });
+            setIdeasBasis((current) => current ?? basis);
+        } catch {
+            fail("No pudimos traer otras ideas. Probá de nuevo en un momento.");
+        } finally {
+            setAiBusy(null);
+        }
+    };
+
+    const pickIdea = (id: MomentId, ideaId: string) =>
+        setMoments((current) => {
+            if (!current) return current;
+            const moment = current[id];
+            return { ...current, [id]: { ...moment, selectedId: moment.selectedId === ideaId ? null : ideaId } };
+        });
+
+    const saveOwnIdea = (id: MomentId, input: OwnIdeaInput | null) =>
+        setMoments((current) => {
+            const base = current ?? emptyMoments();
+            const moment = base[id];
+            const existing = moment.ideas.find((i) => i.own) ?? null;
+            if (!input) {
+                return {
+                    ...base,
+                    [id]: {
+                        ideas: moment.ideas.filter((i) => !i.own),
+                        selectedId: moment.selectedId === existing?.id ? null : moment.selectedId,
+                    },
+                };
+            }
+            const idea: PlanIdea = {
+                id: existing?.id ?? newIdeaId(),
+                title: input.title,
+                description: input.description,
+                tool: "none",
+                minutes: input.minutes,
+                grouping: existing?.grouping ?? (id === "tarea" ? "Cada uno" : "Toda la clase"),
+                lines: input.lines,
+                own: true,
+            };
+            const ideas = existing ? moment.ideas.map((i) => (i.own ? idea : i)) : [...moment.ideas, idea];
+            return { ...base, [id]: { ideas, selectedId: idea.id } };
+        });
+
+    const startManual = () => setMoments({ ...emptyMoments(), tarea: { ideas: [campusIdea()], selectedId: null } });
+
+    // El `Dialog` compartido cierra con el fondo pero no con Escape.
+    useEffect(() => {
+        if (!guideTool) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setGuideTool(null);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [guideTool]);
+    const openGuide = TOOLS.find((tool) => tool.id === guideTool) ?? null;
+
+    // ── 4. La práctica ────────────────────────────────────────────────────────
     const [phrases, setPhrases] = useState(practice?.speakingPhrases ?? "");
     const [listening, setListening] = useState(practice?.listeningText ?? "");
     const [chat, setChat] = useState(practice?.chatScenario ?? "");
@@ -116,11 +325,9 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
     );
     const practiceSave = useAutosave(practiceValue, savePractice, canWrite);
 
-    // ── Generar la práctica con IA ───────────────────────────────────────────
     const [generation, setGeneration] = useState<"idle" | "confirm" | "generating">("idle");
     const [generateError, setGenerateError] = useState<string | null>(null);
     const [justGenerated, setJustGenerated] = useState(false);
-    const readiness = checkDraftInputs(topic || SCHEDULED_LESSON_TOPIC, content);
 
     const generate = async () => {
         if (!readiness.ready || generation === "generating") return;
@@ -133,11 +340,10 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
         setGenerateError(null);
         setJustGenerated(false);
 
-        // El servidor redacta a partir de la clase guardada: primero se guarda lo
-        // que esté pendiente del tema y los contenidos.
-        const saved = await detailsSave.flush();
-        if (!saved) {
-            setGenerateError("No se pudo guardar la clase, así que la IA no tiene de dónde partir. Revisá el aviso de arriba.");
+        // El servidor redacta a partir de la clase guardada —el tema, los
+        // contenidos y las palabras—: primero se guarda lo pendiente.
+        if (!(await saveBeforeAsking())) {
+            setGenerateError(notSaved);
             setGeneration("idle");
             return;
         }
@@ -175,7 +381,7 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
 
     // Avisa antes de irse con algo sin guardar. Con medio segundo de espera es
     // raro, pero cerrar la pestaña justo después de escribir pasa.
-    const unsaved = isUnsaved(detailsSave.state) || isUnsaved(practiceSave.state);
+    const unsaved = [detailsSave, planSave, practiceSave].some((s) => isUnsaved(s.state));
     useEffect(() => {
         if (!unsaved) return;
         const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -185,15 +391,38 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
 
     // ── Lo que se muestra arriba ─────────────────────────────────────────────
     const schedule = course.schedules.find((s) => s.id === scheduleId) ?? null;
-    const dateLabel = format(new Date(`${dateKey}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
+    const lessonDate = new Date(`${dateKey}T12:00:00`);
+    const dateLabel = format(lessonDate, "EEEE d 'de' MMMM", { locale: es });
     const room = schedule?.room ?? course.classroomName;
     const minutes = schedule ? durationMinutes(schedule.startTime, schedule.endTime) : null;
     const hasTopic = topic.trim().length > 0;
+    const whenLabel = `${capitalize(format(lessonDate, "EEE d/M", { locale: es }))}${schedule ? ` · ${schedule.startTime}` : ""}`;
 
     const parts = [
         { href: "#la-clase", n: 1, label: "La clase", status: hasTopic ? "Lista" : "Falta el tema", done: hasTopic },
-        { href: "#practica", n: 2, label: "Práctica", status: published ? "Publicada" : hasPracticeContent ? "Borrador" : "Sin armar", done: published },
+        { href: "#palabras", n: 2, label: "Palabras", status: chosenWords ? `${chosenWords} elegidas` : "Sin palabras", done: chosenWords > 0 },
+        {
+            href: "#armar",
+            n: 3,
+            label: "Armar la clase",
+            status: chosenMoments ? `${chosenMoments} de ${MOMENT_IDS.length} momentos` : "Sin armar",
+            done: chosenMoments === MOMENT_IDS.length,
+        },
+        { href: "#practica", n: 4, label: "Práctica", status: published ? "Publicada" : hasPracticeContent ? "Borrador" : "Sin armar", done: published },
     ];
+
+    const whoSees = (
+        <div className="flex gap-3 rounded-xl bg-muted/40 p-4">
+            <Lock className={cn("mt-0.5 size-[18px] shrink-0", MUTED)} />
+            <div className="space-y-1">
+                <h2 className="text-sm font-bold">Quién ve esta clase</h2>
+                <p className={cn("text-[13px] leading-normal", MUTED)}>
+                    El docente del curso y la administración del instituto. Los alumnos ven sólo la práctica, cuando se
+                    publica.
+                </p>
+            </div>
+        </div>
+    );
 
     return (
         <main className="container mx-auto px-4 py-6 animate-in fade-in slide-in-from-bottom-4 duration-500 sm:px-6 md:py-8">
@@ -262,7 +491,7 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <nav aria-label="Partes de la clase" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+                    <nav aria-label="Partes de la clase" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
                         {parts.map((part) => (
                             <a
                                 key={part.href}
@@ -277,12 +506,12 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                                 >
                                     {part.done ? <Check className="size-3.5" strokeWidth={3} /> : part.n}
                                 </span>
-                                <span className="font-semibold">{part.label}</span>
-                                <span className={cn("hidden sm:inline", MUTED)}>{part.status}</span>
+                                <span className="whitespace-nowrap font-semibold">{part.label}</span>
+                                <span className={cn("hidden whitespace-nowrap sm:inline", MUTED)}>{part.status}</span>
                             </a>
                         ))}
                     </nav>
-                    {canWrite && <SaveStatus states={[detailsSave, practiceSave]} />}
+                    {canWrite && <SaveStatus states={[detailsSave, planSave, practiceSave]} />}
                 </div>
 
                 {!canWrite && (
@@ -340,7 +569,7 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                                         className={cn(FIELD, "resize-y py-2.5 leading-relaxed")}
                                     />
                                     <p className={cn("text-[12.5px] leading-normal", MUTED)}>
-                                        Cuanto más concreto, mejor sale la práctica que escribe la IA.
+                                        Cuanto más concreto, mejores salen las palabras y las ideas de abajo.
                                     </p>
                                 </div>
 
@@ -425,13 +654,49 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                             </Card>
                         </section>
 
+                        <WordsSection
+                            canWrite={canWrite}
+                            focus={focus}
+                            onFocusChange={setFocus}
+                            words={words}
+                            onWordsChange={setWords}
+                            blocked={planBlocked}
+                            busy={aiBusy}
+                            onSuggest={suggestWords}
+                            onPropose={() => proposeIdeas(false)}
+                            ideasState={ideasState}
+                            error={wordsError ?? planSave.error}
+                            confirming={confirmIdeas}
+                            onConfirm={() => proposeIdeas(true)}
+                            onCancelConfirm={() => setConfirmIdeas(false)}
+                        />
+
+                        <MomentsSection
+                            canWrite={canWrite}
+                            moments={moments}
+                            studentCount={course.studentCount}
+                            level={course.level}
+                            busy={aiBusy}
+                            errors={momentErrors}
+                            askBlocked={askBlocked}
+                            onPick={pickIdea}
+                            onMore={moreIdeas}
+                            onSaveOwn={saveOwnIdea}
+                            onStartManual={startManual}
+                            onOpenGuide={setGuideTool}
+                        />
+
                         <section id="practica" aria-labelledby="titulo-practica" className="scroll-mt-24 space-y-4">
                             <SectionHeader
-                                n={2}
+                                n={4}
                                 tone="violet"
                                 titleId="titulo-practica"
                                 title="La práctica de los alumnos"
-                                description="Es la tarea de esta clase. La hacen desde su cuenta del campus, con lo que se dio hoy."
+                                description={
+                                    chosenWords > 0
+                                        ? "Es la tarea de esta clase. La hacen desde su cuenta del campus, con las palabras de hoy."
+                                        : "Es la tarea de esta clase. La hacen desde su cuenta del campus, con lo que se dio hoy."
+                                }
                             />
                             <Card className="space-y-5 border-violet-200 p-4 dark:border-violet-900/50 sm:p-6">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -451,9 +716,7 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                                                 )}
                                                 {generation === "generating"
                                                     ? "Escribiendo…"
-                                                    : hasPracticeContent
-                                                      ? "Rehacer con la IA"
-                                                      : "Escribir con la IA"}
+                                                    : `${hasPracticeContent ? "Rehacer" : "Escribir"} ${chosenWords > 0 ? "con las palabras de la clase" : "con la IA"}`}
                                             </button>
                                         )}
                                         {hasPhrases && (
@@ -557,199 +820,44 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                                 {practiceSave.error && <ErrorNote>{practiceSave.error}</ErrorNote>}
                             </Card>
                         </section>
+
+                        <div className="lg:hidden">{whoSees}</div>
                     </div>
 
-                    <aside aria-label="Sobre esta clase" className="lg:sticky lg:top-24 lg:self-start">
-                        <div className="flex gap-3 rounded-xl bg-muted/40 p-4">
-                            <Lock className={cn("mt-0.5 size-[18px] shrink-0", MUTED)} />
-                            <div className="space-y-1">
-                                <h2 className="text-sm font-bold">Quién ve esta clase</h2>
-                                <p className={cn("text-[13px] leading-normal", MUTED)}>
-                                    El docente del curso y la administración del instituto. Los alumnos ven sólo la práctica,
-                                    cuando se publica.
-                                </p>
-                            </div>
-                        </div>
+                    {/* En el celular, el plan va arriba de todo, como en el lienzo. */}
+                    <aside aria-label="Sobre esta clase" className="order-first flex flex-col gap-4 lg:sticky lg:top-24 lg:order-none lg:self-start">
+                        {(moments !== null || aiBusy === "ideas") && (
+                            <PlanSummary moments={moments ?? emptyMoments()} minutes={minutes} whenLabel={whenLabel} />
+                        )}
+                        <div className="hidden lg:block">{whoSees}</div>
                     </aside>
                 </div>
             </div>
+
+            <Dialog open={openGuide !== null} onOpenChange={(open) => { if (!open) setGuideTool(null); }}>
+                {openGuide && (
+                    <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden p-0">
+                        <ToolGuide tool={openGuide} onClose={() => setGuideTool(null)} />
+                    </DialogContent>
+                )}
+            </Dialog>
         </main>
     );
 }
 
-// ─── Guardado automático ─────────────────────────────────────────────────────
-
-type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
-
-type Autosave = {
-    state: SaveState;
-    error: string | null;
-    /** Guarda ya lo pendiente. Devuelve si quedó guardado. */
-    flush: () => Promise<boolean>;
-};
-
-const AUTOSAVE_DELAY_MS = 800;
-
 /**
- * Guarda `value` un rato después de que deja de cambiar. `save` devuelve el
- * mensaje de error, o `null` si salió bien.
- *
- * Nunca hay dos guardados a la vez: el que llega mientras otro está en vuelo
- * espera y manda el valor más nuevo. Así el orden de llegada al servidor es el
- * mismo que el de escritura, y un guardado viejo no pisa a uno nuevo.
+ * El mensaje de los pedidos del armado. Los del servidor —sin permiso, falta el
+ * tema, se terminó la cuota— están escritos para el docente y se muestran tal
+ * cual; una falla que no sea de esas lleva el mensaje de la pantalla.
  */
-function useAutosave<T>(value: T, save: (value: T) => Promise<string | null>, enabled: boolean): Autosave {
-    const serialized = JSON.stringify(value);
-
-    // Lo último que se sabe guardado. «Pendiente» se deduce comparando contra
-    // esto y no se lleva como estado aparte: así no se desincroniza, y montar dos
-    // veces en desarrollo no dispara un guardado de más.
-    const [savedSnapshot, setSavedSnapshot] = useState(serialized);
-    const [saving, setSaving] = useState(false);
-    const [savedOnce, setSavedOnce] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const latest = useRef(value);
-    const saveRef = useRef(save);
-    const snapshot = useRef(serialized);
-    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const inFlight = useRef<Promise<void> | null>(null);
-    const failed = useRef(false);
-
-    useEffect(() => {
-        latest.current = value;
-    }, [value]);
-
-    useEffect(() => {
-        saveRef.current = save;
-    }, [save]);
-
-    const flush = useCallback(async () => {
-        if (timer.current) {
-            clearTimeout(timer.current);
-            timer.current = null;
-        }
-        while (inFlight.current) await inFlight.current;
-
-        const sending = latest.current;
-        const body = JSON.stringify(sending);
-        if (body === snapshot.current) return !failed.current;
-
-        setSaving(true);
-        const run = (async () => {
-            let message: string | null;
-            try {
-                message = await saveRef.current(sending);
-            } catch {
-                message = "No se pudo guardar. Revisá la conexión y seguí escribiendo: se vuelve a intentar.";
-            }
-            failed.current = message !== null;
-            if (message) {
-                setError(message);
-            } else {
-                snapshot.current = body;
-                setSavedSnapshot(body);
-                setSavedOnce(true);
-                setError(null);
-            }
-            setSaving(false);
-        })();
-        inFlight.current = run;
-        await run;
-        inFlight.current = null;
-        return !failed.current;
-    }, []);
-
-    useEffect(() => {
-        if (!enabled || serialized === snapshot.current) return;
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => void flush(), AUTOSAVE_DELAY_MS);
-    }, [serialized, enabled, flush]);
-
-    useEffect(() => () => {
-        if (timer.current) clearTimeout(timer.current);
-    }, []);
-
-    const state: SaveState = saving
-        ? "saving"
-        : error
-          ? "error"
-          : serialized !== savedSnapshot
-            ? "pending"
-            : savedOnce
-              ? "saved"
-              : "idle";
-
-    return { state, error, flush };
+async function planApiError(res: Response, fallback: string): Promise<string> {
+    const readable = [403, 404, 409, 429].includes(res.status) || (res.status === 500 && (res.headers.get("content-type") ?? "").startsWith("text/plain"));
+    if (!readable) return fallback;
+    const message = await res.text().catch(() => "");
+    return message.trim() || fallback;
 }
 
-function isUnsaved(state: SaveState) {
-    return state === "pending" || state === "saving";
-}
-
-function SaveStatus({ states }: { states: Autosave[] }) {
-    const all = states.map((s) => s.state);
-    const status = all.includes("error")
-        ? "error"
-        : all.some(isUnsaved)
-          ? "saving"
-          : all.includes("saved")
-            ? "saved"
-            : "idle";
-
-    return (
-        <p role="status" aria-live="polite" className={cn("inline-flex items-center gap-1.5 text-[13px]", MUTED)}>
-            {status === "saving" && <Loader2 className="size-3.5 animate-spin" />}
-            {status === "error" && <AlertCircle className="size-3.5 text-red-600" />}
-            {(status === "saved" || status === "idle") && <CloudCheck className={cn("size-4", PRIMARY_TEXT)} />}
-            {status === "saving"
-                ? "Guardando…"
-                : status === "error"
-                  ? "Hay algo sin guardar"
-                  : status === "saved"
-                    ? "Guardado"
-                    : "Se guarda solo"}
-        </p>
-    );
-}
-
-// ─── Piezas ──────────────────────────────────────────────────────────────────
-
-function SectionHeader({
-    n,
-    titleId,
-    title,
-    description,
-    tone = "green",
-}: {
-    n: number;
-    titleId: string;
-    title: string;
-    description: string;
-    tone?: "green" | "violet";
-}) {
-    return (
-        <div className="flex items-start gap-3 sm:gap-3.5">
-            <span
-                aria-hidden="true"
-                className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-[10px] text-sm font-extrabold sm:size-[34px] sm:text-[15px]",
-                    tone === "violet"
-                        ? "bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
-                        : cn("bg-primary/10", PRIMARY_TEXT)
-                )}
-            >
-                {n}
-            </span>
-            <div className="space-y-1">
-                <h2 id={titleId} className="text-xl font-bold tracking-tight sm:text-2xl">
-                    {title}
-                </h2>
-                <p className={cn("max-w-2xl text-[13.5px] leading-normal sm:text-sm", MUTED)}>{description}</p>
-            </div>
-        </div>
-    );
-}
+// ─── Piezas de la práctica ───────────────────────────────────────────────────
 
 function PracticeChip({ published, hasContent }: { published: boolean; hasContent: boolean }) {
     if (published) {
@@ -866,27 +974,10 @@ function PublishSwitch({
     );
 }
 
-function ErrorNote({ children }: { children: React.ReactNode }) {
-    return (
-        <p className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-[13.5px] leading-normal text-red-700 dark:bg-red-950/40 dark:text-red-400">
-            <AlertCircle className="mt-0.5 size-4 shrink-0" />
-            {children}
-        </p>
-    );
-}
-
 // ─── Ayudas ──────────────────────────────────────────────────────────────────
 
 function scheduleLabel(s: Schedule) {
     return `${DAYS[s.dayOfWeek]} ${s.startTime} – ${s.endTime}${s.room ? ` (${s.room})` : ""}`;
-}
-
-function durationMinutes(start: string, end: string): number | null {
-    const [sh, sm] = start.split(":").map(Number);
-    const [eh, em] = end.split(":").map(Number);
-    if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return null;
-    const minutes = eh * 60 + em - (sh * 60 + sm);
-    return minutes > 0 ? minutes : null;
 }
 
 function capitalize(text: string) {

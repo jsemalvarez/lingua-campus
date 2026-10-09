@@ -7,7 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye } from "lucide-react";
+import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye, Check } from "lucide-react";
 import { format, addDays, subDays, addWeeks, subWeeks, isSameDay, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
@@ -16,6 +16,7 @@ import { getActiveRole } from "@/lib/roles";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { getPeerLevels, isPeerCourse, visibleCoursesFilter } from "@/lib/peers";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -207,12 +208,15 @@ export default async function SchedulePage(props: PageProps) {
                 include: {
                     teacher: true,
                     lessons: {
-                        where: lessonsWhere
+                        where: lessonsWhere,
+                        include: { plan: { select: { chosen: true } } }
                     }
                 }
             },
             lessons: {
-                where: lessonsWhere
+                where: lessonsWhere,
+                // Para decir «Armada» en la tarjeta (PED-09).
+                include: { plan: { select: { chosen: true } } }
             }
         },
         orderBy: [
@@ -423,6 +427,12 @@ export default async function SchedulePage(props: PageProps) {
                                                                         <BookOpen size={14} className="text-primary" />
                                                                         {registeredTopic}
                                                                     </p>
+                                                                    {/* El armado es del docente y la administración (PED-09). */}
+                                                                    {!isStudentOrGuardian && !schedule.isPeer && isPlanComplete(lesson?.plan?.chosen ?? 0) && (
+                                                                        <span className="self-start inline-flex items-center gap-1 rounded-full border border-[#bfe5da] bg-[#ebf7f4] px-2 py-0.5 text-[11px] font-bold text-[#1f7360] dark:border-primary/40 dark:bg-primary/10 dark:text-primary">
+                                                                            <Check size={11} strokeWidth={3} /> Armada
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1.5 -mt-0.5">

@@ -203,9 +203,9 @@ function Chip({ chip }: { chip: ToolChip }) {
  * La guía de «¿Primera vez?». Va dentro del `Dialog` compartido, que no tiene
  * alto máximo: la guía lo limita a la pantalla, desplaza el contenido por dentro
  * y deja fijos arriba el título y abajo «Cerrar» y «Abrir», que en el celular
- * quedan siempre a mano.
+ * quedan siempre a mano. La usa también el armado de la clase (PED-09).
  */
-function ToolGuide({ tool, onClose }: { tool: Tool; onClose: () => void }) {
+export function ToolGuide({ tool, onClose }: { tool: Tool; onClose: () => void }) {
     const { Icon, iconBox, band } = GROUP_STYLE[tool.group];
     const titleId = `guia-${tool.id}`;
     const { guide } = tool;

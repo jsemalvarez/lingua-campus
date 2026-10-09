@@ -169,7 +169,8 @@ export default async function CourseDetailPage({
                     chatScenario: true,
                     isPublished: true,
                 }
-            }
+            },
+            plan: { select: { chosen: true } }
         }
     });
 
