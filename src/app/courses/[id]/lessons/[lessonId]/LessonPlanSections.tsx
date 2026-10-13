@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import {
+    ageLabel,
     contentLabel,
     copyLabel,
     copyText,
@@ -38,6 +39,7 @@ import {
     selectedIdea,
     toolLabel,
     youglishUrl,
+    type AgeRange,
     type ExternalTool,
     type MomentId,
     type PlanIdea,
@@ -389,6 +391,7 @@ export function MomentsSection({
     canWrite,
     moments,
     studentCount,
+    ages,
     level,
     busy,
     errors,
@@ -402,6 +405,7 @@ export function MomentsSection({
     canWrite: boolean;
     moments: PlanMoments | null;
     studentCount: number;
+    ages: AgeRange | null;
     level: string | null;
     busy: "words" | "ideas" | MomentId | null;
     errors: Partial<Record<MomentId, string>>;
@@ -413,8 +417,11 @@ export function MomentsSection({
     onStartManual: () => void;
     onOpenGuide: (tool: ExternalTool) => void;
 }) {
+    // «un grupo de 5 alumnos de 13 a 16 años, nivel Upper-intermediate»: el
+    // docente ve con qué edad se pidieron las ideas, y si algo no cierra lo nota.
     const group = studentCount > 0 ? `un grupo de ${studentCount} ${studentCount === 1 ? "alumno" : "alumnos"}` : "tu grupo";
-    const levelText = level?.trim() ? ` de ${level.trim()}` : "";
+    const ageText = ages ? ` de ${ageLabel(ages)}` : "";
+    const levelText = level?.trim() ? `${ages ? "," : ""} ${ages ? "nivel " : "de "}${level.trim()}` : "";
 
     return (
         <section id="armar" aria-labelledby="titulo-armar" className="scroll-mt-24 space-y-4">
@@ -422,7 +429,7 @@ export function MomentsSection({
                 n={3}
                 titleId="titulo-armar"
                 title="Armar la clase"
-                description={`Tres ideas por momento, pensadas para ${group}${levelText}. Elegí una, pedí otras o escribí la tuya.`}
+                description={`Tres ideas por momento, pensadas para ${group}${ageText}${levelText}. Elegí una, pedí otras o escribí la tuya.`}
             />
             {moments === null && busy !== "ideas" ? (
                 <Card className="flex flex-col items-start gap-3 p-4 sm:p-6">

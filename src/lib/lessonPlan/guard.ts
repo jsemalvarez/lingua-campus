@@ -4,6 +4,7 @@ import { consumeAiQuota } from "@/lib/practice/quota";
 import { checkDraftInputs } from "@/lib/practice/draft";
 import type { LessonPlanContext } from "@/lib/practice/providers/ai/IAIProvider";
 import { durationMinutes, sanitizeFocus, sanitizeMoments, sanitizeWords, type PlanMoments, type PlanWord } from "./plan";
+import { courseAgeRange } from "./ages";
 
 /**
  * Puerta de los pedidos a la IA del armado de la clase (PED-09): las palabras y
@@ -15,8 +16,9 @@ import { durationMinutes, sanitizeFocus, sanitizeMoments, sanitizeWords, type Pl
  * del mismo nivel no entra a esta página.
  *
  * Todo lo que va al prompt se lee de la base, como desde SEC-07: el tema, los
- * contenidos, el nivel, los inscriptos, la duración y las palabras guardadas. La
- * página guarda antes de pedir, así que la base tiene lo que el docente ve.
+ * contenidos, el nivel, los inscriptos y sus edades, la duración y las palabras
+ * guardadas. La página guarda antes de pedir, así que la base tiene lo que el
+ * docente ve.
  */
 
 /** Los mismos topes que la práctica: lo que pasa de acá no mejora el prompt. */
@@ -98,6 +100,7 @@ export async function guardLessonPlan(
                 studentCount,
                 minutes: lesson.schedule ? durationMinutes(lesson.schedule.startTime, lesson.schedule.endTime) : null,
                 focus: sanitizeFocus(lesson.plan?.focus),
+                ages: await courseAgeRange(courseId),
             },
             words,
             moments: sanitizeMoments(lesson.plan?.moments),

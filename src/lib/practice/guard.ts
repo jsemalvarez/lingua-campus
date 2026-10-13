@@ -1,7 +1,8 @@
 import { getAuthContext, requireRole, INSTITUTE_STAFF } from "@/lib/authz";
 import prisma from "@/lib/prisma";
 import { consumeAiQuota, QuotaResult } from "@/lib/practice/quota";
-import { sanitizeFocus, sanitizeWords, selectedWords } from "@/lib/lessonPlan/plan";
+import { sanitizeFocus, sanitizeWords, selectedWords, type AgeRange } from "@/lib/lessonPlan/plan";
+import { courseAgeRange } from "@/lib/lessonPlan/ages";
 
 /**
  * Puerta de entrada única a los endpoints de IA de `/api/practice` (SEC-07).
@@ -168,6 +169,8 @@ export type DraftSource = {
     /** Lo que eligió el docente al armar la clase (PED-09), si la armó. */
     focus: string | null;
     words: string[];
+    /** Las edades del grupo, de las fechas de nacimiento (`courseAgeRange`). */
+    ages: AgeRange | null;
 };
 
 export type DraftGuard =
@@ -223,6 +226,7 @@ export async function guardPracticeDraft(lessonId: unknown): Promise<DraftGuard>
             id: true,
             topic: true,
             content: true,
+            courseId: true,
             course: { select: { level: true } },
             plan: { select: { focus: true, words: true } },
         },
@@ -244,6 +248,7 @@ export async function guardPracticeDraft(lessonId: unknown): Promise<DraftGuard>
             level: lesson.course.level,
             focus: sanitizeFocus(lesson.plan?.focus),
             words: selectedWords(sanitizeWords(lesson.plan?.words)),
+            ages: await courseAgeRange(lesson.courseId),
         },
     };
 }

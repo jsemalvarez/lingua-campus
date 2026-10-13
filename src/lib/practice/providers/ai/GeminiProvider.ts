@@ -46,14 +46,15 @@ interface GeminiRequest {
  * La forma de cada idea del armado de la clase. Va como `responseSchema` y no
  * sólo en el prompt: con el pedido en texto, el modelo metía las preguntas de
  * Kahoot y las tarjetas de Quizlet como texto adentro de `lines`, y el formato
- * de importación no podía armarse.
+ * de importación no podía armarse. Las herramientas son sólo las que van con la
+ * edad del grupo: el modelo no puede elegir otra.
  */
-const LESSON_IDEA_SCHEMA = {
+const lessonIdeaSchema = (tools: string[]) => ({
     type: "OBJECT",
     properties: {
         title: { type: "STRING" },
         description: { type: "STRING" },
-        tool: { type: "STRING", enum: ["none", "material", "kahoot", "wordwall", "quizlet", "youglish", "padlet", "docs", "canva"] },
+        tool: { type: "STRING", enum: tools },
         minutes: { type: "INTEGER" },
         grouping: { type: "STRING", enum: ["Toda la clase", "De a dos", "Grupos de 3", "Equipos", "Cada uno"] },
         lines: { type: "ARRAY", items: { type: "STRING" } },
@@ -80,7 +81,25 @@ const LESSON_IDEA_SCHEMA = {
         },
     },
     required: ["title", "description", "tool", "minutes", "grouping", "lines"],
-};
+});
+
+/**
+ * Para qué edad son las actividades. Va en todo lo que se le pide al modelo
+ * sobre una clase —palabras, ideas y práctica—: con el nivel solo, a un grupo
+ * de chicos de 7 años le proponía escribir en un documento compartido.
+ */
+function describeAges(ages: { min: number; max: number } | null): string {
+    if (!ages) return "Students' ages: not recorded (infer them from the level and the topic).";
+    const range = ages.min === ages.max ? `${ages.min}` : `${ages.min} to ${ages.max}`;
+    const guidance = ages.min < 10
+        ? "These are young children: short, playful activities with movement, pictures, games and lots of speaking; very little reading and writing; one simple instruction at a time."
+        : ages.min < 13
+          ? "These are children and pre-teens: games, teams and movement work well; reading and writing in short chunks; nothing that needs their own accounts."
+          : ages.max < 18
+            ? "These are teenagers: topics from their world (school, friends, series, social media), some autonomy, nothing childish."
+            : "These are teenagers and adults: everyday and work situations, nothing childish.";
+    return `Students' ages: ${range} years old. ${guidance}`;
+}
 
 /** Parsea el JSON de una respuesta, aunque venga envuelto en ```json. */
 function parseJsonResponse(text: string): unknown {
@@ -96,6 +115,7 @@ function describeClass(context: LessonPlanContext): string {
         `Level: ${context.level?.trim() || "not recorded (assume the level the topic suggests)"}`,
         `Group size: ${context.studentCount > 0 ? `${context.studentCount} students` : "unknown (assume about 10 students)"}`,
         `Class length: ${context.minutes ? `${context.minutes} minutes` : "not recorded (assume 60 minutes)"}`,
+        describeAges(context.ages),
         context.focus ? `Main focus chosen by the teacher: ${context.focus}` : null,
     ];
     return lines.filter(Boolean).join("\n");
@@ -366,13 +386,14 @@ CRITICAL CONSTRAINTS:
         topic: string,
         content: string | null,
         language: string = "English",
-        extra: { words?: string[]; focus?: string | null; level?: string | null } = {}
+        extra: { words?: string[]; focus?: string | null; level?: string | null; ages?: { min: number; max: number } | null } = {}
     ): Promise<PracticeDraft> {
         // Si el docente ya eligió las palabras de la clase (PED-09), la práctica
         // sale de esas: es lo que une el armado con la tarea.
         const words = extra.words?.filter(Boolean) ?? [];
         const classDetails = [
             extra.level?.trim() ? `Level: ${extra.level.trim()}` : null,
+            extra.ages ? `${describeAges(extra.ages)} Phrases, text and role-play must suit that age.` : null,
             extra.focus ? `Main focus of the class: ${extra.focus}` : null,
             words.length ? `Words and phrases of the class, chosen by the teacher: ${words.join(", ")}. Use them across the three sections.` : null,
         ].filter(Boolean).join("\n");
@@ -479,13 +500,28 @@ Respond ONLY with a JSON array of strings, like ["went", "last weekend"]. No tra
     }
 
     async generateLessonIdeas(
-        context: LessonPlanContext & { words: string[] },
+        context: LessonPlanContext & { words: string[]; tools: string[] },
         moments: LessonMomentId[],
         avoid: string[],
         language: string = "English"
     ): Promise<Partial<Record<LessonMomentId, unknown[]>>> {
         const groupSize = context.studentCount > 0 ? context.studentCount : 10;
         const length = context.minutes ?? 60;
+
+        // Qué tiene que traer cada herramienta. Al prompt van sólo las que
+        // permite la edad del grupo, y el esquema no deja elegir otra.
+        const toolRules: Record<string, string> = {
+            none: `"none": nothing but the classroom. "lines": what the teacher says or writes on the board.`,
+            material: `"material": only in "principal" (see above). "lines": how to prepare it.`,
+            kahoot: `"kahoot": live quiz on the classroom screen; students answer from a device, no account needed. The free version allows 10 players per game${groupSize > 10 ? `, so with ${groupSize} students they play in teams` : ""}. Put the quiz in the "questions" field —never inside "lines"—: 4 to 6 items, each with "question", 4 "options" and "answer" (index of the right option, 0 to 3).`,
+            wordwall: `"wordwall": games built from a word list (spin the wheel, match up). "lines": the items of the list, one per line.`,
+            quizlet: `"quizlet": flashcards to review at home. Put the cards in the "cards" field —never inside "lines"—: 6 to 12 items, each with "term" and "definition".`,
+            youglish: `"youglish": real videos where people say a word, to project in class. Always include "words": 3 to 6 words of the class to listen to.`,
+            padlet: `"padlet": an online wall where students post text or photos without an account. "lines": the instructions to paste.`,
+            docs: `"docs": a shared Google Doc everyone writes in. "lines": the instructions.`,
+            canva: `"canva": the teacher prepares printable or projectable material, like flashcards. "lines": what goes on it.`,
+        };
+        const tools = context.tools.filter((tool) => tool in toolRules);
 
         // Cada momento con lo que se espera de él. La tarea pide dos: la tercera
         // es la práctica del campus, que agrega el sistema.
@@ -507,18 +543,10 @@ Task: write ideas the teacher can choose from, one per moment, for these moments
 ${moments.map((m) => `- ${momentRules[m]}`).join("\n")}
 ${avoid.length ? `\nThe teacher already has these ideas; propose different ones: ${avoid.join("; ")}.` : ""}
 
-Every idea must work for a group of ${groupSize} students and use the words of the class. Vary the dynamics, and keep about half of the ideas without any tool.
+Every idea must work for a group of ${groupSize} students of that age and use the words of the class. Vary the dynamics, and keep about half of the ideas without any tool.
 
-Tools ("tool" field), with what each idea must include:
-- "none": nothing but the classroom. "lines": what the teacher says or writes on the board.
-- "material": only in "principal" (see above). "lines": how to prepare it.
-- "kahoot": live quiz on the classroom screen; students answer from a device, no account needed. The free version allows 10 players per game${groupSize > 10 ? `, so with ${groupSize} students they play in teams` : ""}. Put the quiz in the "questions" field —never inside "lines"—: 4 to 6 items, each with "question", 4 "options" and "answer" (index of the right option, 0 to 3).
-- "wordwall": games built from a word list (spin the wheel, match up). "lines": the items of the list, one per line.
-- "quizlet": flashcards to review at home. Put the cards in the "cards" field —never inside "lines"—: 6 to 12 items, each with "term" and "definition".
-- "youglish": real videos where people say a word, to project in class. Always include "words": 3 to 6 words of the class to listen to.
-- "padlet": an online wall where students post text or photos without an account. "lines": the instructions to paste.
-- "docs": a shared Google Doc everyone writes in. "lines": the instructions.
-- "canva": the teacher prepares printable or projectable material, like flashcards. "lines": what goes on it.
+Tools ("tool" field), with what each idea must include. Use only these:
+${tools.map((tool) => `- ${toolRules[tool]}`).join("\n")}
 Use each external tool at most once in the whole answer. Never invent songs, films, videos or links.
 
 Fields of each idea:
@@ -541,7 +569,7 @@ Respond ONLY with a JSON object whose keys are the requested moments, each with 
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: "OBJECT",
-                    properties: Object.fromEntries(moments.map((m) => [m, { type: "ARRAY", items: LESSON_IDEA_SCHEMA }])),
+                    properties: Object.fromEntries(moments.map((m) => [m, { type: "ARRAY", items: lessonIdeaSchema(tools) }])),
                     required: moments,
                 },
                 thinkingConfig: { thinkingBudget: 1024 },

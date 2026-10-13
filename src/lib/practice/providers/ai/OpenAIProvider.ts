@@ -102,7 +102,7 @@ export class OpenAIProvider implements IAIProvider {
         topic: string,
         content: string | null,
         language?: string,
-        extra?: { words?: string[]; focus?: string | null; level?: string | null }
+        extra?: { words?: string[]; focus?: string | null; level?: string | null; ages?: { min: number; max: number } | null }
     ): Promise<PracticeDraft> {
         throw new Error("generatePracticeDraft not implemented for OpenAIProvider yet.");
     }
@@ -116,7 +116,7 @@ export class OpenAIProvider implements IAIProvider {
     }
 
     async generateLessonIdeas(
-        context: LessonPlanContext & { words: string[] },
+        context: LessonPlanContext & { words: string[]; tools: string[] },
         moments: LessonMomentId[],
         avoid: string[],
         language?: string

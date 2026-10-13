@@ -2,7 +2,7 @@ import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { readJsonBody } from "@/lib/practice/guard";
 import { guardLessonPlan } from "@/lib/lessonPlan/guard";
-import { campusIdea, ideaFromAi, MOMENT_IDS, selectedWords, type MomentId, type PlanIdea } from "@/lib/lessonPlan/plan";
+import { bookIdea, campusIdea, ideaFromAi, MOMENT_IDS, selectedWords, toolsForAges, type MomentId, type PlanIdea } from "@/lib/lessonPlan/plan";
 
 export const maxDuration = 60;
 
@@ -17,7 +17,8 @@ export const maxDuration = 60;
  * ya tiene. Salen de las palabras y el foco guardados (PED-09).
  *
  * La tarea siempre ofrece la práctica del campus: la agrega este endpoint, no la
- * IA. Como los otros pedidos de la página, **no guarda nada**.
+ * IA. Las herramientas son sólo las que van con la edad del grupo
+ * (`toolsForAges`). Como los otros pedidos de la página, **no guarda nada**.
  */
 export async function POST(req: Request) {
     const body = await readJsonBody(req);
@@ -28,15 +29,16 @@ export async function POST(req: Request) {
 
     const { context, words, moments: current } = guard.source;
     const classWords = selectedWords(words);
+    const allowedTools = toolsForAges(context.ages);
     const requested = only ? [only] : MOMENT_IDS;
     const avoid = only && current ? current[only].ideas.map((idea) => idea.title) : [];
 
     const provider = getAIProvider();
     const ask = (moments: MomentId[]) =>
-        provider.generateLessonIdeas({ ...context, words: classWords }, moments, avoid, PRACTICE_LANGUAGE);
+        provider.generateLessonIdeas({ ...context, words: classWords, tools: allowedTools }, moments, avoid, PRACTICE_LANGUAGE);
     const shape = (raw: Partial<Record<MomentId, unknown[]>>, moment: MomentId) =>
         (raw[moment] ?? [])
-            .map((idea) => ideaFromAi(idea, moment, context.studentCount, classWords))
+            .map((idea) => ideaFromAi(idea, moment, { studentCount: context.studentCount, classWords, allowedTools }))
             .filter((idea): idea is PlanIdea => idea !== null)
             .slice(0, moment === "tarea" ? 2 : 3);
 
@@ -59,6 +61,13 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error("[LESSON_PLAN_IDEAS] Error:", error instanceof Error ? error.message : error);
         return new Response("No pudimos escribir las ideas. Probá de nuevo en un momento.", { status: 500 });
+    }
+
+    // La principal siempre ofrece el libro. Si el modelo no lo trajo, va el de
+    // siempre como tercera opción. En «Otras ideas» la página conserva el que ya
+    // estaba, así que sólo hace falta al armar la clase entera.
+    if (!only && fresh.principal?.length && !fresh.principal.some((idea) => idea.tool === "material")) {
+        fresh.principal = [...fresh.principal.slice(0, 2), bookIdea()];
     }
 
     const result: Partial<Record<MomentId, PlanIdea[]>> = {};

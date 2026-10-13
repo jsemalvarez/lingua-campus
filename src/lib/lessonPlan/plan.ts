@@ -40,6 +40,74 @@ export function isExternalTool(tool: PlanTool): tool is ExternalTool {
     return (EXTERNAL_TOOLS as readonly string[]).includes(tool);
 }
 
+// ─── La edad del grupo ───────────────────────────────────────────────────────
+
+/** El rango de edad de los alumnos del curso, calculado de sus fechas de nacimiento. */
+export type AgeRange = { min: number; max: number };
+
+/**
+ * Una fecha de nacimiento que da menos de 4 o más de 99 años está mal cargada
+ * —el año de ingreso en vez del de nacimiento, por ejemplo— y no cuenta.
+ */
+const MIN_PLAUSIBLE_AGE = 4;
+const MAX_PLAUSIBLE_AGE = 99;
+
+/**
+ * YouGlish trae videos de YouTube, que pide 13 años, y la guía de recursos ya
+ * avisa que no están pensados para chicos.
+ */
+const YOUTUBE_MIN_AGE = 13;
+
+/**
+ * Google Docs y Padlet son para escribir y publicar en un dispositivo: antes de
+ * los 10 casi no escriben en inglés, y menos en una pantalla.
+ */
+const WRITING_ONLINE_MIN_AGE = 10;
+
+/** Años cumplidos a `today`, contados en UTC como el resto de las fechas. */
+export function ageOn(birthDate: Date, today: Date): number {
+    let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+    const beforeBirthday =
+        today.getUTCMonth() < birthDate.getUTCMonth() ||
+        (today.getUTCMonth() === birthDate.getUTCMonth() && today.getUTCDate() < birthDate.getUTCDate());
+    if (beforeBirthday) age -= 1;
+    return age;
+}
+
+/**
+ * El rango con los alumnos que tienen la fecha cargada. Si no hay ninguno —un
+ * curso sin inscriptos, o sin fechas—, `null`: la IA sigue con el nivel y el
+ * tema, como antes.
+ */
+export function ageRangeOf(birthDates: (Date | null)[], today: Date = new Date()): AgeRange | null {
+    const ages = birthDates
+        .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()))
+        .map((d) => ageOn(d, today))
+        .filter((age) => age >= MIN_PLAUSIBLE_AGE && age <= MAX_PLAUSIBLE_AGE);
+    if (ages.length === 0) return null;
+    return { min: Math.min(...ages), max: Math.max(...ages) };
+}
+
+export function ageLabel(range: AgeRange): string {
+    return range.min === range.max ? `${range.min} años` : `${range.min} a ${range.max} años`;
+}
+
+/**
+ * Las herramientas que la IA puede proponer para el grupo. Manda el más chico:
+ * una idea que no sirve para uno de los alumnos no sirve para la clase. Lo
+ * decide el sistema y no el prompt, para no depender de que el modelo se acuerde.
+ */
+export function toolsForAges(range: AgeRange | null): PlanTool[] {
+    const youngest = range?.min ?? null;
+    return PLAN_TOOLS.filter((tool) => {
+        if (tool === "campus") return false; // la práctica la agrega el sistema
+        if (youngest === null) return true;
+        if (tool === "youglish") return youngest >= YOUTUBE_MIN_AGE;
+        if (tool === "docs" || tool === "padlet") return youngest >= WRITING_ONLINE_MIN_AGE;
+        return true;
+    });
+}
+
 export const GROUPINGS = ["Toda la clase", "De a dos", "Grupos de 3", "Equipos", "Cada uno"] as const;
 
 export type PlanWord = { text: string; on: boolean; own?: boolean };
@@ -232,6 +300,26 @@ export function campusIdea(): PlanIdea {
 }
 
 /**
+ * La idea del libro de siempre, para cuando la IA no la trae. La actividad
+ * principal la ofrece siempre —es lo que el docente ya tenía previsto—, y el
+ * pedido la exige, pero el modelo a veces la olvida.
+ */
+export function bookIdea(): PlanIdea {
+    return {
+        id: newIdeaId(),
+        title: "Seguir con el libro",
+        description: "Los ejercicios que ya tenías previstos, con las palabras de hoy en los ejemplos.",
+        tool: "material",
+        minutes: 20,
+        grouping: "Toda la clase",
+        lines: [
+            "Antes de la clase, elegí del libro el ejercicio que mejor use las palabras de hoy.",
+            "Hacelo primero y usá sus respuestas como ejemplos para hablar.",
+        ],
+    };
+}
+
+/**
  * Kahoot gratis admite hasta 10 jugadores por partida (verificado el
  * 27/09/2026, ver `src/app/resources/tools.ts`). La IA ya recibe el tamaño del
  * grupo, pero el aviso no depende de que lo recuerde.
@@ -356,12 +444,23 @@ export function isPlanEmpty(plan: PlanData): boolean {
  * tarjetas de Quizlet llegan con estructura y se pasan a renglones acá, con la
  * correcta marcada y la flecha que después se cambia por un tabulador.
  */
-export function ideaFromAi(raw: unknown, moment: MomentId, studentCount: number, classWords: string[]): PlanIdea | null {
+export function ideaFromAi(
+    raw: unknown,
+    moment: MomentId,
+    group: {
+        studentCount: number;
+        classWords: string[];
+        /** De `toolsForAges`: una idea con otra herramienta no llega a la página. */
+        allowedTools: PlanTool[];
+    }
+): PlanIdea | null {
     if (!raw || typeof raw !== "object") return null;
     const r = raw as Record<string, unknown>;
+    const { studentCount, classWords, allowedTools } = group;
     let tool = asTool(r.tool);
-    // La práctica del campus la agrega el sistema, y el libro va en la principal.
-    if (tool === "campus" || (tool === "material" && moment !== "principal")) tool = "none";
+    if (!allowedTools.includes(tool)) return null;
+    // El libro va en la principal; en otro momento es una idea sin herramienta.
+    if (tool === "material" && moment !== "principal") tool = "none";
 
     let ideaLines = lines(r.lines);
 

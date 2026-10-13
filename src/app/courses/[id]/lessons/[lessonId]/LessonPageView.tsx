@@ -38,6 +38,7 @@ import {
     MOMENT_IDS,
     newIdeaId,
     selectedIdea,
+    type AgeRange,
     type ExternalTool,
     type MomentId,
     type PlanData,
@@ -69,6 +70,8 @@ type Props = {
         teacherName: string | null;
         classroomName: string | null;
         studentCount: number;
+        /** Edades de los inscriptos, de sus fechas de nacimiento. */
+        ages: AgeRange | null;
         schedules: Schedule[];
     };
     lesson: { topic: string; content: string; dateKey: string; scheduleId: string | null };
@@ -675,6 +678,7 @@ export function LessonPageView({ courseId, lessonId, canWrite, courseFinished, c
                             canWrite={canWrite}
                             moments={moments}
                             studentCount={course.studentCount}
+                            ages={course.ages}
                             level={course.level}
                             busy={aiBusy}
                             errors={momentErrors}

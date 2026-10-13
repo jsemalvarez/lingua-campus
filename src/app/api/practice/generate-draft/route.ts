@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     // El mismo chequeo que deshabilita el botón en el modal. Se repite acá porque
     // este es el lado que gasta plata: la interfaz puede equivocarse, o no ser la
     // que llamó.
-    const { topic, content, level, focus, words } = guard.lesson;
+    const { topic, content, level, focus, words, ages } = guard.lesson;
     const inputs = checkDraftInputs(topic, content);
     if (!inputs.ready) {
         return new Response(inputs.reason, { status: 409 });
@@ -34,8 +34,9 @@ export async function POST(req: Request) {
 
     try {
         const provider = getAIProvider();
-        // Con las palabras de la clase, si el docente la armó (PED-09).
-        const draft = await provider.generatePracticeDraft(topic, content, PRACTICE_LANGUAGE, { words, focus, level });
+        // Con las palabras de la clase, si el docente la armó, y para la edad
+        // del grupo (PED-09).
+        const draft = await provider.generatePracticeDraft(topic, content, PRACTICE_LANGUAGE, { words, focus, level, ages });
 
         return Response.json(draft);
     } catch (error: any) {

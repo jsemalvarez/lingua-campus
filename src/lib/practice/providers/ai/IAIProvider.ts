@@ -62,6 +62,8 @@ export interface LessonPlanContext {
     /** Duración del horario; `null` si la clase no tiene horario. */
     minutes: number | null;
     focus: string | null;
+    /** Edades de los alumnos, de sus fechas de nacimiento; `null` si no hay. */
+    ages: { min: number; max: number } | null;
 }
 
 /** Los momentos de la clase, con los mismos ids que `LessonPlan.moments`. */
@@ -137,7 +139,7 @@ export interface IAIProvider {
         topic: string,
         content: string | null,
         language?: string,
-        extra?: { words?: string[]; focus?: string | null; level?: string | null }
+        extra?: { words?: string[]; focus?: string | null; level?: string | null; ages?: { min: number; max: number } | null }
     ): Promise<PracticeDraft>;
 
     /**
@@ -157,7 +159,11 @@ export interface IAIProvider {
      * @param avoid - Títulos de ideas que ya tiene la clase y no hay que repetir
      */
     generateLessonIdeas(
-        context: LessonPlanContext & { words: string[] },
+        context: LessonPlanContext & {
+            words: string[];
+            /** Las herramientas que van con la edad del grupo (`toolsForAges`). */
+            tools: string[];
+        },
         moments: LessonMomentId[],
         avoid: string[],
         language?: string

@@ -3,6 +3,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import prisma from "@/lib/prisma";
 import { requireLessonReadAccess } from "@/lib/lessonAccess";
 import { sanitizePlan } from "@/lib/lessonPlan/plan";
+import { courseAgeRange } from "@/lib/lessonPlan/ages";
 import { LessonPageView } from "./LessonPageView";
 
 export const metadata = {
@@ -62,9 +63,12 @@ export default async function LessonPage(props: { params: Promise<{ id: string; 
     if (!lesson) redirect(`/courses/${courseId}`);
     if (lesson.type !== "CLASS") redirect(`/courses/${courseId}`);
 
-    const studentCount = await prisma.enrollment.count({
-        where: { courseId, status: "ACTIVE", student: { status: "ACTIVE" } },
-    });
+    const [studentCount, ages] = await Promise.all([
+        prisma.enrollment.count({
+            where: { courseId, status: "ACTIVE", student: { status: "ACTIVE" } },
+        }),
+        courseAgeRange(courseId),
+    ]);
 
     const { course, practice } = lesson;
 
@@ -82,6 +86,7 @@ export default async function LessonPage(props: { params: Promise<{ id: string; 
                     teacherName: course.teacher?.name ?? null,
                     classroomName: course.classroom?.name ?? null,
                     studentCount,
+                    ages,
                     schedules: course.schedules,
                 }}
                 lesson={{
