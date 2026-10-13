@@ -527,7 +527,7 @@ Respond ONLY with a JSON array of strings, like ["went", "last weekend"]. No tra
         // es la práctica del campus, que agrega el sistema.
         const momentRules: Record<LessonMomentId, string> = {
             inicio: `"inicio" (warm-up): 3 ideas to get into the topic, 5 to 10 minutes each.`,
-            principal: `"principal" (main activity): 3 ideas for the core of the class, about half of the ${length} minutes. Exactly one of them uses tool "material": continuing with the teacher's usual coursebook, with a concrete tip in "lines" to connect it to the topic (if the content mentions a unit or pages, cite them).`,
+            principal: `"principal" (main activity): 3 ideas for the core of the class, about half of the ${length} minutes. Exactly one of them uses tool "material": continuing with the material the teacher already uses, with a concrete tip in "lines" to connect it to the topic. You do not know what that material is: refer to it only as the class content does (if it cites a unit or pages, cite them exactly; if it mentions photocopies or worksheets, say so; if it says nothing, call it "tu material"). Never name a book, a publisher or a series, and never write a unit or page number that is not in the class content.`,
             cierre: `"cierre" (closing): 3 short, energetic ideas, 5 to 10 minutes each.`,
             tarea: `"tarea" (homework): exactly 2 ideas for home. Do not use the campus practice: the system adds it as a third option.`,
         };
@@ -547,7 +547,7 @@ Every idea must work for a group of ${groupSize} students of that age and use th
 
 Tools ("tool" field), with what each idea must include. Use only these:
 ${tools.map((tool) => `- ${toolRules[tool]}`).join("\n")}
-Use each external tool at most once in the whole answer. Never invent songs, films, videos or links.
+Use each external tool at most once in the whole answer. Never invent songs, films, videos, links, books or publishers.
 
 Fields of each idea:
 - "title": short name, in Spanish, at most 6 words.

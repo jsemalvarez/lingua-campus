@@ -26,7 +26,8 @@ export const FOCUSES = ["Conversación", "Gramática", "Vocabulario", "Pronuncia
  * Con qué se hace cada idea. Las siete herramientas son las de la página de
  * recursos menos PlayPhrase y LingoClip: las escenas de películas hay que
  * revisarlas antes de proyectar, y las canciones no tienen de dónde salir sin
- * que la IA invente letras (PED-09). «material» es el libro de siempre y
+ * que la IA invente letras (PED-09). «material» es lo que el docente ya usa
+ * —un libro, fotocopias, lo que sea— y
  * «campus» es la práctica de los alumnos.
  */
 export const PLAN_TOOLS = ["none", "material", "campus", "kahoot", "wordwall", "quizlet", "youglish", "padlet", "docs", "canva"] as const;
@@ -300,23 +301,45 @@ export function campusIdea(): PlanIdea {
 }
 
 /**
- * La idea del libro de siempre, para cuando la IA no la trae. La actividad
+ * El título y la descripción de la idea del material propio: los pone el
+ * sistema y no la IA. El campus no sabe si el docente usa un libro, fotocopias
+ * u otra cosa, y con el título libre el modelo inventaba nombres de libros
+ * («Libro: El sueño del dinero») que el docente podía salir a buscar.
+ */
+export const MATERIAL_TITLE = "Seguir con tu material";
+export const MATERIAL_DESCRIPTION = "El libro, las fotocopias o lo que ya tenías preparado, con las palabras de hoy en los ejemplos.";
+
+/**
+ * La idea del material de siempre, para cuando la IA no la trae. La actividad
  * principal la ofrece siempre —es lo que el docente ya tenía previsto—, y el
  * pedido la exige, pero el modelo a veces la olvida.
  */
-export function bookIdea(): PlanIdea {
+export function materialIdea(): PlanIdea {
     return {
         id: newIdeaId(),
-        title: "Seguir con el libro",
-        description: "Los ejercicios que ya tenías previstos, con las palabras de hoy en los ejemplos.",
+        title: MATERIAL_TITLE,
+        description: MATERIAL_DESCRIPTION,
         tool: "material",
         minutes: 20,
         grouping: "Toda la clase",
-        lines: [
-            "Antes de la clase, elegí del libro el ejercicio que mejor use las palabras de hoy.",
-            "Hacelo primero y usá sus respuestas como ejemplos para hablar.",
-        ],
+        lines: MATERIAL_LINES,
     };
+}
+
+const MATERIAL_LINES = [
+    "Antes de la clase, elegí de tu material el ejercicio que mejor use las palabras de hoy.",
+    "Hacelo primero y usá sus respuestas como ejemplos para hablar.",
+];
+
+/**
+ * Si el consejo cita una unidad o una página que no está en los contenidos, la
+ * inventó: con contenidos sin datos del material, el modelo escribía «unidad 7,
+ * página 42». Se cambia por el consejo genérico, que no promete nada.
+ */
+function citesInventedPages(lines: string[], content: string | null): boolean {
+    const known = new Set((content ?? "").match(/\d+/g) ?? []);
+    const cited = lines.join(" ").match(/\b(?:unit|unidad|units|unidades|page|pages|p\.|pág\.?|página|páginas)\s*\d+(?:\s*(?:y|and|,|-|–|a)\s*\d+)*/gi) ?? [];
+    return cited.some((citation) => (citation.match(/\d+/g) ?? []).some((n) => !known.has(n)));
 }
 
 /**
@@ -452,11 +475,13 @@ export function ideaFromAi(
         classWords: string[];
         /** De `toolsForAges`: una idea con otra herramienta no llega a la página. */
         allowedTools: PlanTool[];
+        /** Los contenidos de la clase, contra los que se controla el material. */
+        content: string | null;
     }
 ): PlanIdea | null {
     if (!raw || typeof raw !== "object") return null;
     const r = raw as Record<string, unknown>;
-    const { studentCount, classWords, allowedTools } = group;
+    const { studentCount, classWords, allowedTools, content } = group;
     let tool = asTool(r.tool);
     if (!allowedTools.includes(tool)) return null;
     // El libro va en la principal; en otro momento es una idea sin herramienta.
@@ -513,11 +538,14 @@ export function ideaFromAi(
     const minutes = Math.round(Number(r.minutes));
     const fallbackMinutes = moment === "principal" ? 25 : moment === "tarea" ? 15 : 10;
 
+    const isMaterial = tool === "material";
+    if (isMaterial && citesInventedPages(ideaLines, content)) ideaLines = MATERIAL_LINES;
+
     const grouping = str(r.grouping, 40);
     return sanitizeIdea({
         id: newIdeaId(),
-        title: r.title,
-        description: r.description,
+        title: isMaterial ? MATERIAL_TITLE : r.title,
+        description: isMaterial ? MATERIAL_DESCRIPTION : r.description,
         tool,
         minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : fallbackMinutes,
         grouping: (GROUPINGS as readonly string[]).includes(grouping) ? grouping : "Toda la clase",

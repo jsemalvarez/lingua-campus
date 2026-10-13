@@ -2,7 +2,7 @@ import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { readJsonBody } from "@/lib/practice/guard";
 import { guardLessonPlan } from "@/lib/lessonPlan/guard";
-import { bookIdea, campusIdea, ideaFromAi, MOMENT_IDS, selectedWords, toolsForAges, type MomentId, type PlanIdea } from "@/lib/lessonPlan/plan";
+import { campusIdea, materialIdea, ideaFromAi, MOMENT_IDS, selectedWords, toolsForAges, type MomentId, type PlanIdea } from "@/lib/lessonPlan/plan";
 
 export const maxDuration = 60;
 
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         provider.generateLessonIdeas({ ...context, words: classWords, tools: allowedTools }, moments, avoid, PRACTICE_LANGUAGE);
     const shape = (raw: Partial<Record<MomentId, unknown[]>>, moment: MomentId) =>
         (raw[moment] ?? [])
-            .map((idea) => ideaFromAi(idea, moment, { studentCount: context.studentCount, classWords, allowedTools }))
+            .map((idea) => ideaFromAi(idea, moment, { studentCount: context.studentCount, classWords, allowedTools, content: context.content }))
             .filter((idea): idea is PlanIdea => idea !== null)
             .slice(0, moment === "tarea" ? 2 : 3);
 
@@ -63,11 +63,11 @@ export async function POST(req: Request) {
         return new Response("No pudimos escribir las ideas. Probá de nuevo en un momento.", { status: 500 });
     }
 
-    // La principal siempre ofrece el libro. Si el modelo no lo trajo, va el de
-    // siempre como tercera opción. En «Otras ideas» la página conserva el que ya
+    // La principal siempre ofrece el material propio. Si el modelo no lo trajo,
+    // va el genérico como tercera opción. En «Otras ideas» la página conserva el que ya
     // estaba, así que sólo hace falta al armar la clase entera.
     if (!only && fresh.principal?.length && !fresh.principal.some((idea) => idea.tool === "material")) {
-        fresh.principal = [...fresh.principal.slice(0, 2), bookIdea()];
+        fresh.principal = [...fresh.principal.slice(0, 2), materialIdea()];
     }
 
     const result: Partial<Record<MomentId, PlanIdea[]>> = {};
