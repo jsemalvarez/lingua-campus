@@ -439,16 +439,17 @@ function citesInventedPages(lines: string[], content: string | null): boolean {
 }
 
 /**
- * Kahoot gratis admite hasta 10 jugadores por partida (verificado el
- * 27/09/2026, ver `src/app/resources/tools.ts`). La IA ya recibe el tamaño del
- * grupo, pero el aviso no depende de que lo recuerde.
+ * Kahoot gratis admite hasta 40 jugadores por partida con la cuenta de
+ * «Profesor» (verificado el 15/10/2026, ver `src/app/resources/tools.ts`); con
+ * una cuenta personal son 10. La IA ya recibe el tamaño del grupo, pero el aviso
+ * no depende de que lo recuerde.
  */
-export const KAHOOT_FREE_PLAYERS = 10;
+export const KAHOOT_FREE_PLAYERS = 40;
 
 export function kahootNote(studentCount: number): string | undefined {
     if (studentCount <= KAHOOT_FREE_PLAYERS) return undefined;
     const teams = Math.ceil(studentCount / 3);
-    return `Son ${studentCount} alumnos y Kahoot gratis admite hasta ${KAHOOT_FREE_PLAYERS} jugadores por partida: jueguen en ${teams <= KAHOOT_FREE_PLAYERS ? `${teams} equipos de a 3` : "equipos"}, con un dispositivo por equipo.`;
+    return `Son ${studentCount} alumnos y Kahoot gratis admite hasta ${KAHOOT_FREE_PLAYERS} jugadores por partida con la cuenta de «Profesor»: jueguen en ${teams <= KAHOOT_FREE_PLAYERS ? `${teams} equipos de a 3` : "equipos"}, con un dispositivo por equipo.`;
 }
 
 // ─── Validación ──────────────────────────────────────────────────────────────

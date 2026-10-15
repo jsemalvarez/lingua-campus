@@ -3,7 +3,9 @@
  *
  * Los límites de las versiones gratis (jugadores de Kahoot, actividades de
  * Wordwall, escenas de PlayPhrase, padlets activos…) se verificaron en el sitio
- * de cada herramienta el 27/09/2026. Cambian seguido: al tocar un texto que
+ * de cada herramienta el 27/09/2026; el de Kahoot, otra vez el 15/10/2026 en su
+ * ayuda («How many participants can play a kahoot?»): depende del tipo de cuenta,
+ * 40 para docentes de escuela, 10 personal y 3 empresa. Cambian seguido: al tocar un texto que
  * afirme uno, volver a confirmarlo antes de publicarlo.
  *
  * Si cambia la cantidad de herramientas, cambia también «Nueve herramientas» en
@@ -88,18 +90,18 @@ export const TOOLS: Tool[] = [
         url: "https://kahoot.com",
         plan: "tiene versión gratis",
         description: "Trivia en vivo: la pregunta va en la pantalla del aula y cada uno contesta desde un dispositivo.",
-        chips: [{ text: "Alumnos sin cuenta" }, { text: "Gratis hasta 10 jugadores" }],
+        chips: [{ text: "Alumnos sin cuenta" }, { text: "Gratis hasta 40 jugadores" }],
         idea: "arrancá con cinco preguntas de la clase anterior. En cinco minutos ves qué quedó.",
         guide: {
             about: "Una trivia en vivo. Vos proyectás la pregunta en la pantalla del aula y cada alumno contesta desde un celular, una tablet o una compu. Suma más puntos quien contesta bien y rápido, y al final aparece el podio.",
             steps: [
-                { lead: "Creá tu cuenta gratis", rest: "en kahoot.com, como docente." },
+                { lead: "Creá tu cuenta gratis", rest: "en kahoot.com y, cuando te pregunte el tipo de cuenta, elegí «Profesor»." },
                 { lead: "Armá la trivia:", rest: "escribí cada pregunta con sus opciones y marcá la correcta." },
                 { lead: "En clase, lanzala en vivo:", rest: "en la pantalla aparece un PIN, y los alumnos entran en kahoot.it con ese número y un apodo." },
             ],
             goodToKnow: [
                 "Los alumnos no necesitan cuenta: entran con el PIN y un apodo.",
-                "La versión gratis admite hasta 10 jugadores por partida. Si son más, jueguen en equipos, con un dispositivo por grupo.",
+                "Con la cuenta de «Profesor», la versión gratis admite hasta 40 jugadores por partida. Si la creaste como personal juegan hasta 10, y como empresa, sólo 3: el tipo de cuenta se cambia en la configuración de tu perfil.",
                 "Gratis tenés preguntas de opción múltiple y de verdadero o falso.",
             ],
             idea: "Arrancá con cinco preguntas de la clase anterior. En cinco minutos ves qué quedó y qué conviene repasar.",
