@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE, LessonPlanContext, LessonMomentId } from "./IAIProvider";
 
 /**
  * Provider de IA usando Gemini de Google — implementación con fetch directo.
@@ -35,7 +35,91 @@ interface GeminiRequest {
         temperature?: number;
         maxOutputTokens?: number;
         responseMimeType?: string;
+        /** En 2.5 el razonamiento sale del mismo tope que la respuesta. */
+        thinkingConfig?: { thinkingBudget: number };
+        /** La forma obligatoria del JSON (el subconjunto de OpenAPI de Gemini). */
+        responseSchema?: Record<string, unknown>;
     };
+}
+
+/**
+ * La forma de cada idea del armado de la clase. Va como `responseSchema` y no
+ * sólo en el prompt: con el pedido en texto, el modelo metía las preguntas de
+ * Kahoot y las tarjetas de Quizlet como texto adentro de `lines`, y el formato
+ * de importación no podía armarse. Los pares sirven igual para Wordwall y Quizlet. Las herramientas son sólo las que van con la
+ * edad del grupo: el modelo no puede elegir otra.
+ */
+const lessonIdeaSchema = (tools: string[]) => ({
+    type: "OBJECT",
+    properties: {
+        title: { type: "STRING" },
+        description: { type: "STRING" },
+        tool: { type: "STRING", enum: tools },
+        minutes: { type: "INTEGER" },
+        grouping: { type: "STRING", enum: ["Toda la clase", "De a dos", "Grupos de 3", "Equipos", "Cada uno"] },
+        steps: { type: "ARRAY", items: { type: "STRING" } },
+        lines: { type: "ARRAY", items: { type: "STRING" } },
+        words: { type: "ARRAY", items: { type: "STRING" } },
+        questions: {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    question: { type: "STRING" },
+                    options: { type: "ARRAY", items: { type: "STRING" } },
+                    answer: { type: "INTEGER" },
+                },
+                required: ["question", "options", "answer"],
+            },
+        },
+        pairs: {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: { left: { type: "STRING" }, right: { type: "STRING" } },
+                required: ["left", "right"],
+            },
+        },
+    },
+    required: ["title", "description", "tool", "minutes", "grouping", "steps"],
+});
+
+/**
+ * Para qué edad son las actividades. Va en todo lo que se le pide al modelo
+ * sobre una clase —palabras, ideas y práctica—: con el nivel solo, a un grupo
+ * de chicos de 7 años le proponía escribir en un documento compartido.
+ */
+function describeAges(ages: { min: number; max: number } | null): string {
+    if (!ages) return "Students' ages: not recorded (infer them from the level and the topic).";
+    const range = ages.min === ages.max ? `${ages.min}` : `${ages.min} to ${ages.max}`;
+    const guidance = ages.min < 10
+        ? "These are young children: short, playful activities with movement, pictures, games and lots of speaking; very little reading and writing; one simple instruction at a time."
+        : ages.min < 13
+          ? "These are children and pre-teens: games, teams and movement work well; reading and writing in short chunks; nothing that needs their own accounts."
+          : ages.max < 18
+            ? "These are teenagers: topics from their world (school, friends, series, social media), some autonomy, nothing childish."
+            : "These are teenagers and adults: everyday and work situations, nothing childish.";
+    return `Students' ages: ${range} years old. ${guidance}`;
+}
+
+/** Parsea el JSON de una respuesta, aunque venga envuelto en ```json. */
+function parseJsonResponse(text: string): unknown {
+    const clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    return JSON.parse(clean);
+}
+
+/** La clase contada para el modelo, igual para las palabras y para las ideas. */
+function describeClass(context: LessonPlanContext): string {
+    const lines = [
+        `Class topic: "${context.topic}"`,
+        context.content ? `What the class covers:\n"""\n${context.content}\n"""` : null,
+        `Level: ${context.level?.trim() || "not recorded (assume the level the topic suggests)"}`,
+        `Group size: ${context.studentCount > 0 ? `${context.studentCount} students` : "unknown (assume about 10 students)"}`,
+        `Class length: ${context.minutes ? `${context.minutes} minutes` : "not recorded (assume 60 minutes)"}`,
+        describeAges(context.ages),
+        context.focus ? `Main focus chosen by the teacher: ${context.focus}` : null,
+    ];
+    return lines.filter(Boolean).join("\n");
 }
 
 async function callGemini(apiKey: string, body: GeminiRequest): Promise<string> {
@@ -302,8 +386,19 @@ CRITICAL CONSTRAINTS:
     async generatePracticeDraft(
         topic: string,
         content: string | null,
-        language: string = "English"
+        language: string = "English",
+        extra: { words?: string[]; focus?: string | null; level?: string | null; ages?: { min: number; max: number } | null } = {}
     ): Promise<PracticeDraft> {
+        // Si el docente ya eligió las palabras de la clase (PED-09), la práctica
+        // sale de esas: es lo que une el armado con la tarea.
+        const words = extra.words?.filter(Boolean) ?? [];
+        const classDetails = [
+            extra.level?.trim() ? `Level: ${extra.level.trim()}` : null,
+            extra.ages ? `${describeAges(extra.ages)} Phrases, text and role-play must suit that age.` : null,
+            extra.focus ? `Main focus of the class: ${extra.focus}` : null,
+            words.length ? `Words and phrases of the class, chosen by the teacher: ${words.join(", ")}. Use them across the three sections.` : null,
+        ].filter(Boolean).join("\n");
+
         // El tema y los contenidos los escribe la profesora en castellano; las
         // frases y el texto van en el idioma de la práctica igual. Se le dice
         // explícito porque si no el modelo sigue el idioma de la consigna.
@@ -311,6 +406,7 @@ CRITICAL CONSTRAINTS:
 
 Class topic: "${topic}"
 ${content ? `What was covered in class:\n"""\n${content}\n"""` : "No further detail was recorded: work from the topic alone."}
+${classDetails}
 
 The topic and the notes may be written in Spanish, because that is the teacher's language. The practice material itself must still be in ${language}.
 
@@ -324,7 +420,7 @@ Task: write the three practice sections for the students of THAT class, and resp
 CRITICAL CONSTRAINTS:
 1. "speakingPhrases": exactly 6 phrases in ${language}, 6 to 12 words each, using the grammar and vocabulary of the class. They are read out loud, so no lists, no parentheses and no abbreviations.
 2. "listeningText": a single paragraph in ${language} of 60 to 90 words, at the same level, that reuses the vocabulary of the class in a concrete everyday situation. It is turned into audio, so plain prose only.
-3. "chatScenario": 2 or 3 sentences **in Spanish**, written as an instruction for a chatbot that will role-play with the student ("Sos un mozo en un café. El alumno es un turista..."). State the role, the situation and the level. The situation must be one where the content of this class is actually needed.
+3. "chatScenario": 2 or 3 sentences **in Rioplatense Spanish, with voseo** ("Sos", "preguntale", "pedile"; never "tú", "eres" or "pregúntale"), written as an instruction for a chatbot that will role-play with the student ("Sos un mozo en un café. El alumno es un turista..."). State the role, the situation and the level. The situation must be one where the content of this class is actually needed.
 4. If the topic is too vague to teach anything specific, choose the most common beginner reading of it and stay concrete.
 5. Plain text, no markdown, no comments.`;
 
@@ -359,5 +455,144 @@ CRITICAL CONSTRAINTS:
         }
 
         return { speakingPhrases, listeningText, chatScenario };
+    }
+
+    async suggestLessonWords(
+        context: LessonPlanContext,
+        avoid: string[],
+        language: string = "English"
+    ): Promise<string[]> {
+        const prompt = `You are an experienced teacher of ${language} as a foreign language, helping a colleague prepare a group class.
+
+${describeClass(context)}
+
+The topic and the notes may be in Spanish, because that is the teacher's language.
+
+Task: suggest the 12 ${language} words or short phrases (at most 3 words each) that the students will need in this class, most important first. If the class is about grammar, include the forms they will use (for example, the irregular past forms of common verbs). Match the level.
+${avoid.length ? `Do not repeat any of these, already on the list: ${avoid.join(", ")}.` : ""}
+
+Respond ONLY with a JSON array of strings, like ["went", "last weekend"]. No translations, no markdown.`;
+
+        const text = await callGemini(this.apiKey, {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1024,
+                responseMimeType: "application/json",
+                responseSchema: { type: "ARRAY", items: { type: "STRING" } },
+                thinkingConfig: { thinkingBudget: 0 },
+            },
+        });
+
+        let parsed: unknown;
+        try {
+            parsed = parseJsonResponse(text);
+        } catch {
+            console.error("[GEMINI] Failed to parse suggestLessonWords response:", text);
+            throw new Error("La IA devolvió las palabras con un formato inválido.");
+        }
+
+        const taken = new Set(avoid.map((w) => w.toLowerCase()));
+        const words = (Array.isArray(parsed) ? parsed : [])
+            .map((w) => String(w).trim())
+            .filter((w) => w.length > 0 && w.length <= 60 && !taken.has(w.toLowerCase()));
+        if (words.length === 0) throw new Error("La IA no devolvió palabras.");
+        return [...new Set(words)].slice(0, 15);
+    }
+
+    async generateLessonIdeas(
+        context: LessonPlanContext & { words: string[]; tools: string[] },
+        moments: LessonMomentId[],
+        avoid: string[],
+        language: string = "English"
+    ): Promise<Partial<Record<LessonMomentId, unknown[]>>> {
+        const groupSize = context.studentCount > 0 ? context.studentCount : 10;
+        const length = context.minutes ?? 60;
+
+        // Qué tiene que traer cada herramienta. Al prompt van sólo las que
+        // permite la edad del grupo, y el esquema no deja elegir otra.
+        const toolRules: Record<string, string> = {
+            none: `"none": nothing but the classroom. "lines": what the teacher says or writes on the board.`,
+            material: `"material": only in "principal" (see above). "lines": how to prepare it.`,
+            kahoot: `"kahoot": live quiz on the classroom screen; students answer from a device, no account needed. The free version allows 10 players per game${groupSize > 10 ? `, so with ${groupSize} students they play in teams` : ""}. Put the quiz in the "questions" field —never inside "lines"—: 4 to 6 items, each with "question" (at most 120 characters), 4 "options" (at most 75 characters each) and "answer" (index of the right option, 0 to 3). The teacher imports them from a spreadsheet the system builds.`,
+            wordwall: `"wordwall": a game projected on the classroom screen. Either a "Match up" (students join the start of a sentence or a word with its end or meaning): put 5 to 8 items in "pairs", each with "left" and "right". Or a spinning wheel that picks a word or a question: put 6 to 10 items in "lines", one per item, and no "pairs".`,
+            quizlet: `"quizlet": flashcards to review at home. Put the cards in the "pairs" field —never inside "lines"—: 6 to 12 items, each with "left" (the term) and "right" (the definition).`,
+            youglish: `"youglish": real videos where people say a word, to project in class. Always include "words": 3 to 6 words of the class to listen to.`,
+            padlet: `"padlet": an online wall where students post text or photos without an account. "lines": the instructions to paste.`,
+            docs: `"docs": a shared Google Doc everyone writes in. "lines": the instructions.`,
+            canva: `"canva": the teacher prepares printable or projectable material, like flashcards. "lines": what goes on it.`,
+        };
+        const tools = context.tools.filter((tool) => tool in toolRules);
+
+        // Cada momento con lo que se espera de él. La tarea pide dos: la tercera
+        // es la práctica del campus, que agrega el sistema.
+        const momentRules: Record<LessonMomentId, string> = {
+            inicio: `"inicio" (warm-up): 3 ideas to get into the topic, 5 to 10 minutes each.`,
+            principal: `"principal" (main activity): 3 ideas for the core of the class, about half of the ${length} minutes. Exactly one of them uses tool "material": continuing with the material the teacher already uses, with a concrete tip in "lines" to connect it to the topic. You do not know what that material is: refer to it only as the class content does (if it cites a unit or pages, cite them exactly; if it mentions photocopies or worksheets, say so; if it says nothing, call it "tu material"). Never name a book, a publisher or a series, and never write a unit or page number that is not in the class content.`,
+            cierre: `"cierre" (closing): 3 short, energetic ideas, 5 to 10 minutes each.`,
+            tarea: `"tarea" (homework): exactly 2 ideas for home. Do not use the campus practice: the system adds it as a third option.`,
+        };
+
+        const prompt = `You are an experienced teacher of ${language} as a foreign language in Argentina, helping a colleague plan a group class.
+
+${describeClass(context)}
+Words of the class, chosen by the teacher: ${context.words.join(", ")}
+
+The topic and the notes may be in Spanish, because that is the teacher's language.
+
+Task: write ideas the teacher can choose from, one per moment, for these moments:
+${moments.map((m) => `- ${momentRules[m]}`).join("\n")}
+${avoid.length ? `\nThe teacher already has these ideas; propose different ones: ${avoid.join("; ")}.` : ""}
+
+Every idea must work for a group of ${groupSize} students of that age and use the words of the class. Vary the dynamics, and keep about half of the ideas without any tool.
+
+Tools ("tool" field), with what each idea must include. Use only these:
+${tools.map((tool) => `- ${toolRules[tool]}`).join("\n")}
+Use each external tool at most once in the whole answer. Never invent songs, films, videos, links, books or publishers.
+
+Fields of each idea:
+- "title": short name, in Spanish, at most 6 words.
+- "description": 1 or 2 sentences in Spanish saying what the class does, so the teacher can choose at a glance.
+- "tool": one of the tools above.
+- "minutes": whole number, at least 5. For homework, how long it takes at home.
+- "grouping": exactly one of "Toda la clase", "De a dos", "Grupos de 3", "Equipos", "Cada uno".
+- "steps": how the teacher runs it, 2 to 5 short steps in Spanish, in order, each one concrete enough to do without thinking it over (what to write on the board, how to form the groups, what students do, how it ends). Quote in ${language} what the teacher or the students say. When the idea uses a tool, the first step is preparing it before class; do not explain how to import or paste into the tool: the system adds that.
+- "lines": the ready-to-use content, 2 to 8 short lines: what the teacher says, projects or pastes. What students read, hear or answer goes in ${language}; notes for the teacher go in Spanish. Leave it empty when the content goes in "questions" or "pairs".
+
+All Spanish must be Rioplatense, with voseo ("contás", "proyectá", "elegí", "armá"); never "tú". Plain text, no markdown.
+
+Respond ONLY with a JSON object whose keys are the requested moments, each with its array of ideas, like {"inicio": [ ... ]}.`;
+
+        const text = await callGemini(this.apiKey, {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.9,
+                maxOutputTokens: 12288,
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: Object.fromEntries(moments.map((m) => [m, { type: "ARRAY", items: lessonIdeaSchema(tools) }])),
+                    required: moments,
+                },
+                thinkingConfig: { thinkingBudget: 1024 },
+            },
+        });
+
+        let parsed: unknown;
+        try {
+            parsed = parseJsonResponse(text);
+        } catch {
+            console.error("[GEMINI] Failed to parse generateLessonIdeas response:", text.slice(0, 2000));
+            throw new Error("La IA devolvió las ideas con un formato inválido.");
+        }
+
+        const result: Partial<Record<LessonMomentId, unknown[]>> = {};
+        if (parsed && typeof parsed === "object") {
+            for (const moment of moments) {
+                const ideas = (parsed as Record<string, unknown>)[moment];
+                if (Array.isArray(ideas)) result[moment] = ideas;
+            }
+        }
+        return result;
     }
 }

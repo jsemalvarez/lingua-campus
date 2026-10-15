@@ -1,4 +1,4 @@
-import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE } from "./IAIProvider";
+import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE, LessonPlanContext, LessonMomentId } from "./IAIProvider";
 
 /**
  * Provider de IA usando GPT-4o de OpenAI.
@@ -101,8 +101,26 @@ export class OpenAIProvider implements IAIProvider {
     async generatePracticeDraft(
         topic: string,
         content: string | null,
-        language?: string
+        language?: string,
+        extra?: { words?: string[]; focus?: string | null; level?: string | null; ages?: { min: number; max: number } | null }
     ): Promise<PracticeDraft> {
         throw new Error("generatePracticeDraft not implemented for OpenAIProvider yet.");
+    }
+
+    async suggestLessonWords(
+        context: LessonPlanContext,
+        avoid: string[],
+        language?: string
+    ): Promise<string[]> {
+        throw new Error("suggestLessonWords not implemented for OpenAIProvider yet.");
+    }
+
+    async generateLessonIdeas(
+        context: LessonPlanContext & { words: string[]; tools: string[] },
+        moments: LessonMomentId[],
+        avoid: string[],
+        language?: string
+    ): Promise<Partial<Record<LessonMomentId, unknown[]>>> {
+        throw new Error("generateLessonIdeas not implemented for OpenAIProvider yet.");
     }
 }

@@ -361,6 +361,7 @@ model Lesson {
   grades      Grade[]
   practice    LessonPractice?
   practiceSessions PracticeSession[]
+  plan        LessonPlan?
 
   scheduleId  String?
   schedule    Schedule? @relation(fields: [scheduleId], references: [id])
@@ -372,6 +373,34 @@ model Lesson {
   updatedAt   DateTime @updatedAt
 
   @@index([courseId, status])
+}
+
+// El armado de la clase (PED-09): las palabras, el foco y los cuatro momentos
+// —inicio, actividad principal, cierre y tarea— con las ideas para elegir. Es
+// material del docente para dar la clase: lo ven el docente del curso y la
+// administración, nunca los alumnos (lo de ellos es `LessonPractice`).
+//
+// Las palabras y los momentos son JSON porque son el documento que arma el
+// docente, no datos que se consulten por partes. La forma la valida
+// `src/lib/lessonPlan/plan.ts` en cada guardado.
+model LessonPlan {
+  id         String   @id @default(cuid())
+  lessonId   String   @unique
+  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  focus      String?  // Conversación, Gramática, Vocabulario...
+  words      Json     @default("[]") // [{ text, on, own }]
+  moments    Json?    // { inicio: { ideas, selectedId }, principal, cierre, tarea }
+  // El foco y las palabras con que se pidieron las ideas: si cambian, la página
+  // avisa que las ideas ya no las usan.
+  ideasBasis String?
+
+  // Cuántos momentos tienen una idea elegida. Se guarda aparte para que el
+  // Resumen, el calendario y el libro de temas digan «Armada» sin leer el JSON.
+  chosen     Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------

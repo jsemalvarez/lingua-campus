@@ -1,10 +1,11 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { Clock, MapPin, User, BookOpen, ClipboardCheck, Eye } from "lucide-react";
+import { Clock, MapPin, User, BookOpen, ClipboardCheck, Eye, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
 
 interface Schedule {
     id: string;
@@ -33,6 +34,7 @@ interface Schedule {
         date: string | Date;
         topic: string;
         content?: string | null;
+        plan?: { chosen: number } | null;
     }[];
     /** Clase de otro docente del mismo nivel: se ve, no se toca (FEAT-07). */
     isPeer?: boolean;
@@ -49,6 +51,11 @@ interface WeeklyGridViewProps {
      * usaban reglas distintas y podían discrepar sin que nada fallara (BUG-17).
      */
     weekDates: string[];
+    /**
+     * Si la tarjeta abre la página de la clase (PED-09). Es del personal: el
+     * alumno y el tutor ven la agenda pero la clase no es pantalla suya.
+     */
+    canOpenLessons?: boolean;
 }
 
 /**
@@ -65,7 +72,7 @@ function dayKey(value: string | Date): string {
     return new Date(value).toISOString().slice(0, 10);
 }
 
-export function WeeklyGridView({ schedules, daysMapping, weekDates }: WeeklyGridViewProps) {
+export function WeeklyGridView({ schedules, daysMapping, weekDates, canOpenLessons = false }: WeeklyGridViewProps) {
     const weekDays = [1, 2, 3, 4, 5, 6, 0];
 
     return (
@@ -137,16 +144,14 @@ export function WeeklyGridView({ schedules, daysMapping, weekDates }: WeeklyGrid
                                         const isPeer = !!schedule.isPeer;
                                         const cardColor = (linkedLesson && !isPeer) ? schedule.course.color : "#94a3b8";
 
-                                        return (
-                                            <Card
-                                                key={schedule.id}
-                                                className={`p-3 border-l-4 transition-all duration-300 hover:scale-[1.03] hover:shadow-md cursor-pointer group ${!linkedLesson ? 'border-dashed opacity-80' : ''} ${isPeer ? 'opacity-75' : ''}`}
-                                                style={{
-                                                    borderLeftColor: cardColor,
-                                                    backgroundColor: (linkedLesson && !isPeer) ? `${cardColor}10` : 'transparent'
-                                                }}
-                                            >
-                                                <div className="space-y-2">
+                                        // La tarjeta de una clase propia abre su página (PED-09).
+                                        // La del par sigue sin acciones de la clase.
+                                        const lessonHref = canOpenLessons && linkedLesson && !isPeer && (linkedLesson.type ?? "CLASS") === "CLASS"
+                                            ? `/courses/${schedule.course.id}/lessons/${linkedLesson.id}`
+                                            : null;
+
+                                        const cardInfo = (
+                                            <>
                                                     {/* Time & Room */}
                                                     <div className="flex items-center justify-between text-[10px] font-bold">
                                                         <span className="flex items-center gap-1 text-foreground/80">
@@ -182,23 +187,51 @@ export function WeeklyGridView({ schedules, daysMapping, weekDates }: WeeklyGrid
                                                         </div>
                                                         
                                                         {registeredTopic ? (
-                                                            <div className="flex items-center gap-1.5 text-[10px] text-primary/70 font-bold shrink-0">
-                                                                <BookOpen size={10} className="shrink-0" />
-                                                                <span className="truncate italic">
-                                                                    {registeredTopic}
-                                                                </span>
-                                                            </div>
+                                                            <>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-primary/70 font-bold shrink-0">
+                                                                    <BookOpen size={10} className="shrink-0" />
+                                                                    <span className="truncate italic">
+                                                                        {registeredTopic}
+                                                                    </span>
+                                                                </div>
+                                                                {/* El armado es de quien la dicta (PED-09): sólo en las que se abren. */}
+                                                                {lessonHref && isPlanComplete(linkedLesson?.plan?.chosen ?? 0) && (
+                                                                    <span className="inline-flex items-center gap-0.5 rounded-full border border-[#bfe5da] bg-[#ebf7f4] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7360] dark:border-primary/40 dark:bg-primary/10 dark:text-primary">
+                                                                        <Check size={10} strokeWidth={3} /> Armada
+                                                                    </span>
+                                                                )}
+                                                            </>
                                                         ) : (
-                                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 font-bold shrink-0">
+                                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 font-bold shrink-0">
                                                                 <span className="truncate italic">
-                                                                    {linkedLesson ? "Sin registrar" : "Pendiente"}
+                                                                    {linkedLesson ? "Sin tema" : "Pendiente"}
                                                                 </span>
                                                             </div>
                                                         )}
                                                     </div>
+                                            </>
+                                        );
 
-                                                    {/* Quick Action */}
-                                                    <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        return (
+                                            <Card
+                                                key={schedule.id}
+                                                className={`p-3 border-l-4 transition-all duration-300 hover:scale-[1.03] hover:shadow-md cursor-pointer group ${!linkedLesson ? 'border-dashed opacity-80' : ''} ${isPeer ? 'opacity-75' : ''}`}
+                                                style={{
+                                                    borderLeftColor: cardColor,
+                                                    backgroundColor: (linkedLesson && !isPeer) ? `${cardColor}10` : 'transparent'
+                                                }}
+                                            >
+                                                <div className="space-y-2">
+                                                    {lessonHref ? (
+                                                        <Link href={lessonHref} className="block space-y-2">
+                                                            {cardInfo}
+                                                        </Link>
+                                                    ) : (
+                                                        <div className="space-y-2">{cardInfo}</div>
+                                                    )}
+
+                                                    {/* Quick Action: con la tarjeta abriendo la clase, Asistencia queda a la vista. */}
+                                                    <div className={`pt-2 transition-opacity ${lessonHref ? "" : "opacity-0 group-hover:opacity-100"}`}>
                                                         {/* Al par no se le ofrece tomar asistencia: la
                                                             pantalla lo rechazaría, y ofrecerlo sería
                                                             prometer algo que no va a pasar. */}

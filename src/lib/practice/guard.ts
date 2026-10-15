@@ -1,6 +1,8 @@
 import { getAuthContext, requireRole, INSTITUTE_STAFF } from "@/lib/authz";
 import prisma from "@/lib/prisma";
 import { consumeAiQuota, QuotaResult } from "@/lib/practice/quota";
+import { sanitizeFocus, sanitizeWords, selectedWords, type AgeRange } from "@/lib/lessonPlan/plan";
+import { courseAgeRange } from "@/lib/lessonPlan/ages";
 
 /**
  * Puerta de entrada única a los endpoints de IA de `/api/practice` (SEC-07).
@@ -163,6 +165,12 @@ export type DraftSource = {
     lessonId: string;
     topic: string;
     content: string | null;
+    level: string | null;
+    /** Lo que eligió el docente al armar la clase (PED-09), si la armó. */
+    focus: string | null;
+    words: string[];
+    /** Las edades del grupo, de las fechas de nacimiento (`courseAgeRange`). */
+    ages: AgeRange | null;
 };
 
 export type DraftGuard =
@@ -214,7 +222,14 @@ export async function guardPracticeDraft(lessonId: unknown): Promise<DraftGuard>
             type: "CLASS",
             course: { instituteId: auth.instituteId },
         },
-        select: { id: true, topic: true, content: true },
+        select: {
+            id: true,
+            topic: true,
+            content: true,
+            courseId: true,
+            course: { select: { level: true } },
+            plan: { select: { focus: true, words: true } },
+        },
     });
 
     if (!lesson) {
@@ -230,6 +245,10 @@ export async function guardPracticeDraft(lessonId: unknown): Promise<DraftGuard>
             lessonId: lesson.id,
             topic: lesson.topic.slice(0, MAX_TOPIC_CHARS),
             content: lesson.content?.slice(0, MAX_CONTENT_CHARS) || null,
+            level: lesson.course.level,
+            focus: sanitizeFocus(lesson.plan?.focus),
+            words: selectedWords(sanitizeWords(lesson.plan?.words)),
+            ages: await courseAgeRange(lesson.courseId),
         },
     };
 }

@@ -49,6 +49,26 @@ export interface PracticeDraft {
     chatScenario: string;
 }
 
+/**
+ * Lo que se sabe de una clase para armarla (PED-09). Todo sale de la base: el
+ * tema y los contenidos de `Lesson`, el nivel del curso, los inscriptos y la
+ * duración del horario. Nada de esto viaja en el body.
+ */
+export interface LessonPlanContext {
+    topic: string;
+    content: string | null;
+    level: string | null;
+    studentCount: number;
+    /** Duración del horario; `null` si la clase no tiene horario. */
+    minutes: number | null;
+    focus: string | null;
+    /** Edades de los alumnos, de sus fechas de nacimiento; `null` si no hay. */
+    ages: { min: number; max: number } | null;
+}
+
+/** Los momentos de la clase, con los mismos ids que `LessonPlan.moments`. */
+export type LessonMomentId = "inicio" | "principal" | "cierre" | "tarea";
+
 export interface IAIProvider {
     /**
      * Evalúa la pronunciación del alumno comparando el texto esperado con lo que transcribió.
@@ -112,10 +132,40 @@ export interface IAIProvider {
      * @param topic    - `Lesson.topic`, el tema de la clase
      * @param content  - `Lesson.content`, los contenidos dados (puede no estar)
      * @param language - Idioma de la práctica
+     * @param extra    - Las palabras y el foco que eligió el docente al armar la
+     *                   clase, y el nivel del curso, si los hay (PED-09)
      */
     generatePracticeDraft(
         topic: string,
         content: string | null,
-        language?: string
+        language?: string,
+        extra?: { words?: string[]; focus?: string | null; level?: string | null; ages?: { min: number; max: number } | null }
     ): Promise<PracticeDraft>;
+
+    /**
+     * Sugiere las palabras de la clase para que el docente las tilde (PED-09).
+     * @param avoid - Palabras que ya están en la lista y no hay que repetir
+     */
+    suggestLessonWords(
+        context: LessonPlanContext,
+        avoid: string[],
+        language?: string
+    ): Promise<string[]>;
+
+    /**
+     * Escribe ideas para los momentos pedidos, a partir de las palabras que
+     * eligió el docente. Devuelve las ideas como las escribió el modelo: las deja
+     * en forma `ideaFromAi`, en `src/lib/lessonPlan/plan.ts`.
+     * @param avoid - Títulos de ideas que ya tiene la clase y no hay que repetir
+     */
+    generateLessonIdeas(
+        context: LessonPlanContext & {
+            words: string[];
+            /** Las herramientas que van con la edad del grupo (`toolsForAges`). */
+            tools: string[];
+        },
+        moments: LessonMomentId[],
+        avoid: string[],
+        language?: string
+    ): Promise<Partial<Record<LessonMomentId, unknown[]>>>;
 }
