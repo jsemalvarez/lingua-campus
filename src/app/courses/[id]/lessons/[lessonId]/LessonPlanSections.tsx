@@ -11,7 +11,9 @@ import {
     CloudCheck,
     Compass,
     Copy,
+    Download,
     ExternalLink,
+    FileSpreadsheet,
     Flag,
     House,
     Lightbulb,
@@ -33,6 +35,8 @@ import {
     copyText,
     FOCUSES,
     isExternalTool,
+    kahootFileName,
+    loadSteps,
     MAX_WORD_CHARS,
     MAX_WORDS,
     MOMENTS,
@@ -41,19 +45,27 @@ import {
     youglishUrl,
     type AgeRange,
     type ExternalTool,
+    type KahootQuestion,
     type MomentId,
     type PlanIdea,
     type PlanMoments,
+    type PlanPair,
     type PlanWord,
 } from "@/lib/lessonPlan/plan";
+import { KAHOOT_SECONDS, kahootXlsx } from "@/lib/lessonPlan/kahootXlsx";
 import { TOOLS } from "@/app/resources/tools";
 import { cn } from "@/lib/utils";
 import { ErrorNote, FIELD, MUTED, PRIMARY_BUTTON, PRIMARY_TEXT, SectionHeader } from "./ui";
 
 /** El color de cada momento: el mismo en su tarjeta, en el plan y en la barra. */
-const MOMENT_STYLE: Record<MomentId, { Icon: LucideIcon; head: string; ink: string; dot: string; ring: string; tint: string; chip: string }> = {
+const MOMENT_STYLE: Record<
+    MomentId,
+    { Icon: LucideIcon; head: string; ink: string; dot: string; ring: string; tint: string; chip: string; step: string; side: string }
+> = {
     inicio: {
         Icon: Sunrise,
+        step: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+        side: "text-orange-700 dark:text-orange-400",
         head: "bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-900/50",
         ink: "text-orange-700 dark:text-orange-400",
         dot: "bg-orange-500",
@@ -63,6 +75,8 @@ const MOMENT_STYLE: Record<MomentId, { Icon: LucideIcon; head: string; ink: stri
     },
     principal: {
         Icon: Target,
+        step: "bg-[#d5efe8] text-[#1f7360] dark:bg-primary/20 dark:text-primary",
+        side: PRIMARY_TEXT,
         head: "bg-[#ebf7f4] border-[#bfe5da] dark:bg-primary/10 dark:border-primary/30",
         ink: PRIMARY_TEXT,
         dot: "bg-primary",
@@ -72,6 +86,8 @@ const MOMENT_STYLE: Record<MomentId, { Icon: LucideIcon; head: string; ink: stri
     },
     cierre: {
         Icon: Flag,
+        step: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+        side: "text-blue-700 dark:text-blue-400",
         head: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/50",
         ink: "text-blue-700 dark:text-blue-400",
         dot: "bg-blue-500",
@@ -81,6 +97,8 @@ const MOMENT_STYLE: Record<MomentId, { Icon: LucideIcon; head: string; ink: stri
     },
     tarea: {
         Icon: House,
+        step: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+        side: "text-violet-700 dark:text-violet-400",
         head: "bg-violet-50 border-violet-200 dark:bg-violet-950/30 dark:border-violet-900/50",
         ink: "text-violet-700 dark:text-violet-400",
         dot: "bg-violet-500",
@@ -801,25 +819,65 @@ function OwnIdeaForm({
 
 // ─── Contenido listo ─────────────────────────────────────────────────────────
 
-/** Copia al portapapeles y deja «Copiado» un par de segundos. */
+/**
+ * Copia al portapapeles y deja «Copiado» un par de segundos en lo que se copió
+ * (`key`). Si el navegador no deja usar el portapapeles, copia con una caja de
+ * texto escondida.
+ */
 function useCopy() {
-    const [copied, setCopied] = useState(false);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => () => {
         if (timer.current) clearTimeout(timer.current);
     }, []);
-    const copy = async (text: string) => {
+    const copy = async (key: string, text: string) => {
+        let ok = false;
         try {
             await navigator.clipboard.writeText(text);
-            setCopied(true);
-            if (timer.current) clearTimeout(timer.current);
-            timer.current = setTimeout(() => setCopied(false), 2000);
+            ok = true;
         } catch {
-            setCopied(false);
+            const area = document.createElement("textarea");
+            area.value = text;
+            area.setAttribute("readonly", "");
+            area.style.position = "fixed";
+            area.style.opacity = "0";
+            document.body.appendChild(area);
+            area.select();
+            try {
+                ok = document.execCommand("copy");
+            } catch {
+                ok = false;
+            }
+            document.body.removeChild(area);
         }
+        if (timer.current) clearTimeout(timer.current);
+        setCopiedKey(ok ? key : null);
+        if (ok) timer.current = setTimeout(() => setCopiedKey(null), 2000);
     };
-    return { copied, copy };
+    return { copiedKey, copy };
 }
+
+/** Descarga la planilla de Kahoot de la idea. */
+function downloadKahoot(idea: PlanIdea) {
+    if (!idea.questions?.length) return;
+    const bytes = kahootXlsx(idea.questions);
+    const blob = new Blob([bytes as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = kahootFileName(idea);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Lo que se copia o se descarga va en una caja propia, con su botón adentro. */
+function hasContentBox(idea: PlanIdea): boolean {
+    return !!idea.questions?.length || !!idea.pairs?.length || (idea.tool === "wordwall" && idea.lines.length > 0);
+}
+
+const SMALL_LABEL = cn("text-xs font-bold uppercase tracking-[0.06em]", MUTED);
 
 /**
  * El contenido de la idea elegida. En la compu se despliega en la tarjeta; en
@@ -898,21 +956,51 @@ function ContentBody({
     withActions: boolean;
 }) {
     const tool = isExternalTool(idea.tool) ? TOOLS.find((t) => t.id === idea.tool) ?? null : null;
-    const { copied, copy } = useCopy();
-    const label = copyLabel(idea);
+    const { copiedKey, copy } = useCopy();
+    const label = hasContentBox(idea) ? null : copyLabel(idea);
+    const style = MOMENT_STYLE[momentId];
 
     return (
-        <div className="space-y-3">
-            <p className={cn("text-xs font-bold uppercase tracking-[0.06em]", MUTED)}>{contentLabel(idea, momentId)}</p>
-            {idea.lines.length > 0 && (
-                <ul className="space-y-2 rounded-lg border border-border/70 bg-card px-4 py-3.5">
-                    {idea.lines.map((line, i) => (
-                        <li key={i} className="text-[14.5px] leading-normal md:text-sm">
-                            {line}
-                        </li>
-                    ))}
-                </ul>
-            )}
+        <div className="space-y-5">
+            {idea.steps?.length ? (
+                <div className="space-y-3">
+                    <p className={SMALL_LABEL}>Cómo se hace</p>
+                    <ol className="space-y-3">
+                        {idea.steps.map((step, i) => (
+                            <li key={i} className="flex gap-3 text-[14.5px] leading-normal">
+                                <span
+                                    aria-hidden="true"
+                                    className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-[12.5px] font-extrabold", style.step)}
+                                >
+                                    {i + 1}
+                                </span>
+                                <span className="min-w-0 pt-px">{step}</span>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            ) : null}
+
+            <div className="space-y-2.5">
+                <p className={SMALL_LABEL}>{contentLabel(idea, momentId)}</p>
+                {idea.questions?.length ? (
+                    <KahootContent idea={idea} questions={idea.questions} />
+                ) : idea.pairs?.length ? (
+                    <PairsBox idea={idea} pairs={idea.pairs} sideClass={style.side} />
+                ) : idea.tool === "wordwall" && idea.lines.length > 0 ? (
+                    <ListBox idea={idea} />
+                ) : (
+                    idea.lines.length > 0 && (
+                        <ul className="space-y-2 rounded-lg border border-border/70 bg-card px-4 py-3.5">
+                            {idea.lines.map((line, i) => (
+                                <li key={i} className="text-[14.5px] leading-normal md:text-sm">
+                                    {line}
+                                </li>
+                            ))}
+                        </ul>
+                    )
+                )}
+            </div>
             {idea.note && (
                 <div className="flex gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
                     <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-400" />
@@ -941,11 +1029,11 @@ function ContentBody({
                     {label && (
                         <button
                             type="button"
-                            onClick={() => copy(copyText(idea))}
+                            onClick={() => copy("todo", copyText(idea))}
                             className={cn("inline-flex h-10 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold", PRIMARY_BUTTON)}
                         >
-                            {copied ? <Check className="size-[15px]" /> : <Copy className="size-[15px]" />}
-                            {copied ? "Copiado" : label}
+                            {copiedKey === "todo" ? <Check className="size-[15px]" /> : <Copy className="size-[15px]" />}
+                            {copiedKey === "todo" ? "Copiado" : label}
                         </button>
                     )}
                     {tool && tool.id !== "youglish" && (
@@ -966,6 +1054,220 @@ function ContentBody({
             ) : (
                 tool && <GuideButton name={tool.name} onClick={() => onOpenGuide(tool.id as ExternalTool)} />
             )}
+        </div>
+    );
+}
+
+/** «Cómo se importa» / «Cómo se pega», al pie de la caja: lo fija el sistema. */
+function LoadSteps({ idea }: { idea: PlanIdea }) {
+    const load = loadSteps(idea);
+    if (!load) return null;
+    return (
+        <div className="space-y-2 border-t border-border/70 bg-muted/30 px-4 py-3.5">
+            <p className="text-[13px] font-semibold">{load.title}</p>
+            <ol className="list-decimal space-y-1 pl-[18px] text-[13.5px] leading-normal">
+                {load.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                ))}
+            </ol>
+        </div>
+    );
+}
+
+function CopyAllButton({ copied, label, onClick }: { copied: boolean; label: string; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn("inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13.5px] font-semibold md:h-9", PRIMARY_BUTTON)}
+        >
+            {copied ? <Check className="size-[15px]" /> : <Copy className="size-[15px]" />}
+            {copied ? "Copiado" : label}
+        </button>
+    );
+}
+
+/**
+ * Kahoot no acepta preguntas pegadas, pero importa una planilla con la correcta
+ * marcada: el archivo se arma acá. Si la cuenta del docente no deja importar,
+ * quedan las preguntas para copiar de a una.
+ */
+function KahootContent({ idea, questions }: { idea: PlanIdea; questions: KahootQuestion[] }) {
+    const [downloaded, setDownloaded] = useState(false);
+    const [loose, setLoose] = useState(false);
+    const { copiedKey, copy } = useCopy();
+    const count = questions.length;
+
+    return (
+        <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-3.5">
+                    <span className="flex min-w-0 flex-1 items-center gap-3.5">
+                        <span aria-hidden="true" className={cn("flex size-11 shrink-0 items-center justify-center rounded-[10px] bg-[#ebf7f4] dark:bg-primary/10", PRIMARY_TEXT)}>
+                            <FileSpreadsheet className="size-[22px]" />
+                        </span>
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                            <span className="truncate text-[15px] font-semibold">{kahootFileName(idea)}</span>
+                            <span className={cn("text-[13px]", MUTED)}>
+                                {count} {count === 1 ? "pregunta" : "preguntas"} con la correcta ya marcada · {KAHOOT_SECONDS} segundos cada una
+                            </span>
+                        </span>
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            downloadKahoot(idea);
+                            setDownloaded(true);
+                        }}
+                        className={cn("inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] px-4 text-[14.5px] font-bold shadow-xs", PRIMARY_BUTTON)}
+                    >
+                        <Download className="size-4" />
+                        {downloaded ? "Descargado" : "Descargar para Kahoot"}
+                    </button>
+                </div>
+                <LoadSteps idea={idea} />
+            </div>
+
+            <div className="space-y-1.5">
+                <p className="text-[13px] font-semibold">Lo que trae el archivo</p>
+                <ol className="space-y-1.5">
+                    {questions.map((q, k) => (
+                        <li key={k} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-sm leading-normal">
+                            <span className={cn("font-bold", MUTED)}>{k + 1}.</span>
+                            <span lang="en" className="min-w-0 flex-1">
+                                {q.question}
+                            </span>
+                            <span
+                                lang="en"
+                                className={cn("inline-flex items-center gap-1 rounded-full bg-[#ebf7f4] px-2 py-0.5 text-[12.5px] font-semibold dark:bg-primary/10", PRIMARY_TEXT)}
+                            >
+                                <Check className="size-3" strokeWidth={3} aria-label="Correcta:" />
+                                {q.options[q.answer]}
+                            </span>
+                        </li>
+                    ))}
+                </ol>
+            </div>
+
+            <button
+                type="button"
+                aria-expanded={loose}
+                onClick={() => setLoose((l) => !l)}
+                className={cn("inline-flex min-h-10 items-center gap-1.5 text-left text-sm font-semibold", PRIMARY_TEXT)}
+            >
+                ¿Tu Kahoot no deja importar? Copialas de a una
+                <ChevronDown className={cn("size-4 shrink-0 transition-transform", loose && "rotate-180")} />
+            </button>
+            {loose && (
+                <div className="space-y-2.5">
+                    <p className={cn("text-[13px] leading-normal", MUTED)}>
+                        Tocá un texto para copiarlo y pegalo en su casillero. En cada pregunta, marcá en Kahoot la respuesta que acá tiene el tilde.
+                    </p>
+                    {questions.map((q, k) => (
+                        <div key={k} className="space-y-2.5 rounded-lg border border-border/70 bg-card p-3.5 sm:px-4">
+                            <button
+                                type="button"
+                                onClick={() => copy(`q${k}`, q.question)}
+                                aria-label={`Copiar la pregunta ${k + 1}`}
+                                className={cn(
+                                    "flex w-full cursor-copy items-center gap-2.5 rounded-md px-2 py-1.5 text-left",
+                                    copiedKey === `q${k}` && "bg-[#ebf7f4] dark:bg-primary/10"
+                                )}
+                            >
+                                <span className={cn("text-[13px] font-bold", MUTED)}>{k + 1}.</span>
+                                <span lang="en" className="min-w-0 flex-1 text-[15px] font-semibold">
+                                    {q.question}
+                                </span>
+                                <CopyTag copied={copiedKey === `q${k}`} />
+                            </button>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {q.options.map((option, j) => {
+                                    const key = `q${k}o${j}`;
+                                    const right = j === q.answer;
+                                    return (
+                                        <button
+                                            key={j}
+                                            type="button"
+                                            onClick={() => copy(key, option)}
+                                            aria-label={`Copiar la respuesta «${option}»${right ? ", la correcta" : ""}`}
+                                            className={cn(
+                                                "flex min-h-10 cursor-copy items-center gap-2 rounded-lg border py-1.5 pl-3 pr-2 text-left text-sm",
+                                                right ? "border-[#bfe5da] font-semibold dark:border-primary/40" : "border-border font-medium",
+                                                copiedKey === key ? "bg-[#ebf7f4] dark:bg-primary/10" : right ? "bg-[#f6fbfa] dark:bg-primary/5" : "bg-card"
+                                            )}
+                                        >
+                                            <span lang="en" className="min-w-0 flex-1">
+                                                {option}
+                                            </span>
+                                            {right && <Check className={cn("size-4 shrink-0", PRIMARY_TEXT)} strokeWidth={3} aria-label="Correcta" />}
+                                            <CopyTag copied={copiedKey === key} />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CopyTag({ copied }: { copied: boolean }) {
+    return (
+        <span
+            className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-semibold",
+                copied ? "bg-[#23806a] text-white" : "bg-muted text-muted-foreground"
+            )}
+        >
+            {copied ? "Copiado" : "Copiar"}
+        </span>
+    );
+}
+
+/** Los pares de Wordwall o las tarjetas de Quizlet, para copiar todo de una vez. */
+function PairsBox({ idea, pairs, sideClass }: { idea: PlanIdea; pairs: PlanPair[]; sideClass: string }) {
+    const { copiedKey, copy } = useCopy();
+    const count = pairs.length;
+    const summary = idea.tool === "quizlet" ? `${count} ${count === 1 ? "tarjeta" : "tarjetas"}` : `${count} ${count === 1 ? "par" : "pares"}`;
+    return (
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-muted/30 py-2 pl-4 pr-2">
+                <span className={cn("text-[13px]", MUTED)}>{summary}</span>
+                <CopyAllButton copied={copiedKey === "todo"} label="Copiar todo" onClick={() => copy("todo", copyText(idea))} />
+            </div>
+            <div lang="en" className="grid grid-cols-1 gap-x-6 gap-y-1 px-4 py-3 font-mono text-[13.5px] leading-normal sm:grid-cols-2 sm:gap-y-2">
+                {pairs.map((p, i) => (
+                    <div key={i} className="contents">
+                        <span className={cn(i > 0 && "mt-2 sm:mt-0")}>{p.left}</span>
+                        <span className={sideClass}>{p.right}</span>
+                    </div>
+                ))}
+            </div>
+            <LoadSteps idea={idea} />
+        </div>
+    );
+}
+
+/** La lista de Wordwall para la ruleta: un elemento por renglón. */
+function ListBox({ idea }: { idea: PlanIdea }) {
+    const { copiedKey, copy } = useCopy();
+    const count = idea.lines.length;
+    return (
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-muted/30 py-2 pl-4 pr-2">
+                <span className={cn("text-[13px]", MUTED)}>
+                    {count} {count === 1 ? "elemento" : "elementos"}
+                </span>
+                <CopyAllButton copied={copiedKey === "todo"} label="Copiar todo" onClick={() => copy("todo", copyText(idea))} />
+            </div>
+            <ul lang="en" className="space-y-1 px-4 py-3 font-mono text-[13.5px] leading-normal">
+                {idea.lines.map((line, i) => (
+                    <li key={i}>{line}</li>
+                ))}
+            </ul>
+            <LoadSteps idea={idea} />
         </div>
     );
 }
@@ -1014,7 +1316,10 @@ function ContentSheet({
 }) {
     const style = MOMENT_STYLE[momentId];
     const tool = isExternalTool(idea.tool) ? TOOLS.find((t) => t.id === idea.tool) ?? null : null;
-    const { copied, copy } = useCopy();
+    const { copiedKey, copy } = useCopy();
+    const [downloaded, setDownloaded] = useState(false);
+    // Al pie va lo principal: el archivo de Kahoot o copiar todo.
+    const quiz = !!idea.questions?.length;
     const label = copyLabel(idea);
     const titleId = `hoja-${momentId}`;
 
@@ -1067,14 +1372,27 @@ function ContentSheet({
                     <ContentBody idea={idea} momentId={momentId} onOpenGuide={onOpenGuide} withActions={false} />
                 </div>
                 <div className="flex shrink-0 gap-2 border-t border-border/70 bg-card px-4 pb-4 pt-3">
+                    {quiz && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                downloadKahoot(idea);
+                                setDownloaded(true);
+                            }}
+                            className={cn("inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-bold", PRIMARY_BUTTON)}
+                        >
+                            <Download className="size-4" />
+                            {downloaded ? "Descargado" : "Descargar"}
+                        </button>
+                    )}
                     {label && (
                         <button
                             type="button"
-                            onClick={() => copy(copyText(idea))}
+                            onClick={() => copy("todo", copyText(idea))}
                             className={cn("inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-bold", PRIMARY_BUTTON)}
                         >
-                            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                            {copied ? "Copiado" : label}
+                            {copiedKey === "todo" ? <Check className="size-4" /> : <Copy className="size-4" />}
+                            {copiedKey === "todo" ? "Copiado" : label}
                         </button>
                     )}
                     {tool && tool.id !== "youglish" && (
@@ -1090,7 +1408,7 @@ function ContentSheet({
                         </a>
                     )}
                     {idea.tool === "campus" && <PracticeLink onClick={onClose} wide />}
-                    {!label && !(tool && tool.id !== "youglish") && idea.tool !== "campus" && (
+                    {!quiz && !label && !(tool && tool.id !== "youglish") && idea.tool !== "campus" && (
                         <button type="button" onClick={onClose} className="h-12 flex-1 rounded-[10px] border border-border bg-card text-[15px] font-semibold">
                             Listo
                         </button>

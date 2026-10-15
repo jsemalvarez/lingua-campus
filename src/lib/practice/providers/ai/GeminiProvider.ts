@@ -46,7 +46,7 @@ interface GeminiRequest {
  * La forma de cada idea del armado de la clase. Va como `responseSchema` y no
  * sólo en el prompt: con el pedido en texto, el modelo metía las preguntas de
  * Kahoot y las tarjetas de Quizlet como texto adentro de `lines`, y el formato
- * de importación no podía armarse. Las herramientas son sólo las que van con la
+ * de importación no podía armarse. Los pares sirven igual para Wordwall y Quizlet. Las herramientas son sólo las que van con la
  * edad del grupo: el modelo no puede elegir otra.
  */
 const lessonIdeaSchema = (tools: string[]) => ({
@@ -57,6 +57,7 @@ const lessonIdeaSchema = (tools: string[]) => ({
         tool: { type: "STRING", enum: tools },
         minutes: { type: "INTEGER" },
         grouping: { type: "STRING", enum: ["Toda la clase", "De a dos", "Grupos de 3", "Equipos", "Cada uno"] },
+        steps: { type: "ARRAY", items: { type: "STRING" } },
         lines: { type: "ARRAY", items: { type: "STRING" } },
         words: { type: "ARRAY", items: { type: "STRING" } },
         questions: {
@@ -71,16 +72,16 @@ const lessonIdeaSchema = (tools: string[]) => ({
                 required: ["question", "options", "answer"],
             },
         },
-        cards: {
+        pairs: {
             type: "ARRAY",
             items: {
                 type: "OBJECT",
-                properties: { term: { type: "STRING" }, definition: { type: "STRING" } },
-                required: ["term", "definition"],
+                properties: { left: { type: "STRING" }, right: { type: "STRING" } },
+                required: ["left", "right"],
             },
         },
     },
-    required: ["title", "description", "tool", "minutes", "grouping", "lines"],
+    required: ["title", "description", "tool", "minutes", "grouping", "steps"],
 });
 
 /**
@@ -513,9 +514,9 @@ Respond ONLY with a JSON array of strings, like ["went", "last weekend"]. No tra
         const toolRules: Record<string, string> = {
             none: `"none": nothing but the classroom. "lines": what the teacher says or writes on the board.`,
             material: `"material": only in "principal" (see above). "lines": how to prepare it.`,
-            kahoot: `"kahoot": live quiz on the classroom screen; students answer from a device, no account needed. The free version allows 10 players per game${groupSize > 10 ? `, so with ${groupSize} students they play in teams` : ""}. Put the quiz in the "questions" field —never inside "lines"—: 4 to 6 items, each with "question", 4 "options" and "answer" (index of the right option, 0 to 3).`,
-            wordwall: `"wordwall": games built from a word list (spin the wheel, match up). "lines": the items of the list, one per line.`,
-            quizlet: `"quizlet": flashcards to review at home. Put the cards in the "cards" field —never inside "lines"—: 6 to 12 items, each with "term" and "definition".`,
+            kahoot: `"kahoot": live quiz on the classroom screen; students answer from a device, no account needed. The free version allows 10 players per game${groupSize > 10 ? `, so with ${groupSize} students they play in teams` : ""}. Put the quiz in the "questions" field —never inside "lines"—: 4 to 6 items, each with "question" (at most 120 characters), 4 "options" (at most 75 characters each) and "answer" (index of the right option, 0 to 3). The teacher imports them from a spreadsheet the system builds.`,
+            wordwall: `"wordwall": a game projected on the classroom screen. Either a "Match up" (students join the start of a sentence or a word with its end or meaning): put 5 to 8 items in "pairs", each with "left" and "right". Or a spinning wheel that picks a word or a question: put 6 to 10 items in "lines", one per item, and no "pairs".`,
+            quizlet: `"quizlet": flashcards to review at home. Put the cards in the "pairs" field —never inside "lines"—: 6 to 12 items, each with "left" (the term) and "right" (the definition).`,
             youglish: `"youglish": real videos where people say a word, to project in class. Always include "words": 3 to 6 words of the class to listen to.`,
             padlet: `"padlet": an online wall where students post text or photos without an account. "lines": the instructions to paste.`,
             docs: `"docs": a shared Google Doc everyone writes in. "lines": the instructions.`,
@@ -551,11 +552,12 @@ Use each external tool at most once in the whole answer. Never invent songs, fil
 
 Fields of each idea:
 - "title": short name, in Spanish, at most 6 words.
-- "description": 1 or 2 sentences in Spanish saying what the class does.
+- "description": 1 or 2 sentences in Spanish saying what the class does, so the teacher can choose at a glance.
 - "tool": one of the tools above.
 - "minutes": whole number, at least 5. For homework, how long it takes at home.
 - "grouping": exactly one of "Toda la clase", "De a dos", "Grupos de 3", "Equipos", "Cada uno".
-- "lines": the ready-to-use content, 2 to 8 short lines. What students read, hear or answer goes in ${language}; notes for the teacher go in Spanish.
+- "steps": how the teacher runs it, 2 to 5 short steps in Spanish, in order, each one concrete enough to do without thinking it over (what to write on the board, how to form the groups, what students do, how it ends). Quote in ${language} what the teacher or the students say. When the idea uses a tool, the first step is preparing it before class; do not explain how to import or paste into the tool: the system adds that.
+- "lines": the ready-to-use content, 2 to 8 short lines: what the teacher says, projects or pastes. What students read, hear or answer goes in ${language}; notes for the teacher go in Spanish. Leave it empty when the content goes in "questions" or "pairs".
 
 All Spanish must be Rioplatense, with voseo ("contás", "proyectá", "elegí", "armá"); never "tú". Plain text, no markdown.
 

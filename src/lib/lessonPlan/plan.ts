@@ -113,6 +113,12 @@ export const GROUPINGS = ["Toda la clase", "De a dos", "Grupos de 3", "Equipos",
 
 export type PlanWord = { text: string; on: boolean; own?: boolean };
 
+/** Una pregunta de Kahoot: `answer` es la posición de la correcta en `options`. */
+export type KahootQuestion = { question: string; options: string[]; answer: number };
+
+/** Un par de Wordwall («Match up») o una tarjeta de Quizlet. */
+export type PlanPair = { left: string; right: string };
+
 export type PlanIdea = {
     id: string;
     title: string;
@@ -120,8 +126,14 @@ export type PlanIdea = {
     tool: PlanTool;
     minutes: number;
     grouping: string;
+    /** «Cómo se hace»: los pasos para llevarla al aula. Las ideas de antes no los tienen. */
+    steps?: string[];
     /** El contenido listo: lo que se dice, se proyecta o se pega. */
     lines: string[];
+    /** Las preguntas de Kahoot, para el archivo que se importa. */
+    questions?: KahootQuestion[];
+    /** Los pares de Wordwall o las tarjetas de Quizlet, para pegar de una vez. */
+    pairs?: PlanPair[];
     note?: string;
     /** Las palabras con que se abre YouGlish. */
     words?: string[];
@@ -148,6 +160,18 @@ export const MAX_WORD_CHARS = 60;
 const MAX_IDEAS_PER_MOMENT = 8;
 const MAX_LINES = 24;
 const MAX_LINE_CHARS = 400;
+const MAX_STEPS = 6;
+const MAX_QUESTIONS = 10;
+const MAX_PAIRS = 20;
+const MAX_PAIR_CHARS = 200;
+
+/**
+ * Los topes de la planilla de Kahoot: lo que se pasa no entra al importar. Una
+ * pregunta larga no se recorta —quedaría sin sentido—: se descarta.
+ */
+export const KAHOOT_QUESTION_CHARS = 120;
+export const KAHOOT_ANSWER_CHARS = 75;
+export const KAHOOT_MAX_ANSWERS = 4;
 const MAX_TITLE_CHARS = 120;
 const MAX_DESCRIPTION_CHARS = 600;
 const MAX_MINUTES = 240;
@@ -230,11 +254,11 @@ export function contentLabel(idea: PlanIdea, moment: MomentId): string {
         case "campus":
             return "Se arma más abajo";
         case "kahoot":
-            return "Para cargar en Kahoot · la correcta va marcada";
+            return idea.questions?.length ? "Para cargar en Kahoot" : "Para cargar en Kahoot · la correcta va marcada";
         case "wordwall":
-            return "Lista para cargar en Wordwall";
+            return idea.pairs?.length ? "Para pegar en Wordwall" : "Lista para cargar en Wordwall";
         case "quizlet":
-            return "Para importar en Quizlet";
+            return idea.pairs?.length ? "Para pegar en Quizlet" : "Para importar en Quizlet";
         case "youglish":
             return "Abrí YouGlish con cada palabra";
         case "padlet":
@@ -244,12 +268,18 @@ export function contentLabel(idea: PlanIdea, moment: MomentId): string {
         case "canva":
             return "Para armar en Canva";
         default:
-            return idea.own ? "Tu idea" : moment === "tarea" ? "Consigna para la casa" : "Para decir en clase";
+            return idea.own ? "Tu idea" : moment === "tarea" ? "Consigna para la casa" : "Lo que les decís";
     }
 }
 
-/** Qué copia el botón: es lo que la herramienta acepta pegado. */
+/**
+ * Qué copia el botón: es lo que la herramienta acepta pegado. Los pares van con
+ * tabulador entre los dos lados y un renglón por par: Quizlet lo importa así, y
+ * Wordwall, pegado en el primer casillero de «Match up», arma un par por renglón
+ * (probado el 15/10/2026).
+ */
 export function copyText(idea: PlanIdea): string {
+    if (idea.pairs?.length) return idea.pairs.map((p) => `${p.left}\t${p.right}`).join("\n");
     if (idea.tool === "quizlet") {
         // Quizlet importa un renglón por tarjeta, con tabulador entre el término
         // y la definición: es su formato por defecto al pegar.
@@ -259,6 +289,9 @@ export function copyText(idea: PlanIdea): string {
 }
 
 export function copyLabel(idea: PlanIdea): string | null {
+    // Kahoot con preguntas se carga con el archivo, no pegando.
+    if (idea.questions?.length) return null;
+    if (idea.pairs?.length) return "Copiar todo";
     switch (idea.tool) {
         case "material":
         case "campus":
@@ -276,6 +309,69 @@ export function copyLabel(idea: PlanIdea): string | null {
         default:
             return "Copiar";
     }
+}
+
+/**
+ * Cómo se carga el contenido en cada herramienta. Lo escribe el sistema y no la
+ * IA: son los botones de la herramienta, y el modelo no los conoce ni los puede
+ * adivinar. Los de Kahoot y Wordwall salen de probarlo el 15/10/2026 en cuentas
+ * gratis; Wordwall los muestra en inglés en una cuenta nueva.
+ */
+export function loadSteps(idea: PlanIdea): { title: string; steps: string[] } | null {
+    if (idea.tool === "kahoot" && idea.questions?.length) {
+        return {
+            title: "Cómo se importa",
+            steps: [
+                "En Kahoot, tocá «Crear» y después «Añadir pregunta».",
+                "Elegí «Importar» y abajo de todo «Importar hoja de cálculo».",
+                "Tocá «Seleccionar archivo», elegí el que descargaste y «Cargar»: entran todas las preguntas con la correcta marcada.",
+            ],
+        };
+    }
+    if (idea.tool === "wordwall" && idea.pairs?.length) {
+        return {
+            title: "Cómo se pega",
+            steps: [
+                "En Wordwall, tocá «Create Activity» y elegí la plantilla «Match up».",
+                "Hacé clic en el primer casillero de «Keyword» y pegá: arma un par por renglón, con el final en «Matching definition».",
+                "Ponele un título y tocá «Done».",
+            ],
+        };
+    }
+    if (idea.tool === "wordwall" && idea.lines.length) {
+        return {
+            title: "Cómo se pega",
+            steps: [
+                "En Wordwall, tocá «Create Activity» y elegí la plantilla «Spin the wheel».",
+                "Hacé clic en el primer casillero y pegá: arma un elemento por renglón.",
+                "Ponele un título y tocá «Done».",
+            ],
+        };
+    }
+    if (idea.tool === "quizlet" && idea.pairs?.length) {
+        return {
+            title: "Cómo se importa",
+            steps: [
+                "En Quizlet, creá un set nuevo y tocá «Importar».",
+                "Pegá todo en el cuadro: Quizlet arma una tarjeta por renglón.",
+                "Guardá el set y compartí el enlace con el curso.",
+            ],
+        };
+    }
+    return null;
+}
+
+/** El nombre del archivo de Kahoot, sacado del título: «trivia-que-harias-si.xlsx». */
+export function kahootFileName(idea: PlanIdea): string {
+    const slug = idea.title
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60)
+        .replace(/-+$/g, "");
+    return `${slug || "kahoot"}.xlsx`;
 }
 
 export function youglishUrl(word: string): string {
@@ -375,6 +471,38 @@ function lines(value: unknown): string[] {
     return value.map((line) => str(line, MAX_LINE_CHARS)).filter(Boolean).slice(0, MAX_LINES);
 }
 
+function questions(value: unknown): KahootQuestion[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((raw): KahootQuestion | null => {
+            if (!raw || typeof raw !== "object") return null;
+            const q = raw as Record<string, unknown>;
+            const question = str(q.question, MAX_LINE_CHARS);
+            const options = lines(q.options).slice(0, KAHOOT_MAX_ANSWERS);
+            const answer = Math.round(Number(q.answer));
+            if (!question || options.length < 2 || !(answer >= 0 && answer < options.length)) return null;
+            if (question.length > KAHOOT_QUESTION_CHARS || options.some((o) => o.length > KAHOOT_ANSWER_CHARS)) return null;
+            return { question, options, answer };
+        })
+        .filter((q): q is KahootQuestion => q !== null)
+        .slice(0, MAX_QUESTIONS);
+}
+
+function pairs(value: unknown): PlanPair[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((raw): PlanPair | null => {
+            if (!raw || typeof raw !== "object") return null;
+            const p = raw as Record<string, unknown>;
+            // Un tabulador o un salto adentro de un lado partiría el par al pegarlo.
+            const left = str(p.left, MAX_PAIR_CHARS).replace(/\s+/g, " ");
+            const right = str(p.right, MAX_PAIR_CHARS).replace(/\s+/g, " ");
+            return left && right ? { left, right } : null;
+        })
+        .filter((p): p is PlanPair => p !== null)
+        .slice(0, MAX_PAIRS);
+}
+
 export function sanitizeWords(value: unknown): PlanWord[] {
     if (!Array.isArray(value)) return [];
     const seen = new Set<string>();
@@ -400,6 +528,9 @@ export function sanitizeIdea(value: unknown): PlanIdea | null {
     const tool = asTool(v.tool);
     const note = str(v.note, MAX_DESCRIPTION_CHARS);
     const words = lines(v.words).map((w) => w.slice(0, MAX_WORD_CHARS)).slice(0, 8);
+    const steps = lines(v.steps).slice(0, MAX_STEPS);
+    const quiz = tool === "kahoot" ? questions(v.questions) : [];
+    const twoSided = tool === "wordwall" || tool === "quizlet" ? pairs(v.pairs) : [];
     return {
         id: str(v.id, 40) || newIdeaId(),
         title,
@@ -407,7 +538,10 @@ export function sanitizeIdea(value: unknown): PlanIdea | null {
         tool,
         minutes: int(v.minutes, 10),
         grouping: str(v.grouping, 40) || "Toda la clase",
+        ...(steps.length ? { steps } : {}),
         lines: lines(v.lines),
+        ...(quiz.length ? { questions: quiz } : {}),
+        ...(twoSided.length ? { pairs: twoSided } : {}),
         ...(note ? { note } : {}),
         ...(tool === "youglish" && words.length ? { words } : {}),
         ...(v.own === true ? { own: true } : {}),
@@ -463,9 +597,9 @@ export function isPlanEmpty(plan: PlanData): boolean {
 // ─── Lo que devuelve la IA ───────────────────────────────────────────────────
 
 /**
- * Deja en forma una idea que escribió la IA. Las preguntas de Kahoot y las
- * tarjetas de Quizlet llegan con estructura y se pasan a renglones acá, con la
- * correcta marcada y la flecha que después se cambia por un tabulador.
+ * Deja en forma una idea que escribió la IA. Las preguntas de Kahoot y los pares
+ * de Wordwall y Quizlet llegan con estructura y se guardan así: de ahí salen el
+ * archivo de Kahoot y el texto con tabuladores que se pega.
  */
 export function ideaFromAi(
     raw: unknown,
@@ -489,36 +623,13 @@ export function ideaFromAi(
 
     let ideaLines = lines(r.lines);
 
-    if (tool === "kahoot" && Array.isArray(r.questions)) {
-        const questions = r.questions
-            .map((q) => {
-                if (!q || typeof q !== "object") return null;
-                const item = q as Record<string, unknown>;
-                const question = str(item.question, 200);
-                const options = lines(item.options).slice(0, 4);
-                const answer = Math.round(Number(item.answer));
-                if (!question || options.length < 2 || !(answer >= 0 && answer < options.length)) return null;
-                const marked = options.map((option, i) => (i === answer ? `${option} ✓` : option));
-                return `${question} · ${marked.join(" · ")}`;
-            })
-            .filter((q): q is string => q !== null)
-            .slice(0, 10);
-        if (questions.length) ideaLines = questions.map((q, i) => `${i + 1}. ${q}`);
-    }
-
-    if (tool === "quizlet" && Array.isArray(r.cards)) {
-        const cards = r.cards
-            .map((c) => {
-                if (!c || typeof c !== "object") return null;
-                const card = c as Record<string, unknown>;
-                const term = str(card.term, 100).replace(/\t/g, " ");
-                const definition = str(card.definition, 200).replace(/\t/g, " ");
-                return term && definition ? `${term}${QUIZLET_ARROW}${definition}` : null;
-            })
-            .filter((c): c is string => c !== null)
-            .slice(0, 20);
-        if (cards.length) ideaLines = cards;
-    }
+    // Con las preguntas o los pares, el contenido es eso: los renglones que la IA
+    // haya escrito además repetirían lo mismo en otra forma.
+    const quiz = tool === "kahoot" ? questions(r.questions) : [];
+    const twoSided = tool === "wordwall" || tool === "quizlet" ? pairs(r.pairs) : [];
+    if (quiz.length || twoSided.length) ideaLines = [];
+    // Kahoot sin preguntas que entren en la planilla no se puede cargar.
+    if (tool === "kahoot" && !quiz.length) return null;
 
     // Si la IA nombra YouGlish pero no dice con qué palabras, se abre con las
     // de la clase: el título ya promete la herramienta.
@@ -549,7 +660,10 @@ export function ideaFromAi(
         tool,
         minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : fallbackMinutes,
         grouping: (GROUPINGS as readonly string[]).includes(grouping) ? grouping : "Toda la clase",
+        steps: r.steps,
         lines: ideaLines,
+        questions: quiz,
+        pairs: twoSided,
         note: tool === "kahoot" ? kahootNote(studentCount) : undefined,
         words,
     });
