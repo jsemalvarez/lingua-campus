@@ -253,6 +253,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
+| [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -2391,6 +2392,10 @@ distinguir **mover** de **agregar**, que es la rama que la propia ficha anticipa
 de baja el viejo genera dos cuotas por mes — que ahora es el comportamiento correcto, pero puede no
 ser el que el operador quiso. En producción no pasó nunca, así que no urge.
 
+**Pasó — 2026-10-15.** Una alumna con dos inscripciones activas desde el 02/09, cobrada dos veces
+en matrícula y en octubre. El arreglo desde la app se traba en las cuotas anuladas: ver
+[FIN-33](#fin-33).
+
 ---
 
 <a id="fin-21"></a>
@@ -3353,6 +3358,80 @@ que la deuda da $0 y lo termina rechazando el servidor con *"Datos del pago inv�
 [FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué), [FIN-27](#fin-27) (la otra
 vez que esta misma pantalla dijo algo que no había pasado), [FIN-25](#fin-25) (las condiciones
 especiales que se tipean de memoria porque no están en ningún lado).
+
+---
+
+<a id="fin-33"></a>
+## FIN-33 · Anular un cobro hecho por error deja una deuda que no se puede borrar · **P1**
+
+**Abierto el 2026-10-15**, con un caso de producción: Paz Isabella Calderón, con dos pagos de
+*"Cuota Octubre 2026"* el 14/10. No fue un pago repetido sobre la misma cuota: la alumna tiene **dos
+inscripciones activas** —*Children 3 M-J late shift* (31/08) y *Children 3 L-M TT* (02/09)—, cada
+una generó su octubre, y se cobraron las dos, más una segunda matrícula el 24/09. El instituto
+confirma que cursa un solo curso: **la segunda inscripción, la segunda matrícula y el segundo octubre
+son errores de carga**. Es el caso que [FIN-20](#fin-20) daba por no ocurrido, y la segunda
+inscripción es del mismo día en que se pidió [BUG-13](#bug-13): con toda probabilidad, un cambio de
+curso hecho inscribiendo de nuevo.
+
+El error fue humano. **Lo que es del sistema es que no se puede deshacer entero desde la app.**
+
+**Lo que el administrador sí puede hacer hoy:**
+
+1. **Anular los pagos de más** desde la ficha del alumno
+   ([`voidPaymentAction`](../src/app/payments/actions.ts)). Asienta el `REFUND` y deja la cuota en
+   cero.
+2. Si la plata **queda a cuenta** en vez de devolverse, registrar un anticipo
+   ([`registerAdvanceAction`](../src/app/payments/actions.ts)) y aplicarlo a los meses siguientes.
+3. **Marcar incompleta** la inscripción que sobra
+   ([`markEnrollmentIncompleteAction`](../src/app/courses/actions.ts)): el generador mensual sólo
+   emite para inscripciones `ACTIVE`, así que deja de generar cuotas.
+
+**Y donde se traba.** Anular el pago devuelve la cuota a `PENDING`, y desde ahí no hay salida:
+
+- **Eliminar cuota** se niega si la cuota tiene alguna fila de `Payment`, anulada o no
+  ([`billingActions.ts:440`](../src/app/payments/billingActions.ts)): *"Anule los pagos primero"*,
+  y ya están anulados.
+- **Eliminar inscripción** tiene el mismo corte por filas de `Payment`
+  ([`courses/actions.ts:252`](../src/app/courses/actions.ts)), que ahí es correcto: lo que tuvo plata
+  se marca, no se borra.
+- Las listas de deudores, la ficha y el panel de la familia leen `PENDING`/`PARTIAL` **sin mirar el
+  estado de la inscripción** ([`payments/page.tsx:124`](../src/app/payments/page.tsx),
+  [`billingActions.ts:358`](../src/app/payments/billingActions.ts)).
+
+Resultado: después de hacer todo bien, Paz figura debiendo $84.000 (un octubre y una matrícula) que
+nunca debió. **La app tiene cómo anular el cobro, pero no la deuda que ese cobro saldaba.** No es el
+caso de Paz: es cualquier cuota emitida por error que alguien llegó a cobrar.
+
+**Y el cambio de curso no ofrece otro camino.** Si se quisiera conservar la inscripción vieja y
+pasarla al curso nuevo con *Cambiar curso*, choca con el índice `studentId_courseId`, porque la
+inscripción duplicada en ese curso no se puede borrar
+([`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) devuelve además un error genérico,
+sin decir por qué). Así que la que se queda es la del curso que el alumno cursa hoy, y la otra se
+marca incompleta. Septiembre, cobrado en la inscripción vieja, queda donde está: se pagó una vez.
+
+**Cambio propuesto.** Que `deleteFeeAction` acepte una cuota cuyos pagos estén **todos** en
+`VOIDED`, con el motivo obligatorio y el registro en `FeeDeletion` que ya tiene
+(`/payments/deletions`). La cuota se borra; los pagos anulados y sus contra-asientos no, porque son
+la historia de la caja — así que el `Payment_feeId_fkey` en RESTRICT obliga a resolver qué pasa con
+ellos (desengancharlos con `feeId` nulo, o borrado lógico de la cuota en vez de físico, que es la
+línea de [ARQ-05](#arq-05)). **Esa es la decisión que falta**, antes de codificar.
+
+Con eso el camino completo del administrador queda en tres pasos —anular, eliminar, marcar
+incompleta— y sin tocar la base a mano.
+
+**Mientras tanto, el caso de Paz** se puede dejar en los pasos 1 a 3 y aceptar las dos deudas falsas
+a la vista, o esperar este arreglo. Lo que no conviene es borrarlas por SQL: se pierde el registro en
+`FeeDeletion` que justamente esta ficha quiere conservar.
+
+**Lo que también se ve desde acá.** En *Movimientos Recientes* los dos cobros decían exactamente lo
+mismo —*"Cuota Octubre 2026 - Paz isabella calderón"*—, sin el curso, y por eso el 14/10 no se notó
+que eran de dos inscripciones distintas. La lista de deudores sí lo nombra
+([`debtors/page.tsx:62`](../src/app/payments/debtors/page.tsx)); el movimiento no.
+
+**Relacionado.** [FIN-20](#fin-20) (la ficha donde quedó abierto *mover* contra *agregar*),
+[BUG-13](#bug-13) (el pedido del mismo día), [FIN-24](#fin-24) (qué pasa con las cuotas al cambiar
+de curso), [FIN-23](#fin-23) (por qué eliminar inscripción se niega con pagos), [ARQ-05](#arq-05)
+(borrado lógico).
 
 ---
 
