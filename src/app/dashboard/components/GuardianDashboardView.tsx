@@ -198,9 +198,9 @@ export function GuardianDashboardView({
                                             
                                             <p className="font-bold text-sm leading-tight text-foreground/90">{lesson.topic || "Clase Regular"}</p>
                                             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-                                                <div className="w-1 h-1 rounded-full bg-border" /> 
-                                                {dayjs(lesson.date).format("MMM DD, YYYY")} 
-                                                <div className="w-1 h-1 rounded-full bg-border" /> 
+                                                <span className="w-1 h-1 rounded-full bg-border" />
+                                                {dayjs(lesson.date).format("MMM DD, YYYY")}
+                                                <span className="w-1 h-1 rounded-full bg-border" />
                                                 {lesson.studentName}
                                             </p>
                                         </div>
