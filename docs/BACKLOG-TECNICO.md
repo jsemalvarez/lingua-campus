@@ -337,6 +337,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
 | [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [ ] |
 | [PED-10](#ped-10) | P2 | Consumo de IA por instituto, visible para el superadmin | [ ] |
+| [PED-13](#ped-13) | P3 | Práctica de escritura con devolución que marca sin corregir | [ ] |
 
 ---
 
@@ -10004,6 +10005,73 @@ La 1 es barata y puede alcanzar; la 2 es la que garantiza. Conviene medir antes 
 **P3.** No rompe nada, el ítem es contestable y el alumno puede seguir. Pero está en el módulo que es
 el diferencial del producto, y la profesora nunca ve estas preguntas: se generan al vuelo, distintas
 para cada alumno, así que si salen mal no hay nadie del otro lado que lo note.
+
+---
+
+<a id="ped-13"></a>
+## PED-13 · Práctica de escritura con devolución que marca sin corregir · **P3**
+
+**De dónde sale.** Patricia fue a una capacitación sobre IA para enseñar idiomas y compartió el
+material. El primer PDF, el *Generative AI Idea Pack* de Cambridge (2024), recomienda pedirle a la IA
+una devolución de escritura **que no reescriba el texto**: que diga qué revisar y deje que el alumno
+lo arregle. La misma idea la implementa Write & Improve, de Cambridge, que se probó el 2026-10-17 con
+un mail de principiante con cuatro errores puestos a propósito.
+
+**Lo que se vio en Write & Improve.** Pinta en naranja las oraciones con problemas sin decir cuál es
+el error, sugiere la palabra sólo a veces («Perhaps "Saturday" is better»), estima un nivel MCER
+(A1) y puntúa de 0 a 5 si el texto responde la consigna. El alumno corrige, vuelve a mandar y ve qué
+cambió de una versión a otra. **Se le escapó uno de los cuatro errores** («by bus, is near») y le dio
+3 de 5 a un mail que contestaba las tres preguntas de la consigna.
+
+**Decidido el 2026-10-17.** Por ahora va como décima herramienta de la página de recursos
+(`src/app/resources/tools.ts`), sin construir nada. Esta ficha es la versión interna, **para probar
+más adelante**.
+
+**Por qué interna.** Lo que el alumno escribe en Write & Improve queda afuera del campus: el docente no
+lo ve en la ficha ni en las métricas, salvo que pague «+Class View». Hecha adentro, la escritura sería
+una sección más de la práctica de la clase y su resultado quedaría en `PracticeSession`, como el de
+las otras tres.
+
+**Lo que se reutiliza.** Los providers de IA, `guardPracticeAi` y la cuota de SEC-07, `PracticeSession`
+y el circuito de borrador y publicación de PED-01.
+
+**Lo que hay que construir.**
+
+1. **Schema:** `writingPrompt` en `LessonPractice` y `WRITING` en `PracticeType`. Lleva migración.
+2. **IA:** `evaluateWriting(consigna, texto, contexto)` en `IAIProvider`, implementado en OpenAI y en
+   Gemini. Devuelve las oraciones a marcar, una pista para cada una y si respondió la consigna.
+3. **Alumno:** consigna, cuadro con contador, «Revisar», las oraciones pintadas con su pista, corregir
+   y volver a revisar. Del tamaño de `SpeakingHub`.
+4. **Docente:** la consigna en la página de la clase, en `generatePracticeDraft` y en la vista previa.
+5. **Métricas:** el tipo nuevo donde hoy se cuentan los otros tres.
+
+**Lo difícil no es el código.**
+
+- **Calidad de la devolución.** Write & Improve usa un modelo entrenado para esto y aun así se le
+  escapó un error de cuatro. Con un modelo general hay que medir con muchos textos antes de
+  confiar, y vigilar sobre todo **que no marque como error algo que está bien**: eso confunde más
+  que un error que se escapa.
+- **Ubicar lo marcado en el texto.** Pintar la oración que la IA señaló exige encontrarla en el
+  texto: oraciones que terminan en «!», textos sin puntos y saltos de línea son donde aparecen los
+  bugs.
+- **Es el texto libre más largo del módulo y va directo a la IA.** Mismo tratamiento que la
+  pronunciación (recorte y plantilla fija, ver [SEC-07](#sec-07)), con más cuidado.
+- **Costo.** Cada «Revisar» es una llamada y la gracia es revisar varias veces: ver si alcanza la
+  cuota actual ([PED-07](#ped-07)).
+
+**Dos decisiones abiertas que cambian el tamaño.**
+
+- **No mostrar nivel MCER.** Write & Improve puede darlo porque su modelo está calibrado; un nivel
+  que estima un modelo general es un dato que no se puede defender.
+- **Guardar o no el texto.** Sin guardarlo, el docente ve sólo «hizo la práctica, puntaje tanto». Si
+  se guarda, puede leer los textos, que es justo lo que Write & Improve cobra, pero suma una tabla, una
+  pantalla para el docente y la misma pregunta abierta de [PED-04](#ped-04): quién lee eso y qué se
+  hace con lo que aparezca.
+
+**Para quién.** Para alumnos que ya escriben un párrafo. Con los cursos de 6 a 8 años no sirve, así que
+la sección tiene que poder quedar apagada por curso.
+
+**P3.** La necesidad está cubierta por la tarjeta de recursos; esto es para cuando haya lugar.
 
 ---
 
