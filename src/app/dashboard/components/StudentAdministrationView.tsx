@@ -31,7 +31,7 @@ export function StudentAdministrationView({
   
   const formatter = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
 
-  // `standing` lo calcula la página con `feeStanding` (src/lib/examFees.ts): el
+  // `standing` lo calcula la página con `feeStanding` (src/lib/feeDue.ts): el
   // derecho de examen que no venció va aparte y no suma deuda.
   const unpaidFees = fees.filter(f => f.status !== "PAID");
   const pendingFees = unpaidFees.filter(f => f.standing !== "UPCOMING");

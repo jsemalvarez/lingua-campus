@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { GraduationCap, Users, User, ArrowRight, Calendar, CreditCard } from "lucide-react";
 import Link from "next/link";
 import dayjs from "dayjs";
-import { excludeUpcomingExamFees } from "@/lib/examFees";
+import { excludeNotYetDueFees } from "@/lib/feeDue";
 
 export default async function GuardianDashboard() {
   const session = await getServerSession(authOptions);
@@ -34,9 +34,9 @@ export default async function GuardianDashboard() {
             include: { course: true },
             where: { status: "ACTIVE" }
           },
-          // El derecho de examen que todavía no venció no es deuda (`examFees.ts`).
+          // Lo que todavía no venció —examen antes del examen, meses que no llegaron— no es deuda (`feeDue.ts`).
           fees: {
-            where: { status: "PENDING", ...excludeUpcomingExamFees() }
+            where: { status: "PENDING", ...excludeNotYetDueFees() }
           }
         }
       }

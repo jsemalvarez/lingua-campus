@@ -6,7 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { StudentAdministrationView } from "../dashboard/components/StudentAdministrationView";
 import { instituteToday } from "@/lib/activity";
-import { feeStanding } from "@/lib/examFees";
+import { feeStanding } from "@/lib/feeDue";
 
 export default async function StudentAdministrationPage() {
     const session = await getServerSession(authOptions);

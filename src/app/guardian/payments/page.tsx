@@ -31,7 +31,7 @@ function getFeeLabel(fee: { type: string; month: number; year: number }) {
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
 import { GUARDIAN_SECTIONS, instituteToday, recordActivity } from "@/lib/activity";
-import { feeStanding } from "@/lib/examFees";
+import { feeStanding } from "@/lib/feeDue";
 import { UpcomingFeesSection } from "@/components/financials/UpcomingFeesSection";
 
 export const dynamic = "force-dynamic";
@@ -249,7 +249,8 @@ export default async function GuardianPaymentsPage() {
                             <div className="space-y-4">
                                 {students.map(student => {
                                     const studentDebt = student.fees
-                                        .filter((f:any) => f.status !== "PAID" && f.status !== "VOIDED" && feeStanding(f, today) !== "UPCOMING")
+                                        // Lo vencido y el mes en curso: lo que todavía no es deuda queda afuera.
+                                        .filter((f:any) => f.status !== "PAID" && f.status !== "VOIDED" && ["OVERDUE", "CURRENT"].includes(feeStanding(f, today)))
                                         .reduce((acc:number, f:any) => acc + (f.originalAmount - f.paidAmount), 0);
                                     
                                     return (

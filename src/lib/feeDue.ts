@@ -2,7 +2,10 @@ import { Prisma } from "@prisma/client";
 import { instituteToday } from "@/lib/activity";
 
 /**
- * Cuándo el derecho de examen es deuda.
+ * Cuándo una cuota es deuda. Dos cosas emitidas todavía no lo son: el derecho de
+ * examen antes del examen, y la cuota de un mes que no llegó.
+ *
+ * El derecho de examen:
  *
  * Vence el día del examen final de su curso (`Course.examDate`). Hasta ese día
  * —incluido— es un **pago futuro**: las familias lo van pagando de a partes
@@ -28,18 +31,39 @@ export function isUpcomingExamFee(
 }
 
 /**
- * Lo mismo que `isUpcomingExamFee`, como filtro de Prisma: se suma al `where`
- * de una consulta de cuotas para dejar afuera los derechos de examen que
- * todavía no vencieron.
+ * Lo mismo que `feeStanding`, como filtro de Prisma: se suma al `where` de una
+ * consulta de cuotas para dejar afuera lo que todavía no es deuda.
+ *
+ * - el derecho de examen que no venció (`UPCOMING`);
+ * - la cuota de un mes que todavía no llegó (`LATER`). Patricia puede generar
+ *   noviembre y diciembre por adelantado, y eso no es deber noviembre en octubre.
+ *
+ * Las dos condiciones son el espejo exacto de `feeStanding`: si se toca una, se
+ * toca la otra.
  */
-export function excludeUpcomingExamFees(today: Date = instituteToday()): Prisma.FeeWhereInput {
+export function excludeNotYetDueFees(today: Date = instituteToday()): Prisma.FeeWhereInput {
+    const currentYear = today.getUTCFullYear();
+    const currentMonth = today.getUTCMonth() + 1;
+
     return {
-        NOT: {
-            type: "EXAM",
-            enrollment: {
-                course: { OR: [{ examDate: null }, { examDate: { gte: today } }] }
+        AND: [
+            {
+                NOT: {
+                    type: "EXAM",
+                    enrollment: {
+                        course: { OR: [{ examDate: null }, { examDate: { gte: today } }] }
+                    }
+                }
+            },
+            {
+                NOT: {
+                    OR: [
+                        { year: { gt: currentYear } },
+                        { year: currentYear, month: { gt: currentMonth } }
+                    ]
+                }
             }
-        }
+        ]
     };
 }
 
@@ -50,7 +74,7 @@ export function excludeUpcomingExamFees(today: Date = instituteToday()): Prisma.
  * - `UPCOMING`: derecho de examen que todavía no venció. Pago futuro.
  * - `OVERDUE`: de un mes anterior al actual. Deuda.
  * - `CURRENT`: del mes en curso.
- * - `LATER`: cuota de un mes que todavía no llegó, ya emitida.
+ * - `LATER`: cuota de un mes que todavía no llegó, ya emitida. No es deuda.
  *
  * `Fee.month` va de 1 a 12 —0 para matrículas y exámenes—, y el mes actual se
  * cuenta igual. Antes estas pantallas lo comparaban con `dayjs().month()`, que va

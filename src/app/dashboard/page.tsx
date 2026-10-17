@@ -20,7 +20,7 @@ import {
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { formatFeeLabel } from "@/lib/utils";
-import { excludeUpcomingExamFees } from "@/lib/examFees";
+import { excludeNotYetDueFees } from "@/lib/feeDue";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
@@ -102,9 +102,9 @@ export default async function DashboardPage() {
                                 lesson: { select: { topic: true, course: { select: { color: true, name: true, level: true } } } }
                             }
                         },
-                        // El derecho de examen que todavía no venció no es deuda (`examFees.ts`).
+                        // Lo que todavía no venció —examen antes del examen, meses que no llegaron— no es deuda (`feeDue.ts`).
                         fees: {
-                            where: { status: { not: "PAID" }, ...excludeUpcomingExamFees() },
+                            where: { status: { not: "PAID" }, ...excludeNotYetDueFees() },
                             select: { originalAmount: true, paidAmount: true }
                         }
                     }
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
 
         // Cuotas pendientes
         const pendingFeesCount = await prisma.fee.count({
-            where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] }, ...excludeUpcomingExamFees() }
+            where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] }, ...excludeNotYetDueFees() }
         });
 
         // Tareas pendientes

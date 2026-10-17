@@ -244,7 +244,7 @@ model Course {
   // Cuándo rinde el curso el examen final. Es el vencimiento del derecho de
   // examen: hasta ese día la cuota es un pago futuro, no una deuda, porque las
   // familias lo van pagando de a partes durante el año. Sin fecha, tampoco es
-  // deuda. Ver `src/lib/examFees.ts`.
+  // deuda. Ver `src/lib/feeDue.ts`.
   examDate       DateTime? @db.Date
 
   createdAt   DateTime @default(now())

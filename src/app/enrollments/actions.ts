@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
-import { syncFinalExamLesson } from "@/lib/examFees";
+import { syncFinalExamLesson } from "@/lib/feeDue";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);

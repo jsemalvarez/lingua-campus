@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
-import { syncFinalExamLesson } from "@/lib/examFees";
+import { syncFinalExamLesson } from "@/lib/feeDue";
 
 // Función auxiliar para obtener el usuario autenticado y su instituto
 async function getAuthAndInstitute() {
