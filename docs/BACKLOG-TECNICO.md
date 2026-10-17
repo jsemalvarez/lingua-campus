@@ -254,6 +254,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
 | [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [ ] |
+| [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [ ] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -3433,6 +3434,41 @@ que eran de dos inscripciones distintas. La lista de deudores sí lo nombra
 [BUG-13](#bug-13) (el pedido del mismo día), [FIN-24](#fin-24) (qué pasa con las cuotas al cambiar
 de curso), [FIN-23](#fin-23) (por qué eliminar inscripción se niega con pagos), [ARQ-05](#arq-05)
 (borrado lógico).
+
+---
+
+<a id="fin-34"></a>
+## FIN-34 · Un cobro de después de las 21 aparece al día siguiente en los movimientos · **P2**
+
+**Visto el 2026-10-17**, revisando las fechas que se corrían un día (ver `src/lib/dates.ts`). No se
+vio en datos: sale de leer el código.
+
+**El mecanismo.** `Transaction.date` mezcla dos clases de fecha según quién creó la fila
+([`payments/actions.ts`](../src/app/payments/actions.ts), [`teachers/actions.ts`](../src/app/teachers/actions.ts)):
+
+- **Un día**, a medianoche UTC: los gastos y sueldos (`date: exp.date`, `new Date(date)`) y los
+  ingresos varios (`date: inc.date`), que vienen de columnas `@db.Date`.
+- **Un momento**, con hora: los cobros, las anulaciones, los reintegros y los adelantos
+  (`date: new Date()`).
+
+La tabla de movimientos ([`TransactionTable.tsx`](../src/app/payments/components/TransactionTable.tsx))
+lee todo como día, en UTC. Para los gastos está bien; para un cobro registrado a las 21:30 en
+Argentina —00:30 UTC del día siguiente— muestra el día siguiente. Antes del 2026-10-17 pasaba lo
+mismo: el arreglo de esa fecha cambió el formato y el idioma, no qué día se lee.
+
+**Por qué no se arregló junto.** Decidir fila por fila exige saber de qué clase es cada una, y el
+tipo no alcanza: `MISC_INCOME` es un día si viene de «ingreso vario» y un momento si es un adelanto
+(`registerAdvanceAction` guarda `new Date()` también en `MiscellaneousIncome.date`, que es
+`@db.Date`, así que un adelanto de las 22 ya queda guardado con el día siguiente). Es tocar la caja,
+y conviene decidirlo aparte.
+
+**Caminos.** (1) Que la fila diga su clase desde el servidor, con una regla por tipo y origen;
+(2) guardar siempre un día en `Transaction.date` y la hora en `createdAt`. Antes de elegir, revisar
+cómo cortan por fecha el cierre de caja y los reportes (no se miró), y medir cuántos cobros de prod
+caen después de las 21.
+
+**P2.** Pocos institutos cobran después de las 21, pero cuando pasa, el cobro figura en un día en que
+la caja no lo tuvo.
 
 ---
 
