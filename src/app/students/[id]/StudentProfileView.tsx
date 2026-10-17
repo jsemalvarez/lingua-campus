@@ -7,6 +7,7 @@ import { EditStudentForm } from "./EditStudentForm";
 import { User, Phone, Mail, UserCheck, Edit3, Info, Wallet } from "lucide-react";
 import { CreateGuardianModal } from "./components/CreateGuardianModal";
 import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { StudentQRCard } from "./components/StudentQRCard";
 import { CompletionLinkButton } from "../components/CompletionLinkButton";
 
@@ -96,7 +97,7 @@ export function StudentProfileView({
 
                     <h2 className="text-xl font-bold capitalize">{student.name}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Ingresó el {dayjs(student.joinDate).format("DD MMM, YYYY")}
+                        Ingresó el {formatDate(student.joinDate, "moment", "short")}
                     </p>
 
 

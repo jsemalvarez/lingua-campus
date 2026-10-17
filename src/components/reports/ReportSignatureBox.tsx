@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { CheckCircle2, Info, PenLine, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { Button } from "@/components/ui/Button";
 import { SignaturePad, StrokeData, isEmptyStroke } from "./SignaturePad";
 import { signReportAction } from "@/app/actions/signatures";
@@ -37,7 +37,7 @@ export function ReportSignatureBox({
                 <div className="space-y-1">
                     <p className="font-bold text-sm">Confirmaste que lo leíste</p>
                     <p className="text-sm text-muted-foreground">
-                        El {dayjs(mySignedAt).format("D [de] MMMM [de] YYYY")}. El instituto ya
+                        El {formatDate(mySignedAt, "moment", "long")}. El instituto ya
                         figura avisado de que viste estas notas.
                     </p>
                 </div>

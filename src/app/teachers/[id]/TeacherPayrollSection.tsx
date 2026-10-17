@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { DollarSign, Clock, Calendar as CalendarIcon, Loader2, CheckCircle, AlertCircle, AlertTriangle, Calculator } from "lucide-react";
 import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
+import { getMonthName } from "@/lib/utils";
 import { processTeacherPayment } from "../actions";
 
 interface PayrollItem {
@@ -132,7 +134,8 @@ export function TeacherPayrollSection({
     const handleRegisterPayment = async () => {
         if (!data) return;
         
-        const description = `Pago de Haberes - ${dayjs(`${year}-${month}-01`).format("MMMM YYYY")} (${formatHours(currentTotalHours)})`;
+        // El mes sale de `getMonthName` y no de dayjs: su idioma depende de qué pantallas cargó el navegador, y esto se guarda («March 2026»).
+        const description = `Pago de Haberes - ${getMonthName(month)} ${year} (${formatHours(currentTotalHours)})`;
         const dateStr = dayjs().format("YYYY-MM-DD");
 
         startTransition(async () => {
@@ -212,7 +215,7 @@ export function TeacherPayrollSection({
                         >
                             {Array.from({ length: 12 }, (_, i) => (
                                 <option key={i + 1} value={i + 1}>
-                                    {dayjs().month(i).format("MMMM")}
+                                    {getMonthName(i + 1)}
                                 </option>
                             ))}
                         </select>
@@ -336,7 +339,7 @@ export function TeacherPayrollSection({
                                                 />
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 font-medium">{dayjs(lesson.date).format("DD/MM/YY")}</td>
+                                        <td className="px-4 py-3 font-medium">{formatDate(lesson.date, "day", "numeric")}</td>
                                         <td className="px-4 py-3">
                                             <p className="font-bold">{lesson.courseName}</p>
                                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{lesson.topic}</p>

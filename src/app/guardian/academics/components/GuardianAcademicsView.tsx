@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/dates";
 import { StudentReportViewer } from "@/components/reports/StudentReportViewer";
 
 interface GuardianAcademicsViewProps {
@@ -194,8 +195,8 @@ export function GuardianAcademicsView({
                             activeCourse?.lessons?.map((lesson: any) => (
                                 <div key={lesson.id} className="flex bg-muted/20 border border-border/50 rounded-2xl overflow-hidden hover:bg-muted/40 transition-colors">
                                     <div className="bg-primary/5 border-r border-border/50 p-4 flex flex-col justify-center items-center shrink-0 w-24">
-                                        <span className="text-xs font-black text-primary/70 uppercase mb-0.5">{dayjs(lesson.date).format("MMM")}</span>
-                                        <span className="text-2xl font-black text-primary leading-none">{dayjs(lesson.date).format("DD")}</span>
+                                        <span className="text-xs font-black text-primary/70 uppercase mb-0.5">{formatDate(lesson.date, "day", "month")}</span>
+                                        <span className="text-2xl font-black text-primary leading-none">{formatDate(lesson.date, "day", "dayNumber")}</span>
                                     </div>
                                     <div className="p-5 flex-1 flex flex-col justify-center">
                                         <h4 className="font-bold text-base">{lesson.topic || "Clase Regular"}</h4>
@@ -244,7 +245,7 @@ export function GuardianAcademicsView({
                                                     {att.status === "ABSENT" ? <XCircle size={16} /> : att.status === "LATE" ? <Clock size={16} /> : <Info size={16} />}
                                                 </div>
                                                 <div className="truncate">
-                                                    <p className="font-bold text-xs truncate">{dayjs(att.lesson.date).format("DD MMM")} • {att.lesson.topic}</p>
+                                                    <p className="font-bold text-xs truncate">{formatDate(att.lesson.date, "day", "dayMonth")} • {att.lesson.topic}</p>
                                                     {att.notes && <p className="text-[10px] italic text-muted-foreground truncate opacity-80">{att.notes}</p>}
                                                 </div>
                                             </div>
@@ -281,7 +282,7 @@ export function GuardianAcademicsView({
                                             <div className="min-w-0 pr-4">
                                                 <p className="font-black text-sm truncate">{grade.lesson.topic}</p>
                                                 <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mt-1">
-                                                    {dayjs(grade.createdAt).format("DD/MM")} • {grade.lesson.course.level || grade.lesson.course.name}
+                                                    {formatDate(grade.createdAt, "moment", "numericDayMonth")} • {grade.lesson.course.level || grade.lesson.course.name}
                                                 </p>
                                             </div>
                                             <div className="shrink-0 text-right">

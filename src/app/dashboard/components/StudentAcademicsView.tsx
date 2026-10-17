@@ -22,6 +22,7 @@ import {
   XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/dates";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/es";
@@ -323,7 +324,7 @@ export function StudentAcademicsView({
                     )} />
                     <div className="min-w-0">
                       <p className="text-[11px] font-black truncate">{att.lesson.course.level || att.lesson.course.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-bold">{dayjs(att.lesson.date).format('DD MMMM, YYYY')}</p>
+                      <p className="text-[10px] text-muted-foreground font-bold">{formatDate(att.lesson.date, "day", "long")}</p>
                     </div>
                   </div>
                   <div className={cn(

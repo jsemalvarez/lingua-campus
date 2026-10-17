@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ReportSignatureBox } from "./ReportSignatureBox";
@@ -556,7 +557,7 @@ export function StudentReportViewer({
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-1.5">
                 <Calendar size={14} className="text-primary/70" />
-                <span>Publicado: {dayjs(displayedReport.publishedAt).format("DD [de] MMMM, YYYY")}</span>
+                <span>Publicado: {formatDate(displayedReport.publishedAt, "moment", "long")}</span>
               </div>
               {activeCourseInfo?.teacher?.name && (
                 <div className="flex items-center gap-1.5 border-l border-border/30 pl-4">

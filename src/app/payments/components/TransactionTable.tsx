@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { TransactionActions } from "./TransactionActions";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -239,7 +239,8 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                                 </div>
                                             </td>
                                             <td className={`px-5 py-4 text-xs font-medium text-muted-foreground ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
-                                                {dayjs(new Date(tx.date).toISOString().split('T')[0]).format("DD MMM, YYYY")}
+                                                {/* Todo se lee como día: bien para gastos e ingresos, que son `@db.Date`; un cobro de después de las 21 cae al día siguiente (FIN-34). */}
+                                                {formatDate(tx.date, "day", "short")}
                                             </td>
                                             <td className={`px-5 py-4 text-right ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
                                                 <span className={`font-bold tabular-nums tracking-tight ${

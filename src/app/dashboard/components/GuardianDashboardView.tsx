@@ -14,29 +14,9 @@ import {
 } from "lucide-react";
 import { cn, getMonthName } from "@/lib/utils";
 import Link from "next/link";
+import { formatDate } from "@/lib/dates";
 
 import { GuardianAttendanceChart } from "./GuardianAttendanceChart";
-
-/**
- * «19 oct 2026», con el mismo texto en el servidor y en el navegador.
- *
- * Antes salía de `dayjs().format("MMM")`, que usa el idioma global de dayjs: en
- * el servidor queda en español porque otras vistas del inicio llaman a
- * `dayjs.locale("es")`, y en el navegador del tutor esas vistas no se cargan.
- * Salía «oct» de un lado y «Oct» del otro, y React no podía hidratar. Por eso el
- * mes sale de `getMonthName` y de `Intl` sólo se toman números.
- *
- * La zona horaria también es fija. La fecha de una clase es `@db.Date`
- * (medianoche UTC) y se lee en UTC, como en el inicio del docente; en la zona del
- * navegador caía en el día anterior. La de una nota es un momento, y se muestra
- * en hora argentina.
- */
-function formatShortDate(value: string | Date, timeZone: "UTC" | "America/Argentina/Buenos_Aires"): string {
-    const parts = new Intl.DateTimeFormat("en-US", { timeZone, day: "numeric", month: "numeric", year: "numeric" })
-        .formatToParts(new Date(value));
-    const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value);
-    return `${part("day")} ${getMonthName(part("month")).slice(0, 3).toLowerCase()} ${part("year")}`;
-}
 
 interface GuardianDashboardViewProps {
     guardianName: string;
@@ -137,7 +117,7 @@ export function GuardianDashboardView({
                                                 <div>
                                                     <h4 className="font-bold text-base leading-tight text-foreground/90">{grade.topic}</h4>
                                                     <p className="text-[11px] text-muted-foreground font-semibold mt-1.5 uppercase tracking-wider">
-                                                        {grade.studentName} • Evaluado el {formatShortDate(grade.createdAt, "America/Argentina/Buenos_Aires")}
+                                                        {grade.studentName} • Evaluado el {formatDate(grade.createdAt, "moment", "short")}
                                                     </p>
                                                     {grade.feedback && <p className="text-[12px] text-muted-foreground italic mt-1.5 line-clamp-1 border-l-2 pl-2">"{grade.feedback}"</p>}
                                                 </div>
@@ -219,7 +199,7 @@ export function GuardianDashboardView({
                                             <p className="font-bold text-sm leading-tight text-foreground/90">{lesson.topic || "Clase Regular"}</p>
                                             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
                                                 <span className="w-1 h-1 rounded-full bg-border" />
-                                                {formatShortDate(lesson.date, "UTC")}
+                                                {formatDate(lesson.date, "day", "short")}
                                                 <span className="w-1 h-1 rounded-full bg-border" />
                                                 {lesson.studentName}
                                             </p>

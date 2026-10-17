@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { TeacherPayrollSection } from "../../teachers/[id]/TeacherPayrollSection";
 import dayjs from "dayjs";
+import { getMonthName } from "@/lib/utils";
 import { processBulkPayrollAction } from "@/app/teachers/actions";
 import { Portal } from "@/components/ui/Portal";
 
@@ -129,7 +130,8 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
         const payments = selectedTeachers.map(s => ({
             teacherId: s.teacherId,
             amount: s.amount,
-            description: `Pago de Haberes - ${dayjs().month(globalMonth - 1).format("MMMM")} ${globalYear}`,
+            // El mes sale de `getMonthName` y no de dayjs: su idioma depende de qué pantallas cargó el navegador, y esto se guarda («March 2026»).
+            description: `Pago de Haberes - ${getMonthName(globalMonth)} ${globalYear}`,
             date: dayjs().format("YYYY-MM-DD"),
             bonus: s.bonus,
             deduction: s.deduction,
@@ -174,7 +176,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                     >
                         {Array.from({ length: 12 }, (_, i) => (
                             <option key={i + 1} value={i + 1}>
-                                {dayjs().month(i).format("MMMM")}
+                                {getMonthName(i + 1)}
                             </option>
                         ))}
                     </select>
@@ -253,7 +255,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                                                 Estás a punto de registrar <span className="font-semibold text-foreground">{selectedTeachers.length} pagos</span> por un total de <span className="font-bold text-foreground">${totalToPay.toLocaleString()}</span>.
                                             </p>
                                             <p className="text-muted-foreground text-xs mt-2">
-                                                Período: <span className="font-semibold">{dayjs().month(globalMonth - 1).format("MMMM")} {globalYear}</span>
+                                                Período: <span className="font-semibold">{getMonthName(globalMonth)} {globalYear}</span>
                                             </p>
                                             <p className="text-muted-foreground text-xs mt-3">
                                                 Esta operación no puede deshacerse directamente. Para revertir un pago, deberás anularlo individualmente desde el libro mayor.

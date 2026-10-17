@@ -17,6 +17,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/es";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/dates";
 
 dayjs.extend(relativeTime);
 dayjs.locale("es");
@@ -188,7 +189,7 @@ export function StudentDashboardV2View({
                         <div className="flex items-center gap-3 p-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary">
                            <Calendar size={14} />
                            <span className="text-[10px] font-black uppercase tracking-widest">
-                              {dayjs(nextSession.date).format('dddd DD')} • {nextSession.schedule?.startTime}
+                              {formatDate(nextSession.date, "day", "weekdayDay")} • {nextSession.schedule?.startTime}
                            </span>
                         </div>
                         <p className="text-sm font-black leading-tight line-clamp-2">

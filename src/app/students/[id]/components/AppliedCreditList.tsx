@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Undo2, Wallet } from "lucide-react";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { voidPaymentAction } from "@/app/payments/actions";
 import { formatCurrency } from "@/lib/utils";
@@ -71,7 +71,7 @@ export function AppliedCreditList({ payments }: { payments: AppliedCredit[] }) {
                         <div className="flex justify-between items-start">
                             <span className="font-medium text-foreground/90 leading-tight">{p.label}</span>
                             <span className="text-xs text-muted-foreground shrink-0">
-                                {dayjs(p.date).format("DD/MM")}
+                                {formatDate(p.date, "moment", "numericDayMonth")}
                             </span>
                         </div>
                         <div className="flex justify-between items-center mt-0.5">

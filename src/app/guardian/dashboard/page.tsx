@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { GraduationCap, Users, User, ArrowRight, Calendar, CreditCard } from "lucide-react";
 import Link from "next/link";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
 
 export default async function GuardianDashboard() {
@@ -115,7 +115,7 @@ export default async function GuardianDashboard() {
 
                 <div className="mt-6 pt-6 border-t border-border/40 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar size={14} /> Ingresó: {dayjs(student.joinDate).format("MMMM YYYY")}
+                        <Calendar size={14} /> Ingresó: {formatDate(student.joinDate, "moment", "monthYear")}
                     </div>
                     <Link 
                       href={`/students/${student.id}`} // Los tutores podrán ver la ficha pero con menos opciones (seguridad pendiente)
