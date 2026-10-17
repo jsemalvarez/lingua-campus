@@ -20,6 +20,7 @@ import {
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { formatFeeLabel } from "@/lib/utils";
+import { excludeUpcomingExamFees } from "@/lib/examFees";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
@@ -101,8 +102,9 @@ export default async function DashboardPage() {
                                 lesson: { select: { topic: true, course: { select: { color: true, name: true, level: true } } } }
                             }
                         },
+                        // El derecho de examen que todavía no venció no es deuda (`examFees.ts`).
                         fees: {
-                            where: { status: { not: "PAID" } },
+                            where: { status: { not: "PAID" }, ...excludeUpcomingExamFees() },
                             select: { originalAmount: true, paidAmount: true }
                         }
                     }
@@ -289,7 +291,7 @@ export default async function DashboardPage() {
 
         // Cuotas pendientes
         const pendingFeesCount = await prisma.fee.count({
-            where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } }
+            where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] }, ...excludeUpcomingExamFees() }
         });
 
         // Tareas pendientes

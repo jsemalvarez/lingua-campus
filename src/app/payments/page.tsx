@@ -12,6 +12,7 @@ import { TransactionTable } from "./components/TransactionTable";
 import { GenerateFeesButton } from "./components/GenerateFeesButton";
 import { CollectionChart } from "./components/CollectionChart";
 import { formatFeeLabel } from "@/lib/utils";
+import { excludeUpcomingExamFees } from "@/lib/examFees";
 import { DebtChart } from "./components/DebtChart";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -126,7 +127,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             OR: [
                 { year: { lt: currentYear } },
                 { year: currentYear, month: { lte: currentMonth } }
-            ]
+            ],
+            // El derecho de examen vence con el examen, no con el mes 0.
+            ...excludeUpcomingExamFees()
         },
         select: { originalAmount: true, paidAmount: true, month: true, year: true }
     });

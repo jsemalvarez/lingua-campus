@@ -255,6 +255,7 @@ export default async function CourseDetailPage({
                                             currentMonthlyPrice={course.monthlyPrice}
                                             currentEnrollmentPrice={course.enrollmentPrice}
                                             currentExamPrice={course.examPrice}
+                                            currentExamDate={course.examDate}
                                         />
                                     )}
                                 </div>
@@ -374,6 +375,7 @@ export default async function CourseDetailPage({
                                                     <CourseExamModal
                                                         courseId={course.id}
                                                         examPrice={course.examPrice}
+                                                        examDate={course.examDate ? course.examDate.toISOString().slice(0, 10) : null}
                                                         enrollments={course.enrollments
                                                             .filter(e => e.status === "ACTIVE")
                                                             .map(e => ({

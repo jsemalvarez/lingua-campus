@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
+import { excludeUpcomingExamFees } from "@/lib/examFees";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -364,7 +365,9 @@ export async function getDebtorsReportAction() {
                         year: new Date().getFullYear(),
                         month: { lte: new Date().getMonth() + 1 }
                     }
-                ]
+                ],
+                // El derecho de examen vence con el examen, no con el mes 0.
+                ...excludeUpcomingExamFees()
             },
             include: {
                 student: {

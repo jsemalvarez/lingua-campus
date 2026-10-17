@@ -49,6 +49,7 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
     const [monthlyPrice, setMonthlyPrice] = useState("0");
     const [enrollmentPrice, setEnrollmentPrice] = useState("0");
     const [examPrice, setExamPrice] = useState("0");
+    const [examDate, setExamDate] = useState("");
 
     const palette = [
         { name: "Rojo 300", value: "#fca5a5" }, { name: "Rojo 500", value: "#ef4444" }, { name: "Rojo 700", value: "#b91c1c" }, { name: "Rojo 900", value: "#7f1d1d" },
@@ -86,6 +87,7 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
         formData.append("monthlyPrice", monthlyPrice);
         formData.append("enrollmentPrice", enrollmentPrice);
         formData.append("examPrice", examPrice);
+        formData.append("examDate", examDate);
 
         setStatusFeedback("idle");
         startTransition(async () => {
@@ -223,6 +225,21 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
                                     className="w-full px-4 py-2.5 rounded-xl border border-purple-500/30 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-purple-500/5 transition-all focus:border-purple-500 shadow-sm"
                                     placeholder="Ej: 10000"
                                 />
+                            </div>
+
+                            <div className="space-y-1.5 group">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-purple-600 px-1 transition-colors group-focus-within:text-foreground">
+                                    Fecha del Examen Final (Opcional)
+                                </label>
+                                <input
+                                    type="date"
+                                    value={examDate}
+                                    onChange={(e) => setExamDate(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-purple-500/30 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-purple-500/5 transition-all focus:border-purple-500 shadow-sm"
+                                />
+                                <p className="text-[11px] text-muted-foreground px-1">
+                                    Hasta ese día, el derecho de examen figura para las familias como un pago futuro, no como deuda.
+                                </p>
                             </div>
                         </div>
                     </div>

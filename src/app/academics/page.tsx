@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { excludeUpcomingExamFees } from "@/lib/examFees";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
@@ -97,7 +98,7 @@ export default async function StudentAcademicsPage() {
 
     // Tareas pendientes
     const pendingFeesCount = await prisma.fee.count({
-        where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } }
+        where: { studentId: student.id, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] }, ...excludeUpcomingExamFees() }
     });
 
     const pendingTasks = [

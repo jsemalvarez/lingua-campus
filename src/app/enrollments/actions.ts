@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
+import { syncFinalExamLesson } from "@/lib/examFees";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -161,7 +162,7 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
         const currentYear = new Date().getFullYear();
 
         await prisma.$transaction(async (tx) => {
-            await applyExamRegistration(tx, enrollment, enrollment.course.examPrice, takesExam, currentYear, user.instituteId as string);
+            await applyExamRegistration(tx, enrollment, enrollment.course, takesExam, currentYear, user.instituteId as string);
         });
 
         revalidatePath(`/students/${enrollment.studentId}`);
@@ -205,7 +206,7 @@ export async function setCourseExamRegistrationsAction(courseId: string, takingE
                 const takesExam = taking.has(enrollment.id);
                 // El que no rinde y nunca rindió no tiene nada que deshacer.
                 if (!takesExam && !enrollment.takesExam) continue;
-                if (await applyExamRegistration(tx, enrollment, course.examPrice, takesExam, currentYear, user.instituteId as string)) {
+                if (await applyExamRegistration(tx, enrollment, course, takesExam, currentYear, user.instituteId as string)) {
                     feesCreated++;
                 }
             }
@@ -227,7 +228,7 @@ export async function setCourseExamRegistrationsAction(courseId: string, takingE
 async function applyExamRegistration(
     tx: Prisma.TransactionClient,
     enrollment: { id: string; studentId: string; courseId: string; customExamPrice: number | null },
-    courseExamPrice: number,
+    course: { examPrice: number; examDate: Date | null },
     takesExam: boolean,
     currentYear: number,
     instituteId: string
@@ -242,7 +243,7 @@ async function applyExamRegistration(
     if (takesExam) {
         const finalExamPrice = enrollment.customExamPrice !== null
             ? enrollment.customExamPrice
-            : courseExamPrice;
+            : course.examPrice;
 
         if (finalExamPrice > 0) {
             // El chequeo previo busca por inscripción y año, **ignorando el
@@ -278,26 +279,9 @@ async function applyExamRegistration(
             }
         }
 
-        // La clase de examen del curso, si todavía no está
-        const existingExamLesson = await tx.lesson.findFirst({
-            where: {
-                courseId: enrollment.courseId,
-                type: "EXAM",
-                status: "ACTIVE"
-            }
-        });
-
-        if (!existingExamLesson) {
-            await tx.lesson.create({
-                data: {
-                    courseId: enrollment.courseId,
-                    type: "EXAM",
-                    date: new Date(),
-                    topic: "Examen Final",
-                    content: "Generado automáticamente por el registro de exámenes finales."
-                }
-            });
-        }
+        // La clase del examen final, en la fecha del examen. Sin fecha todavía no
+        // va: aparece cuando se carga en el curso (`updateCourseAction`).
+        await syncFinalExamLesson(tx, enrollment.courseId, course.examDate);
     } else {
         // Se saca la cuota sólo si está impaga
         const existingFee = await tx.fee.findFirst({

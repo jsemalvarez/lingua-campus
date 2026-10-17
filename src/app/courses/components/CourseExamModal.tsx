@@ -18,6 +18,8 @@ interface ExamEnrollment {
 interface Props {
     courseId: string;
     examPrice: number;
+    /** `YYYY-MM-DD`, o null si el curso todavía no tiene fecha de examen. */
+    examDate: string | null;
     enrollments: ExamEnrollment[];
 }
 
@@ -26,7 +28,7 @@ interface Props {
  * el curso todavía no tiene a nadie anotado, arranca con todos tildados; si ya
  * se cargó, muestra cómo quedó.
  */
-export function CourseExamModal({ courseId, examPrice, enrollments }: Props) {
+export function CourseExamModal({ courseId, examPrice, examDate, enrollments }: Props) {
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
@@ -40,6 +42,9 @@ export function CourseExamModal({ courseId, examPrice, enrollments }: Props) {
     const taking = enrollments.filter(e => selected.has(e.id));
     const total = taking.reduce((sum, e) => sum + priceOf(e), 0);
     const year = new Date().getFullYear();
+    // Se arma a mano y no con `Date`: la fecha viene a medianoche UTC y, leída en
+    // hora de Argentina, caería el día anterior.
+    const examDateLabel = examDate ? examDate.split("-").reverse().join("/") : null;
 
     const handleOpenChange = (next: boolean) => {
         if (next) {
@@ -90,6 +95,11 @@ export function CourseExamModal({ courseId, examPrice, enrollments }: Props) {
                     </DialogTitle>
                     <p className="text-sm text-muted-foreground">
                         Destildá a los alumnos que no rinden. A cada alumno que rinde se le emite el derecho de examen.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        {examDateLabel
+                            ? <>Se rinde el <strong className="text-foreground">{examDateLabel}</strong>. Hasta ese día, las familias ven el derecho de examen como un pago futuro.</>
+                            : <>El curso todavía no tiene fecha de examen. Las familias ven el derecho de examen como un pago futuro, y la clase del examen aparece en el libro de temas cuando se carga la fecha en «Editar curso».</>}
                     </p>
                 </DialogHeader>
 

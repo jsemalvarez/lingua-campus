@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { GraduationCap, Users, User, ArrowRight, Calendar, CreditCard } from "lucide-react";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { excludeUpcomingExamFees } from "@/lib/examFees";
 
 export default async function GuardianDashboard() {
   const session = await getServerSession(authOptions);
@@ -33,8 +34,9 @@ export default async function GuardianDashboard() {
             include: { course: true },
             where: { status: "ACTIVE" }
           },
+          // El derecho de examen que todavía no venció no es deuda (`examFees.ts`).
           fees: {
-            where: { status: "PENDING" }
+            where: { status: "PENDING", ...excludeUpcomingExamFees() }
           }
         }
       }

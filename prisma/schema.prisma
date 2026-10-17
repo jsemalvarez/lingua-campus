@@ -241,6 +241,12 @@ model Course {
   enrollmentPrice Float @default(0)
   examPrice      Float @default(0)
 
+  // Cuándo rinde el curso el examen final. Es el vencimiento del derecho de
+  // examen: hasta ese día la cuota es un pago futuro, no una deuda, porque las
+  // familias lo van pagando de a partes durante el año. Sin fecha, tampoco es
+  // deuda. Ver `src/lib/examFees.ts`.
+  examDate       DateTime? @db.Date
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -356,7 +362,13 @@ model Lesson {
   date        DateTime @db.Date
   topic       String
   content     String?  @db.Text
-  
+
+  // La clase del examen final, la que crea el campus al cargar el examen. Hace
+  // falta para distinguirla de las evaluaciones de unidad, que también son
+  // `EXAM`: antes se buscaba "cualquier EXAM del curso" y, si la docente ya
+  // había tomado una, la del final no se creaba nunca.
+  finalExam   Boolean  @default(false)
+
   attendances Attendance[]
   grades      Grade[]
   practice    LessonPractice?

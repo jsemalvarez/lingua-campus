@@ -30,7 +30,9 @@ function getFeeLabel(fee: { type: string; month: number; year: number }) {
 }
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
-import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
+import { GUARDIAN_SECTIONS, instituteToday, recordActivity } from "@/lib/activity";
+import { feeStanding } from "@/lib/examFees";
+import { UpcomingFeesSection } from "@/components/financials/UpcomingFeesSection";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +72,9 @@ export default async function GuardianPaymentsPage() {
                     fees: {
                         orderBy: [{ year: 'desc' }, { month: 'desc' }],
                         include: {
-                            payments: { where: { status: "VALID" } }
+                            payments: { where: { status: "VALID" } },
+                            // La fecha del examen es el vencimiento del derecho de examen.
+                            enrollment: { select: { course: { select: { examDate: true } } } }
                         }
                     }
                 }
@@ -91,22 +95,22 @@ export default async function GuardianPaymentsPage() {
 
     const students = guardianLinks.map(l => l.student);
     
-    const allFees = students.flatMap(s => s.fees.map(f => ({ ...f, studentName: s.name })))
+    // Dónde cae cada cuota sale de `feeStanding`: el derecho de examen que no
+    // venció va aparte, como pago futuro, y no suma deuda en ningún total.
+    const today = instituteToday();
+    const allFees = students.flatMap(s => s.fees.map(f => ({ ...f, studentName: s.name, standing: feeStanding(f, today) })))
         .sort((a,b) => {
             if (a.year !== b.year) return b.year - a.year;
             return b.month - a.month;
         });
 
-    const pendingFees = allFees.filter(f => f.status !== "PAID");
+    const unpaidFees = allFees.filter(f => f.status !== "PAID");
+    const pendingFees = unpaidFees.filter(f => f.standing !== "UPCOMING");
+    const upcomingFees = unpaidFees.filter(f => f.standing === "UPCOMING");
     const paidFees = allFees.filter(f => f.status === "PAID" && f.paidAmount > 0);
-    
-    // Nueva lógica de segmentación de deuda
-    const now = dayjs();
-    const currentMonth = now.month(); // 0-11
-    const currentYear = now.year();
 
-    const oldDebtFees = pendingFees.filter(f => f.year < currentYear || (f.year === currentYear && f.month < currentMonth));
-    const currentMonthFees = pendingFees.filter(f => f.year === currentYear && f.month === currentMonth);
+    const oldDebtFees = pendingFees.filter(f => f.standing === "OVERDUE");
+    const currentMonthFees = pendingFees.filter(f => f.standing === "CURRENT");
 
     const oldDebtSum = oldDebtFees.reduce((acc, f) => acc + (f.originalAmount - f.paidAmount), 0);
     const currentMonthDebtSum = currentMonthFees.reduce((acc, f) => acc + (f.originalAmount - f.paidAmount), 0);
@@ -166,6 +170,17 @@ export default async function GuardianPaymentsPage() {
                     </Card>
                 </div>
 
+                <UpcomingFeesSection
+                    fees={upcomingFees.map(f => ({
+                        id: f.id,
+                        label: getFeeLabel(f),
+                        studentName: f.studentName,
+                        originalAmount: f.originalAmount,
+                        paidAmount: f.paidAmount,
+                        dueDate: f.enrollment?.course?.examDate ?? null,
+                    }))}
+                />
+
                 {/* MAIN CONTENT GRID */}
                 <div className="grid lg:grid-cols-5 gap-8 items-start">
                     
@@ -199,11 +214,11 @@ export default async function GuardianPaymentsPage() {
                                                     <h4 className="text-lg font-black tracking-tight">{getFeeLabel(fee)}</h4>
                                                     <p className={cn(
                                                         "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded w-fit mt-1",
-                                                        (fee.year < currentYear || (fee.year === currentYear && fee.month < currentMonth)) 
-                                                            ? "bg-rose-100 text-rose-600 dark:bg-rose-900/30" 
+                                                        fee.standing === "OVERDUE"
+                                                            ? "bg-rose-100 text-rose-600 dark:bg-rose-900/30"
                                                             : "bg-amber-100 text-amber-600 dark:bg-amber-900/30"
                                                     )}>
-                                                        {fee.year < currentYear || (fee.year === currentYear && fee.month < currentMonth) ? "Deuda Morosa" : "Vencimiento Actual"}
+                                                        {fee.standing === "OVERDUE" ? "Deuda Morosa" : fee.standing === "CURRENT" ? "Vencimiento Actual" : "En fecha"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -234,7 +249,7 @@ export default async function GuardianPaymentsPage() {
                             <div className="space-y-4">
                                 {students.map(student => {
                                     const studentDebt = student.fees
-                                        .filter((f:any) => f.status !== "PAID" && f.status !== "VOIDED")
+                                        .filter((f:any) => f.status !== "PAID" && f.status !== "VOIDED" && feeStanding(f, today) !== "UPCOMING")
                                         .reduce((acc:number, f:any) => acc + (f.originalAmount - f.paidAmount), 0);
                                     
                                     return (
