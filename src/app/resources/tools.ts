@@ -5,10 +5,12 @@
  * Wordwall, escenas de PlayPhrase, padlets activos…) se verificaron en el sitio
  * de cada herramienta el 27/09/2026; el de Kahoot, otra vez el 15/10/2026 en su
  * ayuda («How many participants can play a kahoot?»): depende del tipo de cuenta,
- * 40 para docentes de escuela, 10 personal y 3 empresa. Cambian seguido: al tocar un texto que
+ * 40 para docentes de escuela, 10 personal y 3 empresa. Los de Write & Improve,
+ * el 17/10/2026 en su sitio y probando una consigna: gratis y sin cuenta para el
+ * alumno, y paga la vista del docente («+Class View»). Cambian seguido: al tocar un texto que
  * afirme uno, volver a confirmarlo antes de publicarlo.
  *
- * Si cambia la cantidad de herramientas, cambia también «Nueve herramientas» en
+ * Si cambia la cantidad de herramientas, cambia también «Diez herramientas» en
  * el encabezado de `ResourcesView`.
  */
 
@@ -23,7 +25,8 @@ export type ToolId =
     | "lingoclip"
     | "canva"
     | "docs"
-    | "padlet";
+    | "padlet"
+    | "writeandimprove";
 
 export type ToolChip = {
     text: string;
@@ -305,6 +308,31 @@ export const TOOLS: Tool[] = [
                 "La versión gratis deja tener 3 padlets activos a la vez.",
             ],
             idea: "«My weekend»: cada uno sube una foto y la describe en dos oraciones. Después comentan las de sus compañeros.",
+        },
+    },
+    {
+        id: "writeandimprove",
+        group: "crear",
+        name: "Write & Improve",
+        domain: "writeandimprove.com",
+        url: "https://writeandimprove.com",
+        plan: "tiene versión gratis",
+        description: "El alumno escribe un texto y le marca qué oraciones revisar, sin corregírselas: las arregla él y vuelve a probar.",
+        chips: [{ text: "Alumnos sin cuenta" }, { text: "En casa o en clase" }],
+        idea: "una consigna para casa, y que corrijan lo marcado antes de entregártela.",
+        guide: {
+            about: "Una herramienta gratis de la Universidad de Cambridge para practicar escritura. El alumno elige una consigna, escribe y toca «Check»: le pinta las oraciones que conviene revisar y, a veces, le sugiere una palabra. No le reescribe el texto: lo corrige él, vuelve a probar y ve qué cambió de una versión a otra.",
+            steps: [
+                { lead: "Entrá a writeandimprove.com", rest: "y tocá «Start writing». No hace falta cuenta." },
+                { lead: "Elegí el nivel y una consigna:", rest: "hay cientos, desde un mail corto para principiantes hasta ensayos avanzados." },
+                { lead: "Escribí y tocá «Check»:", rest: "aparecen las oraciones marcadas. Se corrige y se vuelve a tocar «Check again»." },
+            ],
+            goodToKnow: [
+                "Los alumnos lo usan gratis y sin cuenta; con un perfil gratis se guardan sus textos. Seguir el progreso de cada uno desde tu cuenta es pago: se llama «+Class View».",
+                "La devolución es automática y a veces se le escapa un error: sirve como primera vuelta, antes de que el texto llegue a vos.",
+                "Todo está en inglés y las consignas piden escribir un texto: va para alumnos que ya arman un párrafo, no para los más chicos.",
+            ],
+            idea: "Dales una consigna para casa y pediles que la pasen por Write & Improve y corrijan lo marcado antes de entregártela. Te llega una segunda versión, no un borrador.",
         },
     },
 ];

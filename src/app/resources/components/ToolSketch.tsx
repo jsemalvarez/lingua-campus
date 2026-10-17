@@ -20,6 +20,7 @@ export function ToolSketch({ id }: { id: ToolId }) {
         case "canva": return <CanvaSketch />;
         case "docs": return <DocsSketch />;
         case "padlet": return <PadletSketch />;
+        case "writeandimprove": return <WriteImproveSketch />;
     }
 }
 
@@ -375,6 +376,29 @@ function PadletSketch() {
                     <div className={cn(NOTE, "h-[52px] bg-white")}><Lines widths={["90%", "75%", "85%", "50%"]} /></div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+/** El texto del alumno con lo que marca la devolución: una oración en naranja y una palabra con su pista. */
+function WriteImproveSketch() {
+    return (
+        <div className="relative w-[244px]">
+            <div className="flex flex-col gap-1.5 rounded-[10px] bg-white px-3.5 pb-3 pt-2.5 text-[11.5px] font-medium leading-snug text-zinc-700 shadow-sm">
+                <span>Hi Jamie,</span>
+                <span className="whitespace-nowrap">
+                    <span className="rounded bg-orange-100 px-0.5">Thanks for you email.</span> Come at 10.
+                </span>
+                <span className="whitespace-nowrap">
+                    See you on <span className="rounded border border-teal-600 bg-teal-50 px-0.5 font-semibold">saturday</span>!
+                </span>
+            </div>
+            <span className="absolute -bottom-3 left-[108px] whitespace-nowrap rounded-md bg-zinc-700 px-2 py-1 text-[10.5px] font-semibold text-white shadow-md">
+                Perhaps “Saturday”?
+            </span>
+            <span className="absolute -right-2 -top-2.5 rounded-full bg-teal-700 px-2.5 py-1 text-[10.5px] font-bold text-white shadow-sm">
+                Check again
+            </span>
         </div>
     );
 }

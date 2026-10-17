@@ -40,7 +40,7 @@ const GROUP_STYLE: Record<ToolGroupId, { Icon: LucideIcon; iconBox: string; icon
 };
 
 /**
- * Página de recursos del docente: nueve herramientas externas agrupadas por lo
+ * Página de recursos del docente: diez herramientas externas agrupadas por lo
  * que se quiere hacer en clase. Cada tarjeta tiene dos puertas: «Abrir», para
  * quien ya la usa, y «¿Primera vez?», que abre una guía de tres pasos para quien
  * no la conoce.
@@ -76,7 +76,7 @@ export function ResourcesView() {
                         Herramientas para tus clases
                     </h1>
                     <p className={cn("max-w-2xl text-base leading-relaxed sm:text-lg", MUTED)}>
-                        Nueve herramientas con versión gratis, elegidas para clases de inglés. Si ya usás alguna, abrila desde
+                        Diez herramientas con versión gratis, elegidas para clases de inglés. Si ya usás alguna, abrila desde
                         acá. Si es nueva para vos, tocá <strong className={cn("font-semibold", PRIMARY_TEXT)}>¿Primera vez?</strong> y
                         te mostramos cómo arrancar en tres pasos.
                     </p>
