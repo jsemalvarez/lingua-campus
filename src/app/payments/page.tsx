@@ -48,7 +48,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             expense: { include: { recipient: { select: { name: true } } } },
             miscIncome: { include: { student: { select: { name: true } } } }
         },
-        orderBy: { date: "desc" }
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }]
     });
 
     // 3. Traer todos los Usuarios (para mapear Operadores) y Empleados (para sueldos)
@@ -81,10 +81,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const feesCollectedThisMonth = monthlyFeesData.reduce((acc: number, f: any) => acc + f.paidAmount, 0);
 
     // Filter ledger for current month stats
-    // Los movimientos se cortan por día en UTC, igual que la tabla: gastos e
-    // ingresos varios son días; los cobros tienen hora, y uno de después de las 21
-    // cae en el día siguiente (FIN-34). Antes se cortaba con la zona del servidor,
-    // así que en local y en Vercel el mismo mes sumaba distinto.
+    // `Transaction.date` es el día contable (FIN-34), así que el mes son sus días.
+    // Antes se cortaba con la zona del servidor, y en local y en Vercel el mismo
+    // mes sumaba distinto.
     const { first: startOfMonth, next: startOfNextMonth } = monthDays({ year: currentYear, month: currentMonth });
 
     const currentMonthTransactions = ledger.filter(t =>

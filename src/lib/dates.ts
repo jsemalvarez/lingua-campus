@@ -13,8 +13,11 @@ import { getMonthName } from "@/lib/utils";
  * Fechas para mostrar, con el mismo texto en el servidor y en el navegador.
  *
  * **Dos clases de fecha en la base.**
- * - `"day"`: un día sin hora, `@db.Date` (`Lesson.date`, `Expense.date`,
- *   `MiscellaneousIncome.date`). Se guarda a medianoche UTC, así que se lee en
+ * - `"day"`: un día sin hora, `@db.Date` (`Lesson.date`, `Transaction.date`,
+ *   `Expense.date`, `MiscellaneousIncome.date`, `Student.birthDate`,
+ *   `Course.startDate/endDate/examDate`, `Institute.activityStartDate`). Se
+ *   escribe con `instituteToday()` o `dayFromKey()` y se guarda a medianoche
+ *   UTC, así que se lee en
  *   UTC: en la zona de Argentina cae a las 21 del día anterior, y un curso de
  *   martes y jueves aparecía lunes y miércoles.
  * - `"moment"`: un instante (`Payment.date`, `createdAt`). Se muestra en hora
@@ -160,8 +163,7 @@ export function addMonths({ year, month }: YearMonth, n: number): YearMonth {
 
 /**
  * Los días de un mes, a medianoche UTC. Para filtrar un `@db.Date` va
- * `{ gte: first, lte: last }`; para una columna con hora que guarda días, como
- * `Transaction.date` (FIN-34), `{ gte: first, lt: next }`.
+ * `{ gte: first, lte: last }` o `{ gte: first, lt: next }`, que dan lo mismo.
  *
  * No se arma con `dayjs(...).startOf("month")`: eso da la medianoche de la zona
  * de quien lo corre, y Prisma recorta a fecha el límite de un `@db.Date`. En el

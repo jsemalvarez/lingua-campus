@@ -52,7 +52,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
             ...(category ? { expense: { category } } : {})
         },
         include: { expense: { include: { recipient: { select: { name: true } } } } },
-        orderBy: { date: "desc" }
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }]
     });
 
     // Las categorías del filtro salen de lo que hay cargado y no de las seis del

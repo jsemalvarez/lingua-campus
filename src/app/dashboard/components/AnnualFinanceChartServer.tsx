@@ -4,7 +4,7 @@ import { instituteMonth, yearDays } from "@/lib/dates";
 
 export async function AnnualFinanceChartServer({ instituteId }: { instituteId: string }) {
     const currentYear = instituteMonth().year;
-    // Los movimientos se cortan por día en UTC, como en `/payments` (FIN-34).
+    // `Transaction.date` es el día contable (FIN-34): el año son sus días.
     const { first: startOfYear, next: startOfNextYear } = yearDays(currentYear);
 
     const transactions = await prisma.transaction.findMany({

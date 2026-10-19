@@ -254,7 +254,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
 | [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [ ] |
-| [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [ ] |
+| [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [x] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -3469,6 +3469,18 @@ caen después de las 21.
 
 **P2.** Pocos institutos cobran después de las 21, pero cuando pasa, el cobro figura en un día en que
 la caja no lo tuvo.
+
+**Resuelto el 2026-10-18 con el camino 2** (migración `20261018130000_caja_dia_contable`).
+`Transaction.date` pasó a `@db.Date`: es el día contable, y la hora del registro queda en `createdAt`.
+Las escrituras pasan `instituteToday()` —el día del calendario del instituto, ver `src/lib/dates.ts`—;
+el gasto sin fecha cargada y el adelanto, también (el adelanto guardaba el día UTC en un `@db.Date`).
+La columna quedó sin `DEFAULT`, porque el `now()` de Postgres es el día de UTC. La migración toma la
+medianoche UTC exacta como día y cualquier otra marca como instante en hora argentina. Medido en
+producción antes de migrar: los 121 gastos y sueldos a medianoche exacta, y ninguno de los 1745
+instantes entre las 21 y la medianoche, así que ningún movimiento cambia de día. Los movimientos del
+mismo día se ordenan por `createdAt`. Verificado en local a las 23:36 con el servidor en UTC: un gasto
+y su anulación quedaron el 18/10, y un cobro viejo de las 22:20 del 12/04 pasó del 13/04 al 12/04.
+`Payment.date` sigue siendo un instante: es la hora del cobro, y el recibo la usa.
 
 ---
 

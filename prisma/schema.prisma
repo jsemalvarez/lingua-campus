@@ -610,7 +610,10 @@ model Transaction {
   amount      Float    // Positivo para ingresos, Negativo para salidas
   type        TransactionType
   method      String   // EFECTIVO, TRANSFERENCIA, etc.
-  date        DateTime @default(now())
+  // El día contable (FIN-34): un día sin hora, el del calendario del instituto.
+  // La hora del registro es `createdAt`. Sin default: un `now()` de Postgres es
+  // el día de UTC, que a partir de las 21 de Argentina ya es mañana.
+  date        DateTime @db.Date
   status      TransactionStatus @default(VALID)
   
   description String?  // Concepto

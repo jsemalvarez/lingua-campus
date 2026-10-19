@@ -239,7 +239,7 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                                                 </div>
                                             </td>
                                             <td className={`px-5 py-4 text-xs font-medium text-muted-foreground ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
-                                                {/* Todo se lee como día: bien para gastos e ingresos, que son `@db.Date`; un cobro de después de las 21 cae al día siguiente (FIN-34). */}
+                                                {/* El día contable (FIN-34): un cobro de las 21:30 es de ese día, no del siguiente. */}
                                                 {formatDate(tx.date, "day", "short")}
                                             </td>
                                             <td className={`px-5 py-4 text-right ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
