@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { GuardianAcademicsView } from "./components/GuardianAcademicsView";
 import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
+import { instituteToday } from "@/lib/dates";
 import { signatureLinesByReport } from "@/lib/reports/batchSignatureQuery";
 
 export default async function GuardianAcademicsPage() {
@@ -59,7 +60,7 @@ export default async function GuardianAcademicsPage() {
                                         select: { name: true }
                                     },
                                     lessons: {
-                                        where: { status: "ACTIVE", date: { gte: new Date(new Date().setHours(0,0,0,0)) } },
+                                        where: { status: "ACTIVE", date: { gte: instituteToday() } },
                                         orderBy: { date: 'asc' },
                                         take: 10,
                                         select: { 

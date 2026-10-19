@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { SpreadsheetView } from "./SpreadsheetView";
+import { ageOn } from "@/lib/dates";
 
 export default async function SpreadsheetPage() {
     const auth = await requireRole(INSTITUTE_STAFF);
@@ -74,16 +75,7 @@ export default async function SpreadsheetPage() {
         });
     }
 
-    const calculateAge = (birthDate: Date | null) => {
-        if (!birthDate) return null;
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        return age;
-    };
+    const calculateAge = (birthDate: Date | null) => (birthDate ? ageOn(birthDate) : null);
 
     // Prepare data for the client component
     const data = courses.map(course => ({

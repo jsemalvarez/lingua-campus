@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { StudentAdministrationView } from "../dashboard/components/StudentAdministrationView";
-import { instituteToday } from "@/lib/activity";
+import { ageOn, instituteToday } from "@/lib/dates";
 import { feeStanding } from "@/lib/feeDue";
 
 export default async function StudentAdministrationPage() {
@@ -39,17 +39,7 @@ export default async function StudentAdministrationPage() {
     if (!student) redirect("/login");
 
     // Doble verificación de edad (Seguridad)
-    let isMinor = false;
-    if (student.birthDate) {
-        const birth = new Date(student.birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birth.getFullYear();
-        const m = today.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-            age--;
-        }
-        isMinor = age < 18;
-    }
+    const isMinor = student.birthDate ? ageOn(student.birthDate) < 18 : false;
 
     if (isMinor) {
         redirect("/dashboard");

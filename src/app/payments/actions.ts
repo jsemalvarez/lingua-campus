@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
+import { instituteMonth } from "@/lib/dates";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -325,7 +326,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                 } as const;
             }
 
-            const currentYear = new Date().getFullYear();
+            const currentYear = instituteMonth().year;
 
             // La búsqueda de la cuota existente va adentro de la transacción: afuera
             // ahorraba unos milisegundos a cambio de decidir sobre datos viejos.
@@ -369,7 +370,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                         originalAmount,
                         paidAmount: originalAmount,
                         status: "PAID",
-                        month: new Date().getMonth() + 1,
+                        month: instituteMonth().month,
                         year: currentYear,
                         datePaid: new Date(),
                         instituteId: user.instituteId as string

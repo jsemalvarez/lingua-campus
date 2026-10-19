@@ -1,15 +1,16 @@
 import prisma from "@/lib/prisma";
 import { AnnualFinanceChart } from "./AnnualFinanceChart";
+import { instituteMonth, yearDays } from "@/lib/dates";
 
 export async function AnnualFinanceChartServer({ instituteId }: { instituteId: string }) {
-    const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1);
-    const endOfYear = new Date(currentYear, 12, 0, 23, 59, 59);
+    const currentYear = instituteMonth().year;
+    // Los movimientos se cortan por día en UTC, como en `/payments` (FIN-34).
+    const { first: startOfYear, next: startOfNextYear } = yearDays(currentYear);
 
     const transactions = await prisma.transaction.findMany({
         where: {
             instituteId,
-            date: { gte: startOfYear, lte: endOfYear },
+            date: { gte: startOfYear, lt: startOfNextYear },
             status: "VALID"
         },
         select: { date: true, type: true, amount: true }
@@ -26,7 +27,7 @@ export async function AnnualFinanceChartServer({ instituteId }: { instituteId: s
     }));
 
     transactions.forEach(t => {
-        const monthIndex = t.date.getMonth(); // 0-11
+        const monthIndex = t.date.getUTCMonth(); // 0-11
         if (t.type === "PAYMENT" || t.type === "MISC_INCOME") {
             data[monthIndex].ingresos += t.amount;
         } else if (t.type === "EXPENSE" || t.type === "PAYROLL") {

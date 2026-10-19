@@ -1,6 +1,15 @@
 import { getMonthName } from "@/lib/utils";
 
 /**
+ * Todo lo de fechas del campus: cómo se leen, cuál es «hoy» y qué abarca un mes.
+ *
+ * **La regla.** Nada fuera de este archivo calcula «hoy», «este mes» ni los
+ * límites de un período con el reloj de quien corre el código. El servidor
+ * (Vercel y Postgres) está en UTC y el navegador en la zona de cada uno: a partir
+ * de las 21 de Argentina el servidor ya está en mañana, y una de cada cuatro
+ * asistencias de producción se carga después de esa hora. «Hoy» es el día del
+ * calendario del instituto, y sale de acá.
+ *
  * Fechas para mostrar, con el mismo texto en el servidor y en el navegador.
  *
  * **Dos clases de fecha en la base.**
@@ -22,9 +31,16 @@ import { getMonthName } from "@/lib/utils";
  */
 export type DateKind = "day" | "moment";
 
+/**
+ * Está fijo porque hoy hay un solo instituto y es argentino. El día que haya uno
+ * en otro huso, esto pasa a ser un campo de `Institute`, y todo lo que sigue lo
+ * recibe por parámetro: por eso no hay otro lugar del campus que lo nombre.
+ */
+export const INSTITUTE_TIME_ZONE = "America/Argentina/Buenos_Aires";
+
 const TIME_ZONE: Record<DateKind, string> = {
     day: "UTC",
-    moment: "America/Argentina/Buenos_Aires",
+    moment: INSTITUTE_TIME_ZONE,
 };
 
 const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -88,4 +104,94 @@ export function formatDate(value: Date | string, kind: DateKind, style: DateStyl
         case "numericDayMonth": return `${pad(day)}/${pad(month)}`;
         case "numeric": return `${pad(day)}/${pad(month)}/${String(year).slice(-2)}`;
     }
+}
+
+// ─── Hoy, el mes y sus límites ───────────────────────────────────────────────
+
+/** `YYYY-MM-DD` de un día (`@db.Date` o medianoche UTC). */
+export function dayKey(day: Date | string): string {
+    return new Date(day).toISOString().slice(0, 10);
+}
+
+/** El día de `YYYY-MM-DD`, como lo guarda Postgres un `@db.Date`: medianoche UTC. */
+export function dayFromKey(key: string): Date {
+    return new Date(`${key}T00:00:00.000Z`);
+}
+
+/** `YYYY-MM-DD` de hoy en el calendario del instituto. Sirve también de `value` de un `<input type="date">`. */
+export function instituteTodayKey(now: Date = new Date()): string {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: INSTITUTE_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(now);
+}
+
+/**
+ * Hoy en el calendario del instituto, a medianoche UTC: se compara directo con
+ * un `@db.Date` (`date: { gte: instituteToday() }` son las clases de hoy en
+ * adelante, también a las 23). Sus `getUTC*` dan el día, el mes y el año de hoy.
+ */
+export function instituteToday(now: Date = new Date()): Date {
+    return dayFromKey(instituteTodayKey(now));
+}
+
+export interface YearMonth {
+    year: number;
+    /** 1 a 12, como `Fee.month`. */
+    month: number;
+}
+
+/** El mes en curso en el calendario del instituto. */
+export function instituteMonth(now: Date = new Date()): YearMonth {
+    const today = instituteToday(now);
+    return { year: today.getUTCFullYear(), month: today.getUTCMonth() + 1 };
+}
+
+/** El mes `n` meses después (o antes, con `n` negativo). */
+export function addMonths({ year, month }: YearMonth, n: number): YearMonth {
+    const index = year * 12 + (month - 1) + n;
+    return { year: Math.floor(index / 12), month: (index % 12) + 1 };
+}
+
+/**
+ * Los días de un mes, a medianoche UTC. Para filtrar un `@db.Date` va
+ * `{ gte: first, lte: last }`; para una columna con hora que guarda días, como
+ * `Transaction.date` (FIN-34), `{ gte: first, lt: next }`.
+ *
+ * No se arma con `dayjs(...).startOf("month")`: eso da la medianoche de la zona
+ * de quien lo corre, y Prisma recorta a fecha el límite de un `@db.Date`. En el
+ * navegador, el 30/09 a las 23:59 de Argentina es el 01/10 en UTC, y la
+ * liquidación de septiembre traía las clases del 1° de octubre.
+ */
+export function monthDays({ year, month }: YearMonth): { first: Date; last: Date; next: Date } {
+    return {
+        first: new Date(Date.UTC(year, month - 1, 1)),
+        last: new Date(Date.UTC(year, month, 0)),
+        next: new Date(Date.UTC(year, month, 1)),
+    };
+}
+
+/** Los días de un año, como `monthDays`. */
+export function yearDays(year: number): { first: Date; last: Date; next: Date } {
+    return {
+        first: new Date(Date.UTC(year, 0, 1)),
+        last: new Date(Date.UTC(year, 11, 31)),
+        next: new Date(Date.UTC(year + 1, 0, 1)),
+    };
+}
+
+/**
+ * Edad cumplida en un día. Las dos fechas se leen como días (en UTC): el
+ * nacimiento está guardado a medianoche UTC, a la de Argentina (03:00) o a la
+ * del horario de verano de 2007-2009 (02:00), y en UTC las tres dan el día
+ * correcto; leído en hora argentina, el primer grupo cae un día antes.
+ */
+export function ageOn(birthDate: Date | string, on: Date = instituteToday()): number {
+    const birth = new Date(birthDate);
+    let age = on.getUTCFullYear() - birth.getUTCFullYear();
+    const monthDiff = on.getUTCMonth() - birth.getUTCMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && on.getUTCDate() < birth.getUTCDate())) age--;
+    return age;
 }

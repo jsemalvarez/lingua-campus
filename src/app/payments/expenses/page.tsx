@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/authz";
 import { ArrowLeft, ArrowDownLeft } from "lucide-react";
 import Link from "next/link";
 import { ExpensesClient } from "./ExpensesClient";
+import { instituteMonth, monthDays, yearDays } from "@/lib/dates";
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     // Sólo ADMIN, igual que cargar el gasto y que la liquidación de sueldos. En
@@ -15,18 +16,18 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     if (!user) redirect("/dashboard");
 
     const params = await searchParams;
-    const now = new Date();
+    const now = instituteMonth();
 
     const yearParam = typeof params?.year === "string" ? parseInt(params.year, 10) : NaN;
     const monthParam = typeof params?.month === "string" ? parseInt(params.month, 10) : NaN;
 
-    const year = Number.isInteger(yearParam) ? yearParam : now.getFullYear();
+    const year = Number.isInteger(yearParam) ? yearParam : now.year;
     // `0` es "todo el año"; el estado inicial es el mes en curso, al revés que
     // Cuotas Eliminadas —que arranca sin filtro— porque acá hay gastos todos los
     // meses y la pregunta que trae al dueño es "qué gasté este mes". Ver FEAT-31.
     const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 12
         ? monthParam
-        : now.getMonth() + 1;
+        : now.month;
 
     // Los límites del período se arman en UTC y no en hora local a propósito. El
     // gasto con fecha cargada a mano se guarda como medianoche UTC
@@ -34,8 +35,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     // límite en hora de Argentina —`new Date(2026, 8, 1)` es el 1° a las 03:00
     // UTC— dejaría afuera todo lo del primer día del mes. En Vercel no se nota
     // porque corre en UTC; en la máquina de desarrollo, sí.
-    const from = month ? new Date(Date.UTC(year, month - 1, 1)) : new Date(Date.UTC(year, 0, 1));
-    const to = month ? new Date(Date.UTC(year, month, 1)) : new Date(Date.UTC(year + 1, 0, 1));
+    const { first: from, next: to } = month ? monthDays({ year, month }) : yearDays(year);
 
     const category = typeof params?.category === "string" && params.category ? params.category : null;
 

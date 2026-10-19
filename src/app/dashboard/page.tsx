@@ -21,6 +21,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { formatFeeLabel } from "@/lib/utils";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
+import { ageOn, instituteMonth, instituteToday } from "@/lib/dates";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
@@ -79,7 +80,7 @@ export default async function DashboardPage() {
                                         level: true,
                                         color: true,
                                         lessons: {
-                                            where: { status: "ACTIVE", date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+                                            where: { status: "ACTIVE", date: { gte: instituteToday() } },
                                             orderBy: { date: 'asc' },
                                             take: 5,
                                             select: { id: true, date: true, topic: true }
@@ -244,8 +245,7 @@ export default async function DashboardPage() {
         const courseIds = student.enrollments.map(e => e.course.id);
 
         // Próximas clases de sus cursos
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = instituteToday();
         const upcomingLessons = await prisma.lesson.findMany({
             where: {
                 courseId: { in: courseIds },
@@ -306,17 +306,7 @@ export default async function DashboardPage() {
         ];
 
         // Calcular edad
-        let isMinor = false;
-        if (student.birthDate) {
-            const birth = new Date(student.birthDate);
-            const today = new Date();
-            let age = today.getFullYear() - birth.getFullYear();
-            const m = today.getMonth() - birth.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-                age--;
-            }
-            isMinor = age < 18;
-        }
+        const isMinor = student.birthDate ? ageOn(student.birthDate) < 18 : false;
 
 
         // Calcular progreso del curso principal (Maestría)
@@ -325,7 +315,7 @@ export default async function DashboardPage() {
         if (student.enrollments.length > 0) {
             const mainCourseId = student.enrollments[0].courseId;
             const total = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE" } });
-            const passed = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: new Date() } } });
+            const passed = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: instituteToday() } } });
             courseProgress = total > 0 ? Math.round((passed / total) * 100) : 0;
             lessonStats = { current: passed, total };
         }
@@ -375,8 +365,7 @@ export default async function DashboardPage() {
 
     const isActiveTeacher = activeRole === "TEACHER";
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = instituteToday();
 
     // ─── TEACHER-specific dashboard ───
     if (isActiveTeacher) {
@@ -631,8 +620,7 @@ export default async function DashboardPage() {
     });
 
     // 4. Current month income
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
+    const { year: currentYear, month: currentMonth } = instituteMonth();
 
     const monthlyFees = await prisma.fee.findMany({
         where: {

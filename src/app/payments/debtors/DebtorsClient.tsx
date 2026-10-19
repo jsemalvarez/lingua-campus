@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { formatDate, instituteTodayKey } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import {
     AlertTriangle, Phone, Calendar, User, Clock,
@@ -94,7 +95,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
             const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
             const pageW = doc.internal.pageSize.getWidth();
             const now = new Date();
-            const dateStr = now.toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
+            const dateStr = formatDate(now, "moment", "long");
 
             // ── Encabezado ────────────────────────────────────────────────────
             doc.setFillColor(220, 38, 38); // rose-600
@@ -222,8 +223,8 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
 
             doc.save(
                 period
-                    ? `deudores_${getMonthName(period.month).toLowerCase()}-${period.year}_${now.toISOString().slice(0, 10)}.pdf`
-                    : `deudores_${now.toISOString().slice(0, 10)}.pdf`
+                    ? `deudores_${getMonthName(period.month).toLowerCase()}-${period.year}_${instituteTodayKey(now)}.pdf`
+                    : `deudores_${instituteTodayKey(now)}.pdf`
             );
         } finally {
             setExporting(false);

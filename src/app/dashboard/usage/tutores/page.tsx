@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
+import { formatDate } from "@/lib/dates";
 import { requireRole } from "@/lib/authz";
 import { Info } from "lucide-react";
 import { cargarTutores, NOMBRE_DE_SECCION, type RastroDeTutor } from "../actividad";
@@ -47,8 +48,8 @@ export default async function TutoresUsagePage({
     const volverA = p ? `/dashboard/usage?p=${p}` : "/dashboard/usage";
     const base = p ? `/dashboard/usage/tutores?p=${p}` : "/dashboard/usage/tutores";
 
-    const formatear = (d: Date) =>
-        `${d.getDate()} ${d.toLocaleDateString("es-AR", { month: "short" }).replace(".", "")}`;
+    // `visto` es un momento: el último acceso, la última lectura o la última firma.
+    const formatear = (d: Date) => formatDate(d, "moment", "dayMonth");
 
     return (
         <div className="min-h-screen bg-background">

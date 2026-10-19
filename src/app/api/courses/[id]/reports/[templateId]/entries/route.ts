@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
+import { instituteMonth } from "@/lib/dates";
 import { reportContentHash } from "@/lib/reports/signatures";
 import { asSignedHashes, fallenStudentIds } from "@/lib/reports/batchSignatures";
 import { notifyAfterGradeEdit } from "@/lib/reports/batchSignatureNotices";
@@ -35,7 +36,7 @@ export async function GET(
         const searchParams = req.nextUrl.searchParams;
         const year = searchParams.get("year") 
             ? parseInt(searchParams.get("year")!) 
-            : new Date().getFullYear();
+            : instituteMonth().year;
         
         const periodIndex = searchParams.get("periodIndex")
             ? parseInt(searchParams.get("periodIndex")!)

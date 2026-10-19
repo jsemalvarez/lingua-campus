@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { dayKey, instituteToday, instituteTodayKey } from "@/lib/dates";
 import { createPortal } from "react-dom";
 import { generateLessonsAction } from "../actions";
 import { Button } from "@/components/ui/Button";
@@ -21,8 +22,8 @@ export function GenerateLessonsModal({ courseId, startDate, endDate }: { courseI
     }, []);
 
     // Default to next month if dates not provided
-    const defaultStart = startDate ? new Date(startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-    const defaultEnd = endDate ? new Date(endDate).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const defaultStart = startDate ? new Date(startDate).toISOString().split('T')[0] : instituteTodayKey();
+    const defaultEnd = endDate ? new Date(endDate).toISOString().split('T')[0] : dayKey(new Date(instituteToday().getTime() + 30 * 24 * 60 * 60 * 1000));
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { instituteMonth } from "@/lib/dates";
 import { useRouter } from "next/navigation";
 import { FileText, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
@@ -41,7 +42,7 @@ export function CourseExamModal({ courseId, examPrice, examDate, enrollments }: 
     const priceOf = (e: ExamEnrollment) => e.customExamPrice ?? examPrice;
     const taking = enrollments.filter(e => selected.has(e.id));
     const total = taking.reduce((sum, e) => sum + priceOf(e), 0);
-    const year = new Date().getFullYear();
+    const year = instituteMonth().year;
     // Se arma a mano y no con `Date`: la fecha viene a medianoche UTC y, leída en
     // hora de Argentina, caería el día anterior.
     const examDateLabel = examDate ? examDate.split("-").reverse().join("/") : null;

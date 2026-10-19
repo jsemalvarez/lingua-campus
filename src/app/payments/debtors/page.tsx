@@ -6,6 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { getDebtorsReportAction } from "../billingActions";
 import { DebtorsClient } from "./DebtorsClient";
 import { formatFeeLabel, getMonthName } from "@/lib/utils";
+import { instituteMonth } from "@/lib/dates";
 import { getActiveRole } from "@/lib/roles";
 
 export default async function DebtorsPage() {
@@ -28,9 +29,7 @@ export default async function DebtorsPage() {
 
     const debtors = result.data;
 
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
+    const { month: currentMonth, year: currentYear } = instituteMonth();
 
 
     // Agrupar por estudiante para totales

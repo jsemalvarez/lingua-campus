@@ -4,8 +4,7 @@ import { useState, useTransition, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { DollarSign, Clock, Calendar as CalendarIcon, Loader2, CheckCircle, AlertCircle, AlertTriangle, Calculator } from "lucide-react";
-import dayjs from "dayjs";
-import { formatDate } from "@/lib/dates";
+import { formatDate, instituteMonth, instituteTodayKey, monthDays } from "@/lib/dates";
 import { getMonthName } from "@/lib/utils";
 import { processTeacherPayment } from "../actions";
 
@@ -51,8 +50,8 @@ export function TeacherPayrollSection({
     }) => void;
     refreshKey?: number;
 }) {
-    const [month, setMonth] = useState(globalMonth || dayjs().month() + 1);
-    const [year, setYear] = useState(globalYear || dayjs().year());
+    const [month, setMonth] = useState(globalMonth || instituteMonth().month);
+    const [year, setYear] = useState(globalYear || instituteMonth().year);
     
     // Estados para ajustes manuales
     const [bonus, setBonus] = useState(0);
@@ -77,8 +76,7 @@ export function TeacherPayrollSection({
     const fetchPayrollData = useCallback(async () => {
         setLoading(true);
         try {
-            const startDate = dayjs(`${year}-${month}-01`).startOf('month').toDate();
-            const endDate = dayjs(`${year}-${month}-01`).endOf('month').toDate();
+            const { first: startDate, last: endDate } = monthDays({ year, month });
             
             const res = await fetch(`/api/teachers/${teacherId}/payroll?start=${startDate.toISOString()}&end=${endDate.toISOString()}`);
             const result = await res.json();
@@ -136,7 +134,7 @@ export function TeacherPayrollSection({
         
         // El mes sale de `getMonthName` y no de dayjs: su idioma depende de qué pantallas cargó el navegador, y esto se guarda («March 2026»).
         const description = `Pago de Haberes - ${getMonthName(month)} ${year} (${formatHours(currentTotalHours)})`;
-        const dateStr = dayjs().format("YYYY-MM-DD");
+        const dateStr = instituteTodayKey();
 
         startTransition(async () => {
             const res = await processTeacherPayment(
@@ -147,8 +145,8 @@ export function TeacherPayrollSection({
                 bonus,
                 deduction,
                 notes,
-                dayjs(`${year}-${month}-01`).startOf('month').toISOString(),
-                dayjs(`${year}-${month}-01`).endOf('month').toISOString(),
+                monthDays({ year, month }).first.toISOString(),
+                monthDays({ year, month }).last.toISOString(),
                 Array.from(selectedLessonIds)
             );
             if (res.success) {
@@ -224,7 +222,7 @@ export function TeacherPayrollSection({
                             onChange={(e) => setYear(parseInt(e.target.value))}
                             className="bg-background border border-border/60 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                         >
-                            {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                            {Array.from({ length: 4 }, (_, i) => instituteMonth().year - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
                     </div>
                 )}

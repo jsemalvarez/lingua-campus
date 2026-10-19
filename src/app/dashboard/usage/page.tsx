@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { requireRole } from "@/lib/authz";
-import { instituteToday } from "@/lib/activity";
+import { instituteToday } from "@/lib/dates";
 import { getMonthName } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import { Users, UserRound, CalendarClock, ClipboardCheck, QrCode, Sparkles, Info } from "lucide-react";

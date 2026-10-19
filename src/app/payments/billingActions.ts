@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
+import { instituteMonth } from "@/lib/dates";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -26,9 +27,9 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
 
-    const now = new Date();
-    const targetMonth = month ?? (now.getMonth() + 1);
-    const targetYear = year ?? now.getFullYear();
+    const now = instituteMonth();
+    const targetMonth = month ?? now.month;
+    const targetYear = year ?? now.year;
 
     try {
         // 1. Obtener todas las inscripciones activas del instituto (solo modalidad cuotas mensuales)
@@ -188,7 +189,7 @@ function yearlyEnrollmentTargetsWhere(instituteId: string, year: number): Prisma
         }
     };
 
-    const courseOfTheYear = year === new Date().getFullYear()
+    const courseOfTheYear = year === instituteMonth().year
         ? { OR: [startsInAcademicYear, { startDate: null }] }
         : startsInAcademicYear;
 
@@ -360,10 +361,10 @@ export async function getDebtorsReportAction() {
                 originalAmount: { gt: 0 },
                 // Filtramos por cuotas que ya deberían haber vencido (meses anteriores o actual)
                 OR: [
-                    { year: { lt: new Date().getFullYear() } },
+                    { year: { lt: instituteMonth().year } },
                     { 
-                        year: new Date().getFullYear(),
-                        month: { lte: new Date().getMonth() + 1 }
+                        year: instituteMonth().year,
+                        month: { lte: instituteMonth().month }
                     }
                 ],
                 // El derecho de examen vence con el examen, no con el mes 0.

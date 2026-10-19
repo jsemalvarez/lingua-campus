@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { instituteMonth } from "@/lib/dates";
 import { useState, useEffect, useTransition } from "react";
 import { 
     Save, Send, Calendar, Clock, AlertTriangle, 
@@ -66,7 +67,7 @@ export function ReportGradeSheet({
     initialPeriod
 }: ReportGradeSheetProps) {
     const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod ?? 0);
-    const [selectedYear, setSelectedYear] = useState(initialYear ?? new Date().getFullYear());
+    const [selectedYear, setSelectedYear] = useState(initialYear ?? instituteMonth().year);
     const [students, setStudents] = useState<StudentRow[]>([]);
     const [signatures, setSignatures] = useState<BatchSignatureRow[]>([]);
     const [canSign, setCanSign] = useState({ ADMIN: false, TEACHER: false });
@@ -346,7 +347,7 @@ export function ReportGradeSheet({
                             className="bg-muted border-none px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary/40"
                         >
                             {[...Array(5)].map((_, i) => {
-                                const y = new Date().getFullYear() - 2 + i;
+                                const y = instituteMonth().year - 2 + i;
                                 return <option key={y} value={y}>{y}</option>;
                             })}
                         </select>

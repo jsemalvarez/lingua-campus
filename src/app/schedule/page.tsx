@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye, Check } from "lucide-react";
-import { format, addDays, subDays, addWeeks, subWeeks, isSameDay, parseISO, isValid } from "date-fns";
+import { format, addDays, subDays, addWeeks, subWeeks, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
 import { ScheduleFilters } from "./components/ScheduleFilters";
@@ -17,6 +17,7 @@ import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { getPeerLevels, isPeerCourse, visibleCoursesFilter } from "@/lib/peers";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
 import { isPlanComplete } from "@/lib/lessonPlan/plan";
+import { dayFromKey, dayKey, instituteToday, instituteTodayKey } from "@/lib/dates";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -34,20 +35,22 @@ export default async function SchedulePage(props: PageProps) {
     const params = await props.searchParams;
     const view = (params.view as string) || "week";
 
-    // Parse the date from URL or use today
-    let baseDate = new Date();
+    // La fecha de la URL o la de hoy del instituto. Con `new Date()` el servidor,
+    // que corre en UTC, abría el calendario en mañana a partir de las 21 —la hora
+    // en que muchos docentes cargan— y marcaba como hoy al día siguiente.
+    let baseDate = instituteToday();
     if (params.date) {
         const parsed = parseISO(params.date as string);
         if (isValid(parsed)) {
-            baseDate = parsed;
+            baseDate = dayFromKey(format(parsed, "yyyy-MM-dd"));
         }
     }
 
     const displayDateNoon = new Date(baseDate);
     displayDateNoon.setUTCHours(12, 0, 0, 0);
 
-    const dateStr = format(displayDateNoon, "yyyy-MM-dd");
-    const isToday = isSameDay(displayDateNoon, new Date());
+    const dateStr = dayKey(displayDateNoon);
+    const isToday = dateStr === instituteTodayKey();
 
     const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
@@ -345,7 +348,7 @@ export default async function SchedulePage(props: PageProps) {
                             </Button>
                         </Link>
                     </div>
-                    <Link href={`/schedule?view=${view}&date=${format(new Date(), "yyyy-MM-dd")}${filterParams}`}>
+                    <Link href={`/schedule?view=${view}&date=${instituteTodayKey()}${filterParams}`}>
                         <Button
                             variant="outline"
                             size="sm"

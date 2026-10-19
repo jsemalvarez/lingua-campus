@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
 import { syncFinalExamLesson } from "@/lib/feeDue";
+import { instituteMonth } from "@/lib/dates";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -62,7 +63,7 @@ export async function createEnrollmentAction(formData: FormData) {
         // `getUTCFullYear` porque las fechas se guardan a medianoche UTC: un curso
         // que arranca el 1 de enero, leído en hora local, cae en diciembre del año
         // anterior.
-        const calendarYear = new Date().getFullYear();
+        const calendarYear = instituteMonth().year;
         const academicYear = enrollment.course.startDate
             ? enrollment.course.startDate.getUTCFullYear()
             : calendarYear;
@@ -159,7 +160,7 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
             return { success: false, error: "Inscripción no encontrada" };
         }
 
-        const currentYear = new Date().getFullYear();
+        const currentYear = instituteMonth().year;
 
         await prisma.$transaction(async (tx) => {
             await applyExamRegistration(tx, enrollment, enrollment.course, takesExam, currentYear, user.instituteId as string);
@@ -198,7 +199,7 @@ export async function setCourseExamRegistrationsAction(courseId: string, takingE
         }
 
         const taking = new Set(takingEnrollmentIds);
-        const currentYear = new Date().getFullYear();
+        const currentYear = instituteMonth().year;
         let feesCreated = 0;
 
         await prisma.$transaction(async (tx) => {

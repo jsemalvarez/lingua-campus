@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import { instituteMonth } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { Calendar, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -24,7 +25,7 @@ export function DeletionsClient({ rows, year, month }: { rows: DeletionRow[]; ye
     const pathname = usePathname();
 
     const years: number[] = [];
-    const thisYear = new Date().getFullYear();
+    const thisYear = instituteMonth().year;
     for (let y = thisYear - 2; y <= thisYear + 1; y++) years.push(y);
 
     const applyFilter = (newYear: number | null, newMonth: number | null) => {

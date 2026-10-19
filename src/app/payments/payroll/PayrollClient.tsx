@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { TeacherPayrollSection } from "../../teachers/[id]/TeacherPayrollSection";
-import dayjs from "dayjs";
+import { addMonths, instituteMonth, instituteTodayKey, monthDays } from "@/lib/dates";
 import { getMonthName } from "@/lib/utils";
 import { processBulkPayrollAction } from "@/app/teachers/actions";
 import { Portal } from "@/components/ui/Portal";
@@ -43,8 +43,8 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
     const [refreshKey, setRefreshKey] = useState(0);
     
     // Default al mes pasado
-    const [globalMonth, setGlobalMonth] = useState(dayjs().subtract(1, 'month').month() + 1);
-    const [globalYear, setGlobalYear] = useState(dayjs().subtract(1, 'month').year());
+    const [globalMonth, setGlobalMonth] = useState(addMonths(instituteMonth(), -1).month);
+    const [globalYear, setGlobalYear] = useState(addMonths(instituteMonth(), -1).year);
     
     const [settlements, setSettlements] = useState<Record<string, SettlementData>>({});
     const [isPending, startTransition] = useTransition();
@@ -84,8 +84,8 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
         setCalculating(true);
         setStatus("idle");
         try {
-            const startDate = dayjs(`${globalYear}-${globalMonth}-01`).startOf('month').toISOString();
-            const endDate = dayjs(`${globalYear}-${globalMonth}-01`).endOf('month').toISOString();
+            const startDate = monthDays({ year: globalYear, month: globalMonth }).first.toISOString();
+            const endDate = monthDays({ year: globalYear, month: globalMonth }).last.toISOString();
             
             const res = await fetch(`/api/institutes/payroll?start=${startDate}&end=${endDate}`);
             const data = await res.json();
@@ -124,15 +124,15 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
     const handleBulkPayment = async () => {
         if (selectedTeachers.length === 0) return;
 
-        const startDate = dayjs(`${globalYear}-${globalMonth}-01`).startOf('month').toISOString();
-        const endDate = dayjs(`${globalYear}-${globalMonth}-01`).endOf('month').toISOString();
+        const startDate = monthDays({ year: globalYear, month: globalMonth }).first.toISOString();
+        const endDate = monthDays({ year: globalYear, month: globalMonth }).last.toISOString();
 
         const payments = selectedTeachers.map(s => ({
             teacherId: s.teacherId,
             amount: s.amount,
             // El mes sale de `getMonthName` y no de dayjs: su idioma depende de qué pantallas cargó el navegador, y esto se guarda («March 2026»).
             description: `Pago de Haberes - ${getMonthName(globalMonth)} ${globalYear}`,
-            date: dayjs().format("YYYY-MM-DD"),
+            date: instituteTodayKey(),
             bonus: s.bonus,
             deduction: s.deduction,
             notes: s.notes,
@@ -185,7 +185,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                         onChange={(e) => handlePeriodChange(globalMonth, parseInt(e.target.value))}
                         className="bg-background border border-border/60 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
                     >
-                        {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                        {Array.from({ length: 4 }, (_, i) => instituteMonth().year - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
 
                     <Button 

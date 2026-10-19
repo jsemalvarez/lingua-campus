@@ -30,7 +30,8 @@ function getFeeLabel(fee: { type: string; month: number; year: number }) {
 }
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
-import { GUARDIAN_SECTIONS, instituteToday, recordActivity } from "@/lib/activity";
+import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
+import { instituteToday } from "@/lib/dates";
 import { feeStanding } from "@/lib/feeDue";
 import { UpcomingFeesSection } from "@/components/financials/UpcomingFeesSection";
 

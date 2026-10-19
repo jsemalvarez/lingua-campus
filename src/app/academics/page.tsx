@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
+import { ageOn, instituteToday } from "@/lib/dates";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
@@ -84,10 +85,8 @@ export default async function StudentAcademicsPage() {
     const courseIds = student.enrollments.map(e => e.course.id);
 
     // Próximas clases
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const upcomingLessons = await prisma.lesson.findMany({
-        where: { courseId: { in: courseIds }, status: "ACTIVE", date: { gte: today } },
+        where: { courseId: { in: courseIds }, status: "ACTIVE", date: { gte: instituteToday() } },
         orderBy: { date: "asc" },
         take: 5,
         include: {
@@ -115,7 +114,7 @@ export default async function StudentAcademicsPage() {
     if (student.enrollments.length > 0) {
         const mainCourseId = student.enrollments[0].courseId;
         academicStats.totalLessons = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE" } });
-        academicStats.passedLessons = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: new Date() } } });
+        academicStats.passedLessons = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: instituteToday() } } });
         academicStats.presentsCount = await prisma.attendance.count({ where: { studentId: student.id, lesson: { status: "ACTIVE" }, status: { in: ["PRESENT", "LATE"] } } });
         academicStats.absentsCount = await prisma.attendance.count({ where: { studentId: student.id, lesson: { status: "ACTIVE" }, status: "ABSENT" } });
     }
@@ -156,15 +155,7 @@ export default async function StudentAcademicsPage() {
     };
 
     // Edad
-    let isMinor = false;
-    if (student.birthDate) {
-        const birth = new Date(student.birthDate);
-        const now = new Date();
-        let age = now.getFullYear() - birth.getFullYear();
-        const m = now.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-        isMinor = age < 18;
-    }
+    const isMinor = student.birthDate ? ageOn(student.birthDate) < 18 : false;
 
     // Las firmas del instituto que salen impresas en el boletín (FEAT-21).
     const reports = await withSignatureLines(student.studentReports);

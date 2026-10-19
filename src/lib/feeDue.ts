@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { instituteToday } from "@/lib/activity";
+import { instituteToday } from "@/lib/dates";
 
 /**
  * Cuándo una cuota es deuda. Dos cosas emitidas todavía no lo son: el derecho de

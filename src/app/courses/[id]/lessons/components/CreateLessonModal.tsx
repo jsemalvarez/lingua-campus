@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { instituteTodayKey } from "@/lib/dates";
 import { createPortal } from "react-dom";
 import { createLessonAction } from "../actions";
 import { Button } from "@/components/ui/Button";
@@ -47,10 +48,9 @@ export function CreateLessonModal({
         setMounted(true);
     }, []);
 
-    // El día de hoy en la hora de quien carga. `toISOString()` lo daba en UTC: a la
-    // noche, en Argentina, proponía la fecha de mañana.
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    // El día de hoy en el calendario del instituto. `toISOString()` lo daba en UTC:
+    // a la noche, en Argentina, proponía la fecha de mañana.
+    const todayStr = instituteTodayKey();
     const isClass = lessonType === "CLASS";
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { instituteToday } from "@/lib/dates";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
@@ -44,8 +45,8 @@ function monthRange(key: MonthKey): { start: Date; end: Date } {
  * estamos en enero, ese mes está vacío y el profesor entra a una pantalla en blanco.
  */
 function defaultMonthKey(dates: Date[]): MonthKey {
-    const now = new Date();
-    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    // El día del instituto: el de UTC ya es mañana a partir de las 21.
+    const today = instituteToday().getTime();
 
     if (dates.length === 0) return monthKeyOf(new Date(today));
 
@@ -155,7 +156,7 @@ export default async function CourseDetailPage({
     const { start: monthStart, end: monthEnd } = monthRange(selectedMonth);
 
     // El atajo "Hoy" sólo tiene sentido si el mes actual tiene clases cargadas
-    const currentMonthKey = monthKeyOf(new Date());
+    const currentMonthKey = monthKeyOf(instituteToday());
     const todayMonth = monthCounts.has(currentMonthKey) ? currentMonthKey : null;
 
     // Sólo las clases del mes seleccionado: es lo que evita traer un curso anual entero
