@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { instituteMonth } from "@/lib/dates";
 import { headers } from "next/headers";
 import { getTenantByHost } from "@/lib/tenant";
 import { findResetSubject } from "@/lib/passwordReset";
@@ -97,7 +98,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
 
                 <div className="mt-8 pt-6 border-t border-border/50 text-center">
                     <p className="text-xs font-medium text-muted-foreground">
-                        {brandName} &copy; {new Date().getFullYear()}
+                        {brandName} &copy; {instituteMonth().year}
                     </p>
                 </div>
             </Card>

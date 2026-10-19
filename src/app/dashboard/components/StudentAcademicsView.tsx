@@ -30,7 +30,6 @@ import { StudentPerformanceChart } from "./StudentPerformanceChart";
 import { StudentReportViewer } from "@/components/reports/StudentReportViewer";
 
 dayjs.extend(relativeTime);
-dayjs.locale("es");
 
 interface PracticeSessionRecord {
   id: string;
@@ -136,7 +135,7 @@ export function StudentAcademicsView({
                         </div>
                         <div className="min-w-0">
                           <h5 className="font-bold text-[13px] leading-tight group-hover:text-primary transition-colors truncate">{g.lesson.topic}</h5>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{dayjs(g.createdAt).fromNow()}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{dayjs(g.createdAt).locale("es").fromNow()}</p>
                         </div>
                      </div>
                    ))
@@ -417,7 +416,7 @@ export function StudentAcademicsView({
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-bold truncate">{s.lessonTopic}</p>
-                        <p className="text-[10px] text-muted-foreground">{s.courseName} · {dayjs(s.completedAt).fromNow()}</p>
+                        <p className="text-[10px] text-muted-foreground">{s.courseName} · {dayjs(s.completedAt).locale("es").fromNow()}</p>
                         {s.weakArea && (
                           <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">📍 {s.weakArea}</p>
                         )}

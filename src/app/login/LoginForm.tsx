@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { instituteMonth } from "@/lib/dates";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -195,7 +196,7 @@ export default function LoginForm({ institute }: LoginFormProps) {
 
                 <div className="mt-8 pt-6 border-t border-border/50 text-center">
                     <p className="text-xs font-medium text-muted-foreground">
-                        {brandName} &copy; {new Date().getFullYear()} — Todos los derechos reservados
+                        {brandName} &copy; {instituteMonth().year} — Todos los derechos reservados
                     </p>
                 </div>
             </Card>

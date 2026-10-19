@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { GraduationCap, Users, User, ArrowRight, Calendar, CreditCard } from "lucide-react";
 import Link from "next/link";
-import { formatDate } from "@/lib/dates";
+import { formatDate, instituteMonth } from "@/lib/dates";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
 
 export default async function GuardianDashboard() {
@@ -132,7 +132,7 @@ export default async function GuardianDashboard() {
 
       <footer className="pt-8 border-t border-border/40 text-center">
         <p className="text-xs text-muted-foreground">
-          Lingua Campus &copy; {new Date().getFullYear()} - Panel de Consulta de Tutores
+          Lingua Campus &copy; {instituteMonth().year} - Panel de Consulta de Tutores
         </p>
       </footer>
     </div>

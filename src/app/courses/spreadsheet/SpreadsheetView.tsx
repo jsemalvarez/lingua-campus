@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { formatDate } from "@/lib/dates";
+import { formatDate, instituteTodayKey } from "@/lib/dates";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -75,7 +75,7 @@ export function SpreadsheetView({ data, activeRole, instituteName }: Spreadsheet
             startY = (doc as any).lastAutoTable.finalY + 15;
         });
 
-        doc.save(`Planilla_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Planilla_Alumnos_${instituteTodayKey()}.pdf`);
     };
 
     const totalStudents = data.reduce((acc, curr) => acc + curr.students.length, 0);

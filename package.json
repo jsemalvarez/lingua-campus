@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build:dev": "next build --webpack",
-    "build": "prisma generate && prisma migrate deploy && next build --webpack",
+    "build": "npm run lint:fechas && prisma generate && prisma migrate deploy && next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "lint:fechas": "eslint -c eslint.fechas.config.mjs --quiet src",
     "preview:email": "ts-node -P tsconfig.preview.json preview-email.tsx"
   },
   "dependencies": {

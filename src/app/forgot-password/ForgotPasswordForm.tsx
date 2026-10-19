@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { instituteMonth } from "@/lib/dates";
 import Link from "next/link";
 import Image from "next/image";
 import { Card } from "@/components/ui/Card";
@@ -245,7 +246,7 @@ export default function ForgotPasswordForm({ institute }: ForgotPasswordFormProp
 
                 <div className="mt-8 pt-6 border-t border-border/50 text-center">
                     <p className="text-xs font-medium text-muted-foreground">
-                        {brandName} &copy; {new Date().getFullYear()}
+                        {brandName} &copy; {instituteMonth().year}
                     </p>
                 </div>
             </Card>
