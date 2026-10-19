@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
+import { formatDate } from '@/lib/dates';
 
 interface ReceiptData {
     receiptNumber: string;
@@ -136,7 +137,7 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
             fiscalLineY += 4;
         }
         if (data.institute.activityStartDate) {
-            doc.text(`Inicio de Actividad: ${dayjs(data.institute.activityStartDate).format('DD/MM/YYYY')}`, headerRightX, fiscalLineY);
+            doc.text(`Inicio de Actividad: ${formatDate(data.institute.activityStartDate, "day", "numericFull")}`, headerRightX, fiscalLineY);
             fiscalLineY += 4;
         }
         doc.text('Documento no válido como factura.', headerRightX, fiscalLineY);

@@ -8,6 +8,7 @@
  * —las preguntas de Kahoot, las tarjetas de Quizlet— se arma acá y no en el
  * prompt: el formato no puede depender de que el modelo lo respete.
  */
+import { ageOn, instituteToday } from "@/lib/dates";
 
 export type MomentId = "inicio" | "principal" | "cierre" | "tarea";
 
@@ -65,22 +66,12 @@ const YOUTUBE_MIN_AGE = 13;
  */
 const WRITING_ONLINE_MIN_AGE = 10;
 
-/** Años cumplidos a `today`, contados en UTC como el resto de las fechas. */
-export function ageOn(birthDate: Date, today: Date): number {
-    let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
-    const beforeBirthday =
-        today.getUTCMonth() < birthDate.getUTCMonth() ||
-        (today.getUTCMonth() === birthDate.getUTCMonth() && today.getUTCDate() < birthDate.getUTCDate());
-    if (beforeBirthday) age -= 1;
-    return age;
-}
-
 /**
  * El rango con los alumnos que tienen la fecha cargada. Si no hay ninguno —un
  * curso sin inscriptos, o sin fechas—, `null`: la IA sigue con el nivel y el
  * tema, como antes.
  */
-export function ageRangeOf(birthDates: (Date | null)[], today: Date = new Date()): AgeRange | null {
+export function ageRangeOf(birthDates: (Date | null)[], today: Date = instituteToday()): AgeRange | null {
     const ages = birthDates
         .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()))
         .map((d) => ageOn(d, today))

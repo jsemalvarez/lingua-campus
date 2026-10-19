@@ -18,9 +18,8 @@ import {
     FileText,
     ClipboardList
 } from "lucide-react";
-import dayjs from "dayjs";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/dates";
+import { dateParts, formatDate } from "@/lib/dates";
 import { StudentReportViewer } from "@/components/reports/StudentReportViewer";
 
 interface GuardianAcademicsViewProps {
@@ -142,7 +141,7 @@ export function GuardianAcademicsView({
                                 <p className="font-bold">{activeCourse.teacher?.name || "Pendiente"}</p>
                                 <div className="mt-4 pt-4 border-t border-border/50 flex justify-between items-center">
                                     <span className="text-xs font-bold text-muted-foreground">Ciclo Lectivo</span>
-                                    <span className="text-xs font-black">{dayjs(activeCourse.startDate).format("YYYY")}</span>
+                                    <span className="text-xs font-black">{activeCourse.startDate ? dateParts(activeCourse.startDate, "day").year : null}</span>
                                 </div>
                             </div>
                         )}

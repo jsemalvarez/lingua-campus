@@ -42,7 +42,7 @@ model Institute {
   pwaIcon512 String?
   cuit        String?
   grossIncome String?
-  activityStartDate DateTime?
+  activityStartDate DateTime? @db.Date
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -148,7 +148,7 @@ model Student {
   guardian2Relation String?
   guardian2Phone    String?
   guardian2Email    String?
-  birthDate     DateTime?
+  birthDate     DateTime? @db.Date
   joinDate      DateTime @default(now())
 
   // Ver la nota en `User.hasDefaultPassword`. Acá los candidatos incluyen el
@@ -233,8 +233,8 @@ model Course {
   batchSignatures ReportBatchSignature[]
 
 
-  startDate   DateTime?
-  endDate     DateTime?
+  startDate   DateTime? @db.Date
+  endDate     DateTime? @db.Date
 
   // Financials
   monthlyPrice   Float @default(0)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { formatDate } from "@/lib/dates";
 import { updateProfileAction } from "./actions";
 import { Button } from "@/components/ui/Button";
 import { UserCircle, CheckCircle, AlertCircle, Phone } from "lucide-react";
@@ -105,7 +106,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-foreground/80 text-muted-foreground">Fecha de Nacimiento</label>
                                 <div className="px-4 py-2.5 rounded-xl border border-input bg-muted/30 text-sm">
-                                    {initialData.birthDate ? new Date(initialData.birthDate).toLocaleDateString('es-AR') : "No registrada"}
+                                    {initialData.birthDate ? formatDate(initialData.birthDate, "day", "numericFull") : "No registrada"}
                                 </div>
                             </div>
                             <div className="space-y-1.5">

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatDate } from "@/lib/dates";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -61,7 +62,7 @@ export function SpreadsheetView({ data, activeRole, instituteName }: Spreadsheet
                 body: group.students.map(s => [
                     s.name,
                     s.dni || '-',
-                    s.birthDate ? new Date(s.birthDate).toLocaleDateString('es-AR') : '-',
+                    s.birthDate ? formatDate(s.birthDate, "day", "numericFull") : "-",
                     s.age?.toString() || '-',
                     s.schoolInfo || '-',
                     s.guardian1Name ? `${s.guardian1Name} ${s.guardian1Phone ? `(${s.guardian1Phone})` : ''}` : '-'
@@ -164,7 +165,7 @@ export function SpreadsheetView({ data, activeRole, instituteName }: Spreadsheet
                                                                 {student.name}
                                                             </div>
                                                             <div className="text-[10px] text-muted-foreground mt-0.5">
-                                                                F. Nac: {student.birthDate ? new Date(student.birthDate).toLocaleDateString('es-AR') : 'N/A'}
+                                                                F. Nac: {student.birthDate ? formatDate(student.birthDate, "day", "numericFull") : 'N/A'}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4 text-center">

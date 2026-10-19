@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { instituteToday } from "@/lib/dates";
+import { formatDate, instituteToday } from "@/lib/dates";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
@@ -266,9 +266,9 @@ export default async function CourseDetailPage({
                                     {course.startDate && (
                                         <>
                                             <span className="text-muted-foreground">Vigencia: </span>
-                                            <span className="text-primary font-bold">{new Date(course.startDate).toLocaleDateString('es-ES')}</span>
+                                            <span className="text-primary font-bold">{formatDate(course.startDate, "day", "numericFull")}</span>
                                             {course.endDate ? (
-                                                <> - <span className="text-primary font-bold">{new Date(course.endDate).toLocaleDateString('es-ES')}</span></>
+                                                <> - <span className="text-primary font-bold">{formatDate(course.endDate, "day", "numericFull")}</span></>
                                             ) : (
                                                 " en adelante"
                                             )}
