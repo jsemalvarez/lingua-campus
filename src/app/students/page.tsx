@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserMinus, Users, AlertTriangle } from "lucide-react";
-import dayjs from "dayjs";
+import { ageOn, formatDate } from "@/lib/dates";
 import { StudentListActions } from "./components/StudentListActions";
 import { StudentSearchBar } from "./components/StudentSearchBar";
 
@@ -138,7 +138,7 @@ export default async function StudentsPage(props: PageProps) {
             return flags;
         }
 
-        const age = dayjs().diff(dayjs(student.birthDate), 'year');
+        const age = ageOn(student.birthDate);
 
         // Menor de 18 sin tutor registrado
         if (age < 18) {
@@ -375,7 +375,7 @@ export default async function StudentsPage(props: PageProps) {
                                                 <td className="hidden lg:table-cell px-3 sm:px-6 py-4 text-xs font-medium text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <CalendarIcon size={14} />
-                                                        {dayjs(student.joinDate).format("DD/MM/YYYY")}
+                                                        {formatDate(student.joinDate, "moment", "numericFull")}
                                                     </div>
                                                 </td>
                                                 <td className="hidden lg:table-cell px-3 sm:px-6 py-4 text-right">

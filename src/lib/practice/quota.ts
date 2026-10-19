@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { instituteDayStart } from "@/lib/dates";
 
 /**
  * Límite de uso de los proveedores de IA (SEC-07).
@@ -107,7 +108,9 @@ export async function consumeAiQuota(
     // El instituto se cuenta después de aprobar al usuario: si al alumno ya se le
     // negó la llamada, el instituto no la pagó y no corresponde imputársela.
     if (instituteId) {
-        const instituteWindow = windowStart(now, DAY_MS);
+        // El día del instituto, no el de UTC: alineada a la medianoche UTC, la cuota
+        // se reiniciaba a las 21 de Argentina, justo cuando más se usa.
+        const instituteWindow = instituteDayStart(new Date(now));
         const instituteCount = await bump("INSTITUTE", instituteId, instituteWindow);
 
         if (instituteCount > limitFromEnv("AI_LIMIT_INSTITUTE_DAILY", DEFAULT_INSTITUTE_DAILY)) {

@@ -85,7 +85,9 @@ export type DateStyle =
     /** 20/10 */
     | "numericDayMonth"
     /** 20/10/26 */
-    | "numeric";
+    | "numeric"
+    /** 20/10/2026 */
+    | "numericFull";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -103,6 +105,7 @@ export function formatDate(value: Date | string, kind: DateKind, style: DateStyl
         case "dayNumber": return pad(day);
         case "numericDayMonth": return `${pad(day)}/${pad(month)}`;
         case "numeric": return `${pad(day)}/${pad(month)}/${String(year).slice(-2)}`;
+        case "numericFull": return `${pad(day)}/${pad(month)}/${year}`;
     }
 }
 
@@ -194,4 +197,18 @@ export function ageOn(birthDate: Date | string, on: Date = instituteToday()): nu
     const monthDiff = on.getUTCMonth() - birth.getUTCMonth();
     if (monthDiff < 0 || (monthDiff === 0 && on.getUTCDate() < birth.getUTCDate())) age--;
     return age;
+}
+
+/**
+ * El instante en que empezó hoy en el instituto: su medianoche (03:00 UTC en
+ * Argentina). Para ventanas de tiempo que tienen que cortar con el día del
+ * instituto y no con el de UTC, como la cuota diaria de IA.
+ */
+export function instituteDayStart(now: Date = new Date()): Date {
+    const zone = new Intl.DateTimeFormat("en-US", { timeZone: INSTITUTE_TIME_ZONE, timeZoneName: "longOffset" })
+        .formatToParts(now)
+        .find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+    const match = /GMT([+-])(\d{2}):?(\d{2})?/.exec(zone);
+    const offsetMinutes = match ? (match[1] === "-" ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3] ?? 0)) : 0;
+    return new Date(instituteToday(now).getTime() - offsetMinutes * 60_000);
 }

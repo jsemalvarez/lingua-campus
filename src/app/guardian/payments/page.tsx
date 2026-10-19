@@ -17,7 +17,6 @@ import {
     Receipt,
     Info
 } from "lucide-react";
-import dayjs from "dayjs";
 import { getMonthName, cn } from "@/lib/utils";
 
 function getFeeLabel(fee: { type: string; month: number; year: number }) {
@@ -31,7 +30,7 @@ function getFeeLabel(fee: { type: string; month: number; year: number }) {
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
 import { getActiveRole } from "@/lib/roles";
 import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
-import { instituteToday } from "@/lib/dates";
+import { formatDate, instituteToday } from "@/lib/dates";
 import { feeStanding } from "@/lib/feeDue";
 import { UpcomingFeesSection } from "@/components/financials/UpcomingFeesSection";
 
@@ -295,7 +294,7 @@ export default async function GuardianPaymentsPage() {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-black truncate">{getFeeLabel(fee)}</p>
-                                                        <p className="text-[10px] text-muted-foreground font-medium">{dayjs(fee.datePaid).format("DD/MM/YYYY")}</p>
+                                                        <p className="text-[10px] text-muted-foreground font-medium">{fee.datePaid ? formatDate(fee.datePaid, "moment", "numericFull") : null}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
@@ -353,7 +352,7 @@ export default async function GuardianPaymentsPage() {
                                                 <span className="font-bold text-emerald-600">PAGADO</span>
                                             </td>
                                             <td className="p-6">
-                                                <span className="text-muted-foreground font-medium">{dayjs(fee.datePaid).format("DD/MM/YYYY")}</span>
+                                                <span className="text-muted-foreground font-medium">{fee.datePaid ? formatDate(fee.datePaid, "moment", "numericFull") : null}</span>
                                             </td>
                                             <td className="p-6 text-right">
                                                 <span className="font-black text-emerald-600">
