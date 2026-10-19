@@ -14,6 +14,7 @@ export function ToolSketch({ id }: { id: ToolId }) {
         case "kahoot": return <KahootSketch />;
         case "wordwall": return <WordwallSketch />;
         case "quizlet": return <QuizletSketch />;
+        case "liveworksheets": return <LiveworksheetsSketch />;
         case "youglish": return <YouglishSketch />;
         case "playphrase": return <PlayphraseSketch />;
         case "lingoclip": return <LingoclipSketch />;
@@ -376,6 +377,29 @@ function PadletSketch() {
                     <div className={cn(NOTE, "h-[52px] bg-white")}><Lines widths={["90%", "75%", "85%", "50%"]} /></div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+/** Una ficha ya corregida: una respuesta en verde, otra en rojo, el puntaje y el botón de terminar. */
+function LiveworksheetsSketch() {
+    return (
+        <div className="relative w-[244px]">
+            <div className="flex flex-col gap-1.5 rounded-[10px] bg-white px-3.5 pb-3 pt-2.5 text-[11.5px] font-medium leading-snug text-zinc-700 shadow-sm">
+                <span className="font-bold text-zinc-800">Present Simple</span>
+                <span className="whitespace-nowrap">
+                    1. Bob always <span className="rounded border border-emerald-600 bg-emerald-100 px-1 font-semibold">drinks</span> tea.
+                </span>
+                <span className="whitespace-nowrap">
+                    2. She <span className="rounded border border-red-500 bg-red-100 px-1 font-semibold">don't</span> play tennis.
+                </span>
+            </div>
+            <span className="absolute -bottom-3 right-3 whitespace-nowrap rounded-md bg-zinc-700 px-2 py-1 text-[10.5px] font-semibold text-white shadow-md">
+                Finish!
+            </span>
+            <span className="absolute -right-2 -top-2.5 rounded-full bg-emerald-700 px-2.5 py-1 text-[10.5px] font-bold text-white shadow-sm">
+                1/2
+            </span>
         </div>
     );
 }

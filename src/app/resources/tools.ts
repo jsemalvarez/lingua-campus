@@ -7,10 +7,13 @@
  * ayuda («How many participants can play a kahoot?»): depende del tipo de cuenta,
  * 40 para docentes de escuela, 10 personal y 3 empresa. Los de Write & Improve,
  * el 17/10/2026 en su sitio y probando una consigna: gratis y sin cuenta para el
- * alumno, y paga la vista del docente («+Class View»). Cambian seguido: al tocar un texto que
- * afirme uno, volver a confirmarlo antes de publicarlo.
+ * alumno, y paga la vista del docente («+Class View»). Los de Liveworksheets, el
+ * 19/10/2026 resolviendo una ficha sin cuenta: se corrige sola, viene con
+ * publicidad y tiene un plan pago sin anuncios. Sus precios no se pudieron ver, así
+ * que no se afirman. Cambian seguido: al tocar un texto que afirme uno, volver a
+ * confirmarlo antes de publicarlo.
  *
- * Si cambia la cantidad de herramientas, cambia también «Diez herramientas» en
+ * Si cambia la cantidad de herramientas, cambia también «Once herramientas» en
  * el encabezado de `ResourcesView`.
  */
 
@@ -20,6 +23,7 @@ export type ToolId =
     | "kahoot"
     | "wordwall"
     | "quizlet"
+    | "liveworksheets"
     | "youglish"
     | "playphrase"
     | "lingoclip"
@@ -158,6 +162,32 @@ export const TOOLS: Tool[] = [
                 "Rinde más para repasar en casa que para jugar en el aula.",
             ],
             idea: "El vocabulario de la unidad en un mazo, para que lo repasen la semana de la prueba.",
+        },
+    },
+    {
+        id: "liveworksheets",
+        group: "jugar",
+        name: "Liveworksheets",
+        domain: "liveworksheets.com",
+        url: "https://www.liveworksheets.com",
+        plan: "tiene versión gratis",
+        description: "Fichas hechas por docentes de todo el mundo que se completan en pantalla y se corrigen solas.",
+        chips: [{ text: "Alumnos sin cuenta" }, { text: "Tiene publicidad", caution: true }],
+        idea: "una ficha del tema de la clase para casa, y en la clase siguiente repasan lo que salió en rojo.",
+        guide: {
+            about: "Un banco enorme de fichas que suben docentes de todo el mundo, muchas de inglés ordenadas por nivel y tema. El alumno completa la ficha en la pantalla —elige, escribe o une— y al terminar ve qué respuestas están bien y cuáles no.",
+            steps: [
+                { lead: "Entrá a liveworksheets.com", rest: "y buscá el tema de la clase, por ejemplo «present simple». Para usar las fichas no hace falta cuenta." },
+                { lead: "Hacé la ficha vos primero:", rest: "así revisás que esté bien armada y que sea para el nivel de tu grupo." },
+                { lead: "Compartí el enlace:", rest: "el alumno la completa y toca «Finish!». Ahí elige ver su corrección o mandarte las respuestas por mail." },
+            ],
+            goodToKnow: [
+                "Cualquier docente sube fichas, así que la calidad es despareja: algunas traen errores o respuestas mal marcadas.",
+                "Sin cuenta, la ficha se ve rodeada de publicidad que vos no elegís. Hay un plan pago sin anuncios.",
+                "La corrección pinta cada respuesta de verde o de rojo y da el puntaje, pero no explica el error.",
+                "Con una cuenta gratis podés subir tu propia ficha y volverla interactiva.",
+            ],
+            idea: "Una ficha del tema de la clase para casa. En la clase siguiente, repasan juntos lo que les salió en rojo.",
         },
     },
     {
