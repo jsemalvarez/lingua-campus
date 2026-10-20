@@ -279,7 +279,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
 | [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
 | [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
-| [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [ ] |
+| [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -8109,6 +8109,24 @@ alumno. Para sumarla al lote, [`feeDue.ts`](../src/lib/feeDue.ts) tiene ahora
 `finalExamLessonWrites`, que lee y devuelve la escritura sin ejecutarla; `syncFinalExamLesson` la usa
 por dentro, así que la regla sigue en un solo lugar. El interruptor de la ficha del alumno no cambia:
 es un alumno por vez. Y el error va a `console.error` con el `courseId`.
+
+### Verificado en stage — 2026-10-20 · `4da2cc5`
+
+Sobre **Children 4 L-M en stage**: los mismos 12 alumnos activos que en producción, por el restore
+del 19/10, con la fecha de examen puesta a mano en 18/12/2026 como en prod. Desde la pantalla, con la
+cuenta de una secretaria, y con `pg_stat_statements` reseteado antes de confirmar. Los tres casos
+dieron lo que se había predicho contra la base antes de apretar:
+
+| Caso | Rinden | Derechos | Total | Clases del examen |
+|---|---|---|---|---|
+| Todos tildados | 12 | 12 (mes 0, 2026, impagos) | $ 600.000 | 1, el 18/12 |
+| Destildado uno | 11 | 11 — el suyo, impago, se borró | $ 550.000 | 1 |
+| Vuelto a tildar | 12 | 12 — se creó sólo el suyo | $ 600.000 | 1 |
+
+En el primer caso las escrituras fueron un `UPDATE "Enrollment"` (12 filas), un `INSERT INTO "Fee"`
+(12 filas) y un `INSERT INTO "Lesson"` (1): **una sentencia por tipo, ninguna por alumno**. Stage
+tiene la base en la misma región que las funciones, así que esto prueba el conteo, no la latencia de
+producción — que es justamente lo que el conteo deja de hacer importar.
 
 ---
 
