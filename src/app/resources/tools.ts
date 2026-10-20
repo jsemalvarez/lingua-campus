@@ -10,14 +10,16 @@
  * alumno, y paga la vista del docente («+Class View»). Los de Liveworksheets, el
  * 19/10/2026 resolviendo una ficha sin cuenta: se corrige sola, viene con
  * publicidad y tiene un plan pago sin anuncios. Sus precios no se pudieron ver, así
- * que no se afirman. Cambian seguido: al tocar un texto que afirme uno, volver a
- * confirmarlo antes de publicarlo.
+ * que no se afirman. Los de TeachingEnglish, el 19/10/2026 en su sitio: más de
+ * 400 clases gratis, sin publicidad, que se descargan sin cuenta, con filtros por
+ * edad (de 5 a 8 años en adelante) y nivel. Cambian seguido: al tocar un texto que
+ * afirme uno, volver a confirmarlo antes de publicarlo.
  *
- * Si cambia la cantidad de herramientas, cambia también «Once herramientas» en
+ * Si cambia la cantidad de herramientas, cambia también «Doce herramientas» en
  * el encabezado de `ResourcesView`.
  */
 
-export type ToolGroupId = "jugar" | "escuchar" | "crear";
+export type ToolGroupId = "jugar" | "escuchar" | "crear" | "preparar";
 
 export type ToolId =
     | "kahoot"
@@ -30,7 +32,8 @@ export type ToolId =
     | "canva"
     | "docs"
     | "padlet"
-    | "writeandimprove";
+    | "writeandimprove"
+    | "teachingenglish";
 
 export type ToolChip = {
     text: string;
@@ -85,6 +88,12 @@ export const TOOL_GROUPS: {
         title: "Crear y compartir",
         shortTitle: "Crear",
         description: "Material lindo para el aula, y espacios donde escriben y publican todos.",
+    },
+    {
+        id: "preparar",
+        title: "Preparar la clase",
+        shortTitle: "Preparar",
+        description: "Clases armadas y formación para vos, antes de entrar al aula.",
     },
 ];
 
@@ -363,6 +372,32 @@ export const TOOLS: Tool[] = [
                 "Todo está en inglés y las consignas piden escribir un texto: va para alumnos que ya arman un párrafo, no para los más chicos.",
             ],
             idea: "Dales una consigna para casa y pediles que la pasen por Write & Improve y corrijan lo marcado antes de entregártela. Te llega una segunda versión, no un borrador.",
+        },
+    },
+    {
+        id: "teachingenglish",
+        group: "preparar",
+        name: "TeachingEnglish",
+        domain: "teachingenglish.org.uk",
+        url: "https://www.teachingenglish.org.uk/teaching-resources",
+        plan: "es gratis",
+        description: "Clases listas del British Council, por edad y nivel: el plan paso a paso, la presentación y la ficha para imprimir.",
+        chips: [{ text: "La usás vos" }, { text: "Se descarga sin cuenta" }],
+        idea: "tomá una clase del tema de la unidad y usá su ficha como tarea.",
+        guide: {
+            about: "El sitio del British Council para docentes de inglés. Tiene más de 400 clases armadas, cada una con su plan paso a paso, una presentación para proyectar y una ficha para imprimir. También ofrece cursos gratis para docentes y webinars.",
+            steps: [
+                { lead: "Entrá a teachingenglish.org.uk", rest: "y abrí «Teaching resources». Para descargar no hace falta cuenta." },
+                { lead: "Tocá «Show Filters»", rest: "y elegí la edad y el nivel de tu grupo. Cada clase dice para qué edad es, el nivel y cuántos minutos dura." },
+                { lead: "Descargá lo que te sirva:", rest: "el plan en PDF, la presentación para proyectar o la ficha para imprimir." },
+            ],
+            goodToKnow: [
+                "Lo hace el British Council: es material revisado y no tiene publicidad.",
+                "Está todo en inglés, también el plan para el docente.",
+                "Hay clases desde los 5 años hasta adultos, en todos los niveles.",
+                "Sus cursos para docentes también son gratis y dan certificado.",
+            ],
+            idea: "Tomá una clase del tema de la unidad: usá su presentación para arrancar y su ficha como tarea.",
         },
     },
 ];

@@ -22,6 +22,7 @@ export function ToolSketch({ id }: { id: ToolId }) {
         case "docs": return <DocsSketch />;
         case "padlet": return <PadletSketch />;
         case "writeandimprove": return <WriteImproveSketch />;
+        case "teachingenglish": return <TeachingEnglishSketch />;
     }
 }
 
@@ -376,6 +377,26 @@ function PadletSketch() {
                     <div className={cn(NOTE, "h-[34px] bg-purple-100")}><Lines widths={["85%", "60%"]} tone="bg-purple-300" /></div>
                     <div className={cn(NOTE, "h-[52px] bg-white")}><Lines widths={["90%", "75%", "85%", "50%"]} /></div>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+/** Una clase armada: el título, edad, nivel y minutos, y los tres archivos que se descargan. */
+function TeachingEnglishSketch() {
+    return (
+        <div className="flex w-[244px] flex-col gap-2 rounded-[10px] bg-white px-3.5 pb-3 pt-2.5 text-zinc-700 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap text-[12.5px] font-bold text-zinc-800">My ideal teacher</span>
+                <span className="whitespace-nowrap text-[10.5px] font-semibold text-zinc-500">9-12 · A2</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 text-[10.5px] font-semibold">
+                {["Plan", "Slides", "Worksheet"].map((file) => (
+                    <span key={file} className="flex items-center justify-center gap-1 rounded-md border border-zinc-200 py-1.5">
+                        {file}
+                        <span className="font-bold text-teal-700">↓</span>
+                    </span>
+                ))}
             </div>
         </div>
     );

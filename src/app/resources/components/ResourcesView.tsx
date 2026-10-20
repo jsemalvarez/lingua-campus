@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Compass, ExternalLink, Eye, Gamepad2, Headphones, Lightbulb, Palette, Shapes, X, type LucideIcon } from "lucide-react";
+import { BookOpen, Check, Compass, ExternalLink, Eye, Gamepad2, Headphones, Lightbulb, Palette, Shapes, X, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import { markResourcesSeen } from "@/lib/resourcesSeen";
@@ -37,11 +37,17 @@ const GROUP_STYLE: Record<ToolGroupId, { Icon: LucideIcon; iconBox: string; icon
         icon: "text-purple-500",
         band: "bg-purple-50 dark:bg-purple-950/40",
     },
+    preparar: {
+        Icon: BookOpen,
+        iconBox: "bg-teal-500/10 text-teal-600",
+        icon: "text-teal-600",
+        band: "bg-teal-50 dark:bg-teal-950/40",
+    },
 };
 
 /**
- * Página de recursos del docente: once herramientas externas agrupadas por lo
- * que se quiere hacer en clase. Cada tarjeta tiene dos puertas: «Abrir», para
+ * Página de recursos del docente: doce herramientas externas agrupadas por lo
+ * que se quiere hacer en clase, o antes de entrar. Cada tarjeta tiene dos puertas: «Abrir», para
  * quien ya la usa, y «¿Primera vez?», que abre una guía de tres pasos para quien
  * no la conoce.
  */
@@ -76,13 +82,13 @@ export function ResourcesView() {
                         Herramientas para tus clases
                     </h1>
                     <p className={cn("max-w-2xl text-base leading-relaxed sm:text-lg", MUTED)}>
-                        Once herramientas con versión gratis, elegidas para clases de inglés. Si ya usás alguna, abrila desde
+                        Doce herramientas con versión gratis, elegidas para clases de inglés. Si ya usás alguna, abrila desde
                         acá. Si es nueva para vos, tocá <strong className={cn("font-semibold", PRIMARY_TEXT)}>¿Primera vez?</strong> y
                         te mostramos cómo arrancar en tres pasos.
                     </p>
                 </header>
 
-                <nav aria-label="Secciones" className="flex gap-2 md:hidden">
+                <nav aria-label="Secciones" className="flex flex-wrap gap-2 md:hidden">
                     {TOOL_GROUPS.map((group) => {
                         const { Icon, icon } = GROUP_STYLE[group.id];
                         return (
