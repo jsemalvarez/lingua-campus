@@ -114,14 +114,30 @@ export async function syncFinalExamLesson(
     courseId: string,
     examDate: Date | null
 ): Promise<void> {
-    if (!examDate) return;
+    for (const write of await finalExamLessonWrites(tx, courseId, examDate)) {
+        await write;
+    }
+}
 
-    const lesson = await tx.lesson.findFirst({
+/**
+ * Lo mismo que `syncFinalExamLesson`, pero lee ahora y devuelve la escritura sin
+ * ejecutarla —ninguna o una—, para sumarla a un lote de `$transaction([...])`.
+ * Va en un arreglo y no suelta porque una consulta de Prisma es un *thenable*:
+ * devuelta directo desde una función `async`, se ejecutaría al resolverse.
+ */
+export async function finalExamLessonWrites(
+    db: Prisma.TransactionClient,
+    courseId: string,
+    examDate: Date | null
+): Promise<Prisma.PrismaPromise<unknown>[]> {
+    if (!examDate) return [];
+
+    const lesson = await db.lesson.findFirst({
         where: { courseId, finalExam: true, status: "ACTIVE" }
     });
 
     if (!lesson) {
-        await tx.lesson.create({
+        return [db.lesson.create({
             data: {
                 courseId,
                 type: "EXAM",
@@ -130,8 +146,10 @@ export async function syncFinalExamLesson(
                 topic: "Examen Final",
                 content: "Generado automáticamente por el registro de exámenes finales."
             }
-        });
-    } else if (lesson.date.getTime() !== examDate.getTime()) {
-        await tx.lesson.update({ where: { id: lesson.id }, data: { date: examDate } });
+        })];
     }
+    if (lesson.date.getTime() !== examDate.getTime()) {
+        return [db.lesson.update({ where: { id: lesson.id }, data: { date: examDate } })];
+    }
+    return [];
 }

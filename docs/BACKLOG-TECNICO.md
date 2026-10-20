@@ -279,6 +279,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
 | [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
 | [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
+| [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -8072,6 +8073,42 @@ gasto anulado** en stage, el de la prueba de [FEAT-31](#feat-31).
 **Lo que no se tocó.** Los cuatro fondos decorativos y el respaldo del desplegable de roles siguen
 donde estaban: no son modales y no tienen nada que cubrir. Y las 35 pantallas conservan su
 `animate-in`.
+
+---
+
+<a id="bug-25"></a>
+## BUG-25 · 🗣️ Cargar el examen final falla en el curso más grande · **P1**
+
+**De dónde sale.** Del 2026-10-20, en producción. Patricia cargó el examen final curso por curso
+con la pantalla nueva —todos tildados, Confirmar— y ocho cursos entraron entre las 16:30 y las
+16:44 UTC. **Children 4 L-M** devolvió «Error al cargar el examen final del curso», con captura.
+
+**Qué quedó en la base.** Nada: ninguno de los 12 alumnos marcado, ningún derecho de examen, ninguna
+clase del examen. La transacción se deshizo entera. Y los datos del curso estaban limpios: sin precio
+propio, sin derechos de examen previos, y no hay restricción contra la que pudiera chocar.
+
+**Causa: el mismo patrón que [BUG-23](#bug-23), en el mismo curso.**
+`setCourseExamRegistrationsAction` abría una `$transaction` interactiva y adentro recorría los alumnos
+de a uno: marcar que rinde, buscar el derecho de examen, crearlo, buscar la clase del examen — varias
+sentencias por alumno, todas reteniendo la misma conexión, contra una base de producción que está en
+us-west-2 mientras las funciones corren en `iad1`. Children 4 L-M, con 12, es el curso más grande del
+instituto; los que pasaron tienen 10 o menos. Para esquivarlo se le había puesto `timeout: 30000`,
+que es exactamente lo que [FIN-06](#fin-06) y BUG-23 dejaron escrito que no sirve.
+
+**El error real no se pudo leer.** El `catch` devolvía el mensaje sin registrar nada, así que el log
+de Vercel quedó vacío; los logs de Postgres de esa franja tampoco tienen errores, lo que cuadra con
+una transacción que corta Prisma de su lado y no la base. La causa es por patrón, curso y tamaño, no
+por un mensaje leído — es [ARQ-09](#arq-09) otra vez.
+
+**Cambio.** La receta de BUG-23: las lecturas antes —inscripciones, derechos de examen existentes y la
+clase del examen— y las escrituras en un solo `$transaction([...])`: dos `updateMany` de `takesExam`
+(los que rinden y los que dejan de rendir), un `createMany({ skipDuplicates: true })` de los derechos
+nuevos, un `deleteMany` de los impagos de los que dejan de rendir —con la condición de impago en la
+sentencia, por si entra un pago en el medio— y la clase del examen una sola vez por curso, no una por
+alumno. Para sumarla al lote, [`feeDue.ts`](../src/lib/feeDue.ts) tiene ahora
+`finalExamLessonWrites`, que lee y devuelve la escritura sin ejecutarla; `syncFinalExamLesson` la usa
+por dentro, así que la regla sigue en un solo lugar. El interruptor de la ficha del alumno no cambia:
+es un alumno por vez. Y el error va a `console.error` con el `courseId`.
 
 ---
 
