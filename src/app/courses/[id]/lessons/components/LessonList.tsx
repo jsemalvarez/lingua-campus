@@ -2,7 +2,9 @@
 
 import { CreateLessonModal } from "./CreateLessonModal";
 import { GenerateLessonsModal } from "./GenerateLessonsModal";
-import { ClipboardCheck, Calendar, BookOpen, FileText, Sparkles } from "lucide-react";
+import { ClipboardCheck, Calendar, BookOpen, FileText, Sparkles, ChevronRight, Check } from "lucide-react";
+import { isScheduledPlaceholder } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
 import { EditLessonModal } from "./EditLessonModal";
 import { DeleteLessonButton } from "./DeleteLessonButton";
 import Link from "next/link";
@@ -33,6 +35,8 @@ interface Lesson {
     content: string | null;
     scheduleId: string | null;
     practice: LessonPractice | null;
+    /** Cuántos momentos del armado tienen idea elegida (PED-09). */
+    plan?: { chosen: number } | null;
 }
 
 interface LessonListProps {
@@ -85,39 +89,72 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
                         if (lesson.type === "TP") borderColor = "bg-amber-500/80";
                         if (lesson.type === "EXAM") borderColor = "bg-red-500/80";
 
+                        const isClass = lesson.type === "CLASS";
+                        // La clase se abre en su página (PED-09). El par no entra:
+                        // a él `isTeacherOrAdmin` le llega en falso.
+                        const lessonHref = isClass && isTeacherOrAdmin ? `/courses/${courseId}/lessons/${lesson.id}` : null;
+                        const withoutTopic = isClass && isScheduledPlaceholder(lesson.topic);
+                        const hasPractice = !!lesson.practice && (lesson.practice.speakingPhrases.length > 0 || !!lesson.practice.listeningText || !!lesson.practice.chatScenario);
+
+                        const title = withoutTopic ? (
+                            <h3 className="text-base font-semibold italic leading-tight text-muted-foreground">
+                                Programada, todavía sin tema
+                            </h3>
+                        ) : (
+                            <h3 className="text-base font-bold leading-tight">{lesson.topic}</h3>
+                        );
+
                         return (
                             <div key={lesson.id} className="relative p-4 sm:p-5 rounded-xl border border-border/60 bg-background/50 shadow-sm hover:shadow-md transition-all group overflow-hidden">
                                 <div className={`absolute top-0 left-0 w-1.5 h-full rounded-l-xl ${borderColor}`}></div>
 
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div className="space-y-1.5 pl-2">
+                                    <div className="space-y-1.5 pl-2 min-w-0">
                                         <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                            <Calendar size={14} className={lesson.type === "CLASS" ? "text-blue-500" : lesson.type === "TP" ? "text-amber-500" : "text-red-500"} />
+                                            <Calendar size={14} className={isClass ? "text-blue-500" : lesson.type === "TP" ? "text-amber-500" : "text-red-500"} />
                                             {/* Normalize to Noon before formatting to avoid GMT shifts */}
                                             {format(addHours(new Date(lesson.date), 12), "EEEE, d 'de' MMMM, yyyy", { locale: es })}
                                         </div>
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="text-base font-bold leading-tight">{lesson.topic}</h3>
+                                            {lessonHref ? (
+                                                <Link href={lessonHref} className="hover:underline decoration-blue-500/30 underline-offset-4">
+                                                    {title}
+                                                </Link>
+                                            ) : title}
 
-                                            {/* Practice badge — only for CLASS with practice loaded */}
-                                            {lesson.type === "CLASS" && lesson.practice && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${lesson.practice.isPublished
+                                            {withoutTopic && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-muted text-muted-foreground border border-border">
+                                                    Sin tema
+                                                </span>
+                                            )}
+
+                                            {/* El armado es del docente y la administración: el par no lo ve. */}
+                                            {isClass && isTeacherOrAdmin && isPlanComplete(lesson.plan?.chosen ?? 0) && (
+                                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-[#ebf7f4] dark:bg-primary/10 text-[#1f7360] dark:text-primary border border-[#bfe5da] dark:border-primary/40">
+                                                    <Check size={10} strokeWidth={3} />
+                                                    Armada
+                                                </span>
+                                            )}
+
+                                            {isClass && hasPractice && (
+                                                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${lesson.practice!.isPublished
                                                     ? "bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800"
                                                     : "bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
                                                 }`}>
                                                     <Sparkles size={9} />
-                                                    {lesson.practice.isPublished ? "Práctica activa" : "Borrador"}
+                                                    {lesson.practice!.isPublished ? "Práctica activa" : "Práctica en borrador"}
                                                 </span>
                                             )}
 
                                             {isTeacherOrAdmin && !isFinished && (
                                                 <div className="flex items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
-                                                    <EditLessonModal
-                                                        courseId={courseId}
-                                                        lesson={lesson}
-                                                        lessonPractice={lesson.practice}
-                                                        schedules={schedules}
-                                                    />
+                                                    {!isClass && (
+                                                        <EditLessonModal
+                                                            courseId={courseId}
+                                                            lesson={lesson}
+                                                            schedules={schedules}
+                                                        />
+                                                    )}
                                                     <DeleteLessonButton courseId={courseId} lessonId={lesson.id} />
                                                 </div>
                                             )}
@@ -137,21 +174,14 @@ export function LessonList({ courseId, lessons, schedules, isTeacherOrAdmin, cou
                                                 </div>
                                             </Link>
 
-                                            {lesson.type === "CLASS" ? (
-                                                <div className="w-full">
-                                                    {lesson.practice && (lesson.practice.speakingPhrases.length > 0 || lesson.practice.listeningText || lesson.practice.chatScenario) ? (
-                                                        <Link href={`/courses/${courseId}/lessons/${lesson.id}/practice-preview`}>
-                                                            <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-blue-500/20 whitespace-nowrap">
-                                                                <BookOpen size={16} /> Práctica
-                                                            </div>
-                                                        </Link>
-                                                    ) : (
-                                                        <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-muted/50 text-muted-foreground/50 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-not-allowed border border-border/50 whitespace-nowrap" title="No hay práctica cargada para esta clase">
-                                                            <BookOpen size={16} /> Práctica
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
+                                            {isClass && lessonHref ? (
+                                                <Link href={lessonHref} className="w-full">
+                                                    <div className="px-4 py-2 sm:px-3 sm:py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer border border-blue-500/20 whitespace-nowrap">
+                                                        {withoutTopic && !isFinished ? "Armar la clase" : "Abrir la clase"}
+                                                        <ChevronRight size={15} />
+                                                    </div>
+                                                </Link>
+                                            ) : isClass ? null : (
                                                 <Link href={`/courses/${courseId}/lessons/${lesson.id}/grades`} className="w-full">
                                                     <div className={`px-4 py-2 sm:px-3 sm:py-2.5 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border whitespace-nowrap ${lesson.type === "TP"
                                                         ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20"

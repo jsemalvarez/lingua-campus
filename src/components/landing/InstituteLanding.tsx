@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { instituteMonth } from "@/lib/dates";
 import Link from "next/link";
 import Image from "next/image";
 import { Lato } from "next/font/google";
@@ -146,7 +147,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
           <div className="container mx-auto px-6 text-center max-w-5xl relative z-10 mt-16 sm:mt-0">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm text-slate-700 dark:text-slate-300 font-medium text-sm mb-8 border border-white/50 dark:border-slate-800/50 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
-              <span>Inscripciones Abiertas {new Date().getFullYear()}</span>
+              <span>Inscripciones Abiertas {instituteMonth().year}</span>
             </div>
 
             <h2 className={`text-3xl sm:text-4xl lg:text-5xl italic mb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 ${lato.className}`} style={{ color: primaryColor }}>be Modern, speak English</h2>
@@ -254,7 +255,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
 
             <div className="grid sm:grid-cols-3 gap-8">
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-center shadow-lg border border-slate-100 dark:border-slate-700 transition-transform hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black mb-2 text-slate-900 dark:text-white">+{new Date().getFullYear() - 1996}</div>
+                <div className="text-4xl sm:text-5xl font-black mb-2 text-slate-900 dark:text-white">+{instituteMonth().year - 1996}</div>
                 <div className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Años de Exp.</div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl text-center shadow-lg border border-slate-100 dark:border-slate-700 transition-transform hover:-translate-y-1">
@@ -436,7 +437,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
           {/* Copyright y Firma */}
           <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-slate-500 text-sm font-medium">
-              © {new Date().getFullYear()} {institute.name}. Todos los derechos reservados.
+              © {instituteMonth().year} {institute.name}. Todos los derechos reservados.
             </p>
             <p className="text-slate-400 text-xs flex justify-center items-center gap-1">
               Plataforma impulsada por{" "}

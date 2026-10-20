@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { instituteToday } from "@/lib/dates";
 
 /**
  * Registro de actividad para el panel de uso (FEAT-11).
@@ -36,36 +37,6 @@ export const GUARDIAN_SECTIONS = {
 
 export type ActivitySection = (typeof GUARDIAN_SECTIONS)[keyof typeof GUARDIAN_SECTIONS];
 
-/**
- * El día se corta con el calendario del instituto, no con el del servidor.
- * Vercel y Supabase corren en UTC: sin esto, todo lo que pasa después de las
- * 21:00 de Argentina caería en el día siguiente, y el gráfico diario mostraría
- * las noches corridas un casillero.
- *
- * Está fijo porque hoy hay un solo instituto y es argentino. El día que haya uno
- * en otro huso, esto sale de acá y pasa a ser un campo de `Institute`.
- */
-export const INSTITUTE_TIME_ZONE = "America/Argentina/Buenos_Aires";
-
-/**
- * La fecha del calendario del instituto, a medianoche UTC — que es como
- * Postgres guarda un `@db.Date`. `en-CA` da directamente `YYYY-MM-DD`, así que
- * no hace falta una librería de fechas para esto.
- *
- * Se exporta para que el panel de uso recorte sus períodos con **el mismo hoy**
- * con el que se escribe la actividad. Si cada lado calculara el suyo, el último
- * día del rango podría no coincidir con el último día registrado.
- */
-export function instituteToday(): Date {
-    const ymd = new Intl.DateTimeFormat("en-CA", {
-        timeZone: INSTITUTE_TIME_ZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).format(new Date());
-
-    return new Date(`${ymd}T00:00:00.000Z`);
-}
 
 interface RecordInput {
     subjectType: ActivitySubject;

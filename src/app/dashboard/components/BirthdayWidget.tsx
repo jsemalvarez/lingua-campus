@@ -16,8 +16,9 @@ const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 function formatBirthdayDate(student: BirthdayStudent): string {
     if (student.isToday) return "Hoy 🎉";
     if (student.daysUntil === 1) return "Mañana";
+    // Es un día a medianoche UTC: leído en hora argentina caía el día anterior.
     const d = new Date(student.nextBirthday);
-    return `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)}`;
+    return `${DAY_NAMES[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()].slice(0, 3)}`;
 }
 
 function getInitials(name: string): string {

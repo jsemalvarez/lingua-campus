@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { syncFinalExamLesson } from "@/lib/feeDue";
 
 // Función auxiliar para obtener el usuario autenticado y su instituto
 async function getAuthAndInstitute() {
@@ -25,6 +26,7 @@ export async function createCourseAction(formData: FormData) {
     const monthlyPriceStr = formData.get("monthlyPrice") as string;
     const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
     const examPriceStr = formData.get("examPrice") as string;
+    const examDateStr = formData.get("examDate") as string;
 
     if (!name) {
         return { success: false, error: "El nombre del curso es obligatorio" };
@@ -44,6 +46,7 @@ export async function createCourseAction(formData: FormData) {
                 monthlyPrice: parseFloat(monthlyPriceStr) || 0,
                 enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
                 examPrice: parseFloat(examPriceStr) || 0,
+                examDate: examDateStr ? new Date(examDateStr) : null,
             }
         });
 
@@ -183,6 +186,7 @@ export async function updateCourseAction(formData: FormData) {
     const monthlyPriceStr = formData.get("monthlyPrice") as string;
     const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
     const examPriceStr = formData.get("examPrice") as string;
+    const examDateStr = formData.get("examDate") as string;
 
     if (!courseId) return { success: false, error: "ID de curso no proporcionado" };
     if (!name?.trim()) {
@@ -195,24 +199,42 @@ export async function updateCourseAction(formData: FormData) {
             return { success: false, error: "Curso no encontrado o no pertenece a tu instituto" };
         }
 
-        await prisma.course.update({
-            where: { id: courseId },
-            data: {
-                name: name.trim(),
-                level: level?.trim() || null,
-                color: color || "#3b82f6",
-                classroomId: classroomId || null,
-                teacherId: teacherId || null,
-                startDate: startDateStr ? new Date(startDateStr) : null,
-                endDate: endDateStr ? new Date(endDateStr) : null,
-                monthlyPrice: parseFloat(monthlyPriceStr) || 0,
-                enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
-                examPrice: parseFloat(examPriceStr) || 0,
+        const examDate = examDateStr ? new Date(examDateStr) : null;
+
+        await prisma.$transaction(async (tx) => {
+            await tx.course.update({
+                where: { id: courseId },
+                data: {
+                    name: name.trim(),
+                    level: level?.trim() || null,
+                    color: color || "#3b82f6",
+                    classroomId: classroomId || null,
+                    teacherId: teacherId || null,
+                    startDate: startDateStr ? new Date(startDateStr) : null,
+                    endDate: endDateStr ? new Date(endDateStr) : null,
+                    monthlyPrice: parseFloat(monthlyPriceStr) || 0,
+                    enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,
+                    examPrice: parseFloat(examPriceStr) || 0,
+                    examDate,
+                }
+            });
+
+            // Si el curso ya tiene alumnos que rinden, la clase del examen final
+            // sigue a la fecha: se crea al cargarla por primera vez y se mueve si
+            // cambia. Sin alumnos que rindan no hay examen que poner en el libro.
+            const takingExam = await tx.enrollment.count({
+                where: { courseId, status: "ACTIVE", takesExam: true }
+            });
+            if (takingExam > 0) {
+                await syncFinalExamLesson(tx, courseId, examDate);
             }
         });
 
         revalidatePath(`/courses/${courseId}`);
         revalidatePath("/courses");
+        // El vencimiento del derecho de examen sale de esta fecha.
+        revalidatePath("/guardian/payments");
+        revalidatePath("/payments");
         return { success: true };
     } catch (e: any) {
         return { success: false, error: "Error al actualizar el curso" };

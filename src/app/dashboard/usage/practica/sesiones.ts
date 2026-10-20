@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { INSTITUTE_TIME_ZONE } from "@/lib/activity";
+import { INSTITUTE_TIME_ZONE } from "@/lib/dates";
 import type { Periodo } from "../periodo";
 
 /**

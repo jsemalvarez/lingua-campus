@@ -7,8 +7,8 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye } from "lucide-react";
-import { format, addDays, subDays, addWeeks, subWeeks, isSameDay, parseISO, isValid } from "date-fns";
+import { Calendar, Clock, Users, MapPin, ChevronLeft, ChevronRight, User, ClipboardCheck, BookOpen, AlertTriangle, Eye, Check } from "lucide-react";
+import { format, addDays, subDays, addWeeks, subWeeks, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { WeeklyGridView } from "./components/WeeklyGridView";
 import { ScheduleFilters } from "./components/ScheduleFilters";
@@ -16,6 +16,8 @@ import { getActiveRole } from "@/lib/roles";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { getPeerLevels, isPeerCourse, visibleCoursesFilter } from "@/lib/peers";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import { isPlanComplete } from "@/lib/lessonPlan/plan";
+import { dayFromKey, dayKey, instituteToday, instituteTodayKey } from "@/lib/dates";
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -33,20 +35,22 @@ export default async function SchedulePage(props: PageProps) {
     const params = await props.searchParams;
     const view = (params.view as string) || "week";
 
-    // Parse the date from URL or use today
-    let baseDate = new Date();
+    // La fecha de la URL o la de hoy del instituto. Con `new Date()` el servidor,
+    // que corre en UTC, abría el calendario en mañana a partir de las 21 —la hora
+    // en que muchos docentes cargan— y marcaba como hoy al día siguiente.
+    let baseDate = instituteToday();
     if (params.date) {
         const parsed = parseISO(params.date as string);
         if (isValid(parsed)) {
-            baseDate = parsed;
+            baseDate = dayFromKey(format(parsed, "yyyy-MM-dd"));
         }
     }
 
     const displayDateNoon = new Date(baseDate);
     displayDateNoon.setUTCHours(12, 0, 0, 0);
 
-    const dateStr = format(displayDateNoon, "yyyy-MM-dd");
-    const isToday = isSameDay(displayDateNoon, new Date());
+    const dateStr = dayKey(displayDateNoon);
+    const isToday = dateStr === instituteTodayKey();
 
     const sessionUser = session.user;
     const userRoles = sessionUser.roles ?? [];
@@ -207,12 +211,15 @@ export default async function SchedulePage(props: PageProps) {
                 include: {
                     teacher: true,
                     lessons: {
-                        where: lessonsWhere
+                        where: lessonsWhere,
+                        include: { plan: { select: { chosen: true } } }
                     }
                 }
             },
             lessons: {
-                where: lessonsWhere
+                where: lessonsWhere,
+                // Para decir «Armada» en la tarjeta (PED-09).
+                include: { plan: { select: { chosen: true } } }
             }
         },
         orderBy: [
@@ -341,7 +348,7 @@ export default async function SchedulePage(props: PageProps) {
                             </Button>
                         </Link>
                     </div>
-                    <Link href={`/schedule?view=${view}&date=${format(new Date(), "yyyy-MM-dd")}${filterParams}`}>
+                    <Link href={`/schedule?view=${view}&date=${instituteTodayKey()}${filterParams}`}>
                         <Button
                             variant="outline"
                             size="sm"
@@ -364,7 +371,7 @@ export default async function SchedulePage(props: PageProps) {
                             </div>
                         ) : (
                             view === "week" ? (
-                                <WeeklyGridView schedules={allSchedules} daysMapping={daysMapping} weekDates={weekDates} />
+                                <WeeklyGridView schedules={allSchedules} daysMapping={daysMapping} weekDates={weekDates} canOpenLessons={!isStudentOrGuardian} />
                             ) : (
                                 <div className="space-y-4">
                                     {schedules.map((schedule) => {
@@ -423,6 +430,12 @@ export default async function SchedulePage(props: PageProps) {
                                                                         <BookOpen size={14} className="text-primary" />
                                                                         {registeredTopic}
                                                                     </p>
+                                                                    {/* El armado es del docente y la administración (PED-09). */}
+                                                                    {!isStudentOrGuardian && !schedule.isPeer && isPlanComplete(lesson?.plan?.chosen ?? 0) && (
+                                                                        <span className="self-start inline-flex items-center gap-1 rounded-full border border-[#bfe5da] bg-[#ebf7f4] px-2 py-0.5 text-[11px] font-bold text-[#1f7360] dark:border-primary/40 dark:bg-primary/10 dark:text-primary">
+                                                                            <Check size={11} strokeWidth={3} /> Armada
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1.5 -mt-0.5">
@@ -437,6 +450,14 @@ export default async function SchedulePage(props: PageProps) {
                                                         </div>
                                                     </div>
                                                     <div className="sm:text-right w-full sm:w-auto flex sm:flex-col gap-2">
+                                                        {/* La clase propia se abre en su página (PED-09). */}
+                                                        {!isStudentOrGuardian && !schedule.isPeer && lesson && lesson.type === "CLASS" && (
+                                                            <Link href={`/courses/${schedule.course.id}/lessons/${lesson.id}`} className="flex-1 sm:flex-none">
+                                                                <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold border-blue-500/30 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 transition-all flex items-center justify-center gap-1">
+                                                                    {registeredTopic ? "Abrir la clase" : "Armar la clase"} <ChevronRight size={14} />
+                                                                </Button>
+                                                            </Link>
+                                                        )}
                                                         <Link href={`/courses/${schedule.course.id}`} className="flex-1 sm:flex-none">
                                                             <Button variant="outline" size="sm" className="w-full h-8 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-all flex items-center justify-center gap-1.5">
                                                                 {schedule.isPeer

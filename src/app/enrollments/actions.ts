@@ -1,9 +1,12 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
+import { syncFinalExamLesson } from "@/lib/feeDue";
+import { instituteMonth } from "@/lib/dates";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -60,7 +63,7 @@ export async function createEnrollmentAction(formData: FormData) {
         // `getUTCFullYear` porque las fechas se guardan a medianoche UTC: un curso
         // que arranca el 1 de enero, leído en hora local, cae en diciembre del año
         // anterior.
-        const calendarYear = new Date().getFullYear();
+        const calendarYear = instituteMonth().year;
         const academicYear = enrollment.course.startDate
             ? enrollment.course.startDate.getUTCFullYear()
             : calendarYear;
@@ -157,93 +160,10 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
             return { success: false, error: "Inscripción no encontrada" };
         }
 
-        const currentYear = new Date().getFullYear();
+        const currentYear = instituteMonth().year;
 
-        // Start transaction for consistency
         await prisma.$transaction(async (tx) => {
-            // 1. Update the enrollment flag
-            await tx.enrollment.update({
-                where: { id: enrollmentId },
-                data: { takesExam }
-            });
-
-            if (takesExam) {
-                // 2. Calculate the exam price
-                const finalExamPrice = enrollment.customExamPrice !== null
-                    ? enrollment.customExamPrice
-                    : enrollment.course.examPrice;
-
-                if (finalExamPrice > 0) {
-                    // El chequeo previo busca por inscripción y año, **ignorando el
-                    // mes**, que es lo correcto: el derecho de examen es uno por año.
-                    // Hasta FIN-17 esa regla vivía sólo acá —la restricción única
-                    // incluye el mes, y la cuota se guardaba con el mes en que se
-                    // tocaba el interruptor, así que dos meses distintos no chocaban—.
-                    // Con `EXAM_FEE_MONTH` la base dice lo mismo que esta consulta.
-                    const existingFee = await tx.fee.findFirst({
-                        where: {
-                            studentId: enrollment.studentId,
-                            enrollmentId: enrollment.id,
-                            type: "EXAM",
-                            year: currentYear
-                        }
-                    });
-
-                    if (!existingFee) {
-                        await tx.fee.create({
-                            data: {
-                                studentId: enrollment.studentId,
-                                enrollmentId: enrollment.id,
-                                type: "EXAM",
-                                originalAmount: finalExamPrice,
-                                paidAmount: 0,
-                                status: "PENDING",
-                                month: EXAM_FEE_MONTH,
-                                year: currentYear,
-                                instituteId: user.instituteId as string
-                            }
-                        });
-                    }
-                }
-
-                // 3. Ensure a Lesson of type EXAM exists for this course
-                const existingExamLesson = await tx.lesson.findFirst({
-                    where: {
-                        courseId: enrollment.courseId,
-                        type: "EXAM",
-                        status: "ACTIVE"
-                    }
-                });
-
-                if (!existingExamLesson) {
-                    await tx.lesson.create({
-                        data: {
-                            courseId: enrollment.courseId,
-                            type: "EXAM",
-                            date: new Date(),
-                            topic: "Examen Final",
-                            content: "Generado automáticamente por el registro de exámenes finales."
-                        }
-                    });
-                }
-
-            } else {
-                // Remove the Exam Fee if it is unpaid
-                const existingFee = await tx.fee.findFirst({
-                    where: {
-                        studentId: enrollment.studentId,
-                        enrollmentId: enrollment.id,
-                        type: "EXAM",
-                        year: currentYear
-                    }
-                });
-
-                if (existingFee && existingFee.paidAmount === 0 && existingFee.status === "PENDING") {
-                    await tx.fee.delete({
-                        where: { id: existingFee.id }
-                    });
-                }
-            }
+            await applyExamRegistration(tx, enrollment, enrollment.course, takesExam, currentYear, user.instituteId as string);
         });
 
         revalidatePath(`/students/${enrollment.studentId}`);
@@ -252,4 +172,134 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
     } catch (e: any) {
         return { success: false, error: "Error al registrar para examen" };
     }
+}
+
+/**
+ * Carga el examen final para todo el curso de una vez.
+ *
+ * Rinden casi todos, así que la pantalla arranca con todos tildados y la
+ * secretaria destilda a los que no rinden; antes era entrar a la ficha de cada
+ * alumno y prender el interruptor. `takingEnrollmentIds` son los que rinden: el
+ * resto de las inscripciones activas queda sin examen. Cada alumno pasa por la
+ * misma regla que el interruptor de su ficha, que sigue sirviendo para los casos
+ * sueltos.
+ */
+export async function setCourseExamRegistrationsAction(courseId: string, takingEnrollmentIds: string[]) {
+    const user = await requireRole(INSTITUTE_STAFF);
+    if (!user) return { success: false, error: "Sin permisos" };
+
+    try {
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            include: { enrollments: { where: { status: "ACTIVE" } } }
+        });
+
+        if (!course || course.instituteId !== user.instituteId) {
+            return { success: false, error: "Curso no encontrado" };
+        }
+
+        const taking = new Set(takingEnrollmentIds);
+        const currentYear = instituteMonth().year;
+        let feesCreated = 0;
+
+        await prisma.$transaction(async (tx) => {
+            for (const enrollment of course.enrollments) {
+                const takesExam = taking.has(enrollment.id);
+                // El que no rinde y nunca rindió no tiene nada que deshacer.
+                if (!takesExam && !enrollment.takesExam) continue;
+                if (await applyExamRegistration(tx, enrollment, course, takesExam, currentYear, user.instituteId as string)) {
+                    feesCreated++;
+                }
+            }
+        }, { timeout: 30000 });
+
+        revalidatePath(`/courses/${courseId}`);
+        revalidatePath("/students/[id]", "page");
+        revalidatePath("/payments");
+        return { success: true, registered: taking.size, feesCreated };
+    } catch (e: any) {
+        return { success: false, error: "Error al cargar el examen final del curso" };
+    }
+}
+
+/**
+ * Deja una inscripción rindiendo o sin rendir el examen final del año, con su
+ * cuota y la clase de examen del curso. Devuelve si emitió una cuota nueva.
+ */
+async function applyExamRegistration(
+    tx: Prisma.TransactionClient,
+    enrollment: { id: string; studentId: string; courseId: string; customExamPrice: number | null },
+    course: { examPrice: number; examDate: Date | null },
+    takesExam: boolean,
+    currentYear: number,
+    instituteId: string
+): Promise<boolean> {
+    let feeCreated = false;
+
+    await tx.enrollment.update({
+        where: { id: enrollment.id },
+        data: { takesExam }
+    });
+
+    if (takesExam) {
+        const finalExamPrice = enrollment.customExamPrice !== null
+            ? enrollment.customExamPrice
+            : course.examPrice;
+
+        if (finalExamPrice > 0) {
+            // El chequeo previo busca por inscripción y año, **ignorando el
+            // mes**, que es lo correcto: el derecho de examen es uno por año.
+            // Hasta FIN-17 esa regla vivía sólo acá —la restricción única
+            // incluye el mes, y la cuota se guardaba con el mes en que se
+            // tocaba el interruptor, así que dos meses distintos no chocaban—.
+            // Con `EXAM_FEE_MONTH` la base dice lo mismo que esta consulta.
+            const existingFee = await tx.fee.findFirst({
+                where: {
+                    studentId: enrollment.studentId,
+                    enrollmentId: enrollment.id,
+                    type: "EXAM",
+                    year: currentYear
+                }
+            });
+
+            if (!existingFee) {
+                await tx.fee.create({
+                    data: {
+                        studentId: enrollment.studentId,
+                        enrollmentId: enrollment.id,
+                        type: "EXAM",
+                        originalAmount: finalExamPrice,
+                        paidAmount: 0,
+                        status: "PENDING",
+                        month: EXAM_FEE_MONTH,
+                        year: currentYear,
+                        instituteId
+                    }
+                });
+                feeCreated = true;
+            }
+        }
+
+        // La clase del examen final, en la fecha del examen. Sin fecha todavía no
+        // va: aparece cuando se carga en el curso (`updateCourseAction`).
+        await syncFinalExamLesson(tx, enrollment.courseId, course.examDate);
+    } else {
+        // Se saca la cuota sólo si está impaga
+        const existingFee = await tx.fee.findFirst({
+            where: {
+                studentId: enrollment.studentId,
+                enrollmentId: enrollment.id,
+                type: "EXAM",
+                year: currentYear
+            }
+        });
+
+        if (existingFee && existingFee.paidAmount === 0 && existingFee.status === "PENDING") {
+            await tx.fee.delete({
+                where: { id: existingFee.id }
+            });
+        }
+    }
+
+    return feeCreated;
 }

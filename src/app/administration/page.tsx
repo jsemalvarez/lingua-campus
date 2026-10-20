@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
 import { StudentAdministrationView } from "../dashboard/components/StudentAdministrationView";
+import { ageOn, instituteToday } from "@/lib/dates";
+import { feeStanding } from "@/lib/feeDue";
 
 export default async function StudentAdministrationPage() {
     const session = await getServerSession(authOptions);
@@ -26,7 +28,9 @@ export default async function StudentAdministrationPage() {
             fees: {
                 orderBy: [{ year: 'desc' }, { month: 'desc' }],
                 include: {
-                    payments: { where: { status: "VALID" } }
+                    payments: { where: { status: "VALID" } },
+                    // La fecha del examen es el vencimiento del derecho de examen.
+                    enrollment: { select: { course: { select: { examDate: true } } } }
                 }
             }
         }
@@ -35,28 +39,22 @@ export default async function StudentAdministrationPage() {
     if (!student) redirect("/login");
 
     // Doble verificación de edad (Seguridad)
-    let isMinor = false;
-    if (student.birthDate) {
-        const birth = new Date(student.birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birth.getFullYear();
-        const m = today.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-            age--;
-        }
-        isMinor = age < 18;
-    }
+    const isMinor = student.birthDate ? ageOn(student.birthDate) < 18 : false;
 
     if (isMinor) {
         redirect("/dashboard");
     }
 
+    const today = instituteToday();
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar currentActiveRole={activeRole} />
-            <StudentAdministrationView 
+            {/* La vista es de cliente: dónde cae cada cuota se decide acá, con el
+                mismo hoy y la misma regla que el portal de las familias. */}
+            <StudentAdministrationView
                 student={student}
-                fees={student.fees}
+                fees={student.fees.map(f => ({ ...f, standing: feeStanding(f, today) }))}
             />
         </div>
     );

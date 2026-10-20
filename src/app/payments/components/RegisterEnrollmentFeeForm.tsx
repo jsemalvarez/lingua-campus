@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { instituteMonth } from "@/lib/dates";
 import { generateStandaloneEnrollmentFeeAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, Calendar } from "lucide-react";
@@ -21,7 +22,7 @@ export function RegisterEnrollmentFeeForm({ students }: RegisterEnrollmentFeeFor
     const [errorMsg, setErrorMsg] = useState("");
     const [selectedStudent, setSelectedStudent] = useState<StudentInfo | null>(null);
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = instituteMonth().year;
     const nextYear = currentYear + 1;
 
     const handleSubmit = async (formData: FormData) => {

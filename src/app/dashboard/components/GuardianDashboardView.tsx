@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn, getMonthName } from "@/lib/utils";
 import Link from "next/link";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 
 import { GuardianAttendanceChart } from "./GuardianAttendanceChart";
 
@@ -117,7 +117,7 @@ export function GuardianDashboardView({
                                                 <div>
                                                     <h4 className="font-bold text-base leading-tight text-foreground/90">{grade.topic}</h4>
                                                     <p className="text-[11px] text-muted-foreground font-semibold mt-1.5 uppercase tracking-wider">
-                                                        {grade.studentName} • Evaluado el {dayjs(grade.createdAt).format("DD MMM, YYYY")}
+                                                        {grade.studentName} • Evaluado el {formatDate(grade.createdAt, "moment", "short")}
                                                     </p>
                                                     {grade.feedback && <p className="text-[12px] text-muted-foreground italic mt-1.5 line-clamp-1 border-l-2 pl-2">"{grade.feedback}"</p>}
                                                 </div>
@@ -198,9 +198,9 @@ export function GuardianDashboardView({
                                             
                                             <p className="font-bold text-sm leading-tight text-foreground/90">{lesson.topic || "Clase Regular"}</p>
                                             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-                                                <div className="w-1 h-1 rounded-full bg-border" /> 
-                                                {dayjs(lesson.date).format("MMM DD, YYYY")} 
-                                                <div className="w-1 h-1 rounded-full bg-border" /> 
+                                                <span className="w-1 h-1 rounded-full bg-border" />
+                                                {formatDate(lesson.date, "day", "short")}
+                                                <span className="w-1 h-1 rounded-full bg-border" />
                                                 {lesson.studentName}
                                             </p>
                                         </div>

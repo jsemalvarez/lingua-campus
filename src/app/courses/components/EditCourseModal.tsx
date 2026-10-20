@@ -40,6 +40,7 @@ interface EditCourseModalProps {
     currentMonthlyPrice: number;
     currentEnrollmentPrice: number;
     currentExamPrice: number;
+    currentExamDate: Date | null;
 }
 
 export function EditCourseModal({ 
@@ -56,7 +57,8 @@ export function EditCourseModal({
     currentEndDate,
     currentMonthlyPrice,
     currentEnrollmentPrice,
-    currentExamPrice
+    currentExamPrice,
+    currentExamDate
 }: EditCourseModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
@@ -79,6 +81,7 @@ export function EditCourseModal({
     const [monthlyPrice, setMonthlyPrice] = useState(currentMonthlyPrice.toString());
     const [enrollmentPrice, setEnrollmentPrice] = useState(currentEnrollmentPrice.toString());
     const [examPrice, setExamPrice] = useState(currentExamPrice.toString());
+    const [examDate, setExamDate] = useState(currentExamDate ? new Date(currentExamDate).toISOString().split('T')[0] : "");
 
     const palette = [
         { name: "Rojo 300", value: "#fca5a5" }, { name: "Rojo 500", value: "#ef4444" }, { name: "Rojo 700", value: "#b91c1c" }, { name: "Rojo 900", value: "#7f1d1d" },
@@ -117,6 +120,7 @@ export function EditCourseModal({
         formData.append("monthlyPrice", monthlyPrice);
         formData.append("enrollmentPrice", enrollmentPrice);
         formData.append("examPrice", examPrice);
+        formData.append("examDate", examDate);
 
         setStatus("idle");
         startTransition(async () => {
@@ -345,6 +349,21 @@ export function EditCourseModal({
                                             required
                                             className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
                                         />
+                                    </div>
+
+                                    <div className="space-y-1.5 focus-within:text-purple-500 transition-colors">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 px-1">
+                                            Fecha del Examen Final
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={examDate}
+                                            onChange={(e) => setExamDate(e.target.value)}
+                                            className="w-full px-4 py-2 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all focus:border-primary shadow-sm"
+                                        />
+                                        <p className="text-[11px] text-muted-foreground px-1">
+                                            Hasta ese día, el derecho de examen figura para las familias como un pago futuro, no como deuda.
+                                        </p>
                                     </div>
                                 </div>
                             </div>

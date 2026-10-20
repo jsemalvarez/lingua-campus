@@ -42,7 +42,7 @@ model Institute {
   pwaIcon512 String?
   cuit        String?
   grossIncome String?
-  activityStartDate DateTime?
+  activityStartDate DateTime? @db.Date
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -148,7 +148,7 @@ model Student {
   guardian2Relation String?
   guardian2Phone    String?
   guardian2Email    String?
-  birthDate     DateTime?
+  birthDate     DateTime? @db.Date
   joinDate      DateTime @default(now())
 
   // Ver la nota en `User.hasDefaultPassword`. Acá los candidatos incluyen el
@@ -233,13 +233,19 @@ model Course {
   batchSignatures ReportBatchSignature[]
 
 
-  startDate   DateTime?
-  endDate     DateTime?
+  startDate   DateTime? @db.Date
+  endDate     DateTime? @db.Date
 
   // Financials
   monthlyPrice   Float @default(0)
   enrollmentPrice Float @default(0)
   examPrice      Float @default(0)
+
+  // Cuándo rinde el curso el examen final. Es el vencimiento del derecho de
+  // examen: hasta ese día la cuota es un pago futuro, no una deuda, porque las
+  // familias lo van pagando de a partes durante el año. Sin fecha, tampoco es
+  // deuda. Ver `src/lib/feeDue.ts`.
+  examDate       DateTime? @db.Date
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -356,11 +362,18 @@ model Lesson {
   date        DateTime @db.Date
   topic       String
   content     String?  @db.Text
-  
+
+  // La clase del examen final, la que crea el campus al cargar el examen. Hace
+  // falta para distinguirla de las evaluaciones de unidad, que también son
+  // `EXAM`: antes se buscaba "cualquier EXAM del curso" y, si la docente ya
+  // había tomado una, la del final no se creaba nunca.
+  finalExam   Boolean  @default(false)
+
   attendances Attendance[]
   grades      Grade[]
   practice    LessonPractice?
   practiceSessions PracticeSession[]
+  plan        LessonPlan?
 
   scheduleId  String?
   schedule    Schedule? @relation(fields: [scheduleId], references: [id])
@@ -372,6 +385,34 @@ model Lesson {
   updatedAt   DateTime @updatedAt
 
   @@index([courseId, status])
+}
+
+// El armado de la clase (PED-09): las palabras, el foco y los cuatro momentos
+// —inicio, actividad principal, cierre y tarea— con las ideas para elegir. Es
+// material del docente para dar la clase: lo ven el docente del curso y la
+// administración, nunca los alumnos (lo de ellos es `LessonPractice`).
+//
+// Las palabras y los momentos son JSON porque son el documento que arma el
+// docente, no datos que se consulten por partes. La forma la valida
+// `src/lib/lessonPlan/plan.ts` en cada guardado.
+model LessonPlan {
+  id         String   @id @default(cuid())
+  lessonId   String   @unique
+  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  focus      String?  // Conversación, Gramática, Vocabulario...
+  words      Json     @default("[]") // [{ text, on, own }]
+  moments    Json?    // { inicio: { ideas, selectedId }, principal, cierre, tarea }
+  // El foco y las palabras con que se pidieron las ideas: si cambian, la página
+  // avisa que las ideas ya no las usan.
+  ideasBasis String?
+
+  // Cuántos momentos tienen una idea elegida. Se guarda aparte para que el
+  // Resumen, el calendario y el libro de temas digan «Armada» sin leer el JSON.
+  chosen     Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------
@@ -569,7 +610,10 @@ model Transaction {
   amount      Float    // Positivo para ingresos, Negativo para salidas
   type        TransactionType
   method      String   // EFECTIVO, TRANSFERENCIA, etc.
-  date        DateTime @default(now())
+  // El día contable (FIN-34): un día sin hora, el del calendario del instituto.
+  // La hora del registro es `createdAt`. Sin default: un `now()` de Postgres es
+  // el día de UTC, que a partir de las 21 de Argentina ya es mañana.
+  date        DateTime @db.Date
   status      TransactionStatus @default(VALID)
   
   description String?  // Concepto

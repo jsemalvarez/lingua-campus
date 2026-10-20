@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { ageOn, instituteToday } from "@/lib/dates";
 
 /**
  * Reglas de la firma de conformidad de informes (FEAT-09).
@@ -42,14 +43,13 @@ export function templateRequiresSignature(specialFields: unknown): boolean {
     return parent !== false;
 }
 
-/** Edad cumplida a una fecha dada. */
+/**
+ * Edad cumplida en un momento (la publicación del informe, ahora). El momento se
+ * pasa al día del instituto: un informe publicado a las 22 del día anterior al
+ * cumpleaños lo firma todavía el tutor.
+ */
 export function ageAt(birthDate: Date, at: Date): number {
-    let age = at.getFullYear() - birthDate.getFullYear();
-    const monthDiff = at.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && at.getDate() < birthDate.getDate())) {
-        age--;
-    }
-    return age;
+    return ageOn(birthDate, instituteToday(at));
 }
 
 /**

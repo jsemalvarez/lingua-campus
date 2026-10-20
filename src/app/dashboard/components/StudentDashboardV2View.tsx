@@ -17,9 +17,9 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/es";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/dates";
 
 dayjs.extend(relativeTime);
-dayjs.locale("es");
 
 interface StudentDashboardV2ViewProps {
    student: any;
@@ -75,7 +75,7 @@ export function StudentDashboardV2View({
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                <div className="max-w-xl">
                   <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-white/70 text-[10px] font-black uppercase tracking-[0.2em] mb-6 backdrop-blur-sm border border-white/5">
-                     Mi Espacio de Aprendizaje • {dayjs().format('MMMM YYYY')}
+                     Mi Espacio de Aprendizaje • {formatDate(new Date(), "moment", "monthYear")}
                   </span>
                   <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-6 leading-[1.1]">
                      ¿Qué tal tu día,<br /> {firstName}?
@@ -188,7 +188,7 @@ export function StudentDashboardV2View({
                         <div className="flex items-center gap-3 p-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary">
                            <Calendar size={14} />
                            <span className="text-[10px] font-black uppercase tracking-widest">
-                              {dayjs(nextSession.date).format('dddd DD')} • {nextSession.schedule?.startTime}
+                              {formatDate(nextSession.date, "day", "weekdayDay")} • {nextSession.schedule?.startTime}
                            </span>
                         </div>
                         <p className="text-sm font-black leading-tight line-clamp-2">

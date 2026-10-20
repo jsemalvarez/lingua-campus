@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState, useEffect } from "react";
+import { instituteMonth } from "@/lib/dates";
 import { generateMonthlyFeesAction, generateYearlyEnrollmentFeesAction, countYearlyEnrollmentTargetsAction } from "../billingActions";
 import { Button } from "@/components/ui/Button";
 import { Calculator, ChevronDown, Calendar, GraduationCap } from "lucide-react";
@@ -11,9 +12,9 @@ export function GenerateFeesButton() {
     const [showOptions, setShowOptions] = useState(false);
     const [mode, setMode] = useState<"MONTHLY" | "ENROLLMENT">("MONTHLY");
     
-    const now = new Date();
-    const [month, setMonth] = useState(now.getMonth() + 1);
-    const [year, setYear] = useState(now.getFullYear());
+    const now = instituteMonth();
+    const [month, setMonth] = useState(now.month);
+    const [year, setYear] = useState(now.year);
     const [enrollmentAmount, setEnrollmentAmount] = useState<number>(0);
 
     const months = [
@@ -25,7 +26,7 @@ export function GenerateFeesButton() {
     // apretar, no después, porque un botón que no hace nada se lee como una
     // falla del sistema. `null` es "todavía no sé": ni habilita ni explica.
     const [reachedEnrollments, setReachedEnrollments] = useState<number | null>(null);
-    const isCurrentYear = year === now.getFullYear();
+    const isCurrentYear = year === now.year;
 
     useEffect(() => {
         if (mode !== "ENROLLMENT") return;
@@ -174,7 +175,7 @@ export function GenerateFeesButton() {
                                 onChange={(e) => setYear(parseInt(e.target.value))}
                                 className={`w-full bg-muted/40 border border-border/40 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 ${mode === "MONTHLY" ? "focus:ring-emerald-500/30" : "focus:ring-blue-500/30"}`}
                             >
-                                {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
+                                {[now.year - 1, now.year, now.year + 1].map(y => (
                                     <option key={y} value={y}>{y}</option>
                                 ))}
                             </select>

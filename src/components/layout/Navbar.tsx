@@ -15,6 +15,7 @@ import { MessagesBell } from "@/components/layout/MessagesBell";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
 import { StudyBackground } from "@/components/layout/StudyBackground";
 import { StudentQRModal } from "@/components/layout/StudentQRModal";
+import { ageOn } from "@/lib/dates";
 
 /**
  * Premium dashboard navigation bar.
@@ -89,14 +90,7 @@ export function Navbar({
     let isMinor = true;
     if (activeRole === "STUDENT") {
         if (sessionUser?.birthDate) {
-            const birthDate = new Date(sessionUser.birthDate);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            isMinor = age < 18;
+            isMinor = ageOn(sessionUser.birthDate) < 18;
         }
     } else {
         isMinor = false;

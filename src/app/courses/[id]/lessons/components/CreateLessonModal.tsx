@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { instituteTodayKey } from "@/lib/dates";
 import { createPortal } from "react-dom";
 import { createLessonAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import {
     Plus, X, Calendar, BookOpen, FileText, CheckCircle, AlertCircle,
-    FileEdit, GraduationCap, Sparkles, ChevronDown, ChevronUp, Mic2,
-    Headphones, MessageSquare, Eye, EyeOff, Wand2
+    FileEdit, GraduationCap, Info, ChevronRight
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +21,13 @@ interface Schedule {
 
 const daysMapping = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
+/**
+ * Alta de clase, TP o examen en el libro de temas.
+ *
+ * La clase pide sólo fecha, horario y tema, y al crearse abre su página, que es
+ * donde se cargan los contenidos y la práctica (PED-09). El TP y el examen siguen
+ * enteros acá: no tienen práctica ni página propia.
+ */
 export function CreateLessonModal({
     courseId,
     lessonType = "CLASS",
@@ -36,14 +43,15 @@ export function CreateLessonModal({
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const [mounted, setMounted] = useState(false);
-    const [showPractice, setShowPractice] = useState(false);
-    const [practicePublished, setPracticePublished] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const todayStr = new Date().toISOString().split("T")[0];
+    // El día de hoy en el calendario del instituto. `toISOString()` lo daba en UTC:
+    // a la noche, en Argentina, proponía la fecha de mañana.
+    const todayStr = instituteTodayKey();
+    const isClass = lessonType === "CLASS";
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -55,12 +63,14 @@ export function CreateLessonModal({
         startTransition(async () => {
             const result = await createLessonAction(formData);
             if (result.success) {
+                if (isClass && "lessonId" in result && result.lessonId) {
+                    router.push(`/courses/${courseId}/lessons/${result.lessonId}`);
+                    return;
+                }
                 setStatus("success");
                 setTimeout(() => {
                     setIsOpen(false);
                     setStatus("idle");
-                    setShowPractice(false);
-                    setPracticePublished(false);
                     router.refresh();
                 }, 1500);
             } else {
@@ -73,9 +83,9 @@ export function CreateLessonModal({
     const config = {
         CLASS: {
             label: "Clase",
-            title: "Registrar Nueva Clase",
-            success: "Clase registrada exitosamente.",
-            btn: "Crear Clase",
+            title: "Nueva clase",
+            success: "Clase creada.",
+            btn: "Crear y abrir la clase",
             Icon: Calendar,
             color: "text-blue-500",
             btnColor: "bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-none",
@@ -123,7 +133,7 @@ export function CreateLessonModal({
                         <current.Icon className={current.color} />
                         {current.title}
                     </h2>
-                    <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                    <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} aria-label="Cerrar">
                         <X size={20} />
                     </Button>
                 </div>
@@ -131,210 +141,81 @@ export function CreateLessonModal({
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     <input type="hidden" name="type" value={lessonType} />
 
-                    {/* Fecha */}
-                    <div className="space-y-1.5 focus-within:text-primary transition-colors">
-                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                            Fecha
-                        </label>
-                        <input
-                            type="date"
-                            name="date"
-                            defaultValue={todayStr}
-                            required
-                            className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-text focus:border-primary"
-                        />
-                    </div>
-
-                    {/* Horario */}
-                    {schedules.length > 0 && (
+                    <div className={isClass && schedules.length > 0 ? "grid gap-5 sm:grid-cols-2" : "space-y-5"}>
+                        {/* Fecha */}
                         <div className="space-y-1.5 focus-within:text-primary transition-colors">
-                            <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                                Horario Correspondiente
+                            <label htmlFor="nueva-fecha" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                Fecha
                             </label>
-                            <select
-                                name="scheduleId"
-                                className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
-                                defaultValue={schedules.length === 1 ? schedules[0].id : ""}
-                            >
-                                <option value="">Seleccionar horario </option>
-                                {schedules.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                        {daysMapping[s.dayOfWeek]} {s.startTime} - {s.endTime}{s.room ? ` (${s.room})` : ""}
-                                    </option>
-                                ))}
-                            </select>
+                            <input
+                                id="nueva-fecha"
+                                type="date"
+                                name="date"
+                                defaultValue={todayStr}
+                                required
+                                className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-text focus:border-primary"
+                            />
                         </div>
-                    )}
+
+                        {/* Horario */}
+                        {schedules.length > 0 && (
+                            <div className="space-y-1.5 focus-within:text-primary transition-colors">
+                                <label htmlFor="nueva-horario" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Horario
+                                </label>
+                                <select
+                                    id="nueva-horario"
+                                    name="scheduleId"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
+                                    defaultValue={schedules.length === 1 ? schedules[0].id : ""}
+                                >
+                                    <option value="">Seleccionar horario </option>
+                                    {schedules.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {daysMapping[s.dayOfWeek]} {s.startTime} - {s.endTime}{s.room ? ` (${s.room})` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Tema */}
                     <div className="space-y-1.5 focus-within:text-primary transition-colors">
-                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                            <BookOpen size={14} /> Tema / Título Principal
+                        <label htmlFor="nueva-tema" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            <BookOpen size={14} /> {isClass ? "Tema" : "Tema / Título Principal"}
                         </label>
                         <input
+                            id="nueva-tema"
                             type="text"
                             name="topic"
                             placeholder="Ej: Past Simple vs Continuous"
                             required
+                            maxLength={200}
                             className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all focus:border-primary"
                         />
                     </div>
 
-                    {/* Contenidos */}
-                    <div className="space-y-1.5 focus-within:text-primary transition-colors">
-                        <label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                            <FileText size={14} /> Contenidos / Tareas (Opcional)
-                        </label>
-                        <textarea
-                            name="content"
-                            rows={3}
-                            placeholder="Páginas del libro, tareas asignadas, notas de la sesión..."
-                            className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none focus:border-primary"
-                        />
-                    </div>
-
-                    {/* ── SECCIÓN DE PRÁCTICA (solo en CLASS) ── */}
-                    {lessonType === "CLASS" && (
-                        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 overflow-hidden">
-
-                            {/* Toggle header */}
-                            <button
-                                type="button"
-                                onClick={() => setShowPractice(!showPractice)}
-                                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-violet-500/10 transition-colors"
-                            >
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center">
-                                        <Sparkles size={14} className="text-violet-500" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-violet-700 dark:text-violet-300">
-                                            Material de Práctica con IA
-                                        </p>
-                                        <p className="text-[11px] text-violet-500/70 dark:text-violet-400/60 font-medium">
-                                            Opcional · Los alumnos practicarán lo visto en esta clase
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-violet-400">
-                                    {showPractice
-                                        ? <ChevronUp size={18} />
-                                        : <ChevronDown size={18} />
-                                    }
-                                </div>
-                            </button>
-
-                            {/* Contenido expandible */}
-                            {showPractice && (
-                                <div className="px-5 pb-5 space-y-5 border-t border-violet-500/15">
-
-                                    {/*
-                                      * El botón de generar con IA vive en el modal de edición y no
-                                      * acá: la clase todavía no existe, y el servidor arma el
-                                      * material leyendo su tema y sus contenidos de la base (PED-01).
-                                      * Que falte sin explicación es lo que termina en un llamado a
-                                      * soporte, así que se dice acá mismo qué hacer.
-                                      */}
-                                    <div className="mt-4 flex items-start gap-2.5 p-3.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                                        <Wand2 size={15} className="text-violet-500 flex-shrink-0 mt-0.5" />
-                                        <div className="space-y-1.5">
-                                            <p className="text-[12px] font-bold text-violet-700 dark:text-violet-300">
-                                                El botón &quot;Generar práctica con IA&quot; aparece al editar la clase.
-                                            </p>
-                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
-                                                Creá la clase con el tema y los contenidos, y volvé a abrirla con el
-                                                lápiz de editar: ahí está el botón. La IA se apoya sobre todo en los{" "}
-                                                <strong>Contenidos</strong> —el Tema es el título que ven alumnos y
-                                                tutores—, así que cuanto más concreto sea lo que anotes, mejor sale el
-                                                material. También podés cargar la práctica a mano acá abajo.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Speaking */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2">
-                                            <Mic2 size={14} /> Frases para Speaking
-                                        </label>
-                                        <textarea
-                                            name="speakingPhrases"
-                                            rows={4}
-                                            placeholder={"She sells sea shells by the seashore.\nThe weather is better in the south.\nHow much wood would a woodchuck chuck..."}
-                                            className="w-full px-4 py-3 rounded-xl border border-violet-300/40 bg-background text-sm outline-none focus:ring-2 focus:ring-violet-500/20 transition-all resize-none focus:border-violet-400 font-mono placeholder:font-sans placeholder:text-muted-foreground/50"
-                                        />
-                                        <p className="text-[11px] text-muted-foreground font-medium">
-                                            Una frase por línea. La IA las usará como base para generar los ejercicios del alumno.
-                                        </p>
-                                    </div>
-
-                                    {/* Listening */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2">
-                                            <Headphones size={14} /> Texto para Listening{" "}
-                                            <span className="text-[11px] font-normal text-muted-foreground">(Opcional)</span>
-                                        </label>
-                                        <textarea
-                                            name="listeningText"
-                                            rows={3}
-                                            placeholder="Escribí un párrafo breve en inglés. Se convertirá en audio automáticamente para que los alumnos practiquen su comprensión auditiva."
-                                            className="w-full px-4 py-3 rounded-xl border border-violet-300/40 bg-background text-sm outline-none focus:ring-2 focus:ring-violet-500/20 transition-all resize-none focus:border-violet-400"
-                                        />
-                                    </div>
-
-                                    {/* Chatbot */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2">
-                                            <MessageSquare size={14} /> Escenario para Chatbot{" "}
-                                            <span className="text-[11px] font-normal text-muted-foreground">(Opcional)</span>
-                                        </label>
-                                        <textarea
-                                            name="chatScenario"
-                                            rows={2}
-                                            placeholder="Ej: Simula ser un mozo en un café. El alumno es un turista de habla inglesa. Nivel B1."
-                                            className="w-full px-4 py-3 rounded-xl border border-violet-300/40 bg-background text-sm outline-none focus:ring-2 focus:ring-violet-500/20 transition-all resize-none focus:border-violet-400"
-                                        />
-                                    </div>
-
-                                    {/* Publicar toggle */}
-                                    <div
-                                        onClick={() => setPracticePublished(!practicePublished)}
-                                        className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all select-none ${practicePublished
-                                            ? "border-violet-400/50 bg-violet-500/10"
-                                            : "border-border/50 bg-background hover:border-violet-400/30 hover:bg-violet-500/5"
-                                            }`}
-                                    >
-                                        <input
-                                            type="hidden"
-                                            name="practicePublished"
-                                            value={practicePublished ? "true" : "false"}
-                                        />
-                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${practicePublished
-                                            ? "bg-violet-500 border-violet-500"
-                                            : "border-muted-foreground/40"
-                                            }`}>
-                                            {practicePublished && (
-                                                <svg viewBox="0 0 10 8" className="w-3 h-3 fill-white">
-                                                    <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold flex items-center gap-1.5">
-                                                {practicePublished
-                                                    ? <><Eye size={13} className="text-violet-500" /> Práctica visible para los alumnos</>
-                                                    : <><EyeOff size={13} className="text-muted-foreground" /> Guardar como borrador</>
-                                                }
-                                            </p>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                {practicePublished
-                                                    ? "Los alumnos podrán practicar esta clase al guardar."
-                                                    : "Podés publicarla más tarde editando la clase."
-                                                }
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                    {isClass ? (
+                        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-muted/40 text-[13px] leading-relaxed text-muted-foreground">
+                            <Info size={16} className="shrink-0 mt-0.5" />
+                            <p>
+                                Los contenidos y la práctica de los alumnos se cargan en la página de la clase,
+                                que se abre al crearla.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5 focus-within:text-primary transition-colors">
+                            <label htmlFor="nueva-contenidos" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                <FileText size={14} /> Contenidos / Tareas (Opcional)
+                            </label>
+                            <textarea
+                                id="nueva-contenidos"
+                                name="content"
+                                rows={3}
+                                placeholder="Páginas del libro, tareas asignadas, notas de la sesión..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none focus:border-primary"
+                            />
                         </div>
                     )}
 
@@ -355,8 +236,13 @@ export function CreateLessonModal({
                         <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={isPending}>
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={isPending} className="premium-gradient font-bold px-6">
-                            {isPending ? "Guardando..." : current.btn}
+                        <Button
+                            type="submit"
+                            disabled={isPending}
+                            className={isClass ? "bg-[#23806a] hover:bg-[#1f7360] text-white font-bold px-5 gap-1" : "premium-gradient font-bold px-6"}
+                        >
+                            {isPending ? (isClass ? "Creando..." : "Guardando...") : current.btn}
+                            {isClass && !isPending && <ChevronRight size={16} />}
                         </Button>
                     </div>
                 </form>

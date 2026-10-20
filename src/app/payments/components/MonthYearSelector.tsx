@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { instituteMonth } from "@/lib/dates";
 import { Calendar } from "lucide-react";
 
 interface MonthYearSelectorProps {
@@ -19,7 +20,7 @@ export function MonthYearSelector({ currentMonth, currentYear }: MonthYearSelect
     ];
 
     const years: number[] = [];
-    const activeYear = new Date().getFullYear();
+    const activeYear = instituteMonth().year;
     // Permitir seleccionar desde 2 años anteriores hasta 1 año futuro
     for (let y = activeYear - 2; y <= activeYear + 1; y++) {
         years.push(y);

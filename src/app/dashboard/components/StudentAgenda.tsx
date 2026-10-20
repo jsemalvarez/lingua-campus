@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
+import { instituteToday } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { Clock, User, MapPin, Video, BookOpen, Star } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import dayjs from "dayjs";
 
 interface StudentAgendaProps {
   enrollments: any[];
@@ -14,7 +14,7 @@ export function StudentAgenda({ enrollments }: StudentAgendaProps) {
   const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
   const fullDayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   
-  const todayIndex = dayjs().day(); // 0-6
+  const todayIndex = instituteToday().getUTCDay(); // 0-6, el día del instituto
 
   // Agrupar horarios por día
   const weekSchedule = Array.from({ length: 7 }, (_, i) => {

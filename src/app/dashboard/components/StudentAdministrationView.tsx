@@ -17,6 +17,7 @@ import dayjs from "dayjs";
 import { cn, getMonthName } from "@/lib/utils";
 import { formatFeeLabel } from "@/lib/utils";
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
+import { UpcomingFeesSection } from "@/components/financials/UpcomingFeesSection";
 
 interface StudentAdministrationViewProps {
   student: any;
@@ -29,19 +30,20 @@ export function StudentAdministrationView({
 }: StudentAdministrationViewProps) {
   
   const formatter = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
-  const now = dayjs();
-  const currentMonth = now.month();
-  const currentYear = now.year();
 
-  const pendingFees = fees.filter(f => f.status !== "PAID");
+  // `standing` lo calcula la página con `feeStanding` (src/lib/feeDue.ts): el
+  // derecho de examen que no venció va aparte y no suma deuda.
+  const unpaidFees = fees.filter(f => f.status !== "PAID");
+  const pendingFees = unpaidFees.filter(f => f.standing !== "UPCOMING");
+  const upcomingFees = unpaidFees.filter(f => f.standing === "UPCOMING");
   const paidFees = fees.filter(f => f.status === "PAID" && f.paidAmount > 0);
 
   const oldDebtSum = pendingFees
-    .filter(f => f.year < currentYear || (f.year === currentYear && f.month < currentMonth))
+    .filter(f => f.standing === "OVERDUE")
     .reduce((acc, f) => acc + (f.originalAmount - f.paidAmount), 0);
 
   const currentMonthDebtSum = pendingFees
-    .filter(f => f.year === currentYear && f.month === currentMonth)
+    .filter(f => f.standing === "CURRENT")
     .reduce((acc, f) => acc + (f.originalAmount - f.paidAmount), 0);
 
   return (
@@ -85,6 +87,16 @@ export function StudentAdministrationView({
         </Card>
       </div>
 
+      <UpcomingFeesSection
+        fees={upcomingFees.map(f => ({
+          id: f.id,
+          label: formatFeeLabel(f.type, f.month, f.year),
+          originalAmount: f.originalAmount,
+          paidAmount: f.paidAmount,
+          dueDate: f.enrollment?.course?.examDate ?? null,
+        }))}
+      />
+
       {/* MAIN CONTENT GRID */}
       <div className="grid lg:grid-cols-5 gap-8 items-start">
          
@@ -107,14 +119,13 @@ export function StudentAdministrationView({
                          <div className="flex items-center gap-5">
                             <div className="w-14 h-14 bg-muted/50 rounded-2xl flex items-center justify-center">
                                <Calendar className={cn(
-                                 (fee.year < currentYear || (fee.year === currentYear && fee.month < currentMonth)) 
-                                   ? "text-rose-500" : "text-primary"
+                                 fee.standing === "OVERDUE" ? "text-rose-500" : "text-primary"
                                )} size={24} />
                             </div>
                             <div>
                                <h4 className="text-lg font-black tracking-tight italic uppercase">{formatFeeLabel(fee.type, fee.month, fee.year)}</h4>
                                <p className="text-[10px] font-bold uppercase text-muted-foreground mt-1 tracking-widest">
-                                 {fee.year < currentYear || (fee.year === currentYear && fee.month < currentMonth) ? "Vencida" : "En Fecha"}
+                                 {fee.standing === "OVERDUE" ? "Vencida" : "En Fecha"}
                                </p>
                             </div>
                          </div>

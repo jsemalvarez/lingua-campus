@@ -253,6 +253,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
+| [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [ ] |
+| [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [x] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -309,6 +311,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
 | [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
 | [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [~] |
+| [FEAT-33](#feat-33) | P3 | 🗣️ Incorporar las clases particulares al sistema | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -335,6 +338,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
 | [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [ ] |
 | [PED-10](#ped-10) | P2 | Consumo de IA por instituto, visible para el superadmin | [ ] |
+| [PED-13](#ped-13) | P3 | Práctica de escritura con devolución que marca sin corregir | [ ] |
 
 ---
 
@@ -2390,6 +2394,10 @@ distinguir **mover** de **agregar**, que es la rama que la propia ficha anticipa
 de baja el viejo genera dos cuotas por mes — que ahora es el comportamiento correcto, pero puede no
 ser el que el operador quiso. En producción no pasó nunca, así que no urge.
 
+**Pasó — 2026-10-15.** Una alumna con dos inscripciones activas desde el 02/09, cobrada dos veces
+en matrícula y en octubre. El arreglo desde la app se traba en las cuotas anuladas: ver
+[FIN-33](#fin-33).
+
 ---
 
 <a id="fin-21"></a>
@@ -3352,6 +3360,127 @@ que la deuda da $0 y lo termina rechazando el servidor con *"Datos del pago inv�
 [FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué), [FIN-27](#fin-27) (la otra
 vez que esta misma pantalla dijo algo que no había pasado), [FIN-25](#fin-25) (las condiciones
 especiales que se tipean de memoria porque no están en ningún lado).
+
+---
+
+<a id="fin-33"></a>
+## FIN-33 · Anular un cobro hecho por error deja una deuda que no se puede borrar · **P1**
+
+**Abierto el 2026-10-15**, con un caso de producción: Paz Isabella Calderón, con dos pagos de
+*"Cuota Octubre 2026"* el 14/10. No fue un pago repetido sobre la misma cuota: la alumna tiene **dos
+inscripciones activas** —*Children 3 M-J late shift* (31/08) y *Children 3 L-M TT* (02/09)—, cada
+una generó su octubre, y se cobraron las dos, más una segunda matrícula el 24/09. El instituto
+confirma que cursa un solo curso: **la segunda inscripción, la segunda matrícula y el segundo octubre
+son errores de carga**. Es el caso que [FIN-20](#fin-20) daba por no ocurrido, y la segunda
+inscripción es del mismo día en que se pidió [BUG-13](#bug-13): con toda probabilidad, un cambio de
+curso hecho inscribiendo de nuevo.
+
+El error fue humano. **Lo que es del sistema es que no se puede deshacer entero desde la app.**
+
+**Lo que el administrador sí puede hacer hoy:**
+
+1. **Anular los pagos de más** desde la ficha del alumno
+   ([`voidPaymentAction`](../src/app/payments/actions.ts)). Asienta el `REFUND` y deja la cuota en
+   cero.
+2. Si la plata **queda a cuenta** en vez de devolverse, registrar un anticipo
+   ([`registerAdvanceAction`](../src/app/payments/actions.ts)) y aplicarlo a los meses siguientes.
+3. **Marcar incompleta** la inscripción que sobra
+   ([`markEnrollmentIncompleteAction`](../src/app/courses/actions.ts)): el generador mensual sólo
+   emite para inscripciones `ACTIVE`, así que deja de generar cuotas.
+
+**Y donde se traba.** Anular el pago devuelve la cuota a `PENDING`, y desde ahí no hay salida:
+
+- **Eliminar cuota** se niega si la cuota tiene alguna fila de `Payment`, anulada o no
+  ([`billingActions.ts:440`](../src/app/payments/billingActions.ts)): *"Anule los pagos primero"*,
+  y ya están anulados.
+- **Eliminar inscripción** tiene el mismo corte por filas de `Payment`
+  ([`courses/actions.ts:252`](../src/app/courses/actions.ts)), que ahí es correcto: lo que tuvo plata
+  se marca, no se borra.
+- Las listas de deudores, la ficha y el panel de la familia leen `PENDING`/`PARTIAL` **sin mirar el
+  estado de la inscripción** ([`payments/page.tsx:124`](../src/app/payments/page.tsx),
+  [`billingActions.ts:358`](../src/app/payments/billingActions.ts)).
+
+Resultado: después de hacer todo bien, Paz figura debiendo $84.000 (un octubre y una matrícula) que
+nunca debió. **La app tiene cómo anular el cobro, pero no la deuda que ese cobro saldaba.** No es el
+caso de Paz: es cualquier cuota emitida por error que alguien llegó a cobrar.
+
+**Y el cambio de curso no ofrece otro camino.** Si se quisiera conservar la inscripción vieja y
+pasarla al curso nuevo con *Cambiar curso*, choca con el índice `studentId_courseId`, porque la
+inscripción duplicada en ese curso no se puede borrar
+([`changeStudentCourseAction`](../src/app/students/[id]/actions.ts) devuelve además un error genérico,
+sin decir por qué). Así que la que se queda es la del curso que el alumno cursa hoy, y la otra se
+marca incompleta. Septiembre, cobrado en la inscripción vieja, queda donde está: se pagó una vez.
+
+**Cambio propuesto.** Que `deleteFeeAction` acepte una cuota cuyos pagos estén **todos** en
+`VOIDED`, con el motivo obligatorio y el registro en `FeeDeletion` que ya tiene
+(`/payments/deletions`). La cuota se borra; los pagos anulados y sus contra-asientos no, porque son
+la historia de la caja — así que el `Payment_feeId_fkey` en RESTRICT obliga a resolver qué pasa con
+ellos (desengancharlos con `feeId` nulo, o borrado lógico de la cuota en vez de físico, que es la
+línea de [ARQ-05](#arq-05)). **Esa es la decisión que falta**, antes de codificar.
+
+Con eso el camino completo del administrador queda en tres pasos —anular, eliminar, marcar
+incompleta— y sin tocar la base a mano.
+
+**Mientras tanto, el caso de Paz** se puede dejar en los pasos 1 a 3 y aceptar las dos deudas falsas
+a la vista, o esperar este arreglo. Lo que no conviene es borrarlas por SQL: se pierde el registro en
+`FeeDeletion` que justamente esta ficha quiere conservar.
+
+**Lo que también se ve desde acá.** En *Movimientos Recientes* los dos cobros decían exactamente lo
+mismo —*"Cuota Octubre 2026 - Paz isabella calderón"*—, sin el curso, y por eso el 14/10 no se notó
+que eran de dos inscripciones distintas. La lista de deudores sí lo nombra
+([`debtors/page.tsx:62`](../src/app/payments/debtors/page.tsx)); el movimiento no.
+
+**Relacionado.** [FIN-20](#fin-20) (la ficha donde quedó abierto *mover* contra *agregar*),
+[BUG-13](#bug-13) (el pedido del mismo día), [FIN-24](#fin-24) (qué pasa con las cuotas al cambiar
+de curso), [FIN-23](#fin-23) (por qué eliminar inscripción se niega con pagos), [ARQ-05](#arq-05)
+(borrado lógico).
+
+---
+
+<a id="fin-34"></a>
+## FIN-34 · Un cobro de después de las 21 aparece al día siguiente en los movimientos · **P2**
+
+**Visto el 2026-10-17**, revisando las fechas que se corrían un día (ver `src/lib/dates.ts`). No se
+vio en datos: sale de leer el código.
+
+**El mecanismo.** `Transaction.date` mezcla dos clases de fecha según quién creó la fila
+([`payments/actions.ts`](../src/app/payments/actions.ts), [`teachers/actions.ts`](../src/app/teachers/actions.ts)):
+
+- **Un día**, a medianoche UTC: los gastos y sueldos (`date: exp.date`, `new Date(date)`) y los
+  ingresos varios (`date: inc.date`), que vienen de columnas `@db.Date`.
+- **Un momento**, con hora: los cobros, las anulaciones, los reintegros y los adelantos
+  (`date: new Date()`).
+
+La tabla de movimientos ([`TransactionTable.tsx`](../src/app/payments/components/TransactionTable.tsx))
+lee todo como día, en UTC. Para los gastos está bien; para un cobro registrado a las 21:30 en
+Argentina —00:30 UTC del día siguiente— muestra el día siguiente. Antes del 2026-10-17 pasaba lo
+mismo: el arreglo de esa fecha cambió el formato y el idioma, no qué día se lee.
+
+**Por qué no se arregló junto.** Decidir fila por fila exige saber de qué clase es cada una, y el
+tipo no alcanza: `MISC_INCOME` es un día si viene de «ingreso vario» y un momento si es un adelanto
+(`registerAdvanceAction` guarda `new Date()` también en `MiscellaneousIncome.date`, que es
+`@db.Date`, así que un adelanto de las 22 ya queda guardado con el día siguiente). Es tocar la caja,
+y conviene decidirlo aparte.
+
+**Caminos.** (1) Que la fila diga su clase desde el servidor, con una regla por tipo y origen;
+(2) guardar siempre un día en `Transaction.date` y la hora en `createdAt`. Antes de elegir, revisar
+cómo cortan por fecha el cierre de caja y los reportes (no se miró), y medir cuántos cobros de prod
+caen después de las 21.
+
+**P2.** Pocos institutos cobran después de las 21, pero cuando pasa, el cobro figura en un día en que
+la caja no lo tuvo.
+
+**Resuelto el 2026-10-18 con el camino 2** (migración `20261018130000_caja_dia_contable`).
+`Transaction.date` pasó a `@db.Date`: es el día contable, y la hora del registro queda en `createdAt`.
+Las escrituras pasan `instituteToday()` —el día del calendario del instituto, ver `src/lib/dates.ts`—;
+el gasto sin fecha cargada y el adelanto, también (el adelanto guardaba el día UTC en un `@db.Date`).
+La columna quedó sin `DEFAULT`, porque el `now()` de Postgres es el día de UTC. La migración toma la
+medianoche UTC exacta como día y cualquier otra marca como instante en hora argentina. Medido en
+producción antes de migrar: los 121 gastos y sueldos a medianoche exacta, y ninguno de los 1745
+instantes entre las 21 y la medianoche, así que ningún movimiento cambia de día. Los movimientos del
+mismo día se ordenan por `createdAt`. Verificado en local a las 23:36 con el servidor en UTC: un gasto
+y su anulación quedaron el 18/10, y un cobro viejo de las 22:20 del 12/04 pasó del 13/04 al 12/04.
+`Payment.date` sigue siendo un instante: es la hora del cobro, y el recibo la usa.
 
 ---
 
@@ -8574,6 +8703,49 @@ compartir el visor. **Falta stage**, que tiene los datos reales que la base loca
 
 ---
 
+<a id="feat-33"></a>
+## FEAT-33 · Incorporar las clases particulares al sistema · **P3** · 🗣️ Pedido del cliente
+
+**Pedido (2026-10-03).** Poder llevar en el sistema las clases particulares que da el instituto. Sin
+apuro: se anota para cuando haya lugar.
+
+**Hoy se puede cargar una a medias, como un curso de un solo alumno.** Nada lo impide —el curso no
+exige nivel, aula ni cantidad mínima de alumnos—, y todo lo que cuelga del curso —parte, notas,
+práctica, mensajes al profesor, boletín— no depende de cuántos alumnos tenga. Lo que no encaja son tres
+cosas, y las tres son de plata o de agenda:
+
+1. **El cobro es mensual o por curso completo, y nada más.** `BillingMode` tiene `MONTHLY` y
+   `FULL_COURSE` ([`schema.prisma:248`](../prisma/schema.prisma)). Una particular suele cobrarse por
+   clase o por paquete de clases, y eso no existe: habría que meterla como cuota mensual con un precio
+   que no es el que se cobra, o cargarla a mano como ingreso suelto.
+2. **Al profesor se le paga por el horario fijo del curso.** La liquidación toma la duración de cada
+   clase de su `Schedule` ([`payroll.ts:38`](../src/lib/payroll.ts)) y la multiplica por **una sola**
+   tarifa por hora del docente (`hourlyRate`). Una particular que se acuerda semana a semana no tiene
+   horario fijo, y una clase sin horario **suma 0 minutos**: en la ficha del docente se ve con un aviso
+   ámbar ([`TeacherPayrollSection.tsx:345`](../src/app/teachers/[id]/TeacherPayrollSection.tsx)), y
+   en la liquidación general cuenta como clase pero no suma plata
+   ([`payroll.ts:143`](../src/lib/payroll.ts)). Si además la particular se le paga distinto que la
+   hora de grupo, hoy no hay dónde decirlo.
+3. **La agenda.** La carga de clases y el calendario se apoyan en los horarios del curso
+   ([`CreateLessonModal.tsx:149`](../src/app/courses/[id]/lessons/components/CreateLessonModal.tsx)):
+   sirven para lo que se repite cada semana, no para una clase que se mueve.
+
+**Lo que hay que preguntarle al instituto antes de diseñar:**
+
+- Cómo se cobran: por clase, por paquete o por mes.
+- Cómo se le pagan al profesor: a la misma tarifa que la hora de grupo o a otra.
+- Si tienen horario fijo o se acuerdan cada vez.
+- Si el alumno de la particular es además alumno de un curso, o sólo de la particular.
+
+**Y medir antes de preguntar:** si el instituto ya está cargando alguna como curso de un solo alumno,
+o las lleva fuera del sistema. Lo que ya haya cargado dice cuál de los tres puntos le duele.
+
+**Relacionado.** [FEAT-17](#feat-17) (el borrador de la clase, que también arrastra la liquidación),
+[FEAT-14](#feat-14) (el carrito: un paquete de clases es varias cuotas en un solo cobro),
+[FIN-29](#fin-29) (la cuota que se emite al inscribir, que una particular por clase no seguiría).
+
+---
+
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
 
@@ -8658,9 +8830,9 @@ que confirmar en stage cuál de los dos caminos se toma hoy **(sin verificar en 
 | Archivo | Línea | Entidad |
 |---|---|---|
 | [`students/[id]/actions.ts`](../src/app/students/[id]/actions.ts) | 264-268 | Alumno + asistencias + notas + inscripciones + cuotas |
-| [`courses/actions.ts`](../src/app/courses/actions.ts) | 85 | Curso |
-| [`courses/actions.ts`](../src/app/courses/actions.ts) | 145 | Horario |
-| [`courses/actions.ts`](../src/app/courses/actions.ts) | 251 | Inscripción |
+| [`courses/actions.ts`](../src/app/courses/actions.ts) | 68 | Curso — se lleva los boletines, ver [abajo](#arq-05-curso) |
+| [`courses/actions.ts`](../src/app/courses/actions.ts) | 128 | Horario |
+| [`courses/actions.ts`](../src/app/courses/actions.ts) | 266-267 | Inscripción + sus cuotas |
 | [`courses/[id]/lessons/actions.ts`](../src/app/courses/[id]/lessons/actions.ts) | 175, 213 | Práctica y clase — ver [BUG-02](#bug-02) / [BUG-03](#bug-03) |
 | [`enrollments/actions.ts`](../src/app/enrollments/actions.ts) | 202 | Cuota |
 | [`payments/billingActions.ts`](../src/app/payments/billingActions.ts) | 248 | Cuota |
@@ -8689,6 +8861,40 @@ que confirmar en stage cuál de los dos caminos se toma hoy **(sin verificar en 
 **Nota sobre alcance.** Es un cambio transversal y no debería hacerse de una sola vez. Sugerencia de
 orden: primero alumno y clase (los de mayor impacto y los que motivaron la decisión), después cursos
 e inscripciones, y por último catálogos (aulas, niveles) e informes.
+
+<a id="arq-05-curso"></a>
+### El curso borrado se lleva los boletines firmados — 2026-10-02
+
+Salió armando la sección de soporte de la landing: «se borró un curso» parecía una urgencia que se
+podía atender un fin de semana, y no se puede. `deleteCourseAction`
+([`courses/actions.ts:68`](../src/app/courses/actions.ts)) hace `prisma.course.delete`, y lo que pasa
+depende de las claves foráneas. Esto está leído de las migraciones **(sin verificar en runtime)**:
+
+| Lo que cuelga del curso | Al borrar el curso |
+|---|---|
+| Inscripciones, horarios y clases | `RESTRICT`: el borrado falla |
+| Hilos de mensajes | `SET NULL`: el hilo queda sin curso |
+| Boletines del curso (`StudentReport`), y con ellos sus notas, firmantes y firmas | `CASCADE`: se borran |
+| Plantillas asignadas (`CourseReportTemplate`) y firmas por lote (`ReportBatchSignature`) | `CASCADE`: se borran |
+
+Un curso en uso no se puede borrar, y eso protege. El problema es el camino que sí deja borrar:
+sacar a los alumnos con `removeStudentFromCourseAction` (línea 266-267: borra la inscripción y sus
+cuotas) y los horarios con `removeCourseScheduleAction` (línea 128) **no toca los boletines**. Si el
+curso además no tiene clases cargadas —lo común mientras las docentes no cargan las clases—, después
+de eso el borrado pasa y se lleva los boletines publicados, **con las firmas de las familias**. No
+hay forma de recuperarlos más que desde un backup.
+
+Además, el mensaje de error dice «Revisa que no tenga alumnos inscriptos» también cuando lo que
+frena son los horarios o las clases.
+
+**Sugerencia.** Adelantar el curso en el orden de este ítem, junto con alumno y clase: lo que arrastra
+son documentos firmados.
+
+**Criterio de aceptación de esta parte.**
+
+- Borrar un curso lo marca como borrado y no toca boletines, firmas ni firmas por lote.
+- Sacar a un alumno de un curso no borra su inscripción ni sus cuotas (va con el resto de la tabla).
+- Si algo impide borrar, el mensaje dice qué.
 
 ---
 
@@ -9552,12 +9758,70 @@ recite de memoria inventa o copia. Hay que decidir de dónde sale ese contenido 
 herramienta. En el rediseño de la landing se anuncia como "próximamente", dentro del módulo
 pedagógico.
 
+**El pedido, en las palabras del usuario (2026-10-03):** que los docentes puedan **armar la clase**
+con los recursos de la página de recursos, en función del tema.
+
+**La referencia: Langboost App (relevada el 2026-10-03).** [langboost.app](https://langboost.app)
+arma la clase en tres pasos: el tema con idioma, nivel, duración y foco; un paso de **vocabulario
+sugerido para tildar** (diez palabras según el tema, que el docente destilda o completa); y una
+revisión. Devuelve objetivos ("vas a poder…"), **cuatro momentos —inicio, actividad principal,
+cierre, tarea— con tres ideas cada uno para elegir una**, y una biblioteca: palabras con traducción y
+ejemplo, frases, notas de gramática, preguntas para conversar y un texto corto con preguntas. Cada
+idea dice herramienta y minutos, y despliega el contenido listo para pegar en esa herramienta: las
+preguntas de Kahoot con la correcta marcada, las tarjetas de Quizlet, la consigna de Padlet. Una idea
+de la actividad principal es siempre **"tu material de siempre"** —el libro—, con un consejo para
+engancharlo al tema. Usa las mismas herramientas que la página de recursos, que salieron de un video
+suyo.
+
+Lo que se toma: los momentos con ideas a elegir, el contenido listo por herramienta, el vocabulario
+confirmado antes de generar como fuente de todo lo demás, la idea del libro y la entrada por foco
+—que es el "objetivo" de la actividad que pidió el usuario el 2026-09-26—.
+
+Lo que se hace distinto, porque es donde el campus ya sabe más que Langboost:
+
+- **Grupos, no un alumno.** Langboost está pensado para clases particulares ("contale al alumno").
+  En el instituto son grupos, hay chicos de 6 a 8 sin email y Kahoot gratis llega a 10 jugadores:
+  las ideas tienen que saberlo, y la página de recursos ya tiene, por herramienta, si los alumnos
+  necesitan cuenta.
+- **Nada se carga a mano.** La clase ya tiene tema (`Lesson.topic`, que nace como "Clase
+  Programada" desde el horario), el curso tiene nivel (`Course.level`) y el horario dice cuánto dura
+  (`Schedule.startTime`/`endTime`). Langboost pone minutos en cada idea pero no los suma; acá se
+  pueden sumar contra la duración real.
+- **Abrir con el contenido puesto.** Su "Abrir" lleva a la portada de la herramienta y el contenido
+  se pega a mano, en formatos que la herramienta no importa (a Quizlet le da una lista vertical).
+  YouGlish y PlayPhrase se pueden abrir con la palabra puesta, y Quizlet importa texto con tabulador.
+- **Las canciones siguen sin fuente.** La idea de LingoClip le pide al alumno que elija él la
+  canción: Langboost tampoco resolvió lo que esta ficha ya marcaba.
+- **La tarea puede ser la práctica de [PED-01](#ped-01).** Y la biblioteca se parece a lo que hoy
+  carga el docente para la práctica —un texto para el listening, frases para pronunciar—: armar la
+  clase y armar la práctica pueden salir del mismo paso.
+
+**Decidido (2026-10-03): lo que arma el docente queda guardado en la clase.** Contesta la primera
+pregunta de abajo. Langboost lo muestra por la negativa: en su plan gratis la clase no se guarda, y
+doce ideas sin guardar son algo para leer, no para llevar al aula.
+
+**Decidido (2026-10-03): se arma desde la clase misma, en una página de la clase que reemplaza a
+los modales de crear y editar clase.** Los modales
+([`CreateLessonModal`](../src/app/courses/[id]/lessons/components/CreateLessonModal.tsx),
+[`EditLessonModal`](../src/app/courses/[id]/lessons/components/EditLessonModal.tsx)) ya estaban al
+límite: el botón de generar práctica sólo aparece al editar —hay que crear la clase, cerrar y volver
+a abrirla—, la IA lee lo guardado y no lo que se está escribiendo, y mientras genera no se puede
+guardar. La página ordena lo que piensa el docente: la clase (tema y contenidos), las palabras de la
+clase con el foco, armar la clase en cuatro momentos y la práctica de los alumnos, que es la tarea.
+Las palabras se cargan una vez y alimentan el armado y la práctica. Va en
+`/courses/[id]/lessons/[lessonId]`, donde ya viven asistencia, notas y la vista previa de la
+práctica. TP y examen siguen con el modal: no tienen práctica ni armado. Se diseña entera en el
+lienzo y se construye en dos pasos: primero la página con lo que hace hoy el modal, después el
+armado encima.
+
 **Dos preguntas que cambian el diseño por completo:**
 
 1. **¿Se guarda o se descarta?** Si el recurso queda pegado a la clase, hace falta un modelo nuevo
    (`LessonResource`) y decidir quién lo ve — ¿sólo quien lo generó, todo el instituto, los alumnos?
    Si es de un solo uso, alcanza con generarlo y ofrecer copiarlo o bajarlo en PDF, y no hay
-   migración.
+   migración. **Decidido el 2026-10-03: se guarda, y lo ven el docente del curso y la
+   administración del instituto; los alumnos no.** Lo del alumno ya es la práctica de
+   [PED-01](#ped-01), que puede ser el momento "tarea" de la clase sin que vea el resto.
 2. **¿En qué formato sale?** Texto para copiar y pegar es lo más barato. Un PDF armado ya es otro
    trabajo, aunque el proyecto tiene `jspdf` y lo usa para recibos e informes, así que hay de dónde
    agarrarse.
@@ -9789,6 +10053,73 @@ La 1 es barata y puede alcanzar; la 2 es la que garantiza. Conviene medir antes 
 **P3.** No rompe nada, el ítem es contestable y el alumno puede seguir. Pero está en el módulo que es
 el diferencial del producto, y la profesora nunca ve estas preguntas: se generan al vuelo, distintas
 para cada alumno, así que si salen mal no hay nadie del otro lado que lo note.
+
+---
+
+<a id="ped-13"></a>
+## PED-13 · Práctica de escritura con devolución que marca sin corregir · **P3**
+
+**De dónde sale.** Patricia fue a una capacitación sobre IA para enseñar idiomas y compartió el
+material. El primer PDF, el *Generative AI Idea Pack* de Cambridge (2024), recomienda pedirle a la IA
+una devolución de escritura **que no reescriba el texto**: que diga qué revisar y deje que el alumno
+lo arregle. La misma idea la implementa Write & Improve, de Cambridge, que se probó el 2026-10-17 con
+un mail de principiante con cuatro errores puestos a propósito.
+
+**Lo que se vio en Write & Improve.** Pinta en naranja las oraciones con problemas sin decir cuál es
+el error, sugiere la palabra sólo a veces («Perhaps "Saturday" is better»), estima un nivel MCER
+(A1) y puntúa de 0 a 5 si el texto responde la consigna. El alumno corrige, vuelve a mandar y ve qué
+cambió de una versión a otra. **Se le escapó uno de los cuatro errores** («by bus, is near») y le dio
+3 de 5 a un mail que contestaba las tres preguntas de la consigna.
+
+**Decidido el 2026-10-17.** Por ahora va como décima herramienta de la página de recursos
+(`src/app/resources/tools.ts`), sin construir nada. Esta ficha es la versión interna, **para probar
+más adelante**.
+
+**Por qué interna.** Lo que el alumno escribe en Write & Improve queda afuera del campus: el docente no
+lo ve en la ficha ni en las métricas, salvo que pague «+Class View». Hecha adentro, la escritura sería
+una sección más de la práctica de la clase y su resultado quedaría en `PracticeSession`, como el de
+las otras tres.
+
+**Lo que se reutiliza.** Los providers de IA, `guardPracticeAi` y la cuota de SEC-07, `PracticeSession`
+y el circuito de borrador y publicación de PED-01.
+
+**Lo que hay que construir.**
+
+1. **Schema:** `writingPrompt` en `LessonPractice` y `WRITING` en `PracticeType`. Lleva migración.
+2. **IA:** `evaluateWriting(consigna, texto, contexto)` en `IAIProvider`, implementado en OpenAI y en
+   Gemini. Devuelve las oraciones a marcar, una pista para cada una y si respondió la consigna.
+3. **Alumno:** consigna, cuadro con contador, «Revisar», las oraciones pintadas con su pista, corregir
+   y volver a revisar. Del tamaño de `SpeakingHub`.
+4. **Docente:** la consigna en la página de la clase, en `generatePracticeDraft` y en la vista previa.
+5. **Métricas:** el tipo nuevo donde hoy se cuentan los otros tres.
+
+**Lo difícil no es el código.**
+
+- **Calidad de la devolución.** Write & Improve usa un modelo entrenado para esto y aun así se le
+  escapó un error de cuatro. Con un modelo general hay que medir con muchos textos antes de
+  confiar, y vigilar sobre todo **que no marque como error algo que está bien**: eso confunde más
+  que un error que se escapa.
+- **Ubicar lo marcado en el texto.** Pintar la oración que la IA señaló exige encontrarla en el
+  texto: oraciones que terminan en «!», textos sin puntos y saltos de línea son donde aparecen los
+  bugs.
+- **Es el texto libre más largo del módulo y va directo a la IA.** Mismo tratamiento que la
+  pronunciación (recorte y plantilla fija, ver [SEC-07](#sec-07)), con más cuidado.
+- **Costo.** Cada «Revisar» es una llamada y la gracia es revisar varias veces: ver si alcanza la
+  cuota actual ([PED-07](#ped-07)).
+
+**Dos decisiones abiertas que cambian el tamaño.**
+
+- **No mostrar nivel MCER.** Write & Improve puede darlo porque su modelo está calibrado; un nivel
+  que estima un modelo general es un dato que no se puede defender.
+- **Guardar o no el texto.** Sin guardarlo, el docente ve sólo «hizo la práctica, puntaje tanto». Si
+  se guarda, puede leer los textos, que es justo lo que Write & Improve cobra, pero suma una tabla, una
+  pantalla para el docente y la misma pregunta abierta de [PED-04](#ped-04): quién lee eso y qué se
+  hace con lo que aparezca.
+
+**Para quién.** Para alumnos que ya escriben un párrafo. Con los cursos de 6 a 8 años no sirve, así que
+la sección tiene que poder quedar apagada por curso.
+
+**P3.** La necesidad está cubierta por la tarjeta de recursos; esto es para cuando haya lugar.
 
 ---
 

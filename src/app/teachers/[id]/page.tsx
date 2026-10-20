@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { ArrowLeft, BookOpen, Clock, DollarSign, Calendar as CalendarIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { TeacherProfileView } from "./TeacherProfileView";
 import { TeacherDangerZone } from "./TeacherDangerZone";
 import { TeacherPayrollSection } from "./TeacherPayrollSection";
@@ -85,7 +85,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                                     </div>
                                                 </div>
                                                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                    <Clock size={14} /> Creado: {dayjs(course.createdAt).format("DD/MM/YYYY")}
+                                                    <Clock size={14} /> Creado: {formatDate(course.createdAt, "moment", "numericFull")}
                                                 </div>
                                             </Card>
                                         </Link>
@@ -126,7 +126,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                                 <div>
                                                     <p className={`font-bold text-sm ${isVoided ? 'line-through text-muted-foreground' : ''}`}>{payment.description}</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {dayjs(payment.date).format("DD [de] MMMM, YYYY")}
+                                                        {formatDate(payment.date, "day", "long")}
                                                     </p>
                                                 </div>
                                             </div>

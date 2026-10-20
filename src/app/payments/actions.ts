@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
+import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -153,7 +154,7 @@ export async function createPaymentAction(formData: FormData) {
                     amount: amount, // El pago real que ingresó
                     type: "PAYMENT",
                     method,
-                    date: new Date(),
+                    date: instituteToday(),
                     description: `Pago Cuota/Matrícula - Estudiante ID: ${fee.studentId}`,
                     paymentId: payment.id,
                     operatorId: user.id
@@ -325,7 +326,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                 } as const;
             }
 
-            const currentYear = new Date().getFullYear();
+            const currentYear = instituteMonth().year;
 
             // La búsqueda de la cuota existente va adentro de la transacción: afuera
             // ahorraba unos milisegundos a cambio de decidir sobre datos viejos.
@@ -369,7 +370,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                         originalAmount,
                         paidAmount: originalAmount,
                         status: "PAID",
-                        month: new Date().getMonth() + 1,
+                        month: instituteMonth().month,
                         year: currentYear,
                         datePaid: new Date(),
                         instituteId: user.instituteId as string
@@ -408,7 +409,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
                     amount: paidCapital,
                     type: "PAYMENT",
                     method,
-                    date: new Date(),
+                    date: instituteToday(),
                     description: `Pago Único Curso Completo (${enrollment.course.name}) - Estudiante ID: ${studentId}`,
                     paymentId: payment.id,
                     operatorId: user.id
@@ -458,7 +459,7 @@ export async function createExpenseAction(formData: FormData) {
                     amount,
                     category: category || "OTROS",
                     ticketNumber: ticketNumber?.trim() || null,
-                    date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
+                    date: dateStr ? dayFromKey(dateStr) : instituteToday(),
                     instituteId: user.instituteId as string,
                     recipientId: recipientId || null
                 }
@@ -518,7 +519,7 @@ export async function voidExpenseAction(expenseId: string, reason?: string) {
                     amount: expense.amount, // Positivo para compensar el gasto negativo original
                     type: "ADJUSTMENT",
                     method: "EFECTIVO",
-                    date: new Date(),
+                    date: instituteToday(),
                     description: `Anulación de Gasto #${expense.id.slice(-6)}`,
                     expenseId: expense.id,
                     operatorId: user.id
@@ -567,7 +568,7 @@ export async function createIncomeAction(formData: FormData) {
                     category: category || "OTROS",
                     method: method || "EFECTIVO",
                     ticketNumber: ticketNumber?.trim() || null,
-                    date: dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date(),
+                    date: dateStr ? dayFromKey(dateStr) : instituteToday(),
                     instituteId: user.instituteId as string,
                     studentId: studentId || null
                 }
@@ -800,7 +801,7 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                     // Un REFUND de $0 sería mentira: no hubo devolución de plata.
                     type: reversalAmount === 0 ? "ADJUSTMENT" : "REFUND",
                     method: payment.method,
-                    date: new Date(),
+                    date: instituteToday(),
                     description: adjustmentDescription,
                     paymentId: payment.id,
                     operatorId: user.id
@@ -875,7 +876,7 @@ export async function voidIncomeAction(incomeId: string, reason?: string) {
                     amount: -income.amount, // Negativo para compensar el ingreso original
                     type: "ADJUSTMENT",
                     method: income.method,
-                    date: new Date(),
+                    date: instituteToday(),
                     description: adjustmentDescription,
                     miscIncomeId: income.id,
                     operatorId: user.id
@@ -926,7 +927,7 @@ export async function registerAdvanceAction(formData: FormData) {
                     amount,
                     category: "ADELANTO",
                     method: method || "EFECTIVO",
-                    date: new Date(),
+                    date: instituteToday(),
                     instituteId: user.instituteId as string,
                     studentId: studentId,
                     status: "VALID"
@@ -940,7 +941,7 @@ export async function registerAdvanceAction(formData: FormData) {
                     amount: amount,
                     type: "MISC_INCOME",
                     method: income.method,
-                    date: new Date(),
+                    date: instituteToday(),
                     description: `Adelanto - ${student.name}`,
                     miscIncomeId: income.id,
                     operatorId: user.id
@@ -1025,7 +1026,7 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
                     amount: 0, // No entra dinero real a la caja hoy, ya entró antes
                     type: "ADJUSTMENT",
                     method: "SALDO",
-                    date: new Date(),
+                    date: instituteToday(),
                     // `formatFeeLabel` y no `${fee.month}/${fee.year}`: el mes de una
                     // matrícula es fijo y no significa nada (FIN-12), así que armado
                     // a mano el asiento decía "Cuota 0/2026".

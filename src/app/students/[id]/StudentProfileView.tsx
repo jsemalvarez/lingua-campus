@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { EditStudentForm } from "./EditStudentForm";
 import { User, Phone, Mail, UserCheck, Edit3, Info, Wallet } from "lucide-react";
 import { CreateGuardianModal } from "./components/CreateGuardianModal";
-import dayjs from "dayjs";
+import { ageOn, formatDate } from "@/lib/dates";
 import { StudentQRCard } from "./components/StudentQRCard";
 import { CompletionLinkButton } from "../components/CompletionLinkButton";
 
@@ -96,7 +96,7 @@ export function StudentProfileView({
 
                     <h2 className="text-xl font-bold capitalize">{student.name}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Ingresó el {dayjs(student.joinDate).format("DD MMM, YYYY")}
+                        Ingresó el {formatDate(student.joinDate, "moment", "short")}
                     </p>
 
 
@@ -152,7 +152,7 @@ export function StudentProfileView({
                         <div className="space-y-1">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Fecha de Nacimiento</span>
                             <p className="font-medium text-sm">
-                                {student.birthDate ? `${dayjs(student.birthDate).format("DD/MM/YYYY")} (${dayjs().diff(student.birthDate, 'year')} años)` : "-"}
+                                {student.birthDate ? `${formatDate(student.birthDate, "day", "numericFull")} (${ageOn(student.birthDate)} años)` : "-"}
                             </p>
                         </div>
                         <div className="space-y-1">

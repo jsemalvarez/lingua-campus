@@ -3,25 +3,37 @@
  *
  * Los límites de las versiones gratis (jugadores de Kahoot, actividades de
  * Wordwall, escenas de PlayPhrase, padlets activos…) se verificaron en el sitio
- * de cada herramienta el 27/09/2026. Cambian seguido: al tocar un texto que
+ * de cada herramienta el 27/09/2026; el de Kahoot, otra vez el 15/10/2026 en su
+ * ayuda («How many participants can play a kahoot?»): depende del tipo de cuenta,
+ * 40 para docentes de escuela, 10 personal y 3 empresa. Los de Write & Improve,
+ * el 17/10/2026 en su sitio y probando una consigna: gratis y sin cuenta para el
+ * alumno, y paga la vista del docente («+Class View»). Los de Liveworksheets, el
+ * 19/10/2026 resolviendo una ficha sin cuenta: se corrige sola, viene con
+ * publicidad y tiene un plan pago sin anuncios. Sus precios no se pudieron ver, así
+ * que no se afirman. Los de TeachingEnglish, el 19/10/2026 en su sitio: más de
+ * 400 clases gratis, sin publicidad, que se descargan sin cuenta, con filtros por
+ * edad (de 5 a 8 años en adelante) y nivel. Cambian seguido: al tocar un texto que
  * afirme uno, volver a confirmarlo antes de publicarlo.
  *
- * Si cambia la cantidad de herramientas, cambia también «Nueve herramientas» en
+ * Si cambia la cantidad de herramientas, cambia también «Doce herramientas» en
  * el encabezado de `ResourcesView`.
  */
 
-export type ToolGroupId = "jugar" | "escuchar" | "crear";
+export type ToolGroupId = "jugar" | "escuchar" | "crear" | "preparar";
 
 export type ToolId =
     | "kahoot"
     | "wordwall"
     | "quizlet"
+    | "liveworksheets"
     | "youglish"
     | "playphrase"
     | "lingoclip"
     | "canva"
     | "docs"
-    | "padlet";
+    | "padlet"
+    | "writeandimprove"
+    | "teachingenglish";
 
 export type ToolChip = {
     text: string;
@@ -77,6 +89,12 @@ export const TOOL_GROUPS: {
         shortTitle: "Crear",
         description: "Material lindo para el aula, y espacios donde escriben y publican todos.",
     },
+    {
+        id: "preparar",
+        title: "Preparar la clase",
+        shortTitle: "Preparar",
+        description: "Clases armadas y formación para vos, antes de entrar al aula.",
+    },
 ];
 
 export const TOOLS: Tool[] = [
@@ -88,18 +106,18 @@ export const TOOLS: Tool[] = [
         url: "https://kahoot.com",
         plan: "tiene versión gratis",
         description: "Trivia en vivo: la pregunta va en la pantalla del aula y cada uno contesta desde un dispositivo.",
-        chips: [{ text: "Alumnos sin cuenta" }, { text: "Gratis hasta 10 jugadores" }],
+        chips: [{ text: "Alumnos sin cuenta" }, { text: "Gratis hasta 40 jugadores" }],
         idea: "arrancá con cinco preguntas de la clase anterior. En cinco minutos ves qué quedó.",
         guide: {
             about: "Una trivia en vivo. Vos proyectás la pregunta en la pantalla del aula y cada alumno contesta desde un celular, una tablet o una compu. Suma más puntos quien contesta bien y rápido, y al final aparece el podio.",
             steps: [
-                { lead: "Creá tu cuenta gratis", rest: "en kahoot.com, como docente." },
+                { lead: "Creá tu cuenta gratis", rest: "en kahoot.com y, cuando te pregunte el tipo de cuenta, elegí «Profesor»." },
                 { lead: "Armá la trivia:", rest: "escribí cada pregunta con sus opciones y marcá la correcta." },
                 { lead: "En clase, lanzala en vivo:", rest: "en la pantalla aparece un PIN, y los alumnos entran en kahoot.it con ese número y un apodo." },
             ],
             goodToKnow: [
                 "Los alumnos no necesitan cuenta: entran con el PIN y un apodo.",
-                "La versión gratis admite hasta 10 jugadores por partida. Si son más, jueguen en equipos, con un dispositivo por grupo.",
+                "Con la cuenta de «Profesor», la versión gratis admite hasta 40 jugadores por partida. Si la creaste como personal juegan hasta 10, y como empresa, sólo 3: el tipo de cuenta se cambia en la configuración de tu perfil.",
                 "Gratis tenés preguntas de opción múltiple y de verdadero o falso.",
             ],
             idea: "Arrancá con cinco preguntas de la clase anterior. En cinco minutos ves qué quedó y qué conviene repasar.",
@@ -153,6 +171,32 @@ export const TOOLS: Tool[] = [
                 "Rinde más para repasar en casa que para jugar en el aula.",
             ],
             idea: "El vocabulario de la unidad en un mazo, para que lo repasen la semana de la prueba.",
+        },
+    },
+    {
+        id: "liveworksheets",
+        group: "jugar",
+        name: "Liveworksheets",
+        domain: "liveworksheets.com",
+        url: "https://www.liveworksheets.com",
+        plan: "tiene versión gratis",
+        description: "Fichas hechas por docentes de todo el mundo que se completan en pantalla y se corrigen solas.",
+        chips: [{ text: "Alumnos sin cuenta" }, { text: "Tiene publicidad", caution: true }],
+        idea: "una ficha del tema de la clase para casa, y en la clase siguiente repasan lo que salió en rojo.",
+        guide: {
+            about: "Un banco enorme de fichas que suben docentes de todo el mundo, muchas de inglés ordenadas por nivel y tema. El alumno completa la ficha en la pantalla —elige, escribe o une— y al terminar ve qué respuestas están bien y cuáles no.",
+            steps: [
+                { lead: "Entrá a liveworksheets.com", rest: "y buscá el tema de la clase, por ejemplo «present simple». Para usar las fichas no hace falta cuenta." },
+                { lead: "Hacé la ficha vos primero:", rest: "así revisás que esté bien armada y que sea para el nivel de tu grupo." },
+                { lead: "Compartí el enlace:", rest: "el alumno la completa y toca «Finish!». Ahí elige ver su corrección o mandarte las respuestas por mail." },
+            ],
+            goodToKnow: [
+                "Cualquier docente sube fichas, así que la calidad es despareja: algunas traen errores o respuestas mal marcadas.",
+                "Sin cuenta, la ficha se ve rodeada de publicidad que vos no elegís. Hay un plan pago sin anuncios.",
+                "La corrección pinta cada respuesta de verde o de rojo y da el puntaje, pero no explica el error.",
+                "Con una cuenta gratis podés subir tu propia ficha y volverla interactiva.",
+            ],
+            idea: "Una ficha del tema de la clase para casa. En la clase siguiente, repasan juntos lo que les salió en rojo.",
         },
     },
     {
@@ -303,6 +347,57 @@ export const TOOLS: Tool[] = [
                 "La versión gratis deja tener 3 padlets activos a la vez.",
             ],
             idea: "«My weekend»: cada uno sube una foto y la describe en dos oraciones. Después comentan las de sus compañeros.",
+        },
+    },
+    {
+        id: "writeandimprove",
+        group: "crear",
+        name: "Write & Improve",
+        domain: "writeandimprove.com",
+        url: "https://writeandimprove.com",
+        plan: "tiene versión gratis",
+        description: "El alumno escribe un texto y le marca qué oraciones revisar, sin corregírselas: las arregla él y vuelve a probar.",
+        chips: [{ text: "Alumnos sin cuenta" }, { text: "En casa o en clase" }],
+        idea: "una consigna para casa, y que corrijan lo marcado antes de entregártela.",
+        guide: {
+            about: "Una herramienta gratis de la Universidad de Cambridge para practicar escritura. El alumno elige una consigna, escribe y toca «Check»: le pinta las oraciones que conviene revisar y, a veces, le sugiere una palabra. No le reescribe el texto: lo corrige él, vuelve a probar y ve qué cambió de una versión a otra.",
+            steps: [
+                { lead: "Entrá a writeandimprove.com", rest: "y tocá «Start writing». No hace falta cuenta." },
+                { lead: "Elegí el nivel y una consigna:", rest: "hay cientos, desde un mail corto para principiantes hasta ensayos avanzados." },
+                { lead: "Escribí y tocá «Check»:", rest: "aparecen las oraciones marcadas. Se corrige y se vuelve a tocar «Check again»." },
+            ],
+            goodToKnow: [
+                "Los alumnos lo usan gratis y sin cuenta; con un perfil gratis se guardan sus textos. Seguir el progreso de cada uno desde tu cuenta es pago: se llama «+Class View».",
+                "La devolución es automática y a veces se le escapa un error: sirve como primera vuelta, antes de que el texto llegue a vos.",
+                "Todo está en inglés y las consignas piden escribir un texto: va para alumnos que ya arman un párrafo, no para los más chicos.",
+            ],
+            idea: "Dales una consigna para casa y pediles que la pasen por Write & Improve y corrijan lo marcado antes de entregártela. Te llega una segunda versión, no un borrador.",
+        },
+    },
+    {
+        id: "teachingenglish",
+        group: "preparar",
+        name: "TeachingEnglish",
+        domain: "teachingenglish.org.uk",
+        url: "https://www.teachingenglish.org.uk/teaching-resources",
+        plan: "es gratis",
+        description: "Clases listas del British Council, por edad y nivel: el plan paso a paso, la presentación y la ficha para imprimir.",
+        chips: [{ text: "La usás vos" }, { text: "Se descarga sin cuenta" }],
+        idea: "tomá una clase del tema de la unidad y usá su ficha como tarea.",
+        guide: {
+            about: "El sitio del British Council para docentes de inglés. Tiene más de 400 clases armadas, cada una con su plan paso a paso, una presentación para proyectar y una ficha para imprimir. También ofrece cursos gratis para docentes y webinars.",
+            steps: [
+                { lead: "Entrá a teachingenglish.org.uk", rest: "y abrí «Teaching resources». Para descargar no hace falta cuenta." },
+                { lead: "Tocá «Show Filters»", rest: "y elegí la edad y el nivel de tu grupo. Cada clase dice para qué edad es, el nivel y cuántos minutos dura." },
+                { lead: "Descargá lo que te sirva:", rest: "el plan en PDF, la presentación para proyectar o la ficha para imprimir." },
+            ],
+            goodToKnow: [
+                "Lo hace el British Council: es material revisado y no tiene publicidad.",
+                "Está todo en inglés, también el plan para el docente.",
+                "Hay clases desde los 5 años hasta adultos, en todos los niveles.",
+                "Sus cursos para docentes también son gratis y dan certificado.",
+            ],
+            idea: "Tomá una clase del tema de la unidad: usá su presentación para arrancar y su ficha como tarea.",
         },
     },
 ];

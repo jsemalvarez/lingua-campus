@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { PenLine, RotateCcw, Info } from "lucide-react";
 import { toast } from "sonner";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { Button } from "@/components/ui/Button";
 import { SignaturePad, StrokeData, isEmptyStroke } from "./SignaturePad";
 import { saveMySignatureReference } from "@/app/actions/signatures";
@@ -87,7 +87,7 @@ export function SignatureManager({ current, updatedAt, audience }: SignatureMana
                         />
                         {updatedAt && (
                             <p className="text-xs text-muted-foreground">
-                                Registrada el {dayjs(updatedAt).format("D [de] MMMM [de] YYYY")}
+                                Registrada el {formatDate(updatedAt, "moment", "long")}
                             </p>
                         )}
                     </div>

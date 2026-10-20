@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { instituteMonth } from "@/lib/dates";
 import { INSTITUTE_ADMINS, INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 
 export async function GET(
@@ -33,7 +34,7 @@ export async function GET(
         const searchParams = req.nextUrl.searchParams;
         const year = searchParams.get("year") 
             ? parseInt(searchParams.get("year")!) 
-            : new Date().getFullYear();
+            : instituteMonth().year;
 
         // Count active enrolled students
         const totalStudents = await prisma.enrollment.count({

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
-import dayjs from "dayjs";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { DollarSign, Wallet, Calendar, AlertCircle, TrendingUp, ArrowUpRight, ArrowDownLeft, Calculator, Sparkles, Percent, Coins, Trash2 } from "lucide-react";
@@ -12,6 +11,8 @@ import { TransactionTable } from "./components/TransactionTable";
 import { GenerateFeesButton } from "./components/GenerateFeesButton";
 import { CollectionChart } from "./components/CollectionChart";
 import { formatFeeLabel } from "@/lib/utils";
+import { excludeNotYetDueFees } from "@/lib/feeDue";
+import { instituteMonth, monthDays } from "@/lib/dates";
 import { DebtChart } from "./components/DebtChart";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -47,7 +48,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             expense: { include: { recipient: { select: { name: true } } } },
             miscIncome: { include: { student: { select: { name: true } } } }
         },
-        orderBy: { date: "desc" }
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }]
     });
 
     // 3. Traer todos los Usuarios (para mapear Operadores) y Empleados (para sueldos)
@@ -64,8 +65,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const userMap = Object.fromEntries(allUsers.map(u => [u.id, u.name]));
 
     // 4. Calcular KPIs Básicos (Mes seleccionado)
-    const currentMonth = params?.month ? parseInt(params.month as string, 10) : new Date().getMonth() + 1;
-    const currentYear = params?.year ? parseInt(params.year as string, 10) : new Date().getFullYear();
+    const currentMonth = params?.month ? parseInt(params.month as string, 10) : instituteMonth().month;
+    const currentYear = params?.year ? parseInt(params.year as string, 10) : instituteMonth().year;
 
     const monthlyFeesData = await prisma.fee.findMany({
         where: {
@@ -80,13 +81,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const feesCollectedThisMonth = monthlyFeesData.reduce((acc: number, f: any) => acc + f.paidAmount, 0);
 
     // Filter ledger for current month stats
-    const selectedDate = dayjs(`${currentYear}-${currentMonth}-01`, "YYYY-M-DD");
-    const startOfMonth = selectedDate.startOf('month').toDate();
-    const endOfMonth = selectedDate.endOf('month').toDate();
-    
-    const currentMonthTransactions = ledger.filter(t => 
-        t.date >= startOfMonth && 
-        t.date <= endOfMonth && 
+    // `Transaction.date` es el día contable (FIN-34), así que el mes son sus días.
+    // Antes se cortaba con la zona del servidor, y en local y en Vercel el mismo
+    // mes sumaba distinto.
+    const { first: startOfMonth, next: startOfNextMonth } = monthDays({ year: currentYear, month: currentMonth });
+
+    const currentMonthTransactions = ledger.filter(t =>
+        t.date >= startOfMonth &&
+        t.date < startOfNextMonth &&
         t.status === "VALID"
     );
 
@@ -126,7 +128,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             OR: [
                 { year: { lt: currentYear } },
                 { year: currentYear, month: { lte: currentMonth } }
-            ]
+            ],
+            // El derecho de examen vence con el examen, no con el mes 0.
+            ...excludeNotYetDueFees()
         },
         select: { originalAmount: true, paidAmount: true, month: true, year: true }
     });

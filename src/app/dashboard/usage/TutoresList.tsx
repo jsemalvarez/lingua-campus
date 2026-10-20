@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { formatDate } from "@/lib/dates";
 import { ArrowRight, Clock, Info } from "lucide-react";
 import { NOMBRE_DE_SECCION, type RastroDeTutor } from "./actividad";
 import { pisoCorto } from "./piso";
@@ -34,8 +35,8 @@ export function TutoresList({
 }) {
     const visibles = tutores.slice(0, A_LA_VISTA);
 
-    const formatear = (d: Date) =>
-        `${d.getDate()} ${d.toLocaleDateString("es-AR", { month: "short" }).replace(".", "")}`;
+    // `visto` es un momento: el último acceso, la última lectura o la última firma.
+    const formatear = (d: Date) => formatDate(d, "moment", "dayMonth");
 
     return (
         <Card className="flex flex-col gap-5">

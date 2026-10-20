@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import { instituteMonth } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { Calendar, Tag, ArrowDownLeft, Receipt } from "lucide-react";
 import dayjs from "dayjs";
@@ -49,7 +50,7 @@ export function ExpensesClient({
     const pathname = usePathname();
 
     const years: number[] = [];
-    const thisYear = new Date().getFullYear();
+    const thisYear = instituteMonth().year;
     for (let y = thisYear - 2; y <= thisYear + 1; y++) years.push(y);
 
     const applyFilter = (next: { year?: number; month?: number; category?: string | null }) => {

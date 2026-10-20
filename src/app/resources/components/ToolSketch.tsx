@@ -14,12 +14,15 @@ export function ToolSketch({ id }: { id: ToolId }) {
         case "kahoot": return <KahootSketch />;
         case "wordwall": return <WordwallSketch />;
         case "quizlet": return <QuizletSketch />;
+        case "liveworksheets": return <LiveworksheetsSketch />;
         case "youglish": return <YouglishSketch />;
         case "playphrase": return <PlayphraseSketch />;
         case "lingoclip": return <LingoclipSketch />;
         case "canva": return <CanvaSketch />;
         case "docs": return <DocsSketch />;
         case "padlet": return <PadletSketch />;
+        case "writeandimprove": return <WriteImproveSketch />;
+        case "teachingenglish": return <TeachingEnglishSketch />;
     }
 }
 
@@ -375,6 +378,72 @@ function PadletSketch() {
                     <div className={cn(NOTE, "h-[52px] bg-white")}><Lines widths={["90%", "75%", "85%", "50%"]} /></div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+/** Una clase armada: el título, edad, nivel y minutos, y los tres archivos que se descargan. */
+function TeachingEnglishSketch() {
+    return (
+        <div className="flex w-[244px] flex-col gap-2 rounded-[10px] bg-white px-3.5 pb-3 pt-2.5 text-zinc-700 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap text-[12.5px] font-bold text-zinc-800">My ideal teacher</span>
+                <span className="whitespace-nowrap text-[10.5px] font-semibold text-zinc-500">9-12 · A2</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 text-[10.5px] font-semibold">
+                {["Plan", "Slides", "Worksheet"].map((file) => (
+                    <span key={file} className="flex items-center justify-center gap-1 rounded-md border border-zinc-200 py-1.5">
+                        {file}
+                        <span className="font-bold text-teal-700">↓</span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/** Una ficha ya corregida: una respuesta en verde, otra en rojo, el puntaje y el botón de terminar. */
+function LiveworksheetsSketch() {
+    return (
+        <div className="relative w-[244px]">
+            <div className="flex flex-col gap-1.5 rounded-[10px] bg-white px-3.5 pb-3 pt-2.5 text-[11.5px] font-medium leading-snug text-zinc-700 shadow-sm">
+                <span className="font-bold text-zinc-800">Present Simple</span>
+                <span className="whitespace-nowrap">
+                    1. Bob always <span className="rounded border border-emerald-600 bg-emerald-100 px-1 font-semibold">drinks</span> tea.
+                </span>
+                <span className="whitespace-nowrap">
+                    2. She <span className="rounded border border-red-500 bg-red-100 px-1 font-semibold">don't</span> play tennis.
+                </span>
+            </div>
+            <span className="absolute -bottom-3 right-3 whitespace-nowrap rounded-md bg-zinc-700 px-2 py-1 text-[10.5px] font-semibold text-white shadow-md">
+                Finish!
+            </span>
+            <span className="absolute -right-2 -top-2.5 rounded-full bg-emerald-700 px-2.5 py-1 text-[10.5px] font-bold text-white shadow-sm">
+                1/2
+            </span>
+        </div>
+    );
+}
+
+/** El texto del alumno con lo que marca la devolución: una oración en naranja y una palabra con su pista. */
+function WriteImproveSketch() {
+    return (
+        <div className="relative w-[244px]">
+            <div className="flex flex-col gap-1.5 rounded-[10px] bg-white px-3.5 pb-3 pt-2.5 text-[11.5px] font-medium leading-snug text-zinc-700 shadow-sm">
+                <span>Hi Jamie,</span>
+                <span className="whitespace-nowrap">
+                    <span className="rounded bg-orange-100 px-0.5">Thanks for you email.</span> Come at 10.
+                </span>
+                <span className="whitespace-nowrap">
+                    See you on <span className="rounded border border-teal-600 bg-teal-50 px-0.5 font-semibold">saturday</span>!
+                </span>
+            </div>
+            <span className="absolute -bottom-3 left-[108px] whitespace-nowrap rounded-md bg-zinc-700 px-2 py-1 text-[10.5px] font-semibold text-white shadow-md">
+                Perhaps “Saturday”?
+            </span>
+            <span className="absolute -right-2 -top-2.5 rounded-full bg-teal-700 px-2.5 py-1 text-[10.5px] font-bold text-white shadow-sm">
+                Check again
+            </span>
         </div>
     );
 }

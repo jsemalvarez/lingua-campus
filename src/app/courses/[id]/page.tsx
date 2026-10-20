@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { formatDate, instituteToday } from "@/lib/dates";
 import prisma from "@/lib/prisma";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
@@ -12,6 +13,7 @@ import { EditCourseModal } from "../components/EditCourseModal";
 import { RemoveStudentButton } from "../components/RemoveStudentButton";
 import { DeleteCourseButton } from "../components/DeleteCourseButton";
 import { FinishCourseButton } from "../components/FinishCourseButton";
+import { CourseExamModal } from "../components/CourseExamModal";
 import { BadgeCheck, Info } from "lucide-react";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { getPeerLevels, isPeerCourse } from "@/lib/peers";
@@ -43,8 +45,8 @@ function monthRange(key: MonthKey): { start: Date; end: Date } {
  * estamos en enero, ese mes está vacío y el profesor entra a una pantalla en blanco.
  */
 function defaultMonthKey(dates: Date[]): MonthKey {
-    const now = new Date();
-    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    // El día del instituto: el de UTC ya es mañana a partir de las 21.
+    const today = instituteToday().getTime();
 
     if (dates.length === 0) return monthKeyOf(new Date(today));
 
@@ -81,7 +83,7 @@ export default async function CourseDetailPage({
             classroom: { select: { id: true, name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
             enrollments: {
-                select: { id: true, status: true, student: { select: { id: true, name: true, phone: true } } },
+                select: { id: true, status: true, takesExam: true, customExamPrice: true, student: { select: { id: true, name: true, phone: true } } },
                 orderBy: { student: { name: 'asc' } }
             }
         }
@@ -154,7 +156,7 @@ export default async function CourseDetailPage({
     const { start: monthStart, end: monthEnd } = monthRange(selectedMonth);
 
     // El atajo "Hoy" sólo tiene sentido si el mes actual tiene clases cargadas
-    const currentMonthKey = monthKeyOf(new Date());
+    const currentMonthKey = monthKeyOf(instituteToday());
     const todayMonth = monthCounts.has(currentMonthKey) ? currentMonthKey : null;
 
     // Sólo las clases del mes seleccionado: es lo que evita traer un curso anual entero
@@ -169,7 +171,8 @@ export default async function CourseDetailPage({
                     chatScenario: true,
                     isPublished: true,
                 }
-            }
+            },
+            plan: { select: { chosen: true } }
         }
     });
 
@@ -253,6 +256,7 @@ export default async function CourseDetailPage({
                                             currentMonthlyPrice={course.monthlyPrice}
                                             currentEnrollmentPrice={course.enrollmentPrice}
                                             currentExamPrice={course.examPrice}
+                                            currentExamDate={course.examDate}
                                         />
                                     )}
                                 </div>
@@ -262,9 +266,9 @@ export default async function CourseDetailPage({
                                     {course.startDate && (
                                         <>
                                             <span className="text-muted-foreground">Vigencia: </span>
-                                            <span className="text-primary font-bold">{new Date(course.startDate).toLocaleDateString('es-ES')}</span>
+                                            <span className="text-primary font-bold">{formatDate(course.startDate, "day", "numericFull")}</span>
                                             {course.endDate ? (
-                                                <> - <span className="text-primary font-bold">{new Date(course.endDate).toLocaleDateString('es-ES')}</span></>
+                                                <> - <span className="text-primary font-bold">{formatDate(course.endDate, "day", "numericFull")}</span></>
                                             ) : (
                                                 " en adelante"
                                             )}
@@ -367,11 +371,28 @@ export default async function CourseDetailPage({
                                             </p>
                                         </div>
                                         {!isFinished && (
-                                            <Link href={`/enrollments/new?course=${course.id}`}>
-                                                <div className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
-                                                    Inscribir Alumno
-                                                </div>
-                                            </Link>
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                {(activeRole === "ADMIN" || activeRole === "SECRETARY") && totalEnrolled > 0 && (
+                                                    <CourseExamModal
+                                                        courseId={course.id}
+                                                        examPrice={course.examPrice}
+                                                        examDate={course.examDate ? course.examDate.toISOString().slice(0, 10) : null}
+                                                        enrollments={course.enrollments
+                                                            .filter(e => e.status === "ACTIVE")
+                                                            .map(e => ({
+                                                                id: e.id,
+                                                                studentName: e.student.name,
+                                                                takesExam: e.takesExam,
+                                                                customExamPrice: e.customExamPrice,
+                                                            }))}
+                                                    />
+                                                )}
+                                                <Link href={`/enrollments/new?course=${course.id}`}>
+                                                    <div className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-sm rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap">
+                                                        Inscribir Alumno
+                                                    </div>
+                                                </Link>
+                                            </div>
                                         )}
                                     </div>
 

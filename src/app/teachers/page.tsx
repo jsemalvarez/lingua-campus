@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { CreateTeacherModal } from "./components/CreateTeacherModal";
 import { Search, GraduationCap, Filter, Mail, Phone, Calendar as CalendarIcon, Edit3, Eye } from "lucide-react";
 import Link from "next/link";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 
 export default async function TeachersPage() {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -110,7 +110,7 @@ export default async function TeachersPage() {
                                                     </div>
                                                 )}
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium pt-2 border-t border-border/40 mt-2">
-                                                    <CalendarIcon size={14} /> Inc: {dayjs(person.createdAt).format("DD/MMM/YYYY")}
+                                                    <CalendarIcon size={14} /> Inc: {formatDate(person.createdAt, "moment", "short")}
                                                 </div>
                                             </div>
                                         </div>

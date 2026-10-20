@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { ArrowLeft, BookOpen, Clock, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { StudentProfileView } from "./StudentProfileView";
 import { ActivateStudentBanner } from "./components/ActivateStudentBanner";
 import { StudentDangerZone } from "./StudentDangerZone";
@@ -274,7 +274,7 @@ export default async function StudentDetailPage({
                                                 </div>
                                             </div>
                                             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground font-medium border-t border-border/20 pt-3">
-                                                <Clock size={14} /> Fecha de alta: {dayjs(e.enrolledAt).format("DD/MM/YYYY")}
+                                                <Clock size={14} /> Fecha de alta: {formatDate(e.enrolledAt, "moment", "numericFull")}
                                             </div>
                                             {(isAdmin || e.takesExam) && (
                                                 <ExamRegistrationToggle
@@ -326,7 +326,7 @@ export default async function StudentDetailPage({
                                                     <span className="font-medium text-foreground/90 leading-tight">
                                                         {formatFeeLabel(f.type, f.month, f.year)}
                                                     </span>
-                                                    <span className="text-xs text-muted-foreground shrink-0">{dayjs(f.datePaid || f.createdAt).format("DD/MM")}</span>
+                                                    <span className="text-xs text-muted-foreground shrink-0">{formatDate(f.datePaid || f.createdAt, "moment", "numericDayMonth")}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center mt-0.5">
                                                     <span className="font-bold text-emerald-600">${formatCurrency(f.paidAmount)}</span>

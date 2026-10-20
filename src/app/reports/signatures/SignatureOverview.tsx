@@ -14,6 +14,7 @@ import {
     UserX
 } from "lucide-react";
 import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import {
@@ -306,7 +307,7 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                             <p className="text-sm text-muted-foreground truncate">
                                                 {batch.periodLabel} {batch.year} ·{" "}
                                                 {batch.publishedAt
-                                                    ? `publicado ${dayjs(batch.publishedAt).format("D [de] MMMM")}`
+                                                    ? `publicado ${formatDate(batch.publishedAt, "moment", "dayMonthLong")}`
                                                     : "sin publicar"}
                                             </p>
                                         </div>

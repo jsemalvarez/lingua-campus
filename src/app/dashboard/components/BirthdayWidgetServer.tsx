@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { BirthdayWidget } from "./BirthdayWidget";
+import { dayKey, instituteToday } from "@/lib/dates";
 
 export interface BirthdayStudent {
     id: string;
@@ -22,13 +23,13 @@ type RawBirthday = {
 
 function toStudent(row: RawBirthday, today: Date): BirthdayStudent {
     const next = new Date(row.next_birthday);
-    next.setHours(0, 0, 0, 0);
+    next.setUTCHours(0, 0, 0, 0);
     const diffMs = next.getTime() - today.getTime();
     const daysUntil = Math.round(diffMs / (1000 * 60 * 60 * 24));
     
     const birthDate = new Date(row.birthDate);
     // Age they will be turning
-    const turningAge = next.getFullYear() - birthDate.getFullYear();
+    const turningAge = next.getUTCFullYear() - birthDate.getUTCFullYear();
 
     return {
         id: row.id,
@@ -44,18 +45,22 @@ function toStudent(row: RawBirthday, today: Date): BirthdayStudent {
 
 // ── Admin/Secretary: all institute students ──
 async function getBirthdaysForInstitute(instituteId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const currentMonth = today.getMonth() + 1;
+    // Hoy del instituto, como texto: `CURRENT_DATE` es el de Postgres, que corre en
+    // UTC y a partir de las 21 de Argentina ya está en mañana.
+    const today = instituteToday();
+    const todayKey = dayKey(today);
+    const currentMonth = today.getUTCMonth() + 1;
 
     const weekRaw = await prisma.$queryRaw<RawBirthday[]>`
         WITH base AS (
             SELECT s.id, s.name, s."birthDate",
-                MAKE_DATE(
-                    EXTRACT(YEAR FROM CURRENT_DATE)::int,
+                -- Primero del mes más los días: un 29 de febrero cae el 1° de marzo en
+                -- los años no bisiestos, donde MAKE_DATE(año, 2, 29) tira error.
+                (MAKE_DATE(
+                    EXTRACT(YEAR FROM ${todayKey}::date)::int,
                     EXTRACT(MONTH FROM s."birthDate")::int,
-                    EXTRACT(DAY FROM s."birthDate")::int
-                ) AS this_year_bday,
+                    1
+                ) + (EXTRACT(DAY FROM s."birthDate")::int - 1)) AS this_year_bday,
                 string_agg(c.name, ', ') as course_names
             FROM "Student" s
             LEFT JOIN "Enrollment" e ON e."studentId" = s.id AND e.status = 'ACTIVE'
@@ -66,28 +71,30 @@ async function getBirthdaysForInstitute(instituteId: string) {
             GROUP BY s.id, s.name, s."birthDate"
         )
         SELECT id, name, "birthDate", course_names,
-            CASE WHEN this_year_bday < CURRENT_DATE
+            CASE WHEN this_year_bday < ${todayKey}::date
                  THEN this_year_bday + INTERVAL '1 year'
                  ELSE this_year_bday
             END AS next_birthday
         FROM base
         WHERE (
-            CASE WHEN this_year_bday < CURRENT_DATE
+            CASE WHEN this_year_bday < ${todayKey}::date
                  THEN this_year_bday + INTERVAL '1 year'
                  ELSE this_year_bday
             END
-        ) BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '6 days'
+        ) BETWEEN ${todayKey}::date AND ${todayKey}::date + INTERVAL '6 days'
         ORDER BY next_birthday ASC
     `;
 
     const monthRaw = await prisma.$queryRaw<RawBirthday[]>`
         WITH base AS (
             SELECT s.id, s.name, s."birthDate",
-                MAKE_DATE(
-                    EXTRACT(YEAR FROM CURRENT_DATE)::int,
+                -- Primero del mes más los días: un 29 de febrero cae el 1° de marzo en
+                -- los años no bisiestos, donde MAKE_DATE(año, 2, 29) tira error.
+                (MAKE_DATE(
+                    EXTRACT(YEAR FROM ${todayKey}::date)::int,
                     EXTRACT(MONTH FROM s."birthDate")::int,
-                    EXTRACT(DAY FROM s."birthDate")::int
-                ) AS this_year_bday,
+                    1
+                ) + (EXTRACT(DAY FROM s."birthDate")::int - 1)) AS this_year_bday,
                 string_agg(c.name, ', ') as course_names
             FROM "Student" s
             LEFT JOIN "Enrollment" e ON e."studentId" = s.id AND e.status = 'ACTIVE'
@@ -113,18 +120,22 @@ async function getBirthdaysForInstitute(instituteId: string) {
 
 // ── Teacher: only their enrolled students ──
 async function getBirthdaysForTeacher(instituteId: string, courseIds: string[]) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const currentMonth = today.getMonth() + 1;
+    // Hoy del instituto, como texto: `CURRENT_DATE` es el de Postgres, que corre en
+    // UTC y a partir de las 21 de Argentina ya está en mañana.
+    const today = instituteToday();
+    const todayKey = dayKey(today);
+    const currentMonth = today.getUTCMonth() + 1;
 
     const weekRaw = await prisma.$queryRaw<RawBirthday[]>`
         WITH base AS (
             SELECT s.id, s.name, s."birthDate",
-                MAKE_DATE(
-                    EXTRACT(YEAR FROM CURRENT_DATE)::int,
+                -- Primero del mes más los días: un 29 de febrero cae el 1° de marzo en
+                -- los años no bisiestos, donde MAKE_DATE(año, 2, 29) tira error.
+                (MAKE_DATE(
+                    EXTRACT(YEAR FROM ${todayKey}::date)::int,
                     EXTRACT(MONTH FROM s."birthDate")::int,
-                    EXTRACT(DAY FROM s."birthDate")::int
-                ) AS this_year_bday,
+                    1
+                ) + (EXTRACT(DAY FROM s."birthDate")::int - 1)) AS this_year_bday,
                 string_agg(DISTINCT c.name, ', ') as course_names
             FROM "Student" s
             INNER JOIN "Enrollment" e ON e."studentId" = s.id
@@ -137,28 +148,30 @@ async function getBirthdaysForTeacher(instituteId: string, courseIds: string[]) 
             GROUP BY s.id, s.name, s."birthDate"
         )
         SELECT id, name, "birthDate", course_names,
-            CASE WHEN this_year_bday < CURRENT_DATE
+            CASE WHEN this_year_bday < ${todayKey}::date
                  THEN this_year_bday + INTERVAL '1 year'
                  ELSE this_year_bday
             END AS next_birthday
         FROM base
         WHERE (
-            CASE WHEN this_year_bday < CURRENT_DATE
+            CASE WHEN this_year_bday < ${todayKey}::date
                  THEN this_year_bday + INTERVAL '1 year'
                  ELSE this_year_bday
             END
-        ) BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '6 days'
+        ) BETWEEN ${todayKey}::date AND ${todayKey}::date + INTERVAL '6 days'
         ORDER BY next_birthday ASC
     `;
 
     const monthRaw = await prisma.$queryRaw<RawBirthday[]>`
         WITH base AS (
             SELECT s.id, s.name, s."birthDate",
-                MAKE_DATE(
-                    EXTRACT(YEAR FROM CURRENT_DATE)::int,
+                -- Primero del mes más los días: un 29 de febrero cae el 1° de marzo en
+                -- los años no bisiestos, donde MAKE_DATE(año, 2, 29) tira error.
+                (MAKE_DATE(
+                    EXTRACT(YEAR FROM ${todayKey}::date)::int,
                     EXTRACT(MONTH FROM s."birthDate")::int,
-                    EXTRACT(DAY FROM s."birthDate")::int
-                ) AS this_year_bday,
+                    1
+                ) + (EXTRACT(DAY FROM s."birthDate")::int - 1)) AS this_year_bday,
                 string_agg(DISTINCT c.name, ', ') as course_names
             FROM "Student" s
             INNER JOIN "Enrollment" e ON e."studentId" = s.id
