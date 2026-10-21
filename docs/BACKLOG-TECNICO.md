@@ -8128,6 +8128,13 @@ En el primer caso las escrituras fueron un `UPDATE "Enrollment"` (12 filas), un 
 tiene la base en la misma región que las funciones, así que esto prueba el conteo, no la latencia de
 producción — que es justamente lo que el conteo deja de hacer importar.
 
+**Los otros tres cursos que en producción quedaron sin examen**, también probados en stage desde el
+mismo estado que prod (mismas inscripciones activas, fecha 18/12/2026 puesta a mano): Adolescents 3
+(9 alumnos, $ 540.000), Pre-adolescents 1 M-J (10, $ 600.000) y Pre-intermediate M-J (11,
+$ 825.000). Los tres entraron completos, con su clase del examen, y cada uno con un `UPDATE` y un
+`INSERT` de derechos por curso. Los de adultos y First Certificate no tienen precio ni fecha de
+examen y no se probaron.
+
 ---
 
 <a id="feat-22"></a>
