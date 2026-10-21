@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
-import { syncFinalExamLesson } from "@/lib/feeDue";
+import { finalExamLessonWrites, syncFinalExamLesson } from "@/lib/feeDue";
 import { instituteMonth } from "@/lib/dates";
 
 export async function createEnrollmentAction(formData: FormData) {
@@ -183,6 +183,12 @@ export async function toggleExamRegistrationAction(enrollmentId: string, takesEx
  * resto de las inscripciones activas queda sin examen. Cada alumno pasa por la
  * misma regla que el interruptor de su ficha, que sigue sirviendo para los casos
  * sueltos.
+ *
+ * Va en sentencias masivas, no en un bucle por alumno dentro de una transacción
+ * interactiva: así estaba y falló en producción con Children 4 L-M, 12 alumnos,
+ * el mismo umbral de tamaño que tiró la publicación de boletines (BUG-23 y
+ * BUG-25). Las lecturas van antes y las escrituras en un solo lote, así que
+ * la cantidad de sentencias no depende del tamaño del curso.
  */
 export async function setCourseExamRegistrationsAction(courseId: string, takingEnrollmentIds: string[]) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -200,24 +206,62 @@ export async function setCourseExamRegistrationsAction(courseId: string, takingE
 
         const taking = new Set(takingEnrollmentIds);
         const currentYear = instituteMonth().year;
-        let feesCreated = 0;
+        const takers = course.enrollments.filter((e) => taking.has(e.id));
+        // El que no rinde y nunca rindió no tiene nada que deshacer.
+        const leavers = course.enrollments.filter((e) => !taking.has(e.id) && e.takesExam);
+        const takerIds = takers.map((e) => e.id);
+        const leaverIds = leavers.map((e) => e.id);
 
-        await prisma.$transaction(async (tx) => {
-            for (const enrollment of course.enrollments) {
-                const takesExam = taking.has(enrollment.id);
-                // El que no rinde y nunca rindió no tiene nada que deshacer.
-                if (!takesExam && !enrollment.takesExam) continue;
-                if (await applyExamRegistration(tx, enrollment, course, takesExam, currentYear, user.instituteId as string)) {
-                    feesCreated++;
-                }
-            }
-        }, { timeout: 30000 });
+        // El derecho de examen es uno por año: se busca por inscripción y año,
+        // ignorando el mes, igual que `applyExamRegistration`.
+        const [examFees, lessonWrites] = await Promise.all([
+            prisma.fee.findMany({
+                where: { enrollmentId: { in: takerIds }, type: "EXAM", year: currentYear },
+                select: { enrollmentId: true }
+            }),
+            takers.length > 0 ? finalExamLessonWrites(prisma, courseId, course.examDate) : Promise.resolve([]),
+        ]);
+
+        const withFee = new Set(examFees.map((f) => f.enrollmentId));
+        const newFees = takers.flatMap((e) => {
+            const price = e.customExamPrice !== null ? e.customExamPrice : course.examPrice;
+            if (price <= 0 || withFee.has(e.id)) return [];
+            return [{
+                studentId: e.studentId,
+                enrollmentId: e.id,
+                type: "EXAM" as const,
+                originalAmount: price,
+                paidAmount: 0,
+                status: "PENDING" as const,
+                month: EXAM_FEE_MONTH,
+                year: currentYear,
+                instituteId: user.instituteId as string
+            }];
+        });
+
+        const [, , created] = await prisma.$transaction([
+            prisma.enrollment.updateMany({ where: { id: { in: takerIds } }, data: { takesExam: true } }),
+            prisma.enrollment.updateMany({ where: { id: { in: leaverIds } }, data: { takesExam: false } }),
+            // `skipDuplicates` cubre el doble clic: la restricción única ya
+            // dice "uno por inscripción y año" desde FIN-17.
+            prisma.fee.createMany({ data: newFees, skipDuplicates: true }),
+            // Se saca la cuota sólo si está impaga. La condición va en la
+            // sentencia y no en una lectura previa, por si entró un pago en el
+            // medio.
+            prisma.fee.deleteMany({
+                where: { enrollmentId: { in: leaverIds }, type: "EXAM", year: currentYear, paidAmount: 0, status: "PENDING" }
+            }),
+            ...lessonWrites,
+        ]);
 
         revalidatePath(`/courses/${courseId}`);
         revalidatePath("/students/[id]", "page");
         revalidatePath("/payments");
-        return { success: true, registered: taking.size, feesCreated };
+        return { success: true, registered: takers.length, feesCreated: (created as Prisma.BatchPayload).count };
     } catch (e: any) {
+        // El detalle queda en el log de Vercel; antes se perdía y no había cómo
+        // saber por qué había fallado.
+        console.error("Error cargando el examen final del curso:", { courseId, error: e });
         return { success: false, error: "Error al cargar el examen final del curso" };
     }
 }
