@@ -249,7 +249,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
 | [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
-| [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [ ] |
+| [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [x] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
@@ -2216,6 +2216,22 @@ Sin período lectivo cargado no hay forma de saber cuándo empezó a cursar el a
 se puede aproximar, pero la respuesta buena depende de la decisión pendiente sobre **qué se espera de
 un curso sin fechas**.
 
+### Lo que cambió con FIN-29 — 2026-10-22
+
+**La regla vive en un solo lugar**: [`monthlyFeesToIssue`](../src/lib/monthlyFees.ts), que usan la
+corrida y el alta. Cualquier límite de período que se agregue va ahí, y alcanza a los dos.
+
+**Y regenerar un mes cerrado ya no repone las cuotas borradas** (`6b92e9c`). Era la mitad del agujero
+de arriba: volver a correr un mes le emitía la cuota a todo el que no la tuviera, también al que se la
+habían borrado con motivo. La otra mitad —emitirle marzo al que entró en julio— sigue abierta.
+
+**Un dato que complica la regla del período, medido en producción:** hay 26 cuotas mensuales pagas de
+meses **anteriores** a la fecha de inicio de su curso, en dos cursos creados el 29/03 que hoy dicen
+empezar el 03/08 y el 06/08. El instituto reutiliza los cursos y les cambia la fecha a mitad de año,
+así que hoy `startDate` no dice cuándo empezó a dictarse el curso. Antes de acotar por fechas hay que
+resolver eso —es lo que [FIN-28](#fin-28) empieza a ordenar—, o el filtro deja sin cobrar meses que se
+dictaron.
+
 ---
 
 <a id="fin-17"></a>
@@ -3195,6 +3211,79 @@ a mano para no perder el mes.
 hace repetible la corrida), [FIN-28](#fin-28) (el año del curso), [FIN-09](#fin-09) (la pantalla donde
 esto tendría que haberse visto), [BUG-08](#bug-08) (el alta por preinscripción, el otro camino por el
 que un alumno llega a un curso).
+
+### Decidido con el instituto — 2026-10-22 · la cuota va entera
+
+**El que se inscribe a mitad de mes paga el mes entero**, sin importar el día. Si el instituto hace
+un descuento —puede ser grande— por anotarse tarde, lo carga a mano al cobrar. No hay prorrateo.
+
+### Medido en producción — 2026-10-22 · cuatro alumnos sin septiembre, y regenerar no era seguro
+
+**Octubre está completo.** Septiembre tiene ocho inscripciones activas sin cuota, y sólo cuatro son
+este defecto: **Joaquín Fidalgo, Jair David Gimenez Escalante, Tobías Ali y Magdalena Sánchez**,
+inscriptos entre el 1 y el 4/09, después de la corrida — **$261.000 sin emitir**. Las otras cuatro no:
+
+- **Ariana Muñiz y Nicolas Duarte**: el instituto les borró septiembre el 11/09, con los motivos
+  «becada 100%» y «baja».
+- **Paz Calderón**: tiene septiembre pago en su otra inscripción; la que no lo tiene es la duplicada de
+  [FIN-33](#fin-33).
+- **Abril Dukard**: curso con precio 0.
+
+**Y lo que esta ficha decía arriba —que repetir la corrida es seguro— había dejado de ser cierto.**
+La corrida no miraba las cuotas borradas ([FEAT-10](#feat-10)): regenerar septiembre habría repuesto,
+al precio de hoy, las de Ariana y Nicolas, además de crearle a Paz una deuda falsa. En producción hay
+**45 cuotas mensuales borradas, todas con motivo de no cobrarlas** —28 «baja», 9 «receso» (7 de ellas
+«receso invernal»), 7 becas y 1 «deja el curso»—; regenerar julio habría vuelto a cobrar el receso.
+
+**De paso, para el instituto:** a Nicolas Duarte le borraron septiembre por «baja», pero sigue activo
+y tiene octubre pendiente, $65.000. Puede ser una deuda que no corresponde.
+
+### Resuelto — 2026-10-22 · `6b92e9c` · verificado por pantalla en local · falta stage
+
+**Una sola regla para los dos caminos.**
+[`monthlyFeesToIssue`](../src/lib/monthlyFees.ts) decide a quién le corresponde la cuota de un
+período, y la usan la corrida (`generateMonthlyFeesAction`, para todo el instituto) y el alta
+(`createEnrollmentAction`, para una inscripción). Son las reglas que la corrida ya tenía —inscripción
+activa y mensual, alumno y curso activos, precio mayor que cero, sin la cuota del período, sin cuota
+suelta— **más una nueva: no se emite la cuota que el instituto le borró a ese alumno en ese período.**
+Borrar es una decisión, y apretar el botón no la puede deshacer. Si se borró por error, el camino es
+reponerla ([FEAT-26](#feat-26)), que sigue pendiente.
+
+**Lo que hace el alta:** emite la cuota entera del mes en curso —el del instituto, `instituteMonth()`,
+no el reloj del servidor—, y la pantalla de inscripción dice cuál emitió y por cuánto. La matrícula
+pasa a respetar `customEnrollmentPrice`, como la corrida anual. **Lo que hace el botón:** además de
+cuántas emitió y del aviso de la cuota suelta, avisa cuántos alumnos no la recibieron porque se les
+había borrado.
+
+**El borrado se mira por alumno y período, no por inscripción**, porque `FeeDeletion` no guarda
+`enrollmentId`: al que cursa dos cursos y le borraron la cuota de uno, tampoco se le emite la del otro
+ese mes. Es raro, y queda contado en el aviso.
+
+**Lo que no mira, a propósito: las fechas del curso.** La regla «nadie paga un mes anterior al inicio
+de su curso» no entró: en producción hay **26 cuotas pagas de meses anteriores al inicio**, en dos
+cursos creados en marzo que hoy dicen empezar en agosto. El instituto reutiliza cursos y les cambia la
+fecha a mitad de año, así que esa regla dejaría sin cobrar meses que se dictaron. Hoy no hay ningún
+curso activo que empiece después de hoy. Queda en [FIN-16](#fin-16).
+
+**Verificado por pantalla contra la base local**, con lo esperado anotado antes de abrir el navegador.
+Curso de prueba con cuota de $10.000 y matrícula de $15.000; 10 cuotas al empezar:
+
+| Caso | Dio | Cuotas |
+|---|---|---|
+| Alumna sin cursos, inscripta | Matrícula y cuota de octubre; el cartel dice *«Se le emitió la cuota de octubre de 2026: $10.000.»* | 12 |
+| Alumna con octubre borrado | Sólo la matrícula; el cartel no menciona cuota | 13 |
+| Alumna con cuota suelta de octubre | Sólo la matrícula | 14 |
+| Reactivar una inscripción de curso completo | Reactiva la misma inscripción —no crea otra— y emite sólo la matrícula | 15 |
+| Curso con precio 0 | Nada | 15 |
+| *Generar Cuotas* de octubre | *«Se generaron 5 cuotas»*, más un aviso por la suelta y otro por la borrada | 20 |
+| *Generar Cuotas* otra vez | *«Se generaron 0 cuotas»* y los mismos dos avisos | 20 |
+
+Lo creado se borró después: 9 cuotas, 145 inscripciones y 2 borrados, antes y después.
+
+**Lo que queda.** Stage, y **los cuatro de septiembre**: con esto en producción, regenerar septiembre
+desde el botón emite **5 cuotas** —las cuatro, más la de la inscripción duplicada de Paz— y avisa de
+**2 borradas**. La de Paz se elimina después, con motivo, y ya no vuelve. Antes, que el instituto
+confirme que los cuatro deben septiembre.
 
 ---
 
@@ -8342,6 +8431,11 @@ la pantalla: el importe sale **siempre** de la foto y nunca del precio vigente; 
 **Relacionado.** [FEAT-10](#feat-10) construyó la pantalla y la tabla; esto es la acción que le
 faltaba. [ARQ-10](#arq-10) (auditoría general) es el marco donde ese `restoredAt` debería terminar
 viviendo si se encara.
+
+> **Desde FIN-29 (2026-10-22, `6b92e9c`) esto es el único camino de vuelta.** Hasta entonces, regenerar
+> el mes reponía sin querer la cuota borrada —al precio de hoy, no al de la foto—. Ahora la corrida y el
+> alta saltean el período que el instituto le borró al alumno, así que una cuota borrada por error sólo
+> vuelve reponiéndola. Queda pendiente, decidido por el usuario el 2026-10-22.
 
 ---
 
