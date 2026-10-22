@@ -10,6 +10,20 @@ import { recordActivity } from "@/lib/activity";
  */
 const ROLES_REFRESH_MS = 5 * 60 * 1000;
 
+/**
+ * Corta la sesión de quien ya no está activo.
+ *
+ * next-auth 4 no tiene cómo decir "sin sesión" desde el callback `jwt`: lo que
+ * devuelva se firma como token nuevo. Lo que sí hace es atrapar lo que tire,
+ * borrar la cookie de sesión y devolver una sesión vacía
+ * (`next-auth/core/routes/session.js`), y con eso `getServerSession` da `null` y
+ * cada pantalla manda al login. Por eso se tira, y con un mensaje que se lea
+ * como lo que es en el registro: no es una falla.
+ */
+function revokeSession(): never {
+    throw new Error("Sesión cortada: la cuenta ya no está activa (SEC-12)");
+}
+
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -26,14 +40,25 @@ export const authOptions: NextAuthOptions = {
                 const instituteId = credentials.instituteId?.trim() || undefined;
                 const isEmail     = identifier.includes("@");
 
+                // Sólo entra quien está activo, en las dos tablas (SEC-12). La
+                // baja lógica es la única forma de sacar a alguien del sistema
+                // (ARQ-05): si el login no la mira, el instituto cree que lo sacó
+                // y la persona sigue adentro. El preinscripto tampoco entra —es
+                // un aspirante, no un alumno— y además su contraseña es la fija
+                // de la inscripción, así que con un DNI alcanzaba.
+                //
+                // El que no está activo recibe el mismo `null` que una contraseña
+                // mal: un mensaje propio convertiría el login en una forma de
+                // averiguar quién está en el instituto y quién no.
+
                 // ── 1. Buscar en la tabla User (staff: ADMIN, TEACHER, SECRETARY, GUARDIAN) ──
                 if (isEmail) {
                     const user = await prisma.user.findUnique({
                         where: { email: identifier },
-                        select: { id: true, name: true, email: true, password: true, roles: true, instituteId: true }
+                        select: { id: true, name: true, email: true, password: true, roles: true, instituteId: true, status: true }
                     });
 
-                    if (user?.password) {
+                    if (user?.password && user.status === "ACTIVE") {
                         const ok = await bcrypt.compare(credentials.password, user.password);
                         if (ok) {
                             return {
@@ -50,8 +75,8 @@ export const authOptions: NextAuthOptions = {
                 // ── 2. Buscar en la tabla Student ─────────────────────────────────────
                 const student = await prisma.student.findFirst({
                     where: isEmail
-                        ? { email: identifier }                          // buscar por email
-                        : { dni: identifier, instituteId: instituteId }, // buscar por DNI + instituto
+                        ? { email: identifier, status: "ACTIVE" }                          // buscar por email
+                        : { dni: identifier, instituteId: instituteId, status: "ACTIVE" }, // buscar por DNI + instituto
                 });
 
                 if (student?.password) {
@@ -108,10 +133,11 @@ export const authOptions: NextAuthOptions = {
             // Esta misma compuerta es la que marca actividad para el panel de
             // uso (FEAT-11): ya corría con la frecuencia justa, así que medir
             // uso cuesta una sentencia cada cinco minutos por persona activa, y
-            // no hace falta ni middleware ni instrumentar pantallas. Los alumnos
-            // pasan por acá aunque su rol no cambie nunca — el corte por
-            // STUDENT bajó a la relectura de roles, que es lo único que no les
-            // corresponde.
+            // no hace falta ni middleware ni instrumentar pantallas.
+            //
+            // Y es la que corta la sesión de quien se dio de baja con la sesión
+            // abierta (SEC-12): sin esto, el filtro de `authorize` sólo frena el
+            // próximo login, y el token ya emitido dura 30 días.
             const syncedAt = token.rolesSyncedAt ?? 0;
             if (Date.now() - syncedAt < ROLES_REFRESH_MS) return token;
 
@@ -121,7 +147,16 @@ export const authOptions: NextAuthOptions = {
 
             const isStudent = token.roles?.includes("STUDENT") ?? false;
 
-            if (!isStudent) {
+            if (isStudent) {
+                const fresh = await prisma.student.findUnique({
+                    where: { id: token.id },
+                    select: { status: true },
+                });
+
+                // Acá sí se sabe de qué tabla salió el token, así que una fila
+                // que ya no está —la purga de ARQ-14— corta igual que una baja.
+                if (fresh?.status !== "ACTIVE") revokeSession();
+            } else {
                 const fresh = await prisma.user.findUnique({
                     where: { id: token.id },
                     select: { roles: true, instituteId: true, status: true },
@@ -138,10 +173,12 @@ export const authOptions: NextAuthOptions = {
                 // vacía en lugar de un error. Quien deniega es `getAuthContext`,
                 // que consulta la base en cada acción.
                 if (fresh) {
-                    // Cuenta dada de baja: se vacían los roles. Sin roles no pasa
-                    // ningún chequeo, y la interfaz deja de ofrecer lo que ya no
-                    // puede hacer.
-                    token.roles       = fresh.status === "ACTIVE" ? fresh.roles : [];
+                    // Cuenta dada de baja: se corta la sesión. Antes se vaciaban
+                    // los roles, y eso no alcanzaba: las pantallas que leen la
+                    // sesión directo sólo miran que haya usuario.
+                    if (fresh.status !== "ACTIVE") revokeSession();
+
+                    token.roles       = fresh.roles;
                     token.instituteId = fresh.instituteId;
                 }
             }
