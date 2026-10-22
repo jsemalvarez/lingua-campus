@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
 import { instituteMonth } from "@/lib/dates";
+import { monthlyFeesToIssue } from "@/lib/monthlyFees";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -16,12 +17,16 @@ async function getAuthAndInstitute() {
 }
 
 /**
- * Genera las cuotas mensuales para todos los alumnos inscriptos en cursos activos.
- * Evita duplicados para el mismo mes/año/inscripción.
- * Optimizado para ejecuciones en masa de alto rendimiento (1 single SQL bulk insert).
+ * Genera las cuotas mensuales del período para todo el instituto.
  *
- * Devuelve además `skipped`: los alumnos que quedaron afuera por tener una cuota
- * suelta del período (ver FIN-22, abajo).
+ * A quién le corresponde lo decide `monthlyFeesToIssue`, la misma regla que usa
+ * el alta de una inscripción (FIN-29). Acá queda sólo lo propio de la corrida:
+ * el período elegido y el insert en una sola sentencia.
+ *
+ * Devuelve, además de cuántas emitió, cuántos alumnos quedaron afuera y por qué:
+ * `skipped` los que tienen una cuota suelta del período (FIN-22), que hay que
+ * revisar a mano, y `skippedDeleted` aquellos a los que el instituto ya les
+ * borró la cuota de ese período, que no se vuelve a emitir.
  */
 export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const user = await getAuthAndInstitute();
@@ -32,120 +37,19 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
     const targetYear = year ?? now.year;
 
     try {
-        // 1. Obtener todas las inscripciones activas del instituto (solo modalidad cuotas mensuales)
-        //
-        // El filtro por `student.status` es de FIN-16: un alumno dado de baja cuya
-        // inscripción quedó activa seguía generando cuotas. El generador anual ya lo
-        // filtraba desde FIN-12; este se había quedado atrás.
-        const enrollments = await prisma.enrollment.findMany({
-            where: {
-                status: "ACTIVE",
-                billingMode: "MONTHLY",
-                student: {
-                    status: "ACTIVE"
-                },
-                course: {
-                    instituteId: user.instituteId as string,
-                    status: "ACTIVE"
-                }
-            },
-            include: {
-                course: true
-            }
+        const { fees, skippedLoose, skippedDeleted } = await monthlyFeesToIssue(prisma, {
+            instituteId: user.instituteId as string,
+            month: targetMonth,
+            year: targetYear,
         });
 
-        if (enrollments.length === 0) {
-            return { success: true, count: 0, skipped: 0 };
-        }
-
-        // 2. Traer en 1 sola query todas las cuotas ya existentes para este periodo
-        const existingFees = await prisma.fee.findMany({
-            where: {
-                instituteId: user.instituteId as string,
-                month: targetMonth,
-                year: targetYear,
-                type: "MONTHLY",
-                enrollmentId: {
-                    in: enrollments.map(e => e.id)
-                }
-            },
-            select: { enrollmentId: true }
-        });
-
-        const existingEnrollmentIds = new Set(
-            existingFees.map(f => f.enrollmentId).filter((id): id is string => id !== null)
-        );
-
-        // 2b. Las cuotas **sueltas** del período: mismo alumno, mismo mes, sin
-        // inscripción. La consulta de arriba no las trae —no están en el `in` de
-        // `enrollmentId`— y el índice único de FIN-06 tampoco las alcanza, porque
-        // Postgres no considera iguales dos NULL. Sin esto, cada corrida le crea al
-        // alumno una segunda cuota del mismo mes: es FIN-22, y es lo que le pasó a
-        // los dos alumnos que reportó el instituto.
-        //
-        // Las hay sobre todo porque **desinscribir a un alumno borra la fila de
-        // `Enrollment`** y la clave foránea de `Fee` es ON DELETE SET NULL: le suelta
-        // todas las cuotas de golpe, incluidas las pagas (FIN-23, sin arreglar). Mover
-        // a alguien de curso por desinscribir + inscribir pasa por ahí. La otra fuente,
-        // menor, es la carga inicial de datos por script.
-        const looseFees = await prisma.fee.findMany({
-            where: {
-                instituteId: user.instituteId as string,
-                month: targetMonth,
-                year: targetYear,
-                type: "MONTHLY",
-                enrollmentId: null,
-                studentId: {
-                    in: enrollments.map(e => e.studentId)
-                }
-            },
-            select: { studentId: true }
-        });
-
-        const studentsWithLooseFee = new Set(looseFees.map(f => f.studentId));
-
-        // 3. Filtrar en memoria las inscripciones que necesitan nueva cuota
-        const feesToCreate = enrollments
-            .filter(enrollment => {
-                if (existingEnrollmentIds.has(enrollment.id)) return false;
-                // El alumno ya tiene la cuota del mes, suelta. No se la generamos de
-                // nuevo y **tampoco la vinculamos acá**: si tuviera dos inscripciones
-                // activas no hay forma de saber de cuál es, y una corrida masiva no es
-                // lugar para reescribir el historial. Queda para normalizar aparte, y
-                // el operador se entera por el conteo que devolvemos (FIN-22).
-                if (studentsWithLooseFee.has(enrollment.studentId)) return false;
-                const finalPrice = enrollment.customMonthlyPrice !== null 
-                    ? enrollment.customMonthlyPrice 
-                    : enrollment.course.monthlyPrice;
-                return finalPrice > 0;
-            })
-            .map(enrollment => {
-                const finalPrice = enrollment.customMonthlyPrice !== null 
-                    ? enrollment.customMonthlyPrice 
-                    : enrollment.course.monthlyPrice;
-                return {
-                    studentId: enrollment.studentId,
-                    enrollmentId: enrollment.id,
-                    type: "MONTHLY" as const,
-                    originalAmount: finalPrice,
-                    paidAmount: 0,
-                    status: "PENDING" as const,
-                    month: targetMonth,
-                    year: targetYear,
-                    instituteId: user.instituteId as string
-                };
-            });
-
-        // 4. Crear masivamente en 1 sola query SQL
-        // El filtro en memoria de arriba se queda porque es lo que hace honesto al
-        // contador, pero ya no es lo único que evita duplicados: entre esa consulta y
-        // este insert se puede colar otra generación. `skipDuplicates` se apoya en la
-        // restricción única de `Fee` para que la segunda no explote ni duplique, y
-        // sigue siendo una sola query — que es la razón por la que esto no va dentro
-        // de una transacción (ver FIN-06).
-        if (feesToCreate.length > 0) {
+        // Una sola sentencia, y por eso fuera de una transacción (ver FIN-06).
+        // `monthlyFeesToIssue` ya descartó lo emitido, y es lo que hace honesto al
+        // contador; `skipDuplicates` se apoya en la restricción única de `Fee` para
+        // que otra generación que se cuele en el medio no explote ni duplique.
+        if (fees.length > 0) {
             await prisma.fee.createMany({
-                data: feesToCreate,
+                data: fees,
                 skipDuplicates: true
             });
         }
@@ -153,11 +57,9 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
         revalidatePath("/payments");
         return {
             success: true,
-            count: feesToCreate.length,
-            // Alumnos, no inscripciones: es el número que el operador tiene que ir a
-            // mirar. Si un alumno con cuota suelta tuviera dos inscripciones, las dos
-            // quedaron afuera y sigue siendo un solo caso para revisar.
-            skipped: studentsWithLooseFee.size
+            count: fees.length,
+            skipped: skippedLoose,
+            skippedDeleted
         };
     } catch (e: any) {
         console.error("Error al generar cuotas masivas:", e);

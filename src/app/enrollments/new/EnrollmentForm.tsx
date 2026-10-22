@@ -6,6 +6,7 @@ import { createEnrollmentAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, BookOpen, Search } from "lucide-react";
 import Link from "next/link";
+import { formatCurrency, getMonthName } from "@/lib/utils";
 
 interface CourseOption {
     id: string;
@@ -31,6 +32,8 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
     const [isPending, startTransition] = useTransition();
     const [statusFeedback, setStatusFeedback] = useState<"idle" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
+    // La cuota del mes que el alta acaba de emitir (FIN-29), para decirlo.
+    const [issuedFee, setIssuedFee] = useState<{ month: number; year: number; amount: number } | null>(null);
 
     // State
     const [courseId, setCourseId] = useState(preselectedCourseId || "");
@@ -67,10 +70,13 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
         startTransition(async () => {
             const result = await createEnrollmentAction(formData);
             if (result.success) {
+                const fee = "monthlyFee" in result ? result.monthlyFee ?? null : null;
+                setIssuedFee(fee);
                 setStatusFeedback("success");
+                // Con la cuota hay una línea más que leer antes de irse.
                 setTimeout(() => {
                     router.push(`/courses/${courseId}`);
-                }, 1200); // feedback
+                }, fee ? 2500 : 1200); // feedback
             } else {
                 setStatusFeedback("error");
                 setErrorMsg(result.error ?? "No se pudo inscribir al alumno.");
@@ -179,9 +185,16 @@ export function EnrollmentForm({ courses, students, preselectedCourseId }: Enrol
 
             {/* Feedback Mensajes */}
             {statusFeedback === "success" && (
-                <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-sm font-medium animate-in slide-in-from-top-2">
-                    <CheckCircle size={18} />
-                    ¡Alumno inscripto exitosamente! Redirigiendo...
+                <div className="flex items-start gap-2 p-3 mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-sm font-medium animate-in slide-in-from-top-2">
+                    <CheckCircle size={18} className="shrink-0 mt-0.5" />
+                    <div>
+                        <p>¡Alumno inscripto exitosamente! Redirigiendo...</p>
+                        {issuedFee && (
+                            <p className="font-normal mt-0.5">
+                                Se le emitió la cuota de {getMonthName(issuedFee.month).toLowerCase()} de {issuedFee.year}: ${formatCurrency(issuedFee.amount)}.
+                            </p>
+                        )}
+                    </div>
                 </div>
             )}
             {statusFeedback === "error" && (

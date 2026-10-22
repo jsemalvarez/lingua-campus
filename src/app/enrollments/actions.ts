@@ -7,6 +7,7 @@ import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
 import { finalExamLessonWrites, syncFinalExamLesson } from "@/lib/feeDue";
 import { instituteMonth } from "@/lib/dates";
+import { monthlyFeesToIssue } from "@/lib/monthlyFees";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -69,7 +70,10 @@ export async function createEnrollmentAction(formData: FormData) {
             : calendarYear;
 
         // 3. Vincular o Generar la "Matrícula" (Enrollment Fee) automáticamente
-        const finalEnrollmentPrice = enrollment.course.enrollmentPrice;
+        //
+        // El precio propio de la inscripción manda, igual que en la corrida anual.
+        // Una inscripción nueva no lo tiene; una reactivada puede traerlo.
+        const finalEnrollmentPrice = enrollment.customEnrollmentPrice ?? enrollment.course.enrollmentPrice;
 
         // A una inscripción reactivada no se le vuelve a emitir la matrícula del año
         // si ya la tiene: la pagó cuando entró. Sin esto, el `create` de más abajo
@@ -134,12 +138,37 @@ export async function createEnrollmentAction(formData: FormData) {
             }
         }
 
+        // 4. La cuota del mes en curso (FIN-29). La corrida del botón la emite para
+        // los que ya estaban inscriptos; el que entra después no la tenía, y como no
+        // había fila, tampoco figuraba en deudores. Se cobra entera, sin importar el
+        // día del mes. La regla es la de la corrida, en el mismo lugar: si la
+        // inscripción no se cobra por mes, ya tiene la cuota o el instituto se la
+        // borró, no se emite nada.
+        const period = instituteMonth();
+        const { fees: monthlyFees } = await monthlyFeesToIssue(prisma, {
+            instituteId: user.instituteId as string,
+            month: period.month,
+            year: period.year,
+            enrollmentId: enrollment.id
+        });
+
+        if (monthlyFees.length > 0) {
+            await prisma.fee.createMany({ data: monthlyFees, skipDuplicates: true });
+        }
+
         // Revalidamos las pantallas afectadas
         revalidatePath(`/courses/${courseId}`);
         revalidatePath("/courses");
         revalidatePath("/students");
         revalidatePath("/payments");
-        return { success: true };
+        return {
+            success: true,
+            // Para que la pantalla diga qué se le emitió: quien inscribe es quien
+            // después cobra, y tiene que saber que ese mes ya está en la cuenta.
+            monthlyFee: monthlyFees.length > 0
+                ? { month: period.month, year: period.year, amount: monthlyFees[0].originalAmount }
+                : null
+        };
     } catch (e: any) {
         // Error de Prisma si falla la constraint única u otro
         return { success: false, error: "Error al inscribir al estudiante. Verifica su estado." };

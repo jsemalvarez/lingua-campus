@@ -61,7 +61,17 @@ export function GenerateFeesButton() {
                     // sabemos a qué inscripción corresponde.
                     if (res.skipped && res.skipped > 0) {
                         toast.warning(
-                            `${res.skipped} ${res.skipped === 1 ? "alumno quedó afuera" : "alumnos quedaron afuera"}: ya tenían una cuota de ${monthName} sin curso asociado. Revisalos en su ficha antes de volver a generar.`,
+                            `${res.skipped} ${res.skipped === 1 ? "alumno quedó afuera" : "alumnos quedaron afuera"}: ya ${res.skipped === 1 ? "tenía" : "tenían"} una cuota de ${monthName} sin curso asociado. Revisalos en su ficha antes de volver a generar.`,
+                            { duration: 10000 }
+                        );
+                    }
+                    // FIN-29: el instituto ya les había borrado la cuota de ese mes,
+                    // y borrar es una decisión que regenerar no deshace. No hay nada
+                    // que revisar: es aviso, no advertencia. Sólo aparece al volver a
+                    // generar un mes, que es cuando alguien pudo haber borrado algo.
+                    if (res.skippedDeleted && res.skippedDeleted > 0) {
+                        toast.info(
+                            `${res.skippedDeleted} ${res.skippedDeleted === 1 ? "alumno no recibió" : "alumnos no recibieron"} la cuota de ${monthName} porque ya se ${res.skippedDeleted === 1 ? "le había eliminado" : "les había eliminado"}. Una cuota eliminada no se vuelve a generar.`,
                             { duration: 10000 }
                         );
                     }
