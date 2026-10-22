@@ -219,7 +219,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-09](#sec-09) | P2 | `middleware.ts` de protección de rutas | [ ] |
 | [SEC-10](#sec-10) | P2 | Validación de entrada en server actions | [ ] |
 | [SEC-11](#sec-11) | P1 | 🗣️ Obligar a cambiar la contraseña por defecto en el primer ingreso | [ ] |
-| [SEC-12](#sec-12) | P1 | El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual | [ ] |
+| [SEC-12](#sec-12) | P1 | El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual | [x] |
 | [SEC-13](#sec-13) | P2 · hoy inofensivo | El login del alumno no ata la búsqueda al instituto | [ ] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
@@ -1041,6 +1041,48 @@ una sesión. Tres cosas, y ninguna es cara:
 adivinable el acceso del aspirante), [ARQ-05](#arq-05) (la política de borrado lógico que esto
 incumple), [BUG-08](#bug-08) (qué es un preinscripto y por qué no es un alumno),
 [SEC-09](#sec-09) (el `middleware.ts` que no existe y que sería la otra capa).
+
+### Resuelto — 2026-10-22 · `66a1880` · verificado por pantalla en local · falta stage
+
+**Medido en producción antes de tocar código:** tenían contraseña, y por lo tanto podían entrar,
+**11 preinscriptos, 2 alumnos dados de baja y 1 usuario del personal dado de baja**. **Ninguno tiene
+actividad registrada** desde que se mide (FEAT-11): el agujero estaba abierto y nadie lo había usado.
+Y ningún camino le pide al preinscripto que entre: ni la pantalla de éxito del formulario, ni el correo
+de acuse de [FEAT-20](#feat-20), ni `complete-profile`, que entra con un enlace de un solo uso.
+
+**Los tres puntos de arriba, en `auth.ts`:**
+
+1. `authorize` busca al alumno con `status: "ACTIVE"`, y al `User` le compara la contraseña sólo si
+   está activo. El que no lo está recibe el mismo `null` que una contraseña mal.
+2. La relectura del token cada cinco minutos ya no saltea a los alumnos: relee su fila y, si no está
+   activa o ya no existe, **corta la sesión**.
+3. **Al personal dado de baja también se le corta**, en vez de vaciarle los roles como se hacía. Vaciar
+   no alcanzaba, por lo mismo que esta ficha dice de los alumnos: las pantallas que leen la sesión
+   directo sólo miran que haya usuario.
+
+**Cómo se corta.** next-auth 4 no tiene cómo devolver "sin sesión" desde el callback `jwt`. Lo que sí
+hace es atrapar lo que se tire ahí, borrar la cookie y devolver una sesión vacía
+(`next-auth/core/routes/session.js`); con eso `getServerSession` da `null` y cada pantalla manda al
+login. Queda en el registro como `JWT_SESSION_ERROR` con el texto *«Sesión cortada: la cuenta ya no
+está activa (SEC-12)»*, una vez por pedido hasta que la cookie se borra.
+
+**Verificado por pantalla contra la base local**, con lo esperado anotado antes de abrir el navegador:
+
+| Caso | Dio |
+|---|---|
+| Preinscripta (DNI 30111222) con su contraseña correcta, `inscripcion123` | *«Credenciales inválidas. Verificá tu email, DNI o contraseña.»* — el mismo cartel que una contraseña mal |
+| Alumno activo (DNI 99000001) | Entra y llega a su inicio |
+| La misma sesión, con el alumno pasado a baja en la base | A los 5 minutos del login la sesión vuelve vacía, y al recargar `/dashboard` termina en `/login`. El corte quedó dos veces en el registro: desde la campana de mensajes y desde `/api/auth/session` |
+| Volver a entrar con ese alumno dado de baja | El mismo cartel |
+
+El alumno de prueba volvió a activo después; 285 activos y 2 preinscriptos antes y después.
+
+**Lo que quedó sin ejercitar.** La rama del **personal**: el login y el corte de sesión de un `User`
+dado de baja. La base local no tiene ninguno y el código es el mismo patrón, pero no se vio. Falta
+stage, que tiene los casos reales de producción.
+
+**Aparte, y no es de esta ficha:** en producción hay **136 alumnos activos sin contraseña**, que no
+pueden entrar de ninguna forma.
 
 ---
 
