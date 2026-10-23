@@ -1042,7 +1042,7 @@ adivinable el acceso del aspirante), [ARQ-05](#arq-05) (la política de borrado 
 incumple), [BUG-08](#bug-08) (qué es un preinscripto y por qué no es un alumno),
 [SEC-09](#sec-09) (el `middleware.ts` que no existe y que sería la otra capa).
 
-### Resuelto — 2026-10-22 · `66a1880` · verificado por pantalla en local · falta stage
+### Resuelto — 2026-10-22 · `66a1880` · verificado por pantalla en local y en stage (2026-10-23)
 
 **Medido en producción antes de tocar código:** tenían contraseña, y por lo tanto podían entrar,
 **11 preinscriptos, 2 alumnos dados de baja y 1 usuario del personal dado de baja**. **Ninguno tiene
@@ -1077,12 +1077,25 @@ está activa (SEC-12)»*, una vez por pedido hasta que la cookie se borra.
 
 El alumno de prueba volvió a activo después; 285 activos y 2 preinscriptos antes y después.
 
-**Lo que quedó sin ejercitar.** La rama del **personal**: el login y el corte de sesión de un `User`
-dado de baja. La base local no tiene ninguno y el código es el mismo patrón, pero no se vio. Falta
-stage, que tiene los casos reales de producción.
+**Lo que quedó sin ejercitar en local.** La rama del **personal**: el login y el corte de sesión de un
+`User` dado de baja. La base local no tiene ninguno; se vio en stage, abajo.
 
 **Aparte, y no es de esta ficha:** en producción hay **136 alumnos activos sin contraseña**, que no
 pueden entrar de ninguna forma.
+
+### Verificado en stage — 2026-10-23 · deploy `a80d5e4`
+
+Contra la base de stage —el clon de producción del 19/10, anonimizado: todas las cuentas con la misma
+contraseña de prueba—, con los casos reales que la base local no tenía:
+
+| Caso | Dio |
+|---|---|
+| Docente dado de baja (el único `User` no activo que vino de producción) | Mismo cartel que una contraseña mal |
+| Alumno dado de baja | Ídem |
+| Preinscripta | Ídem |
+| Secretaria con la sesión abierta, pasada a baja en la base | Había entrado a las 14:19:11; a las 14:24:41, primera consulta después de la ventana, la sesión volvió vacía, y al recargar Finanzas el servidor la mandó a `/login`. Después se la devolvió a activa |
+
+Con esto la rama del personal, que en local había quedado sin ejercitar, está vista.
 
 ---
 
@@ -3238,7 +3251,7 @@ al precio de hoy, las de Ariana y Nicolas, además de crearle a Paz una deuda fa
 **De paso, para el instituto:** a Nicolas Duarte le borraron septiembre por «baja», pero sigue activo
 y tiene octubre pendiente, $65.000. Puede ser una deuda que no corresponde.
 
-### Resuelto — 2026-10-22 · `6b92e9c` · verificado por pantalla en local · falta stage
+### Resuelto — 2026-10-22 · `6b92e9c` · verificado por pantalla en local y en stage (2026-10-23)
 
 **Una sola regla para los dos caminos.**
 [`monthlyFeesToIssue`](../src/lib/monthlyFees.ts) decide a quién le corresponde la cuota de un
@@ -3280,10 +3293,31 @@ Curso de prueba con cuota de $10.000 y matrícula de $15.000; 10 cuotas al empez
 
 Lo creado se borró después: 9 cuotas, 145 inscripciones y 2 borrados, antes y después.
 
-**Lo que queda.** Stage, y **los cuatro de septiembre**: con esto en producción, regenerar septiembre
-desde el botón emite **5 cuotas** —las cuatro, más la de la inscripción duplicada de Paz— y avisa de
-**2 borradas**. La de Paz se elimina después, con motivo, y ya no vuelve. Antes, que el instituto
-confirme que los cuatro deben septiembre.
+### Verificado en stage — 2026-10-23 · deploy `a80d5e4` · el procedimiento de los cuatro, ensayado
+
+Contra el clon de producción del 19/10, como administradora, con lo esperado calculado antes por SQL
+—escrito aparte del código— y anotado antes de apretar:
+
+| Paso | Dio |
+|---|---|
+| *Generar Cuotas* de septiembre | *«Se generaron 5 cuotas»* —Jair, Joaquín, Magdalena, Tobías y la duplicada de Paz— y *«3 alumnos no recibieron la cuota de Septiembre porque ya se les había eliminado»*: Ariana y Nicolas, como en producción, más un alumno de prueba de stage. 1841 → 1846 cuotas |
+| Eliminar desde Deudores la de Paz, con motivo | Se borra y queda en `FeeDeletion` con su motivo. 1846 → 1845 |
+| *Generar Cuotas* de septiembre otra vez | *«Se generaron 0 cuotas»* y *«4 alumnos no recibieron…»*: **la eliminada no volvió**. 1845 |
+| Inscribir a un alumno sin cursos en Adolescents 1 | Matrícula de $35.000 y cuota de octubre de $52.000; el cartel dice *«Se le emitió la cuota de octubre de 2026: $52.000.»*. 1845 → 1847 |
+
+Los datos de prueba quedan en stage; los pisa el próximo restore.
+
+### Lo que queda · los cuatro de septiembre, en producción
+
+Con esto en producción, el procedimiento es el que se ensayó arriba, y **conviene hacerlo antes de
+inscribir a nadie más**: regenerar un mes pasado le emite ese mes a todo el que no lo tenga, también
+al que se inscribió después (la mitad abierta de [FIN-16](#fin-16)).
+
+1. Que el instituto confirme que los cuatro deben septiembre.
+2. *Generar Cuotas* de septiembre. Tiene que decir **5 cuotas** y **2 alumnos** sin la cuota
+   eliminada. Si dice más de 5, alguien inscripto en octubre recibió septiembre, y esa también se
+   elimina.
+3. Eliminar desde Deudores la de Paz Calderón en Children 3 L-M TT, con motivo.
 
 ---
 
