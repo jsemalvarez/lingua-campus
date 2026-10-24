@@ -21,7 +21,7 @@ import { Prisma } from "@prisma/client";
  * - el alumno está activo (FIN-16) y el curso está activo;
  * - tiene precio: el propio de la inscripción, o si no hay, el del curso;
  * - todavía no tiene la cuota del período (la restricción única de FIN-06 lo
- *   sostiene igual si dos pedidos se cruzan);
+ *   sostiene igual si dos pedidos se cruzan) — tampoco anulada (FIN-33);
  * - el alumno no tiene una cuota **suelta** del período, sin inscripción (FIN-22);
  * - y **el instituto no le borró la cuota de ese período** (FEAT-10). Borrar es
  *   una decisión —«baja», «becada», «receso invernal»— y volver a apretar el botón
@@ -90,7 +90,7 @@ export async function monthlyFeesToIssue(
     const [existingFees, looseFees, deletions] = await Promise.all([
         db.fee.findMany({
             where: { ...period, enrollmentId: { in: enrollmentIds } },
-            select: { enrollmentId: true },
+            select: { enrollmentId: true, status: true },
         }),
         // Las sueltas no están en el `in` de arriba, y el índice único tampoco las
         // alcanza: Postgres no considera iguales dos NULL (FIN-22).
@@ -104,7 +104,10 @@ export async function monthlyFeesToIssue(
         }),
     ]);
 
-    const issued = new Set(existingFees.map(f => f.enrollmentId));
+    // La anulada (FIN-33) también ocupa el período —no se vuelve a emitir—, pero
+    // se cuenta con las borradas: para quien regenera, es una cuota que se sacó.
+    const issued = new Set(existingFees.filter(f => f.status !== "CANCELLED").map(f => f.enrollmentId));
+    const cancelled = new Set(existingFees.filter(f => f.status === "CANCELLED").map(f => f.enrollmentId));
     const withLooseFee = new Set(looseFees.map(f => f.studentId));
     const withDeletedFee = new Set(deletions.map(d => d.studentId));
 
@@ -116,6 +119,11 @@ export async function monthlyFeesToIssue(
 
     for (const enrollment of enrollments) {
         if (issued.has(enrollment.id)) continue;
+
+        if (cancelled.has(enrollment.id)) {
+            skippedDeleted.add(enrollment.studentId);
+            continue;
+        }
 
         // La cuota suelta es la buena, pero no sabemos de qué inscripción es: ni
         // se emite otra ni se la vincula acá (FIN-22). Se revisa a mano.

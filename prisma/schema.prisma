@@ -640,6 +640,11 @@ enum PaymentStatus {
   PARTIAL
   PAID
   OVERDUE
+  // La cuota que el instituto sacó después de anularle todos los pagos (FIN-33).
+  // No se borra porque los pagos anulados y sus contra-asientos la nombran: son
+  // la historia de la caja. No es deuda en ninguna pantalla, y sigue ocupando su
+  // período en la restricción única, así que tampoco se vuelve a emitir.
+  CANCELLED
 }
 
 enum FeeType {

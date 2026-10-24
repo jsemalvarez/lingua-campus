@@ -26,6 +26,9 @@ export default async function StudentAdministrationPage() {
         where: { id: session.user.id },
         include: {
             fees: {
+                // La anulada no es deuda ni pago (FIN-33): la vista cuenta como
+                // impago todo lo que no sea PAID.
+                where: { status: { not: "CANCELLED" } },
                 orderBy: [{ year: 'desc' }, { month: 'desc' }],
                 include: {
                     payments: { where: { status: "VALID" } },

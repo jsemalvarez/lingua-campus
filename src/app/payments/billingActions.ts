@@ -296,7 +296,14 @@ export async function getDebtorsReportAction() {
 const DELETION_REASON_MAX = 200;
 
 /**
- * Elimina fisicamente una cuota PENDIENTE. Sólo si no tiene pagos asociados.
+ * Saca una cuota impaga. Sólo si no tiene pagos válidos.
+ *
+ * **Si nunca tuvo pagos, la borra.** Si tuvo y se anularon todos —el cobro que se
+ * hizo por error, FIN-33—, **la anula**: queda con estado `CANCELLED`, porque los
+ * pagos anulados y sus contra-asientos la nombran y son la historia de la caja.
+ * Antes ese caso no tenía salida: la cuota volvía a pendiente al anular el pago y
+ * esta acción se negaba —«Anule los pagos primero»— aunque ya estuvieran
+ * anulados. Para quien opera es la misma acción, con el mismo motivo.
  *
  * **Deja la foto de lo que borró, con motivo.** Es la única acción de plata que
  * no dejaba rastro: anular un pago, un gasto o un ingreso escribe su
@@ -343,13 +350,25 @@ export async function deleteFeeAction(feeId: string, reason: string) {
             return { success: false, error: "Cuota no encontrada" };
         }
 
-        if (fee.paidAmount > 0 || fee.payments.length > 0) {
-            return { success: false, error: "No se puede eliminar una cuota que ya tiene pagos. Anule los pagos primero." };
+        if (fee.status === "CANCELLED") {
+            return { success: false, error: "La cuota ya está anulada." };
         }
+
+        if (fee.paidAmount > 0 || fee.payments.some(p => p.status === "VALID")) {
+            return { success: false, error: "No se puede eliminar una cuota que tiene pagos. Anulá los pagos primero." };
+        }
+
+        // Con pagos anulados no se puede borrar —la clave foránea de `Payment` lo
+        // impide, y está bien que lo impida—: se anula.
+        const removal = fee.payments.length > 0
+            ? prisma.fee.update({ where: { id: feeId }, data: { status: "CANCELLED" } })
+            : prisma.fee.delete({ where: { id: feeId } });
 
         // El registro y el borrado van juntos: si falla el borrado no queremos el
         // registro de una cuota que sigue existiendo, ni al revés — una cuota
-        // borrada sin su motivo es exactamente el agujero que esto cierra.
+        // borrada sin su motivo es exactamente el agujero que esto cierra. La
+        // anulada también deja su foto: así figura en `/payments/deletions` con su
+        // motivo, y la regla de emisión de FIN-29 tampoco la repone.
         await prisma.$transaction([
             prisma.feeDeletion.create({
                 data: {
@@ -365,7 +384,7 @@ export async function deleteFeeAction(feeId: string, reason: string) {
                     deletedById: user.id,
                 }
             }),
-            prisma.fee.delete({ where: { id: feeId } }),
+            removal,
         ]);
 
         revalidatePath("/payments/debtors");
@@ -396,6 +415,10 @@ export async function editFeeAmountAction(feeId: string, newAmount: number) {
 
         if (!fee || fee.instituteId !== user.instituteId) {
             return { success: false, error: "Cuota no encontrada" };
+        }
+
+        if (fee.status === "CANCELLED") {
+            return { success: false, error: "La cuota está anulada." };
         }
 
         if (fee.paidAmount > 0) {

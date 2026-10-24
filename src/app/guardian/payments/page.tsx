@@ -70,6 +70,9 @@ export default async function GuardianPaymentsPage() {
                     name: true,
                     creditBalance: true,
                     fees: {
+                        // La anulada no es deuda ni pago: para la familia no existe
+                        // (FIN-33). Más abajo lo impago se cuenta como "no PAID".
+                        where: { status: { not: "CANCELLED" } },
                         orderBy: [{ year: 'desc' }, { month: 'desc' }],
                         include: {
                             payments: { where: { status: "VALID" } },

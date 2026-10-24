@@ -128,6 +128,9 @@ export async function createPaymentAction(formData: FormData) {
             });
 
             if (!fee) return { success: false, error: "Cuota no encontrada" } as const;
+            // La pantalla de cobro no la ofrece —sólo lista pendientes y parciales—,
+            // pero el servidor decide (FIN-33).
+            if (fee.status === "CANCELLED") return { success: false, error: "La cuota está anulada: no se puede cobrar." } as const;
 
             const totalPaidAfter = fee.paidAmount + capitalContribution;
             const surplus = totalPaidAfter > fee.originalAmount ? totalPaidAfter - fee.originalAmount : 0;
@@ -985,6 +988,9 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
             });
 
             if (!fee || !fee.student) return { success: false, error: "Cuota o alumno no encontrado" } as const;
+            // Una anulada tiene `paidAmount` en 0 y pasaría el control de abajo como
+            // si se debiera entera (FIN-33).
+            if (fee.status === "CANCELLED") return { success: false, error: "La cuota está anulada." } as const;
 
             const remainingDebt = fee.originalAmount - fee.paidAmount;
 

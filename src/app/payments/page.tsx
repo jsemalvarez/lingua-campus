@@ -72,7 +72,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         where: {
             instituteId: user.instituteId,
             month: currentMonth,
-            year: currentYear
+            year: currentYear,
+            // La anulada no es plata a cobrar: sin esto inflaba el total del mes (FIN-33).
+            status: { not: "CANCELLED" }
         },
         select: { originalAmount: true, paidAmount: true }
     });

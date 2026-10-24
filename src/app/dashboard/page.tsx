@@ -104,8 +104,9 @@ export default async function DashboardPage() {
                             }
                         },
                         // Lo que todavía no venció —examen antes del examen, meses que no llegaron— no es deuda (`feeDue.ts`).
+                        // La anulada tampoco (FIN-33).
                         fees: {
-                            where: { status: { not: "PAID" }, ...excludeNotYetDueFees() },
+                            where: { status: { notIn: ["PAID", "CANCELLED"] }, ...excludeNotYetDueFees() },
                             select: { originalAmount: true, paidAmount: true }
                         }
                     }
