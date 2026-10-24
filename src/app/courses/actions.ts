@@ -4,12 +4,28 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { syncFinalExamLesson } from "@/lib/feeDue";
+import { dayFromKey, dayKey } from "@/lib/dates";
 
 // Función auxiliar para obtener el usuario autenticado y su instituto
 async function getAuthAndInstitute() {
     const auth = await requireRole(INSTITUTE_STAFF);
     if (!auth) return null;
     return { id: auth.userId, instituteId: auth.instituteId, activeRole: auth.activeRole };
+}
+
+const START_DATE_REQUIRED = "La fecha de inicio es obligatoria: es la que dice de qué año es el curso";
+
+/**
+ * La fecha de inicio es la que le da año al curso. Sin ella, el curso toma el
+ * año de hoy y cambia solo el 1 de enero, y la generación de matrículas del año
+ * siguiente no lo ve. La pantalla la pide; el servidor no la deja pasar vacía ni
+ * mal formada. Ver FIN-28.
+ */
+function parseStartDate(value: FormDataEntryValue | null): Date | null {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const day = dayFromKey(value);
+    // Un 31 de febrero no da error: corre al 3 de marzo. Ida y vuelta, o no es un día.
+    return !isNaN(day.getTime()) && dayKey(day) === value ? day : null;
 }
 
 export async function createCourseAction(formData: FormData) {
@@ -21,7 +37,7 @@ export async function createCourseAction(formData: FormData) {
     const color = formData.get("color") as string;
     const teacherId = formData.get("teacherId") as string;
     const classroomId = formData.get("classroomId") as string;
-    const startDateStr = formData.get("startDate") as string;
+    const startDate = parseStartDate(formData.get("startDate"));
     const endDateStr = formData.get("endDate") as string;
     const monthlyPriceStr = formData.get("monthlyPrice") as string;
     const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
@@ -31,6 +47,7 @@ export async function createCourseAction(formData: FormData) {
     if (!name) {
         return { success: false, error: "El nombre del curso es obligatorio" };
     }
+    if (!startDate) return { success: false, error: START_DATE_REQUIRED };
 
     try {
         await prisma.course.create({
@@ -40,7 +57,7 @@ export async function createCourseAction(formData: FormData) {
                 color: color || "#3b82f6",
                 teacherId: teacherId || null,
                 classroomId: classroomId || null,
-                startDate: startDateStr ? new Date(startDateStr) : null,
+                startDate,
                 endDate: endDateStr ? new Date(endDateStr) : null,
                 instituteId: user.instituteId as string,
                 monthlyPrice: parseFloat(monthlyPriceStr) || 0,
@@ -181,7 +198,7 @@ export async function updateCourseAction(formData: FormData) {
     const color = formData.get("color") as string;
     const classroomId = formData.get("classroomId") as string;
     const teacherId = formData.get("teacherId") as string;
-    const startDateStr = formData.get("startDate") as string;
+    const startDate = parseStartDate(formData.get("startDate"));
     const endDateStr = formData.get("endDate") as string;
     const monthlyPriceStr = formData.get("monthlyPrice") as string;
     const enrollmentPriceStr = formData.get("enrollmentPrice") as string;
@@ -192,6 +209,7 @@ export async function updateCourseAction(formData: FormData) {
     if (!name?.trim()) {
         return { success: false, error: "El nombre del curso es obligatorio" };
     }
+    if (!startDate) return { success: false, error: START_DATE_REQUIRED };
 
     try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
@@ -210,7 +228,7 @@ export async function updateCourseAction(formData: FormData) {
                     color: color || "#3b82f6",
                     classroomId: classroomId || null,
                     teacherId: teacherId || null,
-                    startDate: startDateStr ? new Date(startDateStr) : null,
+                    startDate,
                     endDate: endDateStr ? new Date(endDateStr) : null,
                     monthlyPrice: parseFloat(monthlyPriceStr) || 0,
                     enrollmentPrice: parseFloat(enrollmentPriceStr) || 0,

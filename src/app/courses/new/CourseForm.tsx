@@ -166,6 +166,7 @@ export function CourseForm({ teachers, levels, classrooms }: CourseFormProps) {
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
+                                    required
                                     className="w-full px-4 py-2.5 rounded-xl border border-input/60 bg-background text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 transition-all focus:border-primary shadow-sm"
                                 />
                             </div>
