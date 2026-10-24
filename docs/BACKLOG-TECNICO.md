@@ -280,6 +280,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
 | [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
 | [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [x] |
+| [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -2346,6 +2347,10 @@ selector de cobro ([`RegisterFeeForm`](../src/app/payments/components/RegisterFe
 **Cambio.** Que `formatFeeLabel` acepte el nombre del curso como parámetro opcional y lo agregue
 cuando esté. Es el único lugar donde se decide; los llamadores le pasan lo que ya tienen a mano.
 
+> **2026-10-24 · Movimientos Recientes ya nombra el curso** (`ffe6388`, ver [FIN-33](#fin-33)). Lo
+> pone en un renglón propio y no pasa por `formatFeeLabel`. La ficha del alumno, el dashboard y los
+> recibos siguen como dice arriba, así que esto no cierra la ficha.
+
 ---
 
 <a id="fin-20"></a>
@@ -3687,6 +3692,40 @@ que mirar qué pago tenía detrás cada fila. Quien opere el caso real va a tene
 **El caso de Paz** se resuelve con la aplicación una vez que esto esté en producción: anular los dos
 cobros de más y sacar las dos cuotas desde Deudores. Si la familia pagó dos veces, qué se hace con esa
 plata —devolverla o dejarla a cuenta— es una decisión del instituto, no del sistema.
+
+### Movimientos Recientes nombra el curso — 2026-10-24 · `ffe6388` · verificado en stage
+
+Lo que el ensayo de arriba dejó a la vista se resolvió antes de promover, porque quien opere el caso
+real en producción va a estar frente a esa misma tabla. Se diseñó primero en un lienzo, y se
+eligió la variante C.
+
+**Cada movimiento se lee en tres renglones:** qué es y de qué —*INGRESO · Cuota Octubre 2026*—, de
+quién —el alumno, o el proveedor en un gasto— y de dónde —el curso, o la categoría del gasto—. El
+tipo va adelante del concepto y no del nombre, porque *«INGRESO · Paz…»* se leía como que había
+ingresado una alumna. La anulación describe el cobro que revierte, con su curso. La nota queda a la
+vista en un ícono gris tenue, y el operador aparece al pasar el mouse. En el celular es una lista
+con el importe a la derecha y los botones siempre visibles, del tamaño de un dedo.
+
+**El mismo texto alimenta la búsqueda y el cartel de anular:** buscar por el nombre de un curso
+encuentra sus cobros, y el cartel dice qué se está por anular con el curso incluido.
+
+**Verificado en stage** con los datos del ensayo de arriba, buscando a Paz:
+
+| Fila | Dice |
+|---|---|
+| El octubre válido | *INGRESO · Cuota Octubre 2026* / Paz isabella calderón / **Children 3 L-M TT** |
+| El octubre anulado | Lo mismo tachado, con *ANULADO*, y **Children 3 M-J late shift** |
+| Su anulación | *ANULACIÓN · Cuota Octubre 2026* / Paz… / **Children 3 M-J late shift** |
+| Las dos matrículas y su anulación | Igual, cada una con su curso |
+| El cartel de anular del octubre válido | *«Cuota Octubre 2026 - Paz isabella calderón - Children 3 L-M TT» por $46.000*. Se cerró con Cancelar, sin anular |
+
+**El límite, escrito.** El curso sale de la inscripción **como está hoy**
+(`fee.enrollment.course`). Una inscripción movida con *Cambiar curso* muestra el curso nuevo también
+en sus cuotas viejas. Para que cada cuota diga el curso por el que se cobró, hace falta el campo en
+`Fee` que [FIN-24](#fin-24) decidió el 16/08. Esto no lo reemplaza.
+
+**Lo que se vio de paso y no es de acá:** entre 640 y 1024 píxeles de ancho, Finanzas se corre de
+costado por la tarjeta de deuda → [BUG-26](#bug-26).
 
 ---
 
@@ -8386,6 +8425,40 @@ mismo estado que prod (mismas inscripciones activas, fecha 18/12/2026 puesta a m
 $ 825.000). Los tres entraron completos, con su clase del examen, y cada uno con un `UPDATE` y un
 `INSERT` de derechos por curso. Los de adultos y First Certificate no tienen precio ni fecha de
 examen y no se probaron.
+
+---
+
+<a id="bug-26"></a>
+## BUG-26 · Finanzas se corre de costado en una tablet o una ventana angosta · **P3**
+
+**De dónde sale.** Del 2026-10-24, verificando en stage el rediseño de *Movimientos Recientes*
+([FIN-33](#fin-33)). Con la ventana a 810 píxeles, al ir a anular, la página se corrió de costado y
+el menú lateral quedó encima del contenido.
+
+**Medido en stage**, con los datos de producción del 24/10:
+
+| Ancho | Visible | La página mide | Qué se sale |
+|---|---|---|---|
+| 375 (celular) | 375 | 375 | Nada |
+| 810 | 804 | **886** | La tarjeta *Deuda Total (Alumnos)* |
+| 1024 | 1018 | 1025 | El «24%» del gráfico de esa misma tarjeta |
+
+**La causa.** La tarjeta muestra la cuenta *$1,146,700 + $3,615,000 = $4,761,700* en una sola fila
+(`flex items-stretch`, a `sm:text-lg`) que no corta, y al lado le pone el gráfico en un cuarto del
+ancho ([`payments/page.tsx:522`](../src/app/payments/page.tsx)). Desde los 640 píxeles hay dos
+tarjetas por fila, y la cuenta no entra en su mitad. *Progreso de Cobro* tiene la misma
+construcción: con los números de hoy entra, con uno más largo se sale igual.
+
+**No es del rediseño.** El bloque no cambió entre `main` y `stage`, así que esto ya está en
+producción. La tabla de movimientos entra en su tarjeta: a 810 ocupa de 35 a 761.
+
+**Al pasar, en la misma tarjeta:** los importes salen *$1,146,700*, con coma, mientras los
+movimientos dicen *$46.000*. Es `toLocaleString()` sin idioma, que toma el del servidor. Con las
+fechas pasó lo mismo, y para ellas la regla del build ya existe ([`docs/FECHAS.md`](FECHAS.md)). Los
+números no tienen regla.
+
+**P3.** Con el mouse, en una pantalla de escritorio, no se ve. En una tablet o una ventana partida, la
+columna de acciones queda afuera hasta que se desplaza la página.
 
 ---
 
