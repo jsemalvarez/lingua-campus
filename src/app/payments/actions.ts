@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
+import { feeAfterPayment } from "@/lib/feePayment";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -104,13 +105,12 @@ export async function createPaymentAction(formData: FormData) {
     const surcharge = parseFloat(surchargeStr) || 0;
     const discount = parseFloat(discountStr) || 0;
 
-    if (!feeId || isNaN(amount) || amount <= 0) {
+    if (!feeId || isNaN(amount)) {
         return { success: false, error: "Datos del pago inválidos" };
     }
-
-    // El capital que realmente se acredita a la deuda es:
-    // Lo que pagó + lo que se le perdonó - lo que es recargo (interés)
-    const capitalContribution = amount + discount - surcharge;
+    if (amount <= 0) {
+        return { success: false, error: "El total a cobrar tiene que ser mayor que cero." };
+    }
 
     try {
         // La cuota se lee **dentro** de la transacción y con la fila bloqueada: antes
@@ -132,9 +132,12 @@ export async function createPaymentAction(formData: FormData) {
             // pero el servidor decide (FIN-33).
             if (fee.status === "CANCELLED") return { success: false, error: "La cuota está anulada: no se puede cobrar." } as const;
 
-            const totalPaidAfter = fee.paidAmount + capitalContribution;
-            const surplus = totalPaidAfter > fee.originalAmount ? totalPaidAfter - fee.originalAmount : 0;
-            const finalPaidAmountOnFee = Math.min(totalPaidAfter, fee.originalAmount);
+            // La misma cuenta con la que la pantalla anunció cómo queda la cuota.
+            const outcome = feeAfterPayment(fee, { amount, discount, surcharge });
+            const { surplus } = outcome;
+            const finalPaidAmountOnFee = outcome.paidAmount;
+            // Un recargo mayor que lo cobrado le restaría a la cuota lo ya pagado.
+            if (outcome.capital <= 0) return { success: false, error: "El recargo no puede ser mayor que lo que se cobra." } as const;
 
             // 2. Crear el pago, actualizar la cuota y manejar el saldo a favor
             // Crear el registro de transacción individual con los ajustes
@@ -165,10 +168,7 @@ export async function createPaymentAction(formData: FormData) {
             });
 
             // Determinar nuevo estado (basado en el capital cubierto)
-            let newStatus: any = "PARTIAL";
-            if (finalPaidAmountOnFee >= fee.originalAmount) {
-                newStatus = "PAID";
-            }
+            const newStatus = outcome.settled ? "PAID" : "PARTIAL";
 
             // Actualizar el "Snapshot" de la cuota
             await tx.fee.update({
@@ -190,7 +190,7 @@ export async function createPaymentAction(formData: FormData) {
                 });
             }
 
-            return { success: true } as const;
+            return { success: true, remaining: outcome.remaining, surplus } as const;
         }, COLLECTION_TX_OPTIONS);
 
         if (!result.success) return result;
@@ -198,7 +198,9 @@ export async function createPaymentAction(formData: FormData) {
         revalidatePath("/payments");
         revalidatePath("/payments/debtors");
         revalidatePath("/students");
-        return { success: true };
+        // Cómo quedó la cuota, para que el cartel de éxito lo diga con lo que
+        // efectivamente se grabó y no con lo que calculó la pantalla.
+        return { success: true, remaining: result.remaining, surplus: result.surplus };
     } catch (e: any) {
         console.error(e);
         return { success: false, error: "Error al registrar el pago" };

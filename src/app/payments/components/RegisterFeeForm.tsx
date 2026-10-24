@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, Wallet } from "lucide-react";
 import { EntitySearch } from "./EntitySearch";
 import { formatCurrency, getMonthName } from "@/lib/utils";
+import { feeAfterPayment } from "@/lib/feePayment";
 
 interface StudentListOption {
     id: string;
@@ -34,12 +35,26 @@ function feeLabel(f: PendingFeeOption): string {
     return `Cuota ${getMonthName(f.month)} ${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
 }
 
+const NOTHING_TO_COLLECT = "Con ese descuento no queda nada que cobrar.";
+
+/**
+ * En qué estado queda la cuota. Antes la pantalla decía "Se cancela parte de la
+ * deuda" tanto si la saldaba como si la dejaba debiendo, y así pasó el cobro del
+ * 03/08 que dejó julio a medio pagar sin que nadie lo notara. Ver FIN-32.
+ */
+function feeStateText(remaining: number, surplus: number): string {
+    if (surplus > 0) return `La cuota queda saldada, y $${formatCurrency(surplus)} van al saldo a favor del alumno.`;
+    if (remaining > 0) return `Quedan $${formatCurrency(remaining)} pendientes de la cuota.`;
+    return "La cuota queda saldada.";
+}
+
 export function RegisterFeeForm({ students }: { students: StudentListOption[] }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [status, setStatus] = useState<"idle" | "success" | "error" | "credit">("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const [creditMsg, setCreditMsg] = useState("");
+    const [successMsg, setSuccessMsg] = useState("");
 
     const [selectedStudent, setSelectedStudent] = useState<StudentListOption | null>(null);
     const [pendingFees, setPendingFees] = useState<any[]>([]);
@@ -130,12 +145,16 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
             return;
         }
 
-        if (totalToCollect < 0) {
+        // Antes se chequeaba `totalToCollect < 0`, que no se cumplía nunca: el total
+        // sale de un `Math.max(0, ...)`. Un descuento que se comía todo terminaba en
+        // el "Datos del pago inválidos" del servidor. Ver FIN-32.
+        if (rawTotal <= 0) {
             setStatus("error");
-            setErrorMsg("El monto total a cobrar no puede ser negativo");
+            setErrorMsg(NOTHING_TO_COLLECT);
             return;
         }
 
+        const label = feeLabel(selectedFee);
         formData.append("feeId", selectedFeeId);
         // We overwrite 'amount' to be the exact cash collected (Total a Cobrar)
         formData.set("amount", totalToCollect.toString());
@@ -145,6 +164,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         startTransition(async () => {
             const result = await createPaymentAction(formData);
             if (result.success) {
+                setSuccessMsg(`Pago registrado: ${label}. ${feeStateText(result.remaining ?? 0, result.surplus ?? 0)}`);
                 setStatus("success");
                 setTimeout(() => {
                     setStatus("idle");
@@ -162,7 +182,14 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         });
     };
 
-    const totalToCollect = Math.max(0, baseAmount + surcharge - discount);
+    const selectedFee = pendingFees.find(f => f.id === selectedFeeId);
+    const rawTotal = baseAmount + surcharge - discount;
+    const totalToCollect = Math.max(0, rawTotal);
+    // Cómo queda la cuota si se confirma. La misma cuenta que hace el servidor al
+    // grabar: lo que se anuncia acá es lo que pasa.
+    const outcome = selectedFee && rawTotal > 0
+        ? feeAfterPayment(selectedFee, { amount: totalToCollect, discount, surcharge })
+        : null;
 
     return (
         <form id="fee-form" action={handleSubmit} className="space-y-4">
@@ -231,7 +258,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
             <div className="space-y-4">
                 <div className="space-y-1.5">
-                    <label className="text-sm font-semibold">Monto a cancelar de la deuda ($)</label>
+                    <label className="text-sm font-semibold">Importe de la cuota que se paga ($)</label>
                     <input 
                         type="number" 
                         min="1" 
@@ -270,20 +297,24 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
             <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
-                    <span className="font-semibold text-emerald-900 dark:text-emerald-100 italic text-sm">Base + Recargo - Desc:</span>
+                    <span className="font-semibold text-emerald-900 dark:text-emerald-100 text-sm">Total a cobrar</span>
                     <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                        ${totalToCollect.toLocaleString()}
+                        ${formatCurrency(totalToCollect)}
                     </span>
                 </div>
-                {selectedFeeId && (
+                {selectedFee && baseAmount > 0 && (
                     <div className="pt-2 border-t border-emerald-200/30">
-                        {totalToCollect > (pendingFees.find(f => f.id === selectedFeeId)?.originalAmount - pendingFees.find(f => f.id === selectedFeeId)?.paidAmount) ? (
-                            <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1.5">
-                                <AlertCircle size={12} /> El excedente de ${(totalToCollect - (pendingFees.find(f => f.id === selectedFeeId).originalAmount - pendingFees.find(f => f.id === selectedFeeId).paidAmount)).toLocaleString()} se guardará como Saldo a Favor.
+                        {!outcome ? (
+                            <p className="text-sm text-red-600 dark:text-red-400 font-semibold flex items-start gap-1.5">
+                                <AlertCircle size={16} className="mt-0.5 shrink-0" /> {NOTHING_TO_COLLECT}
+                            </p>
+                        ) : outcome.settled && outcome.surplus === 0 ? (
+                            <p className="text-sm text-emerald-700 dark:text-emerald-300 font-semibold flex items-start gap-1.5">
+                                <CheckCircle size={16} className="mt-0.5 shrink-0" /> {feeStateText(outcome.remaining, outcome.surplus)}
                             </p>
                         ) : (
-                            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium">
-                                <CheckCircle size={12} /> Se cancela parte de la deuda.
+                            <p className="text-sm text-amber-700 dark:text-amber-400 font-semibold flex items-start gap-1.5">
+                                <AlertCircle size={16} className="mt-0.5 shrink-0" /> {feeStateText(outcome.remaining, outcome.surplus)}
                             </p>
                         )}
                     </div>
@@ -308,7 +339,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
 
             {status === "success" && (
                 <div className="flex items-center gap-2 p-3 mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-sm font-medium animate-in">
-                    <CheckCircle size={16} /> Pago registrado exitosamente
+                    <CheckCircle size={16} className="shrink-0" /> {successMsg}
                 </div>
             )}
 
