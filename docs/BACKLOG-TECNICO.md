@@ -252,7 +252,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [x] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
-| [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
+| [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [x] |
 | [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [x] |
 | [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [x] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
@@ -3564,6 +3564,50 @@ que la deuda da $0 y lo termina rechazando el servidor con *"Datos del pago inv�
 [FIN-13](#fin-13) (el descuento que no deja rastro de quién ni por qué), [FIN-27](#fin-27) (la otra
 vez que esta misma pantalla dijo algo que no había pasado), [FIN-25](#fin-25) (las condiciones
 especiales que se tipean de memoria porque no están en ningún lado).
+
+### Resuelto — 2026-10-24 · `e3625e3` · verificado por pantalla en stage
+
+**Una sola cuenta.** [`feeAfterPayment`](../src/lib/feePayment.ts) dice cómo queda la cuota después
+de un cobro: lo que se le descuenta (lo cobrado más el descuento, menos el recargo), lo pagado, lo
+pendiente, el excedente y si queda saldada. La usan la pantalla, para anunciar, y
+`createPaymentAction`, para grabar. Ya no hay dos fórmulas que puedan separarse. El servidor
+devuelve cómo quedó, y el cartel de éxito lo dice con lo que se grabó.
+
+**La línea de confirmación dice el estado**, en letra legible y no en 10 píxeles:
+
+- en verde, *«La cuota queda saldada.»*;
+- en ámbar, *«Quedan $3.000 pendientes de la cuota.»*;
+- en ámbar, *«La cuota queda saldada, y $7.000 van al saldo a favor del alumno.»*;
+- en rojo, *«Con ese descuento no queda nada que cobrar.»*, que es lo que antes terminaba en *«Datos
+  del pago inválidos»*.
+
+**El campo y el efectivo.** Se mantuvo cómo funciona el formulario: el campo es la parte de la cuota
+que se paga, viene precargado con lo que falta, y el efectivo es el total, que baja solo al cargar
+un descuento. Cambiaron los nombres: el campo dice *«Importe de la cuota que se paga»* y el total,
+*«Total a cobrar»* (antes *«Base + Recargo - Desc:»*). Quien escriba en el campo lo que tiene en la
+mano, como el 03/08, ve en ámbar lo que queda pendiente antes de confirmar.
+
+**Al pasar.** El servidor rechaza un recargo mayor que lo cobrado, que le restaría a la cuota lo ya
+pagado; desde la pantalla no se puede llegar. Y separa el total en cero de los datos rotos, con su
+propio mensaje.
+
+**Verificado en stage** sobre el backup de producción del 24/10, con la cuenta de Patricia, en
+cuotas de octubre de $49.000 sin pagos y lo esperado anotado antes:
+
+| Caso | Se cargó | La pantalla dijo | En la base |
+|---|---|---|---|
+| A · Juan Perez | Importe 46.000, sin descuento | *«Quedan $3.000 pendientes de la cuota.»* | `PARTIAL`, pagado 46.000, caja 46.000 |
+| B · Ámbar Pastor | 49.000 precargado + 3.000 de descuento | Total $46.000; *«La cuota queda saldada.»* | `PAID`, pagado 49.000, caja 46.000 |
+| C · Avril Ailyn Lucero | 56.000 + 3.000 de descuento | Total $53.000; *«…y $7.000 van al saldo a favor del alumno.»* La pantalla vieja decía $4.000 | `PAID`, caja 53.000, saldo a favor 7.000, nota *«(Excedente de $7.000 acreditado a saldo)»* |
+| D · Benjamin Rivero | 49.000 + 49.000 de descuento | En rojo, y al confirmar no grabó | Sin cambios |
+
+Los carteles de éxito repitieron el estado de cada uno, por ejemplo *«Pago registrado: Cuota Octubre
+2026 - Children 2 Ma - Jue. Quedan $3.000 pendientes de la cuota.»* Los totales pasaron de 1803
+pagos, 1936 asientos y $0 de saldo a favor a 1806, 1939 y $7.000, como se había predicho. Después se
+borraron los tres cobros con sus asientos y las cuotas volvieron a pendientes: 1803, 1936 y $0.
+
+**Lo que no se ejercitó:** los dos frenos nuevos del servidor (recargo mayor que lo cobrado, total en
+cero), porque la pantalla no deja llegar.
 
 ---
 
