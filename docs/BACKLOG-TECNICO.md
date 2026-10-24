@@ -248,7 +248,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
 | [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
-| [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [ ] |
+| [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [x] |
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [x] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
@@ -3151,6 +3151,39 @@ es el corriente, y es exactamente cuando olvidarse la fecha hace daño.
 **Relacionado.** [FIN-14](#fin-14) (de donde salió, y quien consume el año del curso),
 [FIN-16](#fin-16) (comparte la decisión sobre los cursos sin fechas), [FIN-18](#fin-18) (la inscripción
 tampoco tiene año propio, que es el otro lado de esta carencia).
+
+### Resuelto — 2026-10-24 · `d914462` · verificado por pantalla en stage
+
+**La pregunta que lo frenaba no hizo falta contestarla.** Medido en producción ese día: **31 cursos,
+ninguno sin fecha de inicio**, igual que el 17/08. No hay cursos viejos que resolver, así que entró
+como validación.
+
+- **La pantalla la pide:** `required` en el alta y en la edición. El navegador no envía el formulario
+  y lleva el foco al campo.
+- **El servidor decide:** `parseStartDate`, en [`courses/actions.ts`](../src/app/courses/actions.ts),
+  la exige en las dos acciones. Tiene que ser un día que exista: un 31 de febrero no da error en
+  JavaScript, lo corre al 3 de marzo, y por eso la fecha se lee y se vuelve a escribir para
+  compararla. Se guarda con `dayFromKey`, la medianoche UTC de un `@db.Date`. Si falta, contesta
+  *«La fecha de inicio es obligatoria: es la que dice de qué año es el curso»*.
+
+**Verificado en stage** sobre el backup de producción del 24/10, con la cuenta de Patricia y lo
+esperado anotado antes:
+
+| Caso | Dio |
+|---|---|
+| Alta sin fecha | No se envía; foco en la fecha, *«Completa este campo»*. 31 cursos |
+| Alta sin fecha, salteando la pantalla | El mensaje del servidor. 31 cursos |
+| Editar *Children 3 L-M TT* y vaciar la fecha | No se envía |
+| Lo mismo, salteando la pantalla | El mensaje del servidor; el curso sigue en 09/03/2026, sin tocar desde el 20/10 |
+| Alta con 08/03/2027 | *«¡Curso creado con éxito!»*; 32 cursos, inicio `2027-03-08`, sin correrse un día |
+
+El curso de prueba se borró después: 31 cursos, ninguno sin fecha.
+
+**Lo que no se probó:** que el curso de 2027 aparezca en la generación de matrículas de 2027. Esa
+pantalla cuenta inscripciones, no cursos, así que un curso sin alumnos sigue diciendo *«Todavía no
+hay cursos que empiecen en 2027»*, con o sin este cambio. Probarlo pedía inscribir a alguien, y desde
+[FIN-29](#fin-29) inscribir emite cuotas. Lo que esta ficha cambia, que el curso nazca con su año, se
+vio en la base.
 
 ---
 
