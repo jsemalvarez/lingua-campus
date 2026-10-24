@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
-import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, FileText, User } from "lucide-react";
+import { Search, Wallet, Percent, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, FileText, User } from "lucide-react";
 import { formatDate } from "@/lib/dates";
 import { TransactionActions } from "./TransactionActions";
 import { useRouter, usePathname } from "next/navigation";
@@ -30,6 +30,8 @@ interface Transaction {
     note?: string | null;
     /** Aplicación de saldo a favor: no movió caja, pero se puede anular. Ver FIN-11. */
     isCreditApplication?: boolean;
+    /** Cuota saldada con un descuento del 100%: tampoco movió caja. Ver FIN-32. */
+    isFullDiscount?: boolean;
 }
 
 interface TransactionTableProps {
@@ -39,7 +41,7 @@ interface TransactionTableProps {
     searchQuery: string;
 }
 
-type Kind = "income" | "expense" | "cancel" | "credit";
+type Kind = "income" | "expense" | "cancel" | "credit" | "discount";
 
 // Los tonos 700: los 500 que usaba la tabla no llegaban a 4,5:1 sobre blanco.
 const KIND: Record<Kind, { label: string; text: string; icon: string }> = {
@@ -49,10 +51,18 @@ const KIND: Record<Kind, { label: string; text: string; icon: string }> = {
     // no se pinta de ámbar ni dice ANULACIÓN.
     cancel: { label: "ANULACIÓN", text: "text-amber-700 dark:text-amber-400", icon: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
     credit: { label: "SALDO APLICADO", text: "text-blue-700 dark:text-blue-400", icon: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
+    // El índigo es el de «Descuentos Otorgados», arriba en la misma pantalla.
+    discount: { label: "DESCUENTO 100%", text: "text-indigo-700 dark:text-indigo-400", icon: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400" },
 };
+
+/** Lo que no entró ni salió de la caja: se muestra sin signo y con «no mueve caja». */
+function movesNoCash(tx: Transaction) {
+    return !!tx.isCreditApplication || !!tx.isFullDiscount;
+}
 
 function kindOf(tx: Transaction): Kind {
     if (tx.isCreditApplication) return "credit";
+    if (tx.isFullDiscount) return "discount";
     if (tx.category === "ADJUSTMENT" || tx.category === "REFUND") return "cancel";
     return tx.type === "INCOME" ? "income" : "expense";
 }
@@ -92,6 +102,7 @@ function MovementIcon({ tx }: { tx: Transaction }) {
         <div className={`p-2 rounded-full shrink-0 ${KIND[kindOf(tx)].icon}`}>
             {tx.isCreditApplication
                 ? <Wallet size={16} />
+                : tx.isFullDiscount ? <Percent size={16} />
                 : tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
         </div>
     );
@@ -103,7 +114,7 @@ function Amount({ tx }: { tx: Transaction }) {
         <span className={`font-bold tabular-nums tracking-tight whitespace-nowrap ${KIND[kindOf(tx)].text} ${voided ? "line-through" : ""}`}>
             {/* Sin `+` ni `-`: no entró ni salió plata. El importe está para
                 reconocer cuál es, no para sumarlo a la caja. */}
-            {tx.isCreditApplication ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
+            {movesNoCash(tx) ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
         </span>
     );
 }
@@ -134,10 +145,12 @@ function MovementText({ tx, trailing }: { tx: Transaction; trailing?: ReactNode 
                     <span className={`font-semibold ${voided ? "line-through text-muted-foreground" : "text-foreground"}`}>
                         {tx.concept}
                     </span>
-                    {tx.isCreditApplication && (
+                    {movesNoCash(tx) && (
                         <span
                             className="ml-1.5 text-xs italic text-muted-foreground cursor-help"
-                            title="El dinero había ingresado antes, cuando se cobró de más. Aplicarlo no mueve la caja."
+                            title={tx.isFullDiscount
+                                ? "La cuota se saldó con un descuento por el total: no entró dinero."
+                                : "El dinero había ingresado antes, cuando se cobró de más. Aplicarlo no mueve la caja."}
                         >
                             · no mueve caja
                         </span>
@@ -241,7 +254,8 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                 description: tx.title,
                 amount: tx.amount,
                 source: tx.category!,
-                isCreditApplication: tx.isCreditApplication
+                isCreditApplication: tx.isCreditApplication,
+                isFullDiscount: tx.isFullDiscount
             }}
         />
     );

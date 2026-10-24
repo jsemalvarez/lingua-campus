@@ -304,6 +304,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             t.type === "ADJUSTMENT" &&
             t.payment?.method === "SALDO" &&
             !(t.payment?.status === "VOIDED" && t.status === "VALID");
+        // El descuento del 100% también se asienta en $0 —no entró plata— y también
+        // se muestra: es la única huella en la caja de quién perdonó la cuota, y desde
+        // acá se anula. Su contra-asiento es un ADJUSTMENT y queda afuera. FIN-32.
+        const isFullDiscount = t.type === "PAYMENT" && t.amount === 0 && (t.payment?.discount ?? 0) > 0;
 
         const entityId = t.paymentId || t.expenseId || t.miscIncomeId;
         const originalId = entityId || t.id;
@@ -332,8 +336,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             // En la aplicación de saldo el asiento vale $0, pero el importe que se
             // usó es el del pago. Se muestra sin signo y etiquetado aparte: no es
             // plata que entró ni salió, y la tabla es la caja.
-            amount: isCreditApplication ? (t.payment?.amount ?? 0) : Math.abs(t.amount),
+            amount: isCreditApplication ? (t.payment?.amount ?? 0)
+                : isFullDiscount ? (t.payment?.discount ?? 0)
+                : Math.abs(t.amount),
             isCreditApplication,
+            isFullDiscount,
             type: t.amount >= 0 ? "INCOME" as const : "EXPENSE" as const,
             status: t.status,
             method: t.method,

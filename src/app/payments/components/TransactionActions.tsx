@@ -21,6 +21,8 @@ interface TransactionActionsProps {
          * el pago original que generó ese saldo queda trabado. Ver FIN-11.
          */
         isCreditApplication?: boolean;
+        /** Cuota saldada con un descuento del 100%: se anula como un cobro, pero no devuelve plata. */
+        isFullDiscount?: boolean;
     };
     /**
      * Para la lista del celular: ahí no hay mouse que pase por la fila, así que
@@ -150,6 +152,8 @@ export function TransactionActions({ tx, alwaysVisible = false }: TransactionAct
                                 <br/><br/>
                                 {tx.isCreditApplication
                                     ? "El importe vuelve al saldo a favor del alumno y la cuota queda impaga. No sale ni entra plata de la caja: ese dinero ya había ingresado."
+                                    : tx.isFullDiscount
+                                    ? "La cuota vuelve a quedar impaga. No sale plata de la caja: con el descuento del 100% no había entrado."
                                     : "Esto generará un asiento contable de ajuste para revertir el balance. No se eliminará del historial."}
                             </p>
                             <textarea

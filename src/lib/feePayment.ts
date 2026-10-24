@@ -26,3 +26,29 @@ export function feeAfterPayment(
         settled: paidAmount >= fee.originalAmount,
     };
 }
+
+// Medio centavo, por los montos en Float (FIN-05).
+const TOLERANCE = 0.005;
+
+/**
+ * Por qué un cobro no se puede grabar, o `null` si se puede. La pantalla lo
+ * muestra antes de confirmar y el servidor lo hace cumplir.
+ */
+export function paymentProblem(
+    fee: { originalAmount: number; paidAmount: number },
+    payment: { amount: number; discount: number; surcharge: number },
+): string | null {
+    const after = feeAfterPayment(fee, payment);
+    // Le restaría a la cuota lo que ya se había pagado.
+    if (after.capital <= 0) return "El recargo no puede ser mayor que lo que se cobra.";
+    // El saldo a favor es plata que entró y sobró: un descuento no puede generarlo.
+    if (after.surplus - payment.amount > TOLERANCE) {
+        return "El descuento no puede ser mayor que lo que falta pagar de la cuota.";
+    }
+    // El único cobro de $0 es el descuento del 100%: salda la cuota entera, o no
+    // es un cobro.
+    if (payment.amount === 0 && !after.settled) {
+        return "Un cobro de $0 tiene que saldar la cuota: el descuento tiene que cubrir todo lo que falta.";
+    }
+    return null;
+}

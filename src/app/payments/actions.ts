@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
-import { feeAfterPayment } from "@/lib/feePayment";
+import { feeAfterPayment, paymentProblem } from "@/lib/feePayment";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -105,11 +105,9 @@ export async function createPaymentAction(formData: FormData) {
     const surcharge = parseFloat(surchargeStr) || 0;
     const discount = parseFloat(discountStr) || 0;
 
-    if (!feeId || isNaN(amount)) {
+    // $0 puede ser: es el descuento del 100%, y `paymentProblem` decide si lo es.
+    if (!feeId || isNaN(amount) || amount < 0 || discount < 0 || surcharge < 0) {
         return { success: false, error: "Datos del pago inválidos" };
-    }
-    if (amount <= 0) {
-        return { success: false, error: "El total a cobrar tiene que ser mayor que cero." };
     }
 
     try {
@@ -132,12 +130,13 @@ export async function createPaymentAction(formData: FormData) {
             // pero el servidor decide (FIN-33).
             if (fee.status === "CANCELLED") return { success: false, error: "La cuota está anulada: no se puede cobrar." } as const;
 
-            // La misma cuenta con la que la pantalla anunció cómo queda la cuota.
+            // La misma cuenta, y las mismas reglas, con las que la pantalla anunció
+            // cómo queda la cuota.
+            const problem = paymentProblem(fee, { amount, discount, surcharge });
+            if (problem) return { success: false, error: problem } as const;
             const outcome = feeAfterPayment(fee, { amount, discount, surcharge });
             const { surplus } = outcome;
             const finalPaidAmountOnFee = outcome.paidAmount;
-            // Un recargo mayor que lo cobrado le restaría a la cuota lo ya pagado.
-            if (outcome.capital <= 0) return { success: false, error: "El recargo no puede ser mayor que lo que se cobra." } as const;
 
             // 2. Crear el pago, actualizar la cuota y manejar el saldo a favor
             // Crear el registro de transacción individual con los ajustes
@@ -153,7 +152,8 @@ export async function createPaymentAction(formData: FormData) {
                 }
             });
 
-            // Asiento en el Libro Mayor
+            // Asiento en el Libro Mayor. El descuento del 100% se asienta en $0: no
+            // entró plata, pero queda quién lo hizo y se anula desde Movimientos.
             await tx.transaction.create({
                 data: {
                     instituteId: user.instituteId as string,

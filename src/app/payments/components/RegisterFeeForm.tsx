@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle, Wallet } from "lucide-react";
 import { EntitySearch } from "./EntitySearch";
 import { formatCurrency, getMonthName } from "@/lib/utils";
-import { feeAfterPayment } from "@/lib/feePayment";
+import { feeAfterPayment, paymentProblem } from "@/lib/feePayment";
 
 interface StudentListOption {
     id: string;
@@ -35,7 +35,8 @@ function feeLabel(f: PendingFeeOption): string {
     return `Cuota ${getMonthName(f.month)} ${f.year} - ${f.enrollment?.course?.name || "Sin curso"}`;
 }
 
-const NOTHING_TO_COLLECT = "Con ese descuento no queda nada que cobrar.";
+const DISCOUNT_OVER_AMOUNT = "El descuento no puede ser mayor que el importe de la cuota que se paga.";
+const FULL_DISCOUNT = "La cuota queda saldada con un descuento del 100%. No entra plata a la caja.";
 
 /**
  * En qué estado queda la cuota. Antes la pantalla decía "Se cancela parte de la
@@ -148,13 +149,14 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         // Antes se chequeaba `totalToCollect < 0`, que no se cumplía nunca: el total
         // sale de un `Math.max(0, ...)`. Un descuento que se comía todo terminaba en
         // el "Datos del pago inválidos" del servidor. Ver FIN-32.
-        if (rawTotal <= 0) {
+        if (problem) {
             setStatus("error");
-            setErrorMsg(NOTHING_TO_COLLECT);
+            setErrorMsg(problem);
             return;
         }
 
         const label = feeLabel(selectedFee);
+        const settledByDiscount = isFullDiscount;
         formData.append("feeId", selectedFeeId);
         // We overwrite 'amount' to be the exact cash collected (Total a Cobrar)
         formData.set("amount", totalToCollect.toString());
@@ -164,7 +166,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         startTransition(async () => {
             const result = await createPaymentAction(formData);
             if (result.success) {
-                setSuccessMsg(`Pago registrado: ${label}. ${feeStateText(result.remaining ?? 0, result.surplus ?? 0)}`);
+                setSuccessMsg(`Pago registrado: ${label}. ${settledByDiscount ? FULL_DISCOUNT : feeStateText(result.remaining ?? 0, result.surplus ?? 0)}`);
                 setStatus("success");
                 setTimeout(() => {
                     setStatus("idle");
@@ -185,11 +187,15 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
     const selectedFee = pendingFees.find(f => f.id === selectedFeeId);
     const rawTotal = baseAmount + surcharge - discount;
     const totalToCollect = Math.max(0, rawTotal);
-    // Cómo queda la cuota si se confirma. La misma cuenta que hace el servidor al
-    // grabar: lo que se anuncia acá es lo que pasa.
-    const outcome = selectedFee && rawTotal > 0
-        ? feeAfterPayment(selectedFee, { amount: totalToCollect, discount, surcharge })
-        : null;
+    // Cómo queda la cuota si se confirma, con la misma cuenta y las mismas reglas
+    // que el servidor al grabar: lo que se anuncia acá es lo que pasa.
+    const payment = { amount: totalToCollect, discount, surcharge };
+    const problem = !selectedFee ? null
+        : rawTotal < 0 ? DISCOUNT_OVER_AMOUNT
+        : paymentProblem(selectedFee, payment);
+    const outcome = selectedFee && !problem ? feeAfterPayment(selectedFee, payment) : null;
+    // El único cobro de $0 que pasa las reglas: el descuento del 100%.
+    const isFullDiscount = !!outcome && totalToCollect === 0;
 
     return (
         <form id="fee-form" action={handleSubmit} className="space-y-4">
@@ -306,11 +312,11 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                     <div className="pt-2 border-t border-emerald-200/30">
                         {!outcome ? (
                             <p className="text-sm text-red-600 dark:text-red-400 font-semibold flex items-start gap-1.5">
-                                <AlertCircle size={16} className="mt-0.5 shrink-0" /> {NOTHING_TO_COLLECT}
+                                <AlertCircle size={16} className="mt-0.5 shrink-0" /> {problem}
                             </p>
                         ) : outcome.settled && outcome.surplus === 0 ? (
                             <p className="text-sm text-emerald-700 dark:text-emerald-300 font-semibold flex items-start gap-1.5">
-                                <CheckCircle size={16} className="mt-0.5 shrink-0" /> {feeStateText(outcome.remaining, outcome.surplus)}
+                                <CheckCircle size={16} className="mt-0.5 shrink-0" /> {isFullDiscount ? FULL_DISCOUNT : feeStateText(outcome.remaining, outcome.surplus)}
                             </p>
                         ) : (
                             <p className="text-sm text-amber-700 dark:text-amber-400 font-semibold flex items-start gap-1.5">
