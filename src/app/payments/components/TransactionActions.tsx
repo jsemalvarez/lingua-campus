@@ -22,9 +22,14 @@ interface TransactionActionsProps {
          */
         isCreditApplication?: boolean;
     };
+    /**
+     * Para la lista del celular: ahí no hay mouse que pase por la fila, así que
+     * los botones se ven siempre y tienen el tamaño de un dedo (44 px).
+     */
+    alwaysVisible?: boolean;
 }
 
-export function TransactionActions({ tx }: TransactionActionsProps) {
+export function TransactionActions({ tx, alwaysVisible = false }: TransactionActionsProps) {
     const [isPending, startTransition] = useTransition();
     const [isDownloading, setIsDownloading] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -103,13 +108,14 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
     };
 
     return (
-        <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <div className={`flex justify-end items-center gap-1 transition-all duration-200 ${alwaysVisible ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}>
             {tx.source === "PAYMENT" && (
                 <button
                     onClick={handleDownload}
                     disabled={isDownloading}
                     title="Descargar Comprobante"
-                    className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+                    aria-label="Descargar comprobante"
+                    className={`${alwaysVisible ? "p-3.5" : "p-2"} hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-primary disabled:opacity-50`}
                 >
                     {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                 </button>
@@ -117,7 +123,8 @@ export function TransactionActions({ tx }: TransactionActionsProps) {
             <button
                 onClick={() => setShowDeleteConfirm(true)}
                 title="Anular"
-                className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-rose-600"
+                aria-label="Anular"
+                className={`${alwaysVisible ? "p-3.5" : "p-2"} hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-rose-600`}
             >
                 <XCircle size={16} />
             </button>

@@ -44,7 +44,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const ledger = await prisma.transaction.findMany({
         where: { instituteId: user.instituteId },
         include: {
-            payment: { include: { fee: { include: { student: { select: { name: true } } } } } },
+            payment: {
+                include: {
+                    fee: {
+                        include: {
+                            student: { select: { name: true } },
+                            // El curso distingue dos cuotas del mismo mes de un alumno con dos inscripciones (FIN-33).
+                            enrollment: { select: { course: { select: { name: true } } } }
+                        }
+                    }
+                }
+            },
             expense: { include: { recipient: { select: { name: true } } } },
             miscIncome: { include: { student: { select: { name: true } } } }
         },
@@ -243,25 +253,39 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         );
     }
 
-    // Mapeo de títulos originales para transacciones anuladas
-    const voidedTitlesMap = new Map<string, string>();
-    ledger.filter(t => t.status === "VOIDED").forEach(t => {
-        const oid = t.paymentId || t.expenseId || t.miscIncomeId;
-        if (!oid) return;
-
-        let vTitle = t.description || "";
-        if (t.type === "PAYMENT" && t.payment?.fee?.student) {
-            const fee = t.payment.fee;
-            vTitle = `${formatFeeLabel(fee.type, fee.month, fee.year)} - ${fee.student.name}`;
-        } else if ((t.type === "EXPENSE" || t.type === "PAYROLL") && t.expense) {
-            vTitle = t.type === "PAYROLL" && t.expense.recipient?.name 
-                ? `Sueldo: ${t.expense.recipient.name}` 
-                : `${t.expense.category}: ${t.expense.description}`;
-        } else if (t.type === "MISC_INCOME" && t.miscIncome) {
-             vTitle = t.miscIncome.student ? `${t.miscIncome.category} - ${t.miscIncome.student.name}` : t.miscIncome.description;
+    // Qué muestra cada fila de Movimientos, por partes: el concepto, a quién
+    // corresponde y dónde. Antes era un solo título —«Cuota Octubre 2026 - Paz…»—
+    // sin el curso, y dos cobros del mismo mes en dos inscripciones del mismo alumno
+    // se leían idénticos (FIN-33). El contra-asiento de una anulación lleva el
+    // pago, el gasto o el ingreso que anula, así que se describe con sus datos:
+    // «ANULACIÓN · Matrícula 2026», con el alumno y el curso debajo.
+    const describeMovement = (t: (typeof ledger)[number]) => {
+        const fee = t.payment?.fee;
+        if (fee?.student) {
+            return {
+                concept: formatFeeLabel(fee.type, fee.month, fee.year),
+                who: fee.student.name as string | null,
+                where: fee.enrollment?.course.name ?? null
+            };
         }
-        voidedTitlesMap.set(oid, vTitle);
-    });
+        const expense = t.expense;
+        if (expense) {
+            // Los sueldos se cargan como gasto de categoría "Payroll" (createExpenseAction).
+            if (expense.category === "Payroll") {
+                return { concept: expense.description || "Pago de sueldo", who: expense.recipient?.name ?? null, where: null };
+            }
+            const recipient = expense.recipient?.name ?? null;
+            return { concept: expense.description, who: recipient ?? expense.category, where: recipient ? expense.category : null };
+        }
+        const income = t.miscIncome;
+        if (income) {
+            if (income.category === "ADELANTO") {
+                return { concept: "Adelanto de pago", who: income.student?.name ?? null, where: null };
+            }
+            return { concept: income.description, who: income.student?.name ?? null, where: income.category as string | null };
+        }
+        return { concept: (t.description || "").split(" - Motivo: ")[0], who: null, where: null };
+    };
 
     // Combinar y Sortear desde el Ledger
     const allTransactionsRaw = filteredLedger.map(t => {
@@ -281,66 +305,30 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             t.payment?.method === "SALDO" &&
             !(t.payment?.status === "VOIDED" && t.status === "VALID");
 
-        let title = t.description || "";
-        let note = null;
-        let recipientName = null;
-        let ticketNumber = null;
-        let entityId = t.paymentId || t.expenseId || t.miscIncomeId;
-        let originalId = entityId || t.id;
+        const entityId = t.paymentId || t.expenseId || t.miscIncomeId;
+        const originalId = entityId || t.id;
+        const { concept, who, where } = describeMovement(t);
 
-        // Extraer motivo de anulación si existe
-        if (title.includes(" - Motivo: ")) {
-            const parts = title.split(" - Motivo: ");
-            title = parts[0];
-            note = parts[1];
-        }
-
-        if (t.type === "PAYMENT" && t.payment?.fee?.student) {
-            const fee = t.payment.fee;
-            let feeLabel = formatFeeLabel(fee.type, fee.month, fee.year);
-            
-            title = `${feeLabel} - ${fee.student.name}`;
-            if (t.payment.notes) {
-                note = t.payment.notes;
-            }
-        } else if (isCreditApplication && t.payment?.fee?.student) {
-            const fee = t.payment.fee;
-            title = `Saldo aplicado: ${formatFeeLabel(fee.type, fee.month, fee.year)} - ${fee.student.name}`;
-        } else if (t.type === "EXPENSE" && t.expense) {
-            title = `${t.expense.category}: ${t.expense.description}`;
-            recipientName = t.expense.recipient?.name || null;
-            ticketNumber = t.expense.ticketNumber || null;
-        } else if (t.type === "PAYROLL" && t.expense) {
-             title = t.expense.recipient?.name ? `Sueldo: ${t.expense.recipient.name}` : `Pago de Salario`;
-             note = t.expense.description; // Aquí asignamos el concepto del sueldo a la nota
-             recipientName = t.expense.recipient?.name || null;
-             ticketNumber = t.expense.ticketNumber || null;
-        } else if (t.type === "MISC_INCOME" && t.miscIncome) {
-            const mi = t.miscIncome;
-            if (mi.category === "ADELANTO") {
-                title = mi.student ? `Adelanto - ${mi.student.name}` : `Adelanto de Pago`;
-                note = mi.description;
-            } else {
-                title = mi.student ? `${mi.category}: ${mi.description} - ${mi.student.name}` : `${mi.category}: ${mi.description}`;
-            }
-            ticketNumber = mi.ticketNumber || null;
-        }
-
-        // La aplicación de saldo comparte `paymentId` con su propio contra-asiento,
-        // así que al anularla el mapa le devolvía su propio título y la fila decía
-        // "Anula a: <ella misma>". No es un contra-asiento de nada: es el original.
-        const relatedTitle = !isCreditApplication && (t.type === "ADJUSTMENT" || t.type === "REFUND")
-            ? voidedTitlesMap.get(entityId || "")
-            : null;
+        // La nota: el motivo de una anulación, la que se escribió al cobrar, o el
+        // detalle de un adelanto. Se ve con el ícono de la fila, no en el texto.
+        const reason = (t.description || "").split(" - Motivo: ")[1];
+        const note = reason
+            ?? (t.type === "PAYMENT" ? t.payment?.notes || null : null)
+            ?? (t.type === "MISC_INCOME" && t.miscIncome?.category === "ADELANTO" ? t.miscIncome.description || null : null);
 
         return {
             id: t.id,
             originalId,
             date: t.date,
-            title,
+            concept,
+            who,
+            where,
+            // Todo junto, para el buscador y para el cartel de anular: ahí también
+            // tienen que poder distinguirse dos cobros del mismo mes.
+            title: [concept, who, where].filter(Boolean).join(" - "),
             note,
-            recipientName,
-            ticketNumber,
+            recipientName: t.expense?.recipient?.name ?? null,
+            ticketNumber: t.expense?.ticketNumber || t.miscIncome?.ticketNumber || null,
             // En la aplicación de saldo el asiento vale $0, pero el importe que se
             // usó es el del pago. Se muestra sin signo y etiquetado aparte: no es
             // plata que entró ni salió, y la tabla es la caja.
@@ -350,8 +338,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             status: t.status,
             method: t.method,
             category: t.type,
-            operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema",
-            relatedTitle
+            operatorName: t.operatorId ? userMap[t.operatorId] : "Sistema"
         };
     }).filter(t => t.amount > 0 || t.isCreditApplication);
 

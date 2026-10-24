@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
+import { useState, useEffect, type ReactNode } from "react";
+import { Search, Wallet, ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, FileText, User } from "lucide-react";
 import { formatDate } from "@/lib/dates";
 import { TransactionActions } from "./TransactionActions";
 import { useRouter, usePathname } from "next/navigation";
@@ -10,6 +10,13 @@ interface Transaction {
     id: string;
     originalId?: string;
     date: Date | string;
+    /** Qué es: «Cuota Octubre 2026», la descripción de un gasto, «Adelanto de pago». */
+    concept: string;
+    /** A quién corresponde: el alumno, el docente, o el rubro de un gasto sin destinatario. */
+    who?: string | null;
+    /** Dónde: el curso de la cuota, o la categoría. */
+    where?: string | null;
+    /** Las tres partes juntas: lo usan el buscador y el cartel de anular. */
     title: string;
     recipientName?: string | null;
     ticketNumber?: string | null;
@@ -21,7 +28,6 @@ interface Transaction {
     method: string;
     operatorName?: string;
     note?: string | null;
-    relatedTitle?: string | null;
     /** Aplicación de saldo a favor: no movió caja, pero se puede anular. Ver FIN-11. */
     isCreditApplication?: boolean;
 }
@@ -31,6 +37,154 @@ interface TransactionTableProps {
     totalPages: number;
     currentPage: number;
     searchQuery: string;
+}
+
+type Kind = "income" | "expense" | "cancel" | "credit";
+
+// Los tonos 700: los 500 que usaba la tabla no llegaban a 4,5:1 sobre blanco.
+const KIND: Record<Kind, { label: string; text: string; icon: string }> = {
+    income: { label: "INGRESO", text: "text-emerald-700 dark:text-emerald-400", icon: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
+    expense: { label: "GASTO", text: "text-rose-700 dark:text-rose-400", icon: "bg-rose-500/10 text-rose-700 dark:text-rose-400" },
+    // La aplicación de saldo también es un ADJUSTMENT, pero no es una anulación:
+    // no se pinta de ámbar ni dice ANULACIÓN.
+    cancel: { label: "ANULACIÓN", text: "text-amber-700 dark:text-amber-400", icon: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+    credit: { label: "SALDO APLICADO", text: "text-blue-700 dark:text-blue-400", icon: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
+};
+
+function kindOf(tx: Transaction): Kind {
+    if (tx.isCreditApplication) return "credit";
+    if (tx.category === "ADJUSTMENT" || tx.category === "REFUND") return "cancel";
+    return tx.type === "INCOME" ? "income" : "expense";
+}
+
+/** Contra-asientos y anulados no se tocan: sólo el original vigente tiene acciones. */
+function hasActions(tx: Transaction) {
+    return tx.status !== "VOIDED" && !!tx.originalId &&
+        (!!tx.isCreditApplication || (tx.category !== "REFUND" && tx.category !== "ADJUSTMENT"));
+}
+
+/**
+ * Un dato que se consulta y no se lee en cada fila —la nota, quién cargó el
+ * movimiento—: un ícono con el texto en un globo, al pasar el mouse o al tocarlo.
+ */
+function Hint({ icon, label, text, className }: { icon: ReactNode; label: string; text: string; className: string }) {
+    return (
+        <span className="relative group/tooltip inline-flex">
+            <button
+                type="button"
+                aria-label={`${label}: ${text}`}
+                className={`flex cursor-help transition-opacity ${className}`}
+                onClick={(e) => e.preventDefault()}
+            >
+                {icon}
+            </button>
+            <span role="tooltip" className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block group-focus-within/tooltip:block w-max max-w-[220px] bg-slate-800 text-white text-[11px] sm:text-xs font-normal normal-case tracking-normal px-3 py-2 rounded-lg shadow-xl z-50 whitespace-normal break-words pointer-events-none">
+                <span className="font-bold block mb-0.5 opacity-70">{label}</span>
+                {text}
+                <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+            </span>
+        </span>
+    );
+}
+
+function MovementIcon({ tx }: { tx: Transaction }) {
+    return (
+        <div className={`p-2 rounded-full shrink-0 ${KIND[kindOf(tx)].icon}`}>
+            {tx.isCreditApplication
+                ? <Wallet size={16} />
+                : tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
+        </div>
+    );
+}
+
+function Amount({ tx }: { tx: Transaction }) {
+    const voided = tx.status === "VOIDED";
+    return (
+        <span className={`font-bold tabular-nums tracking-tight whitespace-nowrap ${KIND[kindOf(tx)].text} ${voided ? "line-through" : ""}`}>
+            {/* Sin `+` ni `-`: no entró ni salió plata. El importe está para
+                reconocer cuál es, no para sumarlo a la caja. */}
+            {tx.isCreditApplication ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
+        </span>
+    );
+}
+
+/**
+ * La fila se lee como una frase (FIN-33): arriba el tipo y el concepto
+ * —«INGRESO · Cuota Octubre 2026»—, debajo a quién corresponde y, en gris,
+ * dónde. El curso es lo que distingue dos cuotas del mismo mes de un alumno con
+ * dos inscripciones, que antes se leían idénticas. El tipo va pegado al concepto
+ * y no arriba del nombre: «INGRESO» sobre un alumno se leía como que había
+ * ingresado el alumno.
+ *
+ * `trailing` es el importe en la lista del celular, a la altura del concepto.
+ */
+function MovementText({ tx, trailing }: { tx: Transaction; trailing?: ReactNode }) {
+    const kind = KIND[kindOf(tx)];
+    const voided = tx.status === "VOIDED";
+
+    return (
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+                {/* Texto corrido y no una fila de bloques: con la columna angosta, un
+                    concepto largo se corta palabra por palabra después del tipo, en
+                    vez de bajar entero y dejar «ANULACIÓN ·» suelto arriba. */}
+                <p className="min-w-0 text-sm leading-snug">
+                    <span className={`text-[11px] font-bold tracking-wide ${kind.text}`}>{kind.label}</span>
+                    <span aria-hidden="true" className="text-[11px] text-muted-foreground mx-1.5">·</span>
+                    <span className={`font-semibold ${voided ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                        {tx.concept}
+                    </span>
+                    {tx.isCreditApplication && (
+                        <span
+                            className="ml-1.5 text-xs italic text-muted-foreground cursor-help"
+                            title="El dinero había ingresado antes, cuando se cobró de más. Aplicarlo no mueve la caja."
+                        >
+                            · no mueve caja
+                        </span>
+                    )}
+                    {tx.ticketNumber && (
+                        <span className="ml-1.5 inline-block align-middle text-[10px] leading-none font-semibold text-muted-foreground bg-muted/60 px-1.5 py-1 rounded">
+                            TKT {tx.ticketNumber}
+                        </span>
+                    )}
+                    {voided && (
+                        <span className="ml-1.5 inline-block align-middle text-[10px] leading-none font-semibold text-rose-700 dark:text-rose-400 border border-current px-1.5 py-0.5 rounded">
+                            ANULADO
+                        </span>
+                    )}
+                    <span className="ml-1.5 inline-flex align-middle items-center gap-1.5">
+                        {/* La nota se ve siempre, tenue: así se sabe qué fila tiene
+                            algo para leer sin pasar por encima. */}
+                        {tx.note && (
+                            <Hint
+                                icon={<FileText size={13} />}
+                                label="Nota / Motivo"
+                                text={tx.note}
+                                className="text-muted-foreground/60 hover:text-amber-600 focus:text-amber-600"
+                            />
+                        )}
+                        {/* El operador lo tienen todos: aparece al pasar por la fila,
+                            y en el celular, donde no hay mouse, siempre. */}
+                        {tx.operatorName && (
+                            <Hint
+                                icon={<User size={13} />}
+                                label="Operador"
+                                text={tx.operatorName}
+                                className="text-muted-foreground sm:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-blue-600 focus:text-blue-600"
+                            />
+                        )}
+                    </span>
+                </p>
+                {trailing}
+            </div>
+            {tx.who && (
+                <span className={`text-[13px] font-medium leading-snug ${voided ? "line-through text-muted-foreground" : "text-foreground/80"}`}>
+                    {tx.who}
+                </span>
+            )}
+            {tx.where && <span className="text-xs leading-snug text-muted-foreground">{tx.where}</span>}
+        </div>
+    );
 }
 
 export function TransactionTable({ transactions, totalPages, currentPage, searchQuery: initialSearchQuery }: TransactionTableProps) {
@@ -70,6 +224,28 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
 
     const filteredTransactions = transactions;
 
+    // Un movimiento y su anulación se resaltan juntos al pasar por cualquiera de los dos.
+    const highlight = (tx: Transaction) =>
+        hoveredOriginalId && tx.originalId === hoveredOriginalId
+            ? "bg-primary/5 ring-1 ring-inset ring-primary/20"
+            : "hover:bg-muted/30";
+    const hoverProps = (tx: Transaction) => ({
+        onMouseEnter: () => tx.originalId && setHoveredOriginalId(tx.originalId),
+        onMouseLeave: () => setHoveredOriginalId(null),
+    });
+    const actionsFor = (tx: Transaction, alwaysVisible = false) => hasActions(tx) && (
+        <TransactionActions
+            alwaysVisible={alwaysVisible}
+            tx={{
+                id: tx.originalId!,
+                description: tx.title,
+                amount: tx.amount,
+                source: tx.category!,
+                isCreditApplication: tx.isCreditApplication
+            }}
+        />
+    );
+
     return (
         <div className="lg:col-span-2 space-y-4">
             <div className="bg-card border border-border/40 rounded-xl overflow-hidden shadow-sm">
@@ -81,7 +257,8 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <input
                             type="text"
-                            placeholder="Buscar por concepto, ticket o categoría..."
+                            aria-label="Buscar movimientos"
+                            placeholder="Buscar por alumno, curso, concepto o ticket..."
                             className="w-full pl-9 pr-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -91,192 +268,77 @@ export function TransactionTable({ transactions, totalPages, currentPage, search
 
                 {filteredTransactions.length === 0 ? (
                     <div className="p-12 text-center text-muted-foreground italic text-sm">
-                        {searchQuery 
+                        {searchQuery
                             ? `No se encontraron movimientos que coincidan con "${searchQuery}"`
                             : "Aún no hay movimientos contables registrados en la base de datos de tu instituto."
                         }
                     </div>
                 ) : (
                     <>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse whitespace-nowrap">
-                                <thead>
-                                    <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border/50">
-                                        <th className="px-5 py-4">Concepto / Referencia</th>
-                                        <th className="px-5 py-4">Fecha</th>
-                                        <th className="px-5 py-4 text-right">Monto</th>
-                                        <th className="px-5 py-4 text-right pr-8">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border/50">
-                                    {filteredTransactions.map((tx) => {
-                                        const displayTitle = tx.title;
-                                        const noteStr = tx.note || null;
-
-                                            // La aplicación de saldo también es un ADJUSTMENT, pero no
-                                            // es una anulación: no se pinta de ámbar ni dice ANULACIÓN.
-                                            const isCancellation = !tx.isCreditApplication &&
-                                                (tx.category === "ADJUSTMENT" || tx.category === "REFUND");
-                                            const isHighlighted = hoveredOriginalId && tx.originalId === hoveredOriginalId;
-
-                                            return (
-                                        <tr 
-                                            key={tx.id} 
-                                            className={`transition-all duration-200 group relative ${
-                                                isHighlighted 
-                                                    ? "bg-primary/5 ring-1 ring-inset ring-primary/20 z-10" 
-                                                    : "hover:bg-muted/30"
-                                            }`}
-                                            onMouseEnter={() => tx.originalId && setHoveredOriginalId(tx.originalId)}
-                                            onMouseLeave={() => setHoveredOriginalId(null)}
-                                        >
-                                            <td className="px-5 py-4">
-                                                <div className={`flex items-center gap-3 ${tx.status === "VOIDED" ? "opacity-50 grayscale" : ""}`}>
-                                                    <div className={`p-2 rounded-full ${
-                                                        tx.isCreditApplication
-                                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                                            : isCancellation
-                                                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                                                : tx.type === "INCOME"
-                                                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                                                    }`}>
-                                                        {tx.isCreditApplication
-                                                            ? <Wallet size={16} />
-                                                            : tx.type === "INCOME" ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
-                                                    </div>
-                                                    {/* El tope de ancho va acá y no en el `<td>`: la tabla es de
-                                                        layout automático y el `max-width` de una celda es apenas
-                                                        una sugerencia, la de un div se respeta. Sin esto, la
-                                                        segunda línea —etiqueta, "Anula a: …", ticket, ANULADO—
-                                                        crece con su contenido, y como la tabla es
-                                                        `whitespace-nowrap` empuja Monto y Acciones fuera de la
-                                                        pantalla: parece que desaparecieron los importes de todos
-                                                        los movimientos. Ver BUG-10. */}
-                                                    <div className="flex flex-col min-w-0 max-w-[350px]">
-                                                        <span className={`font-semibold text-sm truncate ${tx.status === "VOIDED" ? "line-through text-muted-foreground" : ""}`} title={displayTitle}>
-                                                            {displayTitle}
-                                                        </span>
-                                                        {/* Envuelve en vez de estirar: la fila se hace más alta,
-                                                            que es barato, y las columnas de la derecha no se mueven. */}
-                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 whitespace-normal text-xs font-medium mt-0.5">
-                                                            <span className={
-                                                                tx.isCreditApplication
-                                                                    ? "text-blue-500"
-                                                                    : isCancellation
-                                                                        ? "text-amber-500"
-                                                                        : tx.type === "INCOME"
-                                                                            ? "text-emerald-500"
-                                                                            : "text-rose-500"
-                                                            }>
-                                                                {tx.isCreditApplication
-                                                                    ? "SALDO APLICADO"
-                                                                    : isCancellation ? "ANULACIÓN" : tx.type === "INCOME" ? "INGRESO" : "GASTO"}
-                                                            </span>
-                                                            {/* Corto a propósito: la tabla es `whitespace-nowrap` y esta
-                                                                línea no trunca, así que un texto largo acá ensancha la
-                                                                columna y empuja Monto y Acciones fuera de la pantalla.
-                                                                La explicación entera va en el tooltip. */}
-                                                            {tx.isCreditApplication && (
-                                                                <>
-                                                                    <span className="text-muted-foreground/30">·</span>
-                                                                    <span
-                                                                        className="text-muted-foreground italic cursor-help"
-                                                                        title="El dinero había ingresado antes, cuando se cobró de más. Aplicarlo no mueve la caja."
-                                                                    >
-                                                                        no mueve caja
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                            {tx.relatedTitle && (
-                                                                <>
-                                                                    <span className="text-muted-foreground/30">·</span>
-                                                                    <span className="text-amber-600/80 flex items-center gap-1 italic">
-                                                                        <Link2 size={10} />
-                                                                        Anula a: {tx.relatedTitle}
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                            {tx.ticketNumber && (
-                                                                <>
-                                                                    <span className="text-muted-foreground/30">·</span>
-                                                                    <span className="text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded text-[10px]">
-                                                                        TKT: {tx.ticketNumber}
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                            {tx.status === "VOIDED" && <span className="text-rose-500 border border-rose-500 px-1.5 py-0.5 rounded text-[10px]">ANULADO</span>}
-
-                                                            {/* Íconos Adicionales: Motivo y Operador (Visibles al hacer hover en la fila) */}
-                                                            <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                                                                {noteStr && (
-                                                                    <div className="relative group/tooltip flex">
-                                                                        <button type="button" className="text-muted-foreground hover:text-amber-600 focus:text-amber-600 cursor-help" onClick={(e) => e.preventDefault()}>
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                                                                        </button>
-                                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block sm:group-focus-within/tooltip:block w-max max-w-[200px] bg-slate-800 text-white text-[10px] sm:text-xs px-3 py-2 rounded-lg shadow-xl z-50 whitespace-normal break-words pointer-events-none">
-                                                                            <span className="font-bold block mb-0.5 opacity-70">Nota / Motivo:</span>
-                                                                            {noteStr}
-                                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                
-                                                                {tx.operatorName && (
-                                                                    <div className="relative group/tooltip flex">
-                                                                        <button type="button" className="text-muted-foreground hover:text-blue-600 focus:text-blue-600 cursor-help" onClick={(e) => e.preventDefault()}>
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                                                        </button>
-                                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block sm:group-focus-within/tooltip:block w-max bg-slate-800 text-white text-[10px] sm:text-xs px-3 py-1.5 rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none">
-                                                                            Operador: <span className="font-bold">{tx.operatorName}</span>
-                                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                        {/* Computadora: la columna del movimiento envuelve en renglones en
+                            vez de estirarse, así que Monto y Acciones no se salen de la
+                            pantalla (BUG-10) y ya no hace falta desplazar la tabla. */}
+                        <table className="hidden sm:table w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border/50">
+                                    <th className="px-5 py-4">Movimiento</th>
+                                    <th className="px-4 py-4 w-28">Fecha</th>
+                                    <th className="px-4 py-4 w-32 text-right">Monto</th>
+                                    <th className="px-5 py-4 w-28 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {filteredTransactions.map((tx) => {
+                                    const voided = tx.status === "VOIDED";
+                                    return (
+                                        <tr key={tx.id} className={`transition-all duration-200 group relative ${highlight(tx)}`} {...hoverProps(tx)}>
+                                            <td className="px-5 py-3.5">
+                                                <div className={`flex items-start gap-3 ${voided ? "opacity-60 grayscale" : ""}`}>
+                                                    <MovementIcon tx={tx} />
+                                                    <MovementText tx={tx} />
                                                 </div>
                                             </td>
-                                            <td className={`px-5 py-4 text-xs font-medium text-muted-foreground ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
+                                            <td className={`px-4 py-3.5 text-xs font-medium text-muted-foreground whitespace-nowrap ${voided ? "opacity-60" : ""}`}>
                                                 {/* El día contable (FIN-34): un cobro de las 21:30 es de ese día, no del siguiente. */}
                                                 {formatDate(tx.date, "day", "short")}
                                             </td>
-                                            <td className={`px-5 py-4 text-right ${tx.status === "VOIDED" ? "opacity-50" : ""}`}>
-                                                <span className={`font-bold tabular-nums tracking-tight ${
-                                                    tx.isCreditApplication
-                                                        ? "text-blue-600 dark:text-blue-400"
-                                                        : isCancellation
-                                                            ? "text-amber-600 dark:text-amber-400"
-                                                            : tx.type === "INCOME"
-                                                                ? "text-emerald-600 dark:text-emerald-400"
-                                                                : "text-rose-600 dark:text-rose-400"
-                                                } ${tx.status === "VOIDED" ? "line-through" : ""}`}>
-                                                    {/* Sin `+` ni `-`: no entró ni salió plata. El importe está para
-                                                        reconocer cuál es, no para sumarlo a la caja. */}
-                                                    {tx.isCreditApplication ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
-                                                </span>
+                                            <td className={`px-4 py-3.5 text-right ${voided ? "opacity-60" : ""}`}>
+                                                <Amount tx={tx} />
                                             </td>
-                                            <td className="px-5 py-4 text-right pr-6">
-                                                {tx.status !== "VOIDED" && tx.originalId &&
-                                                 (tx.isCreditApplication || (tx.category !== "REFUND" && tx.category !== "ADJUSTMENT")) && (
-                                                    <TransactionActions
-                                                        tx={{
-                                                            id: tx.originalId,
-                                                            description: displayTitle,
-                                                            amount: tx.amount,
-                                                            source: tx.category!,
-                                                            isCreditApplication: tx.isCreditApplication
-                                                        }}
-                                                    />
-                                                )}
+                                            <td className="px-5 py-3 text-right">
+                                                {actionsFor(tx)}
                                             </td>
                                         </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        {/* Celular: una lista. El importe va arriba, a la altura del
+                            concepto; la fecha y las acciones, abajo. */}
+                        <ul className="sm:hidden divide-y divide-border/50">
+                            {filteredTransactions.map((tx) => {
+                                const voided = tx.status === "VOIDED";
+                                return (
+                                    <li key={tx.id} className={`group flex items-start gap-3 px-4 pt-3.5 pb-1 transition-colors ${highlight(tx)}`} {...hoverProps(tx)}>
+                                        <div className={voided ? "opacity-60 grayscale" : ""}>
+                                            <MovementIcon tx={tx} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className={voided ? "opacity-60 grayscale" : ""}>
+                                                <MovementText tx={tx} trailing={<Amount tx={tx} />} />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2 min-h-11">
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                    {formatDate(tx.date, "day", "short")}
+                                                </span>
+                                                <div className="-mr-3">{actionsFor(tx, true)}</div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
 
                         {/* Pagination Bar */}
                         <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
