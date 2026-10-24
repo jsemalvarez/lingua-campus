@@ -253,7 +253,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
 | [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [ ] |
-| [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [ ] |
+| [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [x] |
 | [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [x] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
@@ -3600,6 +3600,71 @@ que eran de dos inscripciones distintas. La lista de deudores sí lo nombra
 [BUG-13](#bug-13) (el pedido del mismo día), [FIN-24](#fin-24) (qué pasa con las cuotas al cambiar
 de curso), [FIN-23](#fin-23) (por qué eliminar inscripción se niega con pagos), [ARQ-05](#arq-05)
 (borrado lógico).
+
+### Decidido — 2026-10-23 · la cuota se anula, no se borra
+
+De los dos caminos de arriba va el **borrado lógico de la cuota**: un estado más, `CANCELLED`. El otro
+—desenganchar los pagos con `feeId` nulo— también llevaba migración, porque hoy no es nullable, y
+dejaba sin cuota a todo lo que la lee desde el pago, empezando por el recibo.
+
+**Cómo está hoy en producción, medido el mismo día:** lo de Paz sigue sin resolver —el octubre y la
+matrícula de más siguen como pagos **válidos**: el instituto no los anuló, esperando este arreglo—, y
+hay **2 cuotas** impagas con todos sus pagos anulados (Benjamin Sapia Sánchez, junio; Bastian Barrio
+Aostri, octubre). Pueden ser deudas reales: esta ficha no las toca sola.
+
+### Resuelto — 2026-10-23 · `5719df4` · verificado por pantalla en local · falta stage
+
+**Migración aditiva** (`20261023120000_cuota_anulada`): `CANCELLED` en el enum `PaymentStatus`, sin
+tocar filas.
+
+**`deleteFeeAction` sigue siendo una sola acción** —el botón de Deudores, con motivo obligatorio—:
+
+- sin pagos, **borra** como antes;
+- con pagos y **todos anulados**, **anula**: la cuota queda, con sus pagos anulados y sus
+  contra-asientos, que son la historia de la caja;
+- con algún pago válido, se niega.
+
+En los dos primeros casos deja la foto en `FeeDeletion`, así que la anulada también figura en
+`/payments/deletions` con su motivo.
+
+**La anulada no es deuda en ningún lado.** Deudores, Finanzas y los contadores ya leían sólo
+`PENDING`/`PARTIAL`. Los que no: el portal y el inicio de la familia y el estado de cuenta del alumno
+adulto contaban como impago todo lo que no fuera `PAID` —ahora no la traen—, y el total *a cobrar* del
+mes en Finanzas la sumaba —ahora no—. Tampoco se la puede cobrar, aplicarle saldo a favor ni editarle el
+importe: la pantalla de cobro no la ofrece, y el servidor lo frena igual.
+
+**La corrida no la vuelve a emitir** —sigue ocupando su período en la restricción única— y la cuenta
+en el aviso de las eliminadas, que es lo que es para quien regenera.
+
+**Verificado por pantalla contra la base local**, con lo esperado anotado antes, sobre una cuota de
+octubre de $10.000:
+
+| Paso | Dio |
+|---|---|
+| Cobrarla | Finanzas, progreso de octubre: *$10.000 + $0 = $10.000* |
+| Anular el cobro | La cuota vuelve a pendiente con el pago anulado; *$0 + $10.000 = $10.000* — acá antes no había salida |
+| Eliminarla desde Deudores, con motivo | *«Deuda eliminada»*; la cuota queda `CANCELLED` con su pago anulado, los asientos de caja no cambian, y figura en cuotas eliminadas con curso, operador y motivo. Deudores: la alumna pasa de $25.000 a $15.000. Finanzas: *$0 + $0 = $0* |
+| Pantalla de cobro de la alumna | Sólo se ofrece la otra cuota que debía |
+| *Generar Cuotas* de octubre | *«Se generaron 5 cuotas»* —el resto del curso— y *«1 alumno no recibió la cuota de Octubre porque ya se le había eliminado»* |
+
+Lo creado se borró después: 9 cuotas, 6 pagos, 20 asientos, 2 borrados y 145 inscripciones, antes y
+después.
+
+**Lo que quedó sin ejercitar.** Las tres pantallas de la familia —el cambio es el filtro de la
+consulta— y los frenos del servidor al cobro, al saldo y a la edición, que la interfaz no deja
+alcanzar. **Falta stage**, y como lleva migración, con el ensayo sobre el backup de producción.
+
+**Dos cosas que deja a la vista.**
+
+- **La anulada ocupa su período.** Si se anula un derecho de examen y el alumno se vuelve a anotar al
+  examen, no se le emite otro. Para volver a cobrarla el camino es reponerla: [FEAT-26](#feat-26).
+- **Ya estaba roto, y no es de esta ficha:** desanotar del examen a un alumno cuyo derecho de examen
+  tiene un pago anulado falla entero. `applyExamRegistration` borra la cuota si está `PENDING` sin
+  mirar los pagos, y la clave foránea de `Payment` lo impide.
+
+**El caso de Paz** se resuelve con la aplicación una vez que esto esté en producción: anular los dos
+cobros de más y sacar las dos cuotas desde Deudores. Si la familia pagó dos veces, qué se hace con esa
+plata —devolverla o dejarla a cuenta— es una decisión del instituto, no del sistema.
 
 ---
 
