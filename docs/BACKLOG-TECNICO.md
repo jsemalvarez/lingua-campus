@@ -3612,7 +3612,7 @@ matrícula de más siguen como pagos **válidos**: el instituto no los anuló, e
 hay **2 cuotas** impagas con todos sus pagos anulados (Benjamin Sapia Sánchez, junio; Bastian Barrio
 Aostri, octubre). Pueden ser deudas reales: esta ficha no las toca sola.
 
-### Resuelto — 2026-10-23 · `5719df4` · verificado por pantalla en local · falta stage
+### Resuelto — 2026-10-23 · `5719df4` · verificado por pantalla en local y en stage (2026-10-24)
 
 **Migración aditiva** (`20261023120000_cuota_anulada`): `CANCELLED` en el enum `PaymentStatus`, sin
 tocar filas.
@@ -3650,9 +3650,31 @@ octubre de $10.000:
 Lo creado se borró después: 9 cuotas, 6 pagos, 20 asientos, 2 borrados y 145 inscripciones, antes y
 después.
 
-**Lo que quedó sin ejercitar.** Las tres pantallas de la familia —el cambio es el filtro de la
-consulta— y los frenos del servidor al cobro, al saldo y a la edición, que la interfaz no deja
-alcanzar. **Falta stage**, y como lleva migración, con el ensayo sobre el backup de producción.
+**Lo que quedó sin ejercitar en local.** Las pantallas de la familia —el cambio es el filtro de la
+consulta—, que se vieron en stage, abajo; y los frenos del servidor al cobro, al saldo y a la edición,
+que la interfaz no deja alcanzar.
+
+### Verificado en stage — 2026-10-24 · deploy `4667376` · el caso de Paz, con los datos de ese día
+
+**Ensayo de la migración sobre producción:** backup de prod del 24/10 (las 39 tablas coinciden en el
+`.dump`, el `.sql` y la base), copia de stage, `restore-stage.sh`, `anonimizar-stage.js`, y recién ahí
+el push. El build aplicó `20261023120000_cuota_anulada` sobre el clon fresco sin error; el mismo push
+quedó `CANCELED` en el proyecto de producción.
+
+**El caso real**, con lo esperado anotado antes. Se tomaron como de más el octubre y la matrícula de la
+inscripción vieja —en producción, cuáles son lo decide el instituto—:
+
+| Paso | Dio |
+|---|---|
+| Antes | Paz sin deuda. Finanzas, octubre: *$7.636.000 + $3.615.000 = $11.251.000* |
+| Anular los dos cobros desde Finanzas | Paz debe **$84.000** —octubre $49.000 y matrícula $35.000—, el agujero que describe esta ficha. Finanzas: *$7.587.000 + $3.664.000 = $11.251.000* |
+| Sacarlas desde Deudores, con motivo | *«Deuda eliminada»* dos veces; las dos quedan `CANCELLED` con su pago `VOIDED`, ninguna cuota se borra (1981 antes y después). Paz sale de Deudores. Finanzas: *$7.587.000 + $3.615.000 = $11.202.000* |
+| Inicio de la tutora | *«No se registran deudas pendientes»* |
+| Estado de cuenta de la tutora | Deuda $0, pendiente $0, *«¡Estás al día!»*; en el historial, sólo los tres cobros válidos. Sin el arreglo, mostraba $84.000 |
+
+**Y se vio de nuevo lo que la ficha anotaba al pasar:** en *Movimientos Recientes* los dos cobros de
+octubre son indistinguibles —mismo texto, importe y fecha, sin el curso—. Para anular el correcto hubo
+que mirar qué pago tenía detrás cada fila. Quien opere el caso real va a tener el mismo problema.
 
 **Dos cosas que deja a la vista.**
 
