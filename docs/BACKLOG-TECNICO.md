@@ -3609,6 +3609,47 @@ borraron los tres cobros con sus asientos y las cuotas volvieron a pendientes: 1
 **Lo que no se ejercitó:** los dos frenos nuevos del servidor (recargo mayor que lo cobrado, total en
 cero), porque la pantalla no deja llegar.
 
+### Descuento del 100% — 2026-10-24 · `3779b93` · verificado por pantalla en stage
+
+**Decidido con el dueño el mismo día:** una cuota se puede saldar con un descuento del 100%. Hasta
+acá el total en $0 se rechazaba siempre (el caso D de arriba), y perdonar una cuota entera era
+eliminarla desde Deudores, con lo que desaparecía del portal de la familia. Saldada con descuento,
+la familia la ve saldada.
+
+**Es el único cobro de $0.** Las reglas viven en `paymentProblem`, al lado de `feeAfterPayment`, y
+las aplican la pantalla antes de confirmar y el servidor al grabar:
+
+- **Un cobro de $0 tiene que saldar la cuota.** El descuento cubre todo lo que falta, ni más ni
+  menos.
+- **Un descuento no genera saldo a favor**, cobre lo que cobre: el saldo a favor es plata que entró
+  y sobró. Antes, un importe mayor que la deuda con un descuento grande acreditaba saldo que nunca
+  había entrado. Desde la pantalla había que buscarlo, pero se podía.
+- **Un recargo mayor que lo cobrado** se sigue rechazando.
+
+**En la caja se asienta en $0** —no entró plata— con el operador, como cualquier cobro. Movimientos
+Recientes lo muestra igual que el saldo aplicado: *«DESCUENTO 100% · Cuota Octubre 2026 · no mueve
+caja»*, en índigo como *Descuentos Otorgados*, con el importe descontado sin signo. Se anula desde
+ahí: la cuota vuelve a impaga y no sale plata. El contra-asiento, también de $0, no se muestra; la
+fila original queda tachada.
+
+**Verificado en stage**, sobre las mismas cuotas de octubre de $49.000, con lo esperado anotado antes:
+
+| Caso | Se cargó | La pantalla dijo | En la base |
+|---|---|---|---|
+| E · Benjamin Rivero | 49.000 + 49.000 de descuento | En verde, *«La cuota queda saldada con un descuento del 100%. No entra plata a la caja.»* | `PAID`; pago de $0 con descuento 49.000; asiento `PAYMENT` de $0; caja sin cambios |
+| E, en Movimientos | — | *«DESCUENTO 100% · Cuota Octubre 2026 · no mueve caja»*, Benjamin Rivero, Children 3 M-J early shift, $49.000 | — |
+| E, anulado desde ahí | — | El cartel: *«La cuota vuelve a quedar impaga. No sale plata de la caja…»*; la fila, tachada | `PENDING` en 0; contra-asiento `ADJUSTMENT` de $0; caja sin cambios |
+| F · Juan Perez | 30.000 + 30.000 de descuento | En rojo, *«Un cobro de $0 tiene que saldar la cuota…»*; al confirmar no grabó | Sin cambios |
+| G · Juan Perez | 60.000 + 60.000 de descuento | En rojo, *«El descuento no puede ser mayor que lo que falta pagar de la cuota.»*; no grabó | Sin cambios |
+| C de nuevo · Avril | 56.000 + 3.000 de descuento | Sigue ofreciendo los $7.000 a saldo a favor: la regla nueva no lo traba | No se confirmó |
+
+La caja se mantuvo en $33.875.581,40 durante toda la prueba. Después se borraron el pago y sus dos
+asientos: 1803 pagos y 1936 asientos, como antes.
+
+**Lo que conviene saber:** el *Progreso de Cobro* del mes cuenta lo que se saldó de las cuotas, no
+lo que entró a la caja, y eso ya pasaba con cualquier descuento. Una cuota saldada al 100% suma ahí
+como cobrada, y suma en *Descuentos Otorgados*.
+
 ---
 
 <a id="fin-33"></a>
