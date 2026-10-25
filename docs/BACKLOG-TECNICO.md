@@ -229,7 +229,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-06](#fin-06) | P1 | Cuotas duplicadas: falta restricción única | [x] |
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
-| [FIN-09](#fin-09) | P2 | 🗣️ Deudores incluye alumnos dados de baja y cursos terminados | [ ] |
+| [FIN-09](#fin-09) | P2 | 🗣️ Deudores incluye alumnos dados de baja y cursos terminados | [x] |
 | [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [x] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
@@ -298,7 +298,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
 | [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
 | [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
-| [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [ ] |
+| [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [x] |
 | [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
 | [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
 | [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [~] |
@@ -1654,6 +1654,51 @@ ya estaba escrito el 16/08 y el resto es alcance.
 los alumnos marcados como incompletos ([FEAT-18](#feat-18)). Las dos cosas juntas hacen desaparecer
 al que dejó el curso debiendo, que es el caso que la decisión del 16/08 quería conservar: hay que
 escribirlas mirando la otra.
+
+### Medido — 2026-10-25 · en producción, hoy no se esconde nada
+
+De las **89 cuotas** que muestra Deudores ($ 4.761.700), **todas son de alumnos activos en cursos
+activos**: 83 con la inscripción activa, 4 de 3 alumnos que dejaron el curso ($ 193.000) y 2 sueltas
+($ 111.000). Ninguna es de un alumno en la papelera ni de un curso terminado. La vista que pidió el
+instituto muestra hoy lo mismo que antes. El filtro empieza a contar en diciembre, cuando se cierren
+los cursos con cuotas impagas.
+
+### Resuelto — 2026-10-25 · `816d772` · verificado por pantalla en stage
+
+**Un selector «Mostrar», al lado del de período**, con cinco vistas y cuántos alumnos entran en cada
+una:
+
+| Vista | Qué cuotas |
+|---|---|
+| **Activos en cursos activos** (abre acá) | Alumno activo, y curso activo o cuota suelta |
+| Dejaron el curso | Inscripción `INCOMPLETE` |
+| Alumnos dados de baja | Alumno en la papelera |
+| Cursos que no están activos | Curso terminado o dado de baja |
+| Todos | Sin recorte |
+
+**Filtro, no exclusión, como se decidió el 16/08:**
+
+- La consulta trae todo, y la pantalla recorta cuota por cuota. Un alumno que debe en un curso
+  activo y en uno terminado aparece en las dos vistas, cada una con lo suyo.
+- **Si la vista por defecto deja deuda afuera, lo dice** debajo del selector, con un enlace a
+  «Todos».
+- **El que dejó el curso sigue en la vista por defecto**, y su cuota dice *«(curso · dejó el
+  curso)»*. Es el cruce con FEAT-18: el listado del curso ya no lo muestra, y si también se fuera de
+  acá su deuda quedaría sólo en la ficha.
+- **La cuota suelta** cuenta como de curso activo, para no perderla en silencio.
+- **El PDF** dice la vista cuando no es la de siempre, y una vista vacía tiene su propio mensaje, no
+  el de *«ningún deudor con ese nombre»*.
+
+**Verificado en stage**, sobre el backup de producción del 24/10, con lo esperado anotado antes:
+
+| Vista | Dio |
+|---|---|
+| Por defecto | 67 deudores, $ 4.761.700, sin aviso. El selector: *Activos en cursos activos (67) · Dejaron el curso (3) · Alumnos dados de baja (0) · Cursos que no están activos (0) · Todos (67)* |
+| Dejaron el curso | 3 deudores, $ 193.000; las cuatro cuotas dicen *«dejó el curso»* |
+| Alumnos dados de baja | *«Sin deudas en «Alumnos dados de baja»»* |
+| Con Ámbar Pastor en la papelera un momento ($ 49.000) | Por defecto 66 deudores y $ 4.712.700, con *«1 cuota de un alumno dado de baja o de un curso que no está activo no se ve en esta vista. Ver todos»*; *Alumnos dados de baja (1)*; el enlace lleva a *Todos (67)*, $ 4.761.700 |
+
+Ámbar volvió a activa después de la prueba.
 
 ---
 
@@ -7007,6 +7052,35 @@ curso"* desplegable. Sigue valiendo la recomendación de arriba —con vista, no
 más concreta es que desde esa pantalla marcar incompleto no tiene vuelta: **cómo vuelve un alumno
 incompleto quedó abierto en [FIN-30](#fin-30)**, y ahí adentro es donde tiene sentido que viva el
 botón.
+
+### Resuelto — 2026-10-25 · `816d772` · verificado por pantalla en stage
+
+Con la recomendación: **con vista, no excluido**.
+
+- **El listado del curso** muestra todo menos `INCOMPLETE`. Los que dejaron van debajo, en un
+  desplegable *«N dejaron el curso»* que abre con el nombre, el teléfono, el enlace a la ficha y el
+  distintivo *Incompleto*. Es un `<details>` nativo y no lleva código del lado del cliente.
+- **El encabezado cuenta la lista**, no todas las inscripciones.
+- **Un curso que sólo tiene incompletos** dice *«Ningún alumno sigue cursando este curso.»*, no
+  *«Todavía no hay ningún estudiante registrado»*.
+- **La tarjeta de `/courses`** cuenta `ACTIVE` y `FINISHED`, el criterio del parte, y deja de decir
+  cero en un curso terminado.
+- **Su deuda sigue en Deudores**, en la vista por defecto y marcada *«dejó el curso»*
+  ([FIN-09](#fin-09)).
+
+**Medido en producción el 25/10:** 9 inscripciones incompletas en 7 cursos. Uno de ellos, el
+terminado *Pre-adolescents 1 M-J early shift*, sólo tiene esas dos.
+
+**Verificado en stage**, con lo esperado anotado antes:
+
+| Pantalla | Dio |
+|---|---|
+| *Children 3 M-J late shift* | *Alumnos Inscritos (10)*, ningún incompleto en la lista; *«2 dejaron el curso»* con Catalina Amparo Teraccio Hombria y Paz Isabella Calderón |
+| *Pre-adolescents 1 M-J early shift* (terminado) | *Alumnos Inscritos (0)*, *«Ningún alumno sigue cursando este curso.»*, *«2 dejaron el curso»* |
+| Tarjeta de *Children 3 M-J late shift* en `/courses` | *Alumnos Inscriptos (10)*, el mismo número que adentro |
+
+**Lo que no se vio:** que la tarjeta de un curso terminado cuente a sus finalizados. Hoy no hay
+ninguna inscripción `FINISHED` en producción. Se va a ver al cerrar los cursos en diciembre.
 
 ---
 
