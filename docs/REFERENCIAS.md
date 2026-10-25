@@ -100,7 +100,8 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
   - Importar preguntas desde texto (el formato Aiken es una lista simple).
   - Rúbrica para corregir la escritura y lo oral, con criterios y niveles que define el instituto.
   - Un camino que muestra qué hizo y qué le falta, con todo abierto (desbloquear de a pasos
-    frena al que se traba en una parte), y logros por constancia y por mejora.
+    frena al que se traba en una parte), y en qué mejoró, para el alumno y el docente. Sin
+    premios por constancia ni medallas: a Patricia la gamificación no la entusiasma.
   - La estadística por pregunta abarca toda la práctica (listening, speaking y escritos), y
     pide guardar cada respuesta: hoy `PracticeSession` guarda solo los totales.
   - La rúbrica usa las categorías y escalas del boletín de cada curso (`ReportCategory`) y no
