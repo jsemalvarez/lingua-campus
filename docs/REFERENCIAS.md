@@ -106,6 +106,11 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
   - La rúbrica usa las categorías y escalas del boletín de cada curso (`ReportCategory`) y no
     calcula nota: en prod, Children 1 a 3 tienen escala conceptual y de Children 4 en adelante
     van de 1 a 10. Lo marcado queda en la clase, a mano para completar el boletín.
+  - **Decidido el 25/10/2026 (falta el visto bueno de Patricia):** la rúbrica no va suelta; es la
+    parte del repaso integrador que el campus no puede corregir, el oral y el writing, tomada por
+    el docente en clase. Una por curso y período, que se completa de a poco (hoy 4 alumnos, la
+    semana que viene otros 4) y muestra cuántos faltan. El campus todavía no recibe trabajos de
+    los alumnos; recibirlos sería otra propuesta, cerca de [PED-13](BACKLOG-TECNICO.md#ped-13).
   - **Decidido el 25/10/2026 (falta el visto bueno de Patricia):** la evaluación pasa a ser un
     «repaso integrador», mensual o bimestral, con los temas de las clases del período. Es un
     complemento del examen que toman y califican las docentes, nunca su reemplazo, y no pone
