@@ -2,6 +2,8 @@
 
 import prisma from "@/lib/prisma";
 import { getAuthContext, INSTITUTE_ADMINS, type AuthContext } from "@/lib/authz";
+import { feeAfterPayment } from "@/lib/feePayment";
+import { formatFeeLabel } from "@/lib/utils";
 
 /**
  * Los datos del recibo de un pago, para las cuatro pantallas que lo ofrecen: la
@@ -65,7 +67,8 @@ export async function getReceiptDataAction(paymentId: string) {
                                 name: true,
                                 address: true
                             }
-                        }
+                        },
+                        enrollment: { select: { course: { select: { name: true } } } }
                     }
                 }
             }
@@ -76,6 +79,28 @@ export async function getReceiptDataAction(paymentId: string) {
         if (!(await canSeeReceipt(ctx, payment.fee.studentId))) {
             return { success: false, error: "Acceso denegado" };
         }
+
+        // Cómo quedó la cuota **con este pago**, no cómo está hoy: el recibo del
+        // primero de tres pagos tiene que seguir diciendo lo que faltaba entonces,
+        // aunque se lo baje después del tercero. Por eso se cuenta lo pagado con los
+        // pagos válidos anteriores a éste y no con el `paidAmount` de la cuota. FIN-31.
+        const earlier = await prisma.payment.findMany({
+            where: {
+                feeId: payment.feeId,
+                status: "VALID",
+                OR: [
+                    { date: { lt: payment.date } },
+                    { date: payment.date, id: { lt: payment.id } }
+                ]
+            },
+            select: { amount: true, discount: true, surcharge: true }
+        });
+        const price = payment.fee.originalAmount;
+        const paidBefore = Math.min(
+            price,
+            earlier.reduce((total, p) => total + p.amount + p.discount - p.surcharge, 0)
+        );
+        const after = feeAfterPayment({ originalAmount: price, paidAmount: paidBefore }, payment);
 
         const institute = await prisma.institute.findUnique({
             where: { id: ctx.instituteId },
@@ -98,11 +123,21 @@ export async function getReceiptDataAction(paymentId: string) {
                 surcharge: payment.surcharge,
                 discount: payment.discount,
                 date: payment.date,
-                feeType: payment.fee.type,
-                feeMonth: payment.fee.month,
-                feeYear: payment.fee.year,
                 studentName: payment.fee.student.name,
                 studentAddress: payment.fee.student.address
+            },
+            fee: {
+                // Con el curso: un alumno con dos inscripciones tiene dos cuotas del mismo mes (FIN-33).
+                label: [
+                    formatFeeLabel(payment.fee.type, payment.fee.month, payment.fee.year),
+                    payment.fee.enrollment?.course.name
+                ].filter(Boolean).join(" - "),
+                price,
+                paidBefore,
+                /** Lo que este pago le descontó a la cuota, con su descuento adentro. */
+                appliedNow: after.paidAmount - paidBefore,
+                pendingAfter: after.remaining,
+                surplus: after.surplus
             },
             institute
         };

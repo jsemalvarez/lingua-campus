@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { getReceiptDataAction } from "@/app/payments/receiptActions";
-import { generatePaymentReceipt } from "@/lib/pdf/generateReceipt";
-import { formatFeeLabel, cn } from "@/lib/utils";
+import { downloadPaymentReceipt } from "@/lib/pdf/paymentReceipt";
+import { cn } from "@/lib/utils";
 
 interface ReceiptDownloadButtonProps {
     paymentId: string;
@@ -26,39 +25,8 @@ export function ReceiptDownloadButton({
         if (isDownloading) return;
         setIsDownloading(true);
         try {
-            const result = await getReceiptDataAction(paymentId);
-            if (result.success && result.payment && result.institute) {
-                const { payment, institute } = result;
-                
-                const baseAmount = payment.amount + payment.discount - payment.surcharge;
-
-                // Prepare concepts
-                const concepts = [
-                    {
-                        description: formatFeeLabel(payment.feeType as any, payment.feeMonth, payment.feeYear),
-                        amount: baseAmount
-                    }
-                ];
-
-                if (payment.surcharge > 0) {
-                    concepts.push({ description: 'RECARGO / INTERÉS', amount: payment.surcharge });
-                }
-                if (payment.discount > 0) {
-                    concepts.push({ description: 'DESCUENTO APLICADO', amount: -payment.discount });
-                }
-
-                await generatePaymentReceipt({
-                    receiptNumber: payment.id.slice(0, 8).toUpperCase(),
-                    date: payment.date,
-                    studentName: payment.studentName,
-                    studentAddress: payment.studentAddress,
-                    concepts,
-                    total: payment.amount,
-                    institute: institute as any
-                });
-            } else {
-                alert(result.error || "Error al generar el recibo");
-            }
+            const error = await downloadPaymentReceipt(paymentId);
+            if (error) alert(error);
         } catch (error) {
             console.error(error);
             alert("Error al descargar el comprobante");

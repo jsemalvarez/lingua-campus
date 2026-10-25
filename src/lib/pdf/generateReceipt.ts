@@ -13,6 +13,12 @@ interface ReceiptData {
         amount: number;
     }[];
     total: number;
+    /** Cómo quedó la cuota después de este pago. Ver FIN-31. */
+    feeStatus?: {
+        price: number;
+        paidBefore: number;
+        pending: number;
+    };
     institute: {
         name: string;
         address?: string | null;
@@ -23,6 +29,9 @@ interface ReceiptData {
         logoUrl?: string | null;
     };
 }
+
+// Los importes en el formato de Argentina, no en el del navegador que baja el recibo.
+const money = (amount: number) => `$ ${Number(amount || 0).toLocaleString('es-AR')}`;
 
 export const generatePaymentReceipt = async (data: ReceiptData) => {
     try {
@@ -37,10 +46,6 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
         const secondaryColor = { r: 100, g: 100, b: 100 };
         const margin = 15;
         const pageWidth = doc.internal.pageSize.getWidth();
-
-        // --- BORDER ---
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, margin, pageWidth - (margin * 2), 140); // Receipt box
 
         // --- TOP RIGHT CORNER: IVA EXENTO ---
         doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
@@ -200,7 +205,7 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
             head: [['CONCEPTO', 'IMPORTE']],
             body: data.concepts.map(c => [
                 (c.description || 'SIN CONCEPTO').toUpperCase(),
-                `$ ${Number(c.amount || 0).toLocaleString()}`
+                money(c.amount)
             ]),
             theme: 'plain',
             headStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
@@ -221,7 +226,52 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
         doc.setDrawColor(0, 0, 0);
         doc.rect(totalX, finalY - 9, 55, 14);
         doc.text('TOTAL  $', totalX + 5, finalY + 0.5);
-        doc.text(`${Number(data.total || 0).toLocaleString()}`, totalX + 50, finalY + 0.5, { align: 'right' });
+        doc.text(`${Number(data.total || 0).toLocaleString('es-AR')}`, totalX + 50, finalY + 0.5, { align: 'right' });
+
+        // --- ESTADO DE LA CUOTA ---
+        // El renglón que faltaba el 03/08: un pago parcial y uno que salda se
+        // imprimían iguales, y la familia se llevaba un papel que no decía que
+        // faltaban $3.000. Ver FIN-31.
+        let endY = finalY + 6;
+        if (data.feeStatus) {
+            const status = data.feeStatus;
+            const left = margin + 10;
+            const right = pageWidth - margin - 10;
+            let y = finalY + 14;
+
+            doc.setDrawColor(200, 200, 200);
+            doc.line(left, y - 4, right, y - 4);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(secondaryColor.r, secondaryColor.g, secondaryColor.b);
+            doc.text('ESTADO DE LA CUOTA DESPUÉS DE ESTE PAGO', left, y);
+            y += 6;
+
+            const rows: [string, string][] = [['VALOR DE LA CUOTA', money(status.price)]];
+            if (status.paidBefore > 0) rows.push(['PAGADO ANTES DE ESTE RECIBO', money(status.paidBefore)]);
+            doc.setFontSize(9);
+            doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+            doc.setFont('helvetica', 'normal');
+            for (const [label, value] of rows) {
+                doc.text(label, left, y);
+                doc.text(value, right, y, { align: 'right' });
+                y += 5;
+            }
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            if (status.pending > 0) {
+                doc.text('QUEDA PENDIENTE', left, y + 1);
+                doc.text(money(status.pending), right, y + 1, { align: 'right' });
+            } else {
+                doc.text('CUOTA SALDADA', left, y + 1);
+            }
+            endY = y + 6;
+        }
+
+        // --- BORDER --- Al final, para que crezca con lo que lleve el recibo.
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(margin, margin, pageWidth - (margin * 2), Math.max(140, endY - margin));
 
         doc.save(`Recibo_${data.receiptNumber || Date.now()}.pdf`);
     } catch (error) {
