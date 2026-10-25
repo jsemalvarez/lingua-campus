@@ -30,8 +30,12 @@ interface ReceiptData {
     };
 }
 
-// Los importes en el formato de Argentina, no en el del navegador que baja el recibo.
-const money = (amount: number) => `$ ${Number(amount || 0).toLocaleString('es-AR')}`;
+// Los importes en el formato de Argentina, no en el del navegador que baja el
+// recibo. El signo va antes del peso: «- $ 3.000», no «$ -3.000».
+const money = (amount: number) => {
+    const value = Number(amount || 0);
+    return `${value < 0 ? '- ' : ''}$ ${Math.abs(value).toLocaleString('es-AR')}`;
+};
 
 export const generatePaymentReceipt = async (data: ReceiptData) => {
     try {
