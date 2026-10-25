@@ -104,7 +104,11 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
   - La estadística por pregunta abarca toda la práctica (listening, speaking y escritos), y
     pide guardar cada respuesta: hoy `PracticeSession` guarda solo los totales.
   - La rúbrica usa las categorías y escalas del boletín (`ReportCategory`) y completa la nota de
-    la clase; la evaluación cuelga de una clase y no toca el examen final.
+    la clase.
+  - **Decidido el 25/10/2026 (falta el visto bueno de Patricia):** la evaluación pasa a ser un
+    «repaso integrador», mensual o bimestral, con los temas de las clases del período. Es un
+    complemento del examen que toman y califican las docentes, nunca su reemplazo, y no pone
+    nota.
 - **No sirve para nosotros:** el taller entre pares (para chicos y grupos chicos es más carga que
   ayuda) y las preguntas de cálculo.
 - **Ventana al cliente:** las propuestas se le muestran a Patricia en un artifact, una por tarjeta,
