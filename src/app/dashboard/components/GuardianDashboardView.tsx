@@ -16,13 +16,97 @@ import { cn, getMonthName } from "@/lib/utils";
 import Link from "next/link";
 import { formatDate } from "@/lib/dates";
 
-import { GuardianAttendanceChart } from "./GuardianAttendanceChart";
-
-interface StudentAttendance {
+interface StudentAttendanceData {
     studentId: string;
     studentName: string;
     /** Las últimas 10 marcas, de la más reciente a la más vieja. */
     attendances: { id: string; status: string; date: Date | string; topic: string | null }[];
+}
+
+const SEGMENT_COLOR: Record<string, string> = {
+    PRESENT: "bg-emerald-500",
+    LATE: "bg-amber-400",
+    JUSTIFIED: "bg-blue-400",
+    ABSENT: "bg-rose-500",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+    PRESENT: "Presente",
+    LATE: "Tarde",
+    JUSTIFIED: "Ausente, justificado",
+    ABSENT: "Ausente",
+};
+
+/**
+ * La asistencia de un hijo: el porcentaje, una raya por clase —de la más vieja,
+ * a la izquierda, a la más reciente— y las clases a las que faltó. Reemplaza al
+ * anillo, que ocupaba 200 px para un número y mostraba 3 de las 10 clases que
+ * anunciaba. Diseño elegido en el lienzo «Asistencia del tutor», variante B.
+ * Ver BUG-21.
+ *
+ * «Tarde» cuenta como presente, como contaba el anillo.
+ */
+function StudentAttendance({ data, showName, divided }: { data: StudentAttendanceData; showName: boolean; divided: boolean }) {
+    const total = data.attendances.length;
+    const present = data.attendances.filter((a) => a.status === "PRESENT" || a.status === "LATE").length;
+    const missed = data.attendances.filter((a) => a.status === "ABSENT" || a.status === "JUSTIFIED");
+    const oldestFirst = [...data.attendances].reverse();
+
+    return (
+        <div className={cn(divided && "border-t border-slate-800 pt-6")}>
+            {showName && <p className="font-bold text-sm text-slate-100">{data.studentName}</p>}
+            <p className="text-[11px] text-slate-400 font-medium uppercase tracking-widest mt-1">
+                {total === 0 ? "Todavía sin asistencia tomada" : total === 1 ? "Última clase" : `Últimas ${total} clases`}
+            </p>
+
+            {total > 0 && (
+                <>
+                    <div className="flex items-baseline gap-2.5 mt-3">
+                        <span className="text-2xl font-black tracking-tight">{Math.round((present / total) * 100)}%</span>
+                        <span className="text-xs font-medium text-slate-400">
+                            {present} de {total} {present === 1 ? "presente" : "presentes"}
+                        </span>
+                    </div>
+
+                    <div
+                        role="img"
+                        aria-label={`Asistencia: ${present} de ${total} clases, de la más vieja a la más reciente`}
+                        className="flex gap-1 mt-3"
+                    >
+                        {oldestFirst.map((att) => (
+                            <span
+                                key={att.id}
+                                title={`${formatDate(att.date, "day", "dayMonth")} · ${att.topic || "Clase"} · ${STATUS_LABEL[att.status] ?? "Ausente"}`}
+                                className={cn("flex-1 h-3.5 rounded", SEGMENT_COLOR[att.status] ?? "bg-rose-500")}
+                            />
+                        ))}
+                    </div>
+                    <div className="flex justify-between text-[11px] font-medium text-slate-400 mt-1.5">
+                        <span>{formatDate(oldestFirst[0].date, "day", "dayMonth")}</span>
+                        <span>{formatDate(data.attendances[0].date, "day", "dayMonth")}</span>
+                    </div>
+
+                    {missed.length === 0 ? (
+                        <p className="mt-4 text-xs font-semibold text-emerald-400">No faltó a ninguna de estas clases.</p>
+                    ) : (
+                        <div className="mt-4 space-y-2.5">
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Faltó a</p>
+                            {missed.map((att) => (
+                                <div key={att.id} className="flex items-center gap-2 text-xs font-semibold min-w-0">
+                                    <span className={cn("w-2 h-2 rounded-full shrink-0", att.status === "JUSTIFIED" ? "bg-blue-400" : "bg-rose-500")} />
+                                    {/* La fecha delante del tema: «Culture» sólo se leía como una
+                                        categoría, no como el tema de una clase. */}
+                                    <span className="text-slate-400 shrink-0 w-11">{formatDate(att.date, "day", "dayMonth")}</span>
+                                    <span className="text-slate-300 truncate">{att.topic || "Clase"}</span>
+                                    {att.status === "JUSTIFIED" && <span className="text-blue-300 shrink-0">justificada</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
 }
 
 interface GuardianDashboardViewProps {
@@ -30,7 +114,7 @@ interface GuardianDashboardViewProps {
     instituteName: string;
     students: any[];
     upcomingLessons: any[];
-    attendanceByStudent: StudentAttendance[];
+    attendanceByStudent: StudentAttendanceData[];
     recentGrades: any[];
     totalDebt: number;
 }
@@ -156,57 +240,14 @@ export function GuardianDashboardView({
                         <Card className="p-6 border-none shadow-xl bg-slate-900 text-slate-50 dark:bg-slate-950 rounded-3xl relative overflow-hidden">
                             <h3 className="font-extrabold text-xl tracking-tight mb-4">Asistencia</h3>
 
-                            <div className="space-y-8">
-                                {attendanceByStudent.map((s) => (
-                                    <div key={s.studentId}>
-                                        {attendanceByStudent.length > 1 && (
-                                            <p className="font-bold text-sm text-slate-100">{s.studentName}</p>
-                                        )}
-                                        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-widest mt-1">
-                                            {s.attendances.length === 0
-                                                ? "Todavía sin asistencia tomada"
-                                                : s.attendances.length === 1 ? "Última clase" : `Últimas ${s.attendances.length} clases`}
-                                        </p>
-
-                                        {s.attendances.length > 0 && (
-                                            <>
-                                                {/* Alto fijo para el anillo y su leyenda: con `h-32` la
-                                                    leyenda caía encima del tercer renglón. */}
-                                                <div className="h-[200px] mt-2 -mx-2">
-                                                    <GuardianAttendanceChart recentAttendances={s.attendances} />
-                                                </div>
-
-                                                <div className="space-y-2.5 mt-3">
-                                                    {s.attendances.slice(0, 3).map((att) => (
-                                                        <div key={att.id} className="flex items-center justify-between gap-3 text-xs font-semibold">
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <div className={cn(
-                                                                    "w-2 h-2 rounded-full shrink-0",
-                                                                    att.status === "PRESENT" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" :
-                                                                    att.status === "LATE" ? "bg-amber-400" :
-                                                                    att.status === "JUSTIFIED" ? "bg-blue-400" :
-                                                                    "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"
-                                                                )} />
-                                                                {/* La fecha delante del tema: «Culture» solo se leía
-                                                                    como una categoría, no como el tema de una clase. */}
-                                                                <span className="text-slate-400 shrink-0">{formatDate(att.date, "day", "dayMonth")}</span>
-                                                                <span className="text-slate-300 truncate">{att.topic || "Clase"}</span>
-                                                            </div>
-                                                            <div className={cn(
-                                                                "text-right shrink-0",
-                                                                att.status === "PRESENT" ? "text-emerald-400" :
-                                                                att.status === "LATE" ? "text-amber-400" :
-                                                                att.status === "JUSTIFIED" ? "text-blue-400" :
-                                                                "text-rose-400"
-                                                            )}>
-                                                                {att.status === "PRESENT" ? "Presente" : att.status === "LATE" ? "Tarde" : att.status === "JUSTIFIED" ? "Justificado" : "Ausente"}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                            <div className="space-y-6">
+                                {attendanceByStudent.map((s, i) => (
+                                    <StudentAttendance
+                                        key={s.studentId}
+                                        data={s}
+                                        showName={attendanceByStudent.length > 1}
+                                        divided={i > 0}
+                                    />
                                 ))}
                             </div>
                         </Card>
