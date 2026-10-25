@@ -8517,6 +8517,33 @@ píxeles ninguna leyenda se encima con sus renglones, y a 375 la página no se c
 Hay 147 en producción. Tampoco la de un hijo sin asistencia tomada (Paz Calderón, la hija de Karen
 Pennisi, sería ese caso). Las dos pedían entrar con otra cuenta.
 
+### Rediseñada — 2026-10-25 · `00baf25` · verificada en stage
+
+**Por qué.** Mirando la versión de arriba, el dueño marcó dos cosas: el título dice *«Últimas 10
+clases»* y la tarjeta muestra 3, y el anillo deja mucho espacio vacío a los costados. Propuso una
+barra con el porcentaje y la lista completa. Se armaron las dos variantes en el lienzo *«Asistencia
+del tutor»*, con los datos reales de una familia de tres hijos, y eligió la **B**.
+
+**Qué muestra ahora cada hijo:** el porcentaje con *«N de M presentes»*; una **raya por clase**, de la
+más vieja a la más reciente, con la fecha de cada punta y el tema de la clase al pasar el mouse; y
+debajo **sólo las clases a las que faltó**, o *«No faltó a ninguna de estas clases.»*. Las diez
+clases que anuncia el título están en la barra, sin necesidad de diez renglones por hijo. «Tarde»
+sigue contando como presente, con su raya en ámbar, y la falta justificada va en azul y en la lista
+dice *«justificada»*. Hoy no hay ninguna de las dos en producción.
+
+Sin el anillo, Recharts sale de esta pantalla: se borró `GuardianAttendanceChart.tsx`.
+
+**Verificado en stage** con la cuenta de *ma. angeles*, con lo esperado anotado antes:
+
+| Hijo | Dio |
+|---|---|
+| Catalina | 50% · 5 de 10; las rayas, de la más vieja a la más reciente, P P P A P A P A A A, del 7 sep al 14 oct; *Faltó a* 14 oct, 7 oct, 5 oct, 28 sep y 16 sep |
+| Joaquin | 100% · 7 de 7, del 24 ago al 23 sep; *«No faltó a ninguna de estas clases.»* |
+| Pedro | 75% · 6 de 8, del 3 ago al 28 sep; *Faltó a* 28 sep y 11 sep |
+
+A 375 píxeles la página no se corre, y la tarjeta de los tres hijos mide 868 px de alto. Con los
+anillos superaba los 1.000.
+
 ---
 
 <a id="bug-22"></a>
