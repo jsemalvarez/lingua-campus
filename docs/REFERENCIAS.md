@@ -123,7 +123,8 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
 - **No sirve para nosotros:** el taller entre pares (para chicos y grupos chicos es más carga que
   ayuda) y las preguntas de cálculo.
 - **Ventana al cliente:** las propuestas se le muestran a Patricia en un artifact, una por tarjeta,
-  para que dé el visto bueno antes de construir. Sin nombrar a Moodle.
+  para que dé el visto bueno antes de construir. Sin nombrar a Moodle ni a las otras referencias.
+  Son ocho: seis de acá y dos de [Trinity Phonics](#trinity-phonics).
 
 ### Langboost
 
@@ -197,7 +198,11 @@ del Plata), relevada el 19/10/2026 leyendo su código público y con una prueba 
   hecha no alcanza para saber si Azure es generoso con algunos sonidos: falta una prueba
   controlada, idealmente con Patricia.
 - **Qué salió:** sirve de prueba concreta para [PED-03](BACKLOG-TECNICO.md#ped-03) (validez de la
-  evaluación de pronunciación) y [PED-02](BACKLOG-TECNICO.md#ped-02). Las ideas quedaron sin decidir.
+  evaluación de pronunciación) y [PED-02](BACKLOG-TECNICO.md#ped-02). El 25/10/2026 dos ideas
+  pasaron a la página de propuestas para Patricia (ver [Moodle](#moodle)): el speaking corregido
+  sonido por sonido, con los sonidos pendientes de cada alumno, condicionado a probarlo antes
+  con alumnos reales; y una práctica sin micrófono de pares mínimos y dictado. Rachas y medallas
+  quedan afuera: a Patricia no la entusiasman.
 
 ### Quinttos
 
