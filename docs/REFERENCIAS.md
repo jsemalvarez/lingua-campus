@@ -111,6 +111,10 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
     el docente en clase. Una por curso y período, que se completa de a poco (hoy 4 alumnos, la
     semana que viene otros 4) y muestra cuántos faltan. El campus todavía no recibe trabajos de
     los alumnos; recibirlos sería otra propuesta, cerca de [PED-13](BACKLOG-TECNICO.md#ped-13).
+    El flujo: se crea el repaso del período, se toma en clase, se ve el avance y se usa en el
+    boletín. La rúbrica no se arma: sale de la plantilla de boletín del curso. En prod, al
+    25/10/2026, de 30 cursos activos 26 tienen plantilla, 4 ninguna y 1 tiene dos. Abierto, y
+    preguntado a Patricia: quién crea el repaso, cada docente o la dirección para todos.
   - **Decidido el 25/10/2026 (falta el visto bueno de Patricia):** la evaluación pasa a ser un
     «repaso integrador», mensual o bimestral, con los temas de las clases del período. Es un
     complemento del examen que toman y califican las docentes, nunca su reemplazo, y no pone
