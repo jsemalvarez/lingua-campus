@@ -275,7 +275,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
 | [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
 | [BUG-20](#bug-20) | P3 | La ficha dice «Sin datos registrados» teniendo el teléfono del tutor | [ ] |
-| [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [ ] |
+| [BUG-21](#bug-21) | P2 | 🗣️ La tarjeta de asistencia del tutor no mide el período que anuncia | [x] |
 | [BUG-22](#bug-22) | P3 | Los cuatro contadores del Hub del alumno no comparten universo | [ ] |
 | [BUG-23](#bug-23) | P1 | 🗣️ Publicar boletines falla en los cursos más grandes | [x] |
 | [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
@@ -8407,6 +8407,47 @@ rótulo y el caso de los hermanos.
 
 **Lo que este arreglo no resuelve.** Aunque el anillo diga la verdad, sigue sin haber dónde ver el
 detalle completo — que es lo que la madre quería en realidad. Eso es [FEAT-30](#feat-30).
+
+### Resuelto — 2026-10-25 · `23f379f`, `99b9a9f` · verificado por pantalla en stage
+
+Los cuatro defectos, cada uno por su lado:
+
+1. **El rótulo dice lo que mide.** *«Últimas N clases»*, con el número real de marcas, en vez de
+   *«Período Académico Actual»*. Se eligió titular por lo que se mide, que es más barato que medir el
+   período y no promete nada.
+2. **Un bloque por hijo.** La consulta ya traía las últimas 10 marcas de cada alumno, y era la
+   pantalla la que las aplanaba. Ahora cada hijo tiene su nombre, su anillo y sus tres últimas clases.
+   El hijo sin asistencia tomada dice *«Todavía sin asistencia tomada»*. Con un solo hijo no se
+   repite el nombre.
+3. **Sin clases borradas:** `lesson: { status: "ACTIVE" }`, como el inicio del alumno y el hub del
+   tutor.
+4. **La leyenda no se encima.** El anillo tiene una caja de 200 px y toma ese alto, en vez de forzar
+   220 dentro de 128.
+
+**Y la fecha delante del tema** en cada renglón —*«14 oct · Adjectives to describe animals»*—, que
+contesta la otra pregunta de la madre: «Culture» se leía como una categoría y es el tema de una
+clase.
+
+**Lo que rompió el arreglo, y se arregló antes de cerrar.** Al sacarle al tema el ancho fijo
+(`max-w-[140px]`) para que use el espacio, un tema largo en una sola línea ensanchaba la columna, y
+en el celular la página se corría 14 px de costado. Se arregló con `min-w-0` en las dos columnas de
+la grilla: el tema se corta con «…».
+
+**Verificado en stage** con la cuenta de la tutora *ma. angeles*, tres hijos, sobre el backup de
+producción del 24/10. Lo esperado se calculó antes contra la base:
+
+| Hijo | Dio |
+|---|---|
+| Catalina Caseres | *Últimas 10 clases* · **50%** · 14 oct, 7 oct y 5 oct, ausente |
+| Joaquin Caseres | *Últimas 7 clases* · **100%** · 23 sep, 16 sep y 7 sep, presente |
+| Pedro Caseres | *Últimas 8 clases* · **75%** · 28 sep ausente; 25 y 18 sep, presente |
+
+Antes los tres compartían un anillo, con las últimas 10 marcas de los tres mezcladas. A 684 y a 375
+píxeles ninguna leyenda se encima con sus renglones, y a 375 la página no se corre.
+
+**Lo que no se vio:** la tarjeta de un tutor de un solo hijo, que sólo deja de mostrar el nombre.
+Hay 147 en producción. Tampoco la de un hijo sin asistencia tomada (Paz Calderón, la hija de Karen
+Pennisi, sería ese caso). Las dos pedían entrar con otra cuenta.
 
 ---
 
