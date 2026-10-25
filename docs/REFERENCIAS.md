@@ -99,8 +99,12 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
   - Examen con apertura, cierre, tiempo e intentos, con la nota pasando sola.
   - Importar preguntas desde texto (el formato Aiken es una lista simple).
   - Rúbrica para corregir la escritura y lo oral, con criterios y niveles que define el instituto.
-  - Desbloquear la práctica siguiente al terminar la anterior.
-  - Insignias o logros para los más chicos.
+  - Un camino que muestra qué hizo y qué le falta, con todo abierto (desbloquear de a pasos
+    frena al que se traba en una parte), y logros por constancia y por mejora.
+  - La estadística por pregunta abarca toda la práctica (listening, speaking y escritos), y
+    pide guardar cada respuesta: hoy `PracticeSession` guarda solo los totales.
+  - La rúbrica usa las categorías y escalas del boletín (`ReportCategory`) y completa la nota de
+    la clase; la evaluación cuelga de una clase y no toca el examen final.
 - **No sirve para nosotros:** el taller entre pares (para chicos y grupos chicos es más carga que
   ayuda) y las preguntas de cálculo.
 - **Ventana al cliente:** las propuestas se le muestran a Patricia en un artifact, una por tarjeta,
