@@ -89,7 +89,10 @@ export default async function DashboardPage() {
                                 }
                             }
                         },
+                        // Las últimas 10 marcas de cada hijo, sin las de clases borradas,
+                        // como en el inicio del alumno y en el hub del tutor (BUG-21).
                         attendances: {
+                            where: { lesson: { status: "ACTIVE" } },
                             orderBy: { lesson: { date: 'desc' } },
                             take: 10,
                             include: {
@@ -150,20 +153,19 @@ export default async function DashboardPage() {
         ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .slice(0, 6);
 
-        // Flatten attendances
-        const recentAttendances = guardianLinks.flatMap(l =>
-            l.student.attendances.map((att: any) => ({
+        // La asistencia va por hijo. Antes se aplanaban las marcas de todos y se
+        // tomaban las últimas 10: dos hermanos compartían un solo porcentaje y los
+        // renglones no decían de quién era cada clase (BUG-21).
+        const attendanceByStudent = guardianLinks.map(l => ({
+            studentId: l.student.id,
+            studentName: l.student.name,
+            attendances: l.student.attendances.map((att: any) => ({
                 id: att.id,
                 status: att.status,
-                notes: att.notes,
                 date: att.lesson.date,
                 topic: att.lesson.topic,
-                courseName: att.lesson.course.level || att.lesson.course.name,
-                courseColor: att.lesson.course.color,
-                studentName: l.student.name
             }))
-        ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 10);
+        }));
 
         // Flatten grades
         const recentGrades = guardianLinks.flatMap(l =>
@@ -192,7 +194,7 @@ export default async function DashboardPage() {
                     instituteName={instituteName}
                     students={students}
                     upcomingLessons={allLessons}
-                    recentAttendances={recentAttendances}
+                    attendanceByStudent={attendanceByStudent}
                     recentGrades={recentGrades}
                     totalDebt={totalDebt}
                 />

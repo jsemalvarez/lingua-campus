@@ -38,7 +38,9 @@ export function GuardianAttendanceChart({ recentAttendances }: GuardianAttendanc
     const rate = Math.round(((presentCount + lateCount) / total) * 100);
 
     return (
-        <div className="relative h-full w-full min-h-[220px]">
+        // Toma el alto de quien lo contiene. Antes forzaba 220px dentro de una caja
+        // de 128 y la leyenda se salía sobre el texto de abajo (BUG-21).
+        <div className="relative h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                     <Pie
