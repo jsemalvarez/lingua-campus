@@ -21,7 +21,30 @@ type DebtorMonth = {
     isPaid: boolean;
     month: number;
     year: number;
+    studentActive: boolean;
+    studentDeleted: boolean;
+    courseActive: boolean;
+    leftCourse: boolean;
 };
+
+/**
+ * Qué deuda mira la pantalla (FIN-09). Abre en «activos en cursos activos», que
+ * es lo que pidió el instituto, pero es un filtro y no una exclusión: la deuda
+ * del alumno dado de baja o la de un curso terminado sigue siendo deuda, y es la
+ * que hay que ir a cobrar. Por eso se puede elegir, y la vista por defecto avisa
+ * cuánto deja afuera. El que dejó el curso no se filtra por defecto: su
+ * inscripción ya no aparece en el listado del curso (FEAT-18), y si además se
+ * fuera de acá su deuda no se vería en ningún lado.
+ */
+const SCOPES = [
+    { id: "default", label: "Activos en cursos activos", test: (m: DebtorMonth) => m.studentActive && m.courseActive },
+    { id: "left", label: "Dejaron el curso", test: (m: DebtorMonth) => m.leftCourse },
+    { id: "deleted", label: "Alumnos dados de baja", test: (m: DebtorMonth) => m.studentDeleted },
+    { id: "inactiveCourse", label: "Cursos que no están activos", test: (m: DebtorMonth) => !m.courseActive },
+    { id: "all", label: "Todos", test: () => true },
+] as const;
+
+type ScopeId = (typeof SCOPES)[number]["id"];
 
 type DebtorSummary = {
     name: string;
@@ -45,6 +68,8 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
     const [exporting, setExporting] = useState(false);
     const [sortField, setSortField] = useState<"name" | "debt">("debt");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+    const [scopeId, setScopeId] = useState<ScopeId>("default");
+    const scope = SCOPES.find((s) => s.id === scopeId)!;
 
     // ── Filtro por período ────────────────────────────────────────────────────
     // `null` es "todos los períodos" y es el estado de entrada a propósito: es la
@@ -108,7 +133,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
             doc.text(period ? `Deudores de ${periodLabel}` : "Reporte de Deudores", 14, 10);
             doc.setFontSize(8);
             doc.setFont("helvetica", "normal");
-            doc.text(`Lingua Campus · Generado el ${dateStr}`, 14, 17);
+            doc.text(`Lingua Campus · Generado el ${dateStr}${scopeId === "default" ? "" : ` · ${scope.label}`}`, 14, 17);
             if (search) {
                 doc.text(`Filtro activo: "${search}"`, pageW - 14, 17, { align: "right" });
             }
@@ -236,16 +261,45 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
     // debe *ese* mes, y lo que se muestra es lo que debe de ese mes, no su deuda
     // total. La lista contesta "a quién le reclamo junio"; la deuda completa se
     // ve volviendo a "Todos los períodos".
+    // ── Qué deuda se mira (FIN-09) ────────────────────────────────────────────
+    // Se filtra cuota por cuota: un alumno puede deber en un curso activo y en
+    // uno terminado, y cada vista se queda con lo suyo. Los totales del alumno se
+    // vuelven a sumar con lo que quedó.
+    const scopedList = useMemo(() => summaryList.reduce<DebtorSummary[]>((acc, s) => {
+        const months = s.months.filter(scope.test);
+        if (months.length === 0) return acc;
+        const currentMonthOwed = months.filter((m) => m.isCurrent).reduce((a, m) => a + m.amount, 0);
+        const totalOwed = months.reduce((a, m) => a + m.amount, 0);
+        acc.push({ ...s, months, totalOwed, currentMonthOwed, previousMonthsOwed: totalOwed - currentMonthOwed });
+        return acc;
+    }, []), [summaryList, scope]);
+
+    // Cuántos alumnos entran en cada vista, para el selector; y cuántas cuotas
+    // deja afuera la vista por defecto, para avisarlo.
+    const scopeCounts = useMemo(() => Object.fromEntries(SCOPES.map((sc) => [
+        sc.id,
+        summaryList.filter((s) => s.months.some(sc.test)).length,
+    ])) as Record<ScopeId, number>, [summaryList]);
+    const hiddenByDefault = useMemo(
+        () => summaryList.reduce((a, s) => a + s.months.filter((m) => !SCOPES[0].test(m)).length, 0),
+        [summaryList]
+    );
+
+    const changeScope = (id: ScopeId) => {
+        setScopeId(id);
+        setPage(1);
+    };
+
     const viewList = useMemo(() => {
-        if (!period) return summaryList;
-        return summaryList.reduce<DebtorSummary[]>((acc, s) => {
+        if (!period) return scopedList;
+        return scopedList.reduce<DebtorSummary[]>((acc, s) => {
             const months = s.months.filter((m) => m.month === period.month && m.year === period.year);
             if (months.length === 0) return acc;
             const owed = months.reduce((a, m) => a + m.amount, 0);
             acc.push({ ...s, months, totalOwed: owed, currentMonthOwed: 0, previousMonthsOwed: 0 });
             return acc;
         }, []);
-    }, [summaryList, period?.month, period?.year]);
+    }, [scopedList, period?.month, period?.year]);
 
     // ── Filtrado + Ordenamiento ───────────────────────────────────────────────
     const filtered = useMemo(() => {
@@ -416,7 +470,35 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                             Ver todos los períodos
                         </button>
                     )}
+
+                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-border/60 rounded-xl px-3 py-2 shadow-sm font-semibold text-sm">
+                        <User size={15} className="text-muted-foreground shrink-0" />
+                        <select
+                            value={scopeId}
+                            onChange={(e) => changeScope(e.target.value as ScopeId)}
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer text-foreground pr-1"
+                            aria-label="Qué deudores mostrar"
+                        >
+                            {SCOPES.map((sc) => (
+                                <option key={sc.id} value={sc.id} className="bg-white dark:bg-zinc-900 text-foreground font-semibold">
+                                    {sc.label} ({scopeCounts[sc.id]})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
+            )}
+
+            {/* La vista por defecto es un recorte: si deja deuda afuera, lo dice. */}
+            {scopeId === "default" && hiddenByDefault > 0 && (
+                <p className="text-xs text-muted-foreground -mt-2 mb-4">
+                    {hiddenByDefault === 1
+                        ? "1 cuota de un alumno dado de baja o de un curso que no está activo no se ve en esta vista."
+                        : `${hiddenByDefault} cuotas de alumnos dados de baja o de cursos que no están activos no se ven en esta vista.`}{" "}
+                    <button onClick={() => changeScope("all")} className="font-semibold text-primary hover:underline">
+                        Ver todos
+                    </button>
+                </p>
             )}
 
             {/* ── Buscador + Exportar PDF ───────────────────────────────────── */}
@@ -489,7 +571,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                 <div className="flex items-center justify-between mb-6 min-h-[24px]">
                     <p className="text-xs text-muted-foreground">
                         {filtered.length === 0
-                            ? "Sin resultados para esa búsqueda."
+                            ? search ? "Sin resultados para esa búsqueda." : "Sin deudores en esta vista."
                             : search
                                 ? `${filtered.length} ${filtered.length === 1 ? "deudor encontrado" : "deudores encontrados"}`
                                 : period
@@ -541,6 +623,16 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                             </p>
                         </Card>
                     )
+                ) : scopedList.length === 0 ? (
+                    <Card className="p-16 text-center flex flex-col items-center justify-center border-dashed bg-muted/10">
+                        <div className="h-14 w-14 bg-muted rounded-full flex items-center justify-center mb-4">
+                            <User size={26} className="text-muted-foreground" />
+                        </div>
+                        <h2 className="text-lg font-bold">Sin deudas en «{scope.label}»</h2>
+                        <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                            Ningún alumno de esta vista debe cuotas. La deuda de los demás está en «Todos».
+                        </p>
+                    </Card>
                 ) : filtered.length === 0 ? (
                     <Card className="p-16 text-center flex flex-col items-center justify-center border-dashed bg-muted/10">
                         <div className="h-14 w-14 bg-muted rounded-full flex items-center justify-center mb-4">

@@ -56,9 +56,16 @@ export default async function DebtorsPage() {
             acc[sid].previousMonthsOwed += owed;
         }
 
+        // El que dejó el curso sigue en la vista por defecto —su deuda es real—,
+        // y la cuota lo dice: el listado del curso ya no lo muestra (FEAT-18).
+        const leftCourse = fee.enrollment?.status === "INCOMPLETE";
+        const courseText = fee.enrollment?.course.name
+            ? ` (${fee.enrollment.course.name}${leftCourse ? " · dejó el curso" : ""})`
+            : "";
+
         acc[sid].months.push({
             feeId: fee.id,
-            label: `${formatFeeLabel(fee.type, fee.month, fee.year)}${fee.enrollment?.course.name ? ` (${fee.enrollment.course.name})` : ""}`,
+            label: `${formatFeeLabel(fee.type, fee.month, fee.year)}${courseText}`,
             isCurrent,
             amount: owed,
             isPaid: fee.paidAmount > 0,
@@ -68,6 +75,12 @@ export default async function DebtorsPage() {
             // por eso no caen en ningún mes del selector.
             month: fee.month,
             year: fee.year,
+            // Los tres ejes del selector de FIN-09. La cuota suelta no tiene curso
+            // (FIN-22): cuenta como de curso activo para no perderla en silencio.
+            studentActive: fee.student.status === "ACTIVE",
+            studentDeleted: fee.student.status === "DELETED",
+            courseActive: !fee.enrollment || fee.enrollment.course.status === "ACTIVE",
+            leftCourse,
         });
         return acc;
     }, {});

@@ -272,12 +272,17 @@ export async function getDebtorsReportAction() {
                 // El derecho de examen vence con el examen, no con el mes 0.
                 ...excludeNotYetDueFees()
             },
+            // Sin filtrar por el estado del alumno, de la inscripción ni del curso:
+            // eso lo decide la pantalla con su selector, que abre en «activos en
+            // cursos activos». Filtrar acá haría desaparecer la deuda del que se fue
+            // o la de un curso que terminó, que es justo la que hay que ir a cobrar.
+            // Ver FIN-09.
             include: {
                 student: {
-                    select: { name: true, phone: true }
+                    select: { name: true, phone: true, status: true }
                 },
                 enrollment: {
-                    include: { course: { select: { name: true } } }
+                    include: { course: { select: { name: true, status: true } } }
                 }
             },
             orderBy: [

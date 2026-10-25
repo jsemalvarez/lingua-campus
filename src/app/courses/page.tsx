@@ -51,14 +51,16 @@ export default async function CoursesPage(props: PageProps) {
             teacher: { select: { name: true } },
             classroom: { select: { name: true } },
             schedules: { orderBy: { dayOfWeek: 'asc' } },
+            // Los que cursan o terminaron, como el parte, las notas y el listado del
+            // curso: con sólo `ACTIVE` un curso terminado decía cero alumnos, y la
+            // tarjeta y la pantalla del curso contaban distinto. Ver FEAT-18.
             enrollments: {
-                // For finished courses, we might want to see who WAS active, but for cards we show summary
-                where: { status: "ACTIVE" },
+                where: { status: { in: ["ACTIVE", "FINISHED"] } },
                 select: { id: true, student: { select: { id: true, name: true } } },
                 orderBy: { student: { name: 'asc' } }
             },
             _count: {
-                select: { enrollments: { where: { status: "ACTIVE" } } }
+                select: { enrollments: { where: { status: { in: ["ACTIVE", "FINISHED"] } } } }
             }
         },
         orderBy: isActiveTab ? { createdAt: "desc" } : { updatedAt: "desc" }

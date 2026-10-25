@@ -214,6 +214,14 @@ export default async function CourseDetailPage({
 
     const totalEnrolled = course.enrollments.filter(e => e.status === "ACTIVE").length;
 
+    // El listado es el de los que cursan o terminaron, como el parte y las notas.
+    // El que dejó el curso (`INCOMPLETE`) va aparte, en un desplegable: no se
+    // esconde del todo porque desde acá marcarlo incompleto no tiene vuelta, y
+    // quien se equivocó de alumno tiene que poder ver qué hizo. Su deuda sigue a
+    // la vista en Deudores. Ver FEAT-18.
+    const listedEnrollments = course.enrollments.filter(e => e.status !== "INCOMPLETE");
+    const leftEnrollments = course.enrollments.filter(e => e.status === "INCOMPLETE");
+
     return (
         <div className="min-h-screen bg-background text-foreground">
             <Navbar currentActiveRole={activeRole} />
@@ -364,7 +372,7 @@ export default async function CourseDetailPage({
                                         <div>
                                             <h2 className="text-lg font-bold flex items-center gap-2">
                                                 <Users size={20} className="text-blue-500" />
-                                                Alumnos Inscritos ({course.enrollments.length})
+                                                Alumnos Inscritos ({listedEnrollments.length})
                                             </h2>
                                             <p className="text-sm text-muted-foreground mt-1">
                                                 Listado oficial de estudiantes activos en este grupo.
@@ -397,14 +405,16 @@ export default async function CourseDetailPage({
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar min-h-[300px]">
-                                        {course.enrollments.length === 0 ? (
+                                        {listedEnrollments.length === 0 ? (
                                             <div className="text-center p-10 border border-dashed rounded-xl border-border/50 text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
                                                 <Users size={32} className="mb-3 opacity-30" />
-                                                Todavía no hay ningún estudiante registrado en este curso.
+                                                {leftEnrollments.length > 0
+                                                    ? "Ningún alumno sigue cursando este curso."
+                                                    : "Todavía no hay ningún estudiante registrado en este curso."}
                                             </div>
                                         ) : (
                                             <div className="space-y-3 mt-4">
-                                                {course.enrollments.map((enrol: any) => (
+                                                {listedEnrollments.map((enrol: any) => (
                                                     <div key={enrol.student.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors group">
                                                         <div className="flex items-center gap-3">
                                                             <div className="h-9 w-9 bg-primary/10 text-primary font-bold rounded-full flex items-center justify-center text-sm">
@@ -461,6 +471,37 @@ export default async function CourseDetailPage({
                                                     </div>
                                                 ))}
                                             </div>
+                                        )}
+
+                                        {leftEnrollments.length > 0 && (
+                                            <details className="mt-4">
+                                                <summary className="cursor-pointer select-none px-1 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                                                    {leftEnrollments.length === 1 ? "1 dejó el curso" : `${leftEnrollments.length} dejaron el curso`}
+                                                </summary>
+                                                <div className="space-y-2 mt-2">
+                                                    {leftEnrollments.map((enrol) => (
+                                                        <div key={enrol.student.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed border-border/60">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="h-9 w-9 bg-muted text-muted-foreground font-bold rounded-full flex items-center justify-center text-sm">
+                                                                    {enrol.student.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <Link
+                                                                        href={`/students/${enrol.student.id}?from=/courses/${id}`}
+                                                                        className="font-semibold text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                                                                    >
+                                                                        {enrol.student.name}
+                                                                    </Link>
+                                                                    <p className="text-xs text-muted-foreground">{enrol.student.phone || "Sin teléfono"}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="px-2 py-1 rounded border border-amber-500/30 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 uppercase tracking-tighter">
+                                                                Incompleto
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
                                         )}
                                     </div>
                                 </div>
