@@ -97,7 +97,7 @@ export function GuardianDashboardView({
                 <div className="grid lg:grid-cols-3 gap-8 items-start">
                     
                     {/* LEFT COLUMN (Span 2): Recent Performance */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="min-w-0 lg:col-span-2 space-y-6">
                         <Card className="p-6 md:p-8 border-none shadow-xl bg-card rounded-3xl relative overflow-hidden">
                             <div className="mb-6">
                                 <h3 className="font-extrabold text-2xl flex items-center gap-3 tracking-tight">
@@ -142,8 +142,11 @@ export function GuardianDashboardView({
                         </Card>
                     </div>
 
-                    {/* RIGHT COLUMN (Span 1): Sidebar components */}
-                    <div className="space-y-6">
+                    {/* RIGHT COLUMN (Span 1): Sidebar components.
+                        `min-w-0`: sin él, el tema más largo de una clase —que va en
+                        una línea y se corta con «…»— ensanchaba la columna y la
+                        página se corría de costado en el celular. */}
+                    <div className="min-w-0 space-y-6">
                         
                         {/* Attendance Card (Dark Mode Style).
                             Un bloque por hijo, titulado por lo que mide: las últimas
