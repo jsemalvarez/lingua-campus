@@ -12,31 +12,13 @@ Ninguna de estas referencias se nombra en textos públicos (landing, redes, corr
 
 ## Por explorar
 
-### Moodle
-
-- **Qué es:** la plataforma de aula virtual más usada del mundo. Es gratuita y de código abierto,
-  existe desde 2002 y la usan universidades, terciarios y colegios. No gestiona el instituto (ni
-  cuotas, ni caja, ni sueldos): sistemas como Quinttos se encargan de eso y la conectan como aula
-  virtual.
-- **Por qué mirarla:** compite con el módulo Pedagógico, y tiene algo que el campus todavía no:
-  **cuestionarios que se corrigen solos**, con banco de preguntas. Para alumnos a distancia pesa.
-- **Qué mirar:**
-  - Los tipos de pregunta (opción múltiple, completar, emparejar, arrastrar, respuesta corta) y
-    cómo corrige cada uno.
-  - El banco de preguntas: cómo se reutilizan entre cursos y cómo se arma un examen al azar.
-  - Los intentos, el tiempo límite y la devolución por respuesta.
-  - Cómo pasa la nota al libro de calificaciones.
-  - Las actividades H5P (interactivas, también de código abierto).
-- **Dónde:** el sitio de demostración (school.moodledemo.net, se reinicia cada hora) y el código en
-  [github.com/moodle/moodle](https://github.com/moodle/moodle) (los tipos de pregunta están en
-  `question/type/`).
-- **Ojo:** sirve para mirar cómo resolvieron las cosas, no para copiar código: está en PHP y su
-  licencia (GPL) trae condiciones para quien lo reutiliza. Las ideas son libres.
+Nada pendiente por ahora.
 
 ## Exploradas
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
+| [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
 | [Langboost](#langboost) | Arma la clase con IA para el docente | 03/10/2026 | [PED-09](BACKLOG-TECNICO.md#ped-09) |
 | [ClassesUp](#classesup) | Gestión de academias, argentina | 06/10/2026 | Ideas sin decidir |
 | [Material de Cambridge](#material-de-cambridge-capacitación-de-patricia) | Capacitación de IA de Patricia | 17/10/2026 | Write & Improve en recursos, [PED-13](BACKLOG-TECNICO.md#ped-13) |
@@ -44,6 +26,58 @@ Ninguna de estas referencias se nombra en textos públicos (landing, redes, corr
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
 | [Mondly](#mondly-cem-english) | App de práctica de Pearson | 29/09/2026 | Vara para los precios |
 | [Gestión comparada por precio](#gestión-comparada-por-precio) | Cinco sistemas de gestión | 28/09/2026 | Tabla de precios |
+
+### Moodle
+
+Sitio de demostración (school.moodledemo.net, Moodle 5.3) · relevado el 25/10/2026 con la cuenta de
+docente, sobre el curso «Moodle Quiz example», que trae un cuestionario con todos los tipos de
+pregunta estándar. El código está en [github.com/moodle/moodle](https://github.com/moodle/moodle)
+(los tipos de pregunta, en `question/type/`); no hizo falta leerlo ni instalarlo en local. Está en
+PHP y con licencia GPL: se miran las ideas, no se copia código.
+
+- **Qué es:** la plataforma de aula virtual más usada del mundo, gratuita, desde 2002. Solo lo
+  pedagógico: lo único con plata es cobrar la inscripción a un curso, sin cuotas, caja ni deudores.
+  Por eso se la combina con un sistema de gestión (Quinttos la conecta como aula virtual).
+- **Cuestionarios que se corrigen solos.** Unos veinte tipos de pregunta. Los que sirven para
+  idiomas: opción múltiple (una o varias), verdadero o falso, emparejar, respuesta corta (con
+  comodines y varias respuestas aceptadas), **completar huecos** de tres maneras (escribiendo,
+  eligiendo de una lista o arrastrando palabras al texto), **ordenar** (el ejemplo es un diálogo
+  desordenado), arrastrar sobre una imagen y redacción, que corrige el docente a mano.
+- **Cómo se comporta la pregunta.** Se elige por cuestionario: devolución al final, inmediata, o
+  **interactiva con varios intentos**: la respuesta mal devuelve una pista escrita por el docente y
+  deja volver a probar, con menos puntaje en cada intento.
+- **Configuración del cuestionario:** apertura, vencimiento (nuevo en 5.3) y cierre, límite de
+  tiempo, cantidad de intentos y qué intento cuenta, navegación libre o en orden, mezclar las
+  opciones, excepciones por alumno o grupo, demora entre intentos, y una matriz de qué ve el alumno
+  al revisar (su respuesta, si estaba bien, el puntaje, la respuesta correcta) y cuándo. Devolución
+  general según la nota («repasá la unidad 3» por debajo de tanto).
+- **Banco de preguntas.** Separado del cuestionario: categorías, etiquetas, versiones, estado
+  borrador o listo, dónde se usó cada pregunta y **estadística por pregunta** (cuántos la aciertan y
+  si separa a los que saben de los que no). Se importa desde texto (GIFT, Aiken, Moodle XML). Una
+  «pregunta al azar» toma de una categoría o etiqueta, así que cada alumno recibe otro examen.
+- **La nota pasa sola** al libro de calificaciones del curso, con categorías y ponderaciones.
+- **Otras actividades:** taller con evaluación entre pares, lecciones con caminos según la
+  respuesta, glosario, wiki, base de datos y H5P (tarjetas, arrastrar palabras, presentaciones
+  interactivas). La IA existe pero viene apagada y es genérica (Claude es proveedor desde 5.3).
+- **Dónde les ganamos:**
+  - La práctica sale de la clase que dio el docente; en Moodle todo se escribe a mano.
+  - Pronunciación, listening y conversación con IA: Moodle no corrige lo oral.
+  - Está pensado para universidades: cada alumno necesita cuenta con correo, y la pantalla es
+    densa para un chico de 8 años.
+  - Gestión, familias, boletines firmados: no tiene nada parecido.
+- **Dónde nos quedamos cortos:** la práctica escrita. De lo escrito, el campus corrige solo las
+  preguntas del listening (verdadero o falso); no hay ejercicios de gramática o vocabulario que se corrijan solos, ni un banco que se
+  reutilice, ni exámenes con tiempo e intentos, ni estadística por pregunta. Las notas por clase y
+  los boletines se cargan a mano.
+- **Ideas sin decidir:**
+  - Práctica escrita generada desde la clase, corregida sola: completar huecos, ordenar un diálogo
+    y emparejar (la primera recomendada; es el mismo circuito de [PED-01](BACKLOG-TECNICO.md#ped-01)).
+  - Pista del docente y nuevo intento ante la respuesta mal, en lugar de mostrar la correcta.
+  - Estadística por pregunta para el docente: qué ítem falla el grupo (se suma a
+    [PED-02](BACKLOG-TECNICO.md#ped-02)).
+  - Banco de preguntas por nivel, reutilizable entre cursos, con examen al azar.
+  - Examen con apertura, cierre, tiempo e intentos, con la nota pasando sola.
+  - Importar preguntas desde texto (el formato Aiken es una lista simple).
 
 ### Langboost
 
