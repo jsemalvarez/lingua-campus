@@ -251,7 +251,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [x] |
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [x] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
-| [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [ ] |
+| [FIN-31](#fin-31) | P1 | 🗣️ El recibo no dice cuánto vale la cuota ni cuánto queda debiendo | [x] |
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [x] |
 | [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [x] |
 | [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [x] |
@@ -3498,6 +3498,52 @@ tipean de memoria), [FIN-26](#fin-26) (dónde se concilia la plata a favor), [FI
 [FIN-11](#fin-11) (el saldo a favor: cómo se aplica y cómo se deshace), [FEAT-14](#feat-14) (el
 carrito: si se cobran varias cuotas juntas, el recibo tiene que poder explicarlo),
 [FIN-32](#fin-32) (el mismo incidente, un paso antes: la pantalla donde se cobra).
+
+### Resuelto — 2026-10-24 · `8165c35`, `d5f52d5` · verificado en stage
+
+**Se hizo con la propuesta, sin la respuesta del instituto**, decidido con el dueño para no esperar
+al lunes. Si el instituto pide otros renglones, se ajusta en un solo lugar.
+
+**Un solo lugar.** [`downloadPaymentReceipt`](../src/lib/pdf/paymentReceipt.ts) arma y baja el
+recibo. La caja (`TransactionActions`) y las otras tres pantallas (`ReceiptDownloadButton`: la ficha
+del alumno, la cuenta del tutor y la del alumno adulto) la llaman. Ya no hay copia que pueda quedar
+atrás.
+
+**El dato llega.** `getReceiptDataAction` calcula cómo quedó la cuota **con ese pago**: lo pagado
+antes sale de los pagos válidos anteriores a él, no del `paidAmount` de hoy. Por eso el primer
+recibo de una cuota pagada en tres veces sigue diciendo lo que faltaba entonces. La cuenta es
+`feeAfterPayment`, la misma de la pantalla de cobro ([FIN-32](#fin-32)).
+
+**Qué dice el recibo:**
+
+- **Los renglones suman el total**, que sigue siendo lo que entró a la caja: lo que el pago le
+  descontó a la cuota (con el curso en el nombre), el recargo, el descuento y, si sobró, *«A saldo a
+  favor del alumno»*.
+- **Debajo, el estado de la cuota después de ese pago:** el valor de la cuota, lo pagado antes si
+  hubo, y en negrita *«Queda pendiente $ X»* o *«Cuota saldada»*.
+- Los importes en formato argentino, con el signo antes del peso, y el recuadro crece con lo que
+  lleve.
+
+**Verificado en stage** sobre el backup de producción del 24/10, **sin escribir nada**: con pagos
+reales, interceptando el PDF en la página antes de que se descargue y leyendo su texto. Lo esperado
+se anotó antes:
+
+| Recibo | Renglones | Estado de la cuota |
+|---|---|---|
+| **CMSDPWR4**, Tahiel Perez, julio ($46.000), 03/08: el del incidente | Cuota Julio 2026 - Children 4 L-M $ 43.000 · total 43.000 | Valor $ 46.000 · **Queda pendiente $ 3.000** |
+| **CMSNQ05S**, el cobro del 10/08 | Cuota $ 3.000 · descuento - $ 3.000 · a saldo a favor $ 43.000 · total 43.000 | Valor $ 46.000 · pagado antes $ 43.000 · **Cuota saldada** |
+| Elena Isabella Patané, agosto ($49.000), en tres pagos | $ 20.000 / $ 20.000 / $ 9.000 | Pendiente $ 29.000 → pagado antes 20.000, pendiente $ 9.000 → pagado antes 40.000, saldada |
+| Carolina Rodríguez, julio ($49.000), 2.º pago | Cuota $ 37.000 · recargo $ 5.000 · total 42.000 | Pagado antes $ 12.000 · saldada |
+| Derecho de examen de Tahiel, desde la caja y desde su ficha | Idénticos: $ 16.000 | Valor $ 50.000 · pendiente $ 34.000 |
+
+El primer recibo de Elena se bajó con la cuota ya saldada, y sigue diciendo los $ 29.000 que
+faltaban ese día. Y el del 03/08 es el papel que la familia se llevó con julio a medio pagar: ahora
+diría que faltaban $ 3.000. El diseño se miró dibujando el PDF en la página.
+
+**Lo que no se probó:** la cuenta del tutor y la del alumno adulto, que usan el mismo botón que la
+ficha y no cambiaron de permisos, porque pedían entrar con otra cuenta. **Y lo que queda escrito:**
+si después se anula un pago anterior, el recibo de uno posterior deja de contarlo en «pagado antes».
+Muestra lo que hoy sigue en pie de ese día, no una foto del momento.
 
 ---
 
