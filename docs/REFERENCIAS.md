@@ -31,7 +31,7 @@ Nada pendiente por ahora.
 
 Sitio de demostración (school.moodledemo.net, Moodle 5.3) · relevado el 25/10/2026 con la cuenta de
 docente, sobre el curso «Moodle Quiz example», que trae un cuestionario con todos los tipos de
-pregunta estándar. El código está en [github.com/moodle/moodle](https://github.com/moodle/moodle)
+pregunta estándar, y el curso «Celebrating Cultures», recorrido también con el rol de alumno. El código está en [github.com/moodle/moodle](https://github.com/moodle/moodle)
 (los tipos de pregunta, en `question/type/`); no hizo falta leerlo ni instalarlo en local. Está en
 PHP y con licencia GPL: se miran las ideas, no se copia código.
 
@@ -55,10 +55,30 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
   borrador o listo, dónde se usó cada pregunta y **estadística por pregunta** (cuántos la aciertan y
   si separa a los que saben de los que no). Se importa desde texto (GIFT, Aiken, Moodle XML). Una
   «pregunta al azar» toma de una categoría o etiqueta, así que cada alumno recibe otro examen.
-- **La nota pasa sola** al libro de calificaciones del curso, con categorías y ponderaciones.
-- **Otras actividades:** taller con evaluación entre pares, lecciones con caminos según la
-  respuesta, glosario, wiki, base de datos y H5P (tarjetas, arrastrar palabras, presentaciones
-  interactivas). La IA existe pero viene apagada y es genérica (Claude es proveedor desde 5.3).
+- **Lo que ve el alumno al entregar:** nota, puntaje parcial por hueco («acertaste 3»), el mensaje
+  que escribió el docente y la respuesta correcta, según lo que el docente habilitó. En un celular
+  entra, pero apretado y con desplazamiento horizontal.
+- **Estadística del cuestionario:** promedio, mediana y, por pregunta, cuánto pesó y cuánto
+  discrimina. Se descarga en planilla.
+- **Tareas** (el alumno entrega texto o archivos): apertura, vencimiento, fecha límite y
+  «recordarme corregir»; límite de palabras; varios intentos hasta aprobar. El docente corrige con
+  nota directa, **rúbrica** (criterios por niveles con puntos: se cliquea el nivel y suma; la del
+  demo hasta tiene un criterio sobre el uso de IA) o guía de corrección con comentarios por
+  criterio. Anota sobre el PDF, puede corregir en anónimo, tiene estados (sin corregir, en
+  corrección, lista para publicar, publicada) y varios correctores.
+- **Taller:** cada alumno entrega y corrige a compañeros con un formulario; recibe una nota por su
+  trabajo y otra por lo bien que corrigió. Va por cinco fases que abre el docente.
+- **Lección:** páginas de contenido intercaladas con preguntas; según la respuesta, el alumno salta
+  a otra página (repaso o avance).
+- **Calificaciones:** la nota de cada actividad pasa sola a la libreta del curso, con categorías,
+  ponderaciones, escalas propias (el demo tiene «Deficiente/Regular/Excelente»), letras y, desde
+  5.3, resultados de aprendizaje por curso. Informe por alumno con el peso de cada actividad.
+- **Seguimiento:** cada actividad puede marcarse como completada (a mano o por condición: vio,
+  entregó, aprobó), y una actividad puede quedar **bloqueada hasta cumplir otra** (fecha, nota,
+  grupo). Informes de finalización, participación y registros. Insignias por criterios.
+- **Otras actividades:** glosario, wiki, base de datos, foro, encuesta, elección y H5P (tarjetas,
+  arrastrar palabras, presentaciones interactivas). La IA existe pero viene apagada y es genérica
+  (Claude es proveedor desde 5.3).
 - **Dónde les ganamos:**
   - La práctica sale de la clase que dio el docente; en Moodle todo se escribe a mano.
   - Pronunciación, listening y conversación con IA: Moodle no corrige lo oral.
@@ -78,6 +98,13 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
   - Banco de preguntas por nivel, reutilizable entre cursos, con examen al azar.
   - Examen con apertura, cierre, tiempo e intentos, con la nota pasando sola.
   - Importar preguntas desde texto (el formato Aiken es una lista simple).
+  - Rúbrica para corregir la escritura y lo oral, con criterios y niveles que define el instituto.
+  - Desbloquear la práctica siguiente al terminar la anterior.
+  - Insignias o logros para los más chicos.
+- **No sirve para nosotros:** el taller entre pares (para chicos y grupos chicos es más carga que
+  ayuda) y las preguntas de cálculo.
+- **Ventana al cliente:** las propuestas se le muestran a Patricia en un artifact, una por tarjeta,
+  para que dé el visto bueno antes de construir. Sin nombrar a Moodle.
 
 ### Langboost
 
