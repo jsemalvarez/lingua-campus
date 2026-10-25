@@ -103,8 +103,9 @@ PHP y con licencia GPL: se miran las ideas, no se copia código.
     frena al que se traba en una parte), y logros por constancia y por mejora.
   - La estadística por pregunta abarca toda la práctica (listening, speaking y escritos), y
     pide guardar cada respuesta: hoy `PracticeSession` guarda solo los totales.
-  - La rúbrica usa las categorías y escalas del boletín (`ReportCategory`) y completa la nota de
-    la clase.
+  - La rúbrica usa las categorías y escalas del boletín de cada curso (`ReportCategory`) y no
+    calcula nota: en prod, Children 1 a 3 tienen escala conceptual y de Children 4 en adelante
+    van de 1 a 10. Lo marcado queda en la clase, a mano para completar el boletín.
   - **Decidido el 25/10/2026 (falta el visto bueno de Patricia):** la evaluación pasa a ser un
     «repaso integrador», mensual o bimestral, con los temas de las clases del período. Es un
     complemento del examen que toman y califican las docentes, nunca su reemplazo, y no pone
