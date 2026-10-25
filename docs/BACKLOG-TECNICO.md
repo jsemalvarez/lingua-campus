@@ -230,7 +230,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | 🗣️ Deudores incluye alumnos dados de baja y cursos terminados | [x] |
-| [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [ ] |
+| [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [~] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [x] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
@@ -247,7 +247,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-24](#fin-24) | P2 | Cambiar de curso no define qué pasa con las cuotas | [ ] |
 | [FIN-25](#fin-25) | P2 | 🗣️ Las condiciones especiales de una inscripción no se ven | [ ] |
 | [FIN-26](#fin-26) | P2 | 🗣️ No hay dónde conciliar una diferencia de plata a favor del alumno | [ ] |
-| [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [x] |
+| [FIN-27](#fin-27) | P1 | «Usar Saldo» deja el formulario armado para un cobro que nadie hizo | [~] |
 | [FIN-28](#fin-28) | P3 hoy · **P1 en noviembre** | La fecha de inicio del curso es opcional, y sin ella el curso no tiene año | [x] |
 | [FIN-29](#fin-29) | P1 | 🗣️ Inscribir a un alumno no le emite la cuota del mes | [x] |
 | [FIN-30](#fin-30) | P2 | Volver a un curso que se dejó no tiene camino propio ni deja rastro | [ ] |
@@ -262,15 +262,15 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-05](#bug-05) | P1 | 🗣️ El admin ve el hilo en la bandeja pero recibe 404 al abrirlo | [x] |
 | [BUG-06](#bug-06) | P2 | El admin ve todos los hilos del instituto como no leídos | [x] |
 | [BUG-07](#bug-07) | P1 | 🗣️ No se pueden guardar las asistencias de la clase | [x] |
-| [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [ ] |
-| [BUG-09](#bug-09) | P3 | Los meses salen en inglés en todo lo que no es del alumno, empezando por la liquidación | [ ] |
+| [BUG-08](#bug-08) | P1 | 🗣️ La preinscripción duplica alumnos y se la puede inscribir a un curso | [~] |
+| [BUG-09](#bug-09) | P3 | Los meses salen en inglés en todo lo que no es del alumno, empezando por la liquidación | [x] |
 | [BUG-10](#bug-10) | P2 | 🗣️ Un concepto largo empuja el importe fuera de la pantalla | [x] |
 | [BUG-11](#bug-11) | P3 | El saldo a favor del formulario queda viejo si se anula desde la tabla | [ ] |
 | [BUG-12](#bug-12) | P3 | El escáner de QR pisa la observación que escribió la docente | [x] |
 | [BUG-13](#bug-13) | P2 | 🗣️ La secretaria no encuentra cómo cambiar de curso a un alumno | [ ] |
 | [BUG-14](#bug-14) | P2 | Los filtros del calendario no avisan que están filtrando | [ ] |
 | [BUG-15](#bug-15) | P2 | En el celular el listado de alumnos no tiene ninguna acción | [ ] |
-| [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [ ] |
+| [BUG-16](#bug-16) | P1 | 🗣️ El alumno y el tutor no pueden descargar el recibo de un pago | [x] |
 | [BUG-17](#bug-17) | P1 | 🗣️ Las clases que cargan las docentes no aparecen en el calendario | [x] |
 | [BUG-18](#bug-18) | P2 | La vista Día del calendario no ofrece tomar asistencia | [ ] |
 | [BUG-19](#bug-19) | P2 | El panel de uso declara en producción una fecha desde la que nunca midió | [ ] |
@@ -284,23 +284,23 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
-| [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [ ] |
-| [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [ ] |
-| [FEAT-06](#feat-06) | P2 | 🗣️ Que alumnos, tutores y docentes puedan escribirle al docente del curso | [~] |
+| [FEAT-04](#feat-04) | P2 | 🗣️ Saber quiénes entraron a la plataforma, sobre todo los tutores | [x] |
+| [FEAT-05](#feat-05) | P1 | 🗣️ Recuperar la contraseña por correo | [x] |
+| [FEAT-06](#feat-06) | P2 | 🗣️ Que alumnos, tutores y docentes puedan escribirle al docente del curso | [x] |
 | [FEAT-07](#feat-07) | P2 | 🗣️ Ver en el calendario las clases de los pares del mismo nivel | [x] |
 | [FEAT-08](#feat-08) | P2 | 🗣️ Columna de novedades: plataforma, instituto y curso | [ ] |
-| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de informes y novedades | [ ] |
+| [FEAT-09](#feat-09) | P2 | 🗣️ Firma de conformidad de informes y novedades | [~] |
 | [FEAT-10](#feat-10) | P2 | Seguimiento visual de las cuotas eliminadas | [x] |
-| [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [ ] |
-| [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [ ] |
+| [FEAT-11](#feat-11) | P3 | 🗣️ Métricas de uso de la plataforma para el administrador | [x] |
+| [FEAT-12](#feat-12) | P3 | 🗣️ Aviso por correo cuando llega un formulario de inscripción | [~] |
 | [FEAT-13](#feat-13) | P3 | Guardar la asistencia sola, sin botón de guardar | [ ] |
 | [FEAT-14](#feat-14) | P2 | 🗣️ Carrito de pagos: cobrar varias cuotas en una sola operación | [ ] |
 | [FEAT-15](#feat-15) | P2 | 🗣️ Filtrar los deudores por mes | [x] |
-| [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [ ] |
+| [FEAT-16](#feat-16) | P3 | Mudar la actividad del Playground al panel de uso | [x] |
 | [FEAT-17](#feat-17) | P2 | 🗣️ Borrador de la clase, y publicarla cuando el docente quiera | [ ] |
 | [FEAT-18](#feat-18) | P3 | 🗣️ Que el listado del curso no muestre a los que dejaron | [x] |
 | [FEAT-19](#feat-19) | P2 | 🗣️ Sumar un concepto de nota al boletín sin tocar lo ya publicado | [ ] |
-| [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [ ] |
+| [FEAT-20](#feat-20) | P2 | Acusar por correo la preinscripción, para que el que se anota no quede sin respuesta | [x] |
 | [FEAT-21](#feat-21) | P2 | 🗣️ Firma de la dirección y del profesor en el boletín | [~] |
 | [FEAT-22](#feat-22) | P2 · sube a P1 con FEAT-06 | Notificaciones push: el sobre solo no alcanza | [ ] |
 | [FEAT-23](#feat-23) | P3 | Los hilos de mensajes no se cierran nunca | [ ] |
@@ -312,7 +312,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-29](#feat-29) | P3 | Desvincular a un tutor de un alumno | [ ] |
 | [FEAT-30](#feat-30) | P3 | Que la familia vea todas las clases del curso y en cuáles estuvo | [ ] |
 | [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
-| [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [~] |
+| [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [x] |
 | [FEAT-33](#feat-33) | P3 | 🗣️ Incorporar las clases particulares al sistema | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
@@ -338,8 +338,10 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-06](#ped-06) | P3 | `isCorrect` debe derivarse de `score` | [x] |
 | [PED-07](#ped-07) | P2 | Límites de consumo de IA por plan | [ ] |
 | [PED-08](#ped-08) | P3 | El caché de TTS no está funcionando | [ ] |
-| [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [ ] |
+| [PED-09](#ped-09) | P2 | 🗣️ Generar recursos extra de la clase para el docente | [~] |
 | [PED-10](#ped-10) | P2 | Consumo de IA por instituto, visible para el superadmin | [ ] |
+| [PED-11](#ped-11) | P2 | 🗣️ El listening va al revés: primero el audio y después las preguntas | [x] |
+| [PED-12](#ped-12) | P3 | El cuestionario del texto generado se contamina con el texto del profesor | [ ] |
 | [PED-13](#ped-13) | P3 | Práctica de escritura con devolución que marca sin corregir | [ ] |
 
 ---
@@ -4739,6 +4741,12 @@ a la pregunta que se quiere responder.
 **Relacionado.** Encaja con el pendiente de mostrar uso real del instituto en el dashboard, anotado
 en [TODO.md](./TODO.md). Si se hace la opción 2, conviene resolverlo junto con ese ítem.
 
+> **Resuelto por [FEAT-11](#feat-11) (estado al 2026-10-25, T0).** Lo de arriba quedó viejo: no se
+> hizo `lastLoginAt`, se hizo algo mejor para la pregunta. El registro de actividad (`9a8e02a`) mide
+> **uso** y no inicios de sesión, que era la trampa del JWT de 30 días. Y el listado de tutores del
+> panel de uso (`24fb2a2`, `/dashboard/usage/tutores`) contesta textual *«quiénes entraron, sobre
+> todo los tutores»*, con el teléfono de los que no.
+
 ---
 
 <a id="feat-05"></a>
@@ -5011,6 +5019,12 @@ atrás** —la última aplicada es del 2026-08-18—, así que ahí no existen n
 Al probar en stage hay una trampa que ya mordió una vez: **el enlace sale de la ficha del instituto,
 no del host desde el que se pidió**. Si la ficha de stage es copia de producción, el correo de prueba
 llega con un enlace a `modernenglishschool.com.ar` — o sea, a producción, donde el token no existe.
+
+> **Estado al 2026-10-25 (T0).** Las tres partes están hechas y en producción (`96a9193`, `17d06bc` y
+> `0c6a94c`, `365c852`), verificadas contra la base local. **Pendiente de verificar en stage** lo que
+> la parte 2 dejó anotado: que el reset desde la ficha invalide un enlace pendiente. Ojo: después de
+> un restore, stage tiene los correos reales de las familias y Resend configurado, así que no se
+> prueba sin cambiar antes el destinatario.
 
 ---
 
@@ -6036,6 +6050,11 @@ Las preguntas abiertas de [FEAT-08](#feat-08) —a quién le llega una novedad, 
 publica— son sobre **novedades, no sobre informes**, y no bloquean nada de esto: son de la segunda
 etapa.
 
+> **Estado al 2026-10-25 (T0).** **La etapa 1, la firma de los informes, está en producción**
+> (`04bf7ee`, `9ea0f24`, `5ae9657`), con el relleno de firmantes corrido el 15/09 (ver
+> [FEAT-21](#feat-21)). Desde [FEAT-32](#feat-32) el boletín es lo primero de Progreso. **La etapa 2,
+> las novedades, sigue abierta** y espera a [FEAT-08](#feat-08). Por eso queda `[~]`.
+
 ---
 
 <a id="feat-10"></a>
@@ -6568,6 +6587,11 @@ plataforma" no. Comparten, eso sí, las mismas tres decisiones caras — dónde 
 y quién lo ve. También hay un ítem viejo en [TODO.md](./TODO.md) que pide mostrar uso real del
 instituto en el dashboard, y es esto.
 
+> **Estado al 2026-10-25 (T0).** Hecha y en producción: la fase 0 (`9a8e02a`, `6e5f560`), la 1, la 2
+> (`24fb2a2`) y la métrica 6 (`858cd06`). La actividad del Playground llegó con
+> [FEAT-16](#feat-16). Se verificó contra consultas de control sobre la base de desarrollo; **no hay
+> una verificación en stage escrita**. De paso cierra [FEAT-04](#feat-04).
+
 ---
 
 <a id="feat-12"></a>
@@ -6629,6 +6653,13 @@ Lo que quedaba abierto acá se cerró al definir el acuse al aspirante, que es e
   ([`inscription/actions.ts:87`](../src/app/inscription/actions.ts)) y comparten la infraestructura de
   [FEAT-05](#feat-05): una vez abierto el archivo, el segundo es una plantilla más. Siguen siendo
   independientes — si uno se cae, el otro se hace igual.
+
+> **Estado al 2026-10-25 (T0) · hecho, pero no le llega a nadie.** El código salió con
+> [FEAT-20](#feat-20) (`3222351`) y está en producción. **Pero el instituto no tiene cargado su correo
+> de contacto** (`Institute.email` vacío, medido en producción ese día), y sin él el aviso no sale:
+> el instituto se entera sólo por la campana, que es justo lo que esta ficha venía a arreglar. Falta
+> cargar ese correo en la ficha del instituto, y se carga con la dirección que elija el instituto.
+> Hasta entonces queda `[~]`.
 
 ---
 
@@ -6876,6 +6907,9 @@ con `group-focus`, o sea con el mouse y con el dedo, sin estado ni bundle de cli
 los dos gráficos diarios en [`BarrasDiarias`](../src/app/dashboard/usage/BarrasDiarias.tsx), y cada
 uno pone su unidad: **"personas" en uno y "sesiones" en el otro**, que es justamente la diferencia
 que los dos no mostraban y que hacía que se confundieran.
+
+> **Estado al 2026-10-25 (T0).** En producción con la promoción de [FEAT-11](#feat-11). La prueba en
+> stage antes de promover, que el párrafo de arriba daba por necesaria, **no quedó escrita**.
 
 ---
 
@@ -7300,6 +7334,12 @@ facture nada**, en silencio.
 arrastra), [SEC-06](#sec-06) (el alta del alumno y sus credenciales), [FIN-16](#fin-16) (el filtro de
 estado en los generadores, que es la otra mitad de la incoherencia).
 
+> **Estado al 2026-10-25 (T0).** **La parte 1 está cerrada**: el duplicado ya no se crea, por los
+> `@@unique` de `dni` y `email` por instituto, y desde [FEAT-20](#feat-20) (`3222351`) a cada lado se
+> le contesta lo que corresponde. Ver la corrección escrita en esa ficha. **La parte 2 sigue
+> abierta**, mirada en el código ese día: `createEnrollmentAction` no mira el estado del alumno. Por
+> eso queda `[~]`.
+
 ---
 
 <a id="bug-09"></a>
@@ -7343,6 +7383,20 @@ en el legajo del docente y en la tabla de movimientos de Finanzas.
 **El arreglo va en un solo lugar que carguen todas las pantallas**, en el cliente y en el servidor, en
 vez de en dos vistas del alumno. Sigue abierta la decisión de arriba sobre las descripciones de
 sueldos que ya quedaron escritas en inglés.
+
+### Resuelto — 2026-10-17 · `02e1939` · en producción · verificado en stage el 25/10
+
+Entró con la normalización de fechas: los nombres de los meses salen de `src/lib/dates.ts` y no del
+idioma de dayjs. Desde el 19/10 una regla del build frena el deploy si una fecha vuelve a salir del
+idioma del entorno.
+
+**Verificado en stage el 25/10** con la cuenta de una tutora de tres hijos, en Progreso: el pie de
+los tres boletines dice *«Publicado: 23 de septiembre de 2026»* y *«22 de septiembre de 2026»*, y en
+la página no queda ningún mes en inglés. **No se miró la liquidación**, que pide la cuenta de la
+dueña.
+
+**Lo ya escrito, medido en producción ese día:** 9 gastos con el mes en inglés en la descripción,
+contra 56 en castellano. Normalizarlos sigue siendo una decisión aparte.
 
 ---
 
@@ -7763,6 +7817,10 @@ puso el canal. [BUG-08](#bug-08) define qué es un preinscripto y comparte el bl
 [SEC-12](#sec-12) salió a la superficie analizando esta ficha. [SEC-06](#sec-06) es lo que vuelve
 adivinable el acceso del aspirante.
 
+> **Estado al 2026-10-25 (T0).** Hecho en `3222351` (10/09), junto con [FEAT-12](#feat-12), y en
+> producción. **Pendiente de verificar en stage.** Al hacerlo, el formulario público dispara correos
+> reales: después de un restore, stage tiene los de las familias.
+
 ---
 
 <a id="feat-21"></a>
@@ -8102,6 +8160,16 @@ pasarla convertida.
 **Relacionado.** [SEC-03](#sec-03), de donde salió. [ARQ-15](#arq-15) y [BUG-01](#bug-01), la
 identidad partida en dos tablas. [FIN-19](#fin-19) toca el mismo recibo por el otro lado: el concepto
 que no nombra el curso. [ARQ-09](#arq-09), los errores que no se registran en ningún lado.
+
+### Resuelto — 2026-09-10 · `c257cdc` · en producción · verificado en stage el 25/10
+
+El commit dice BUG-15 porque el número se reasignó después (`6d5cb6d`). `getReceiptDataAction` vive
+en `receiptActions.ts`, fuera de la caja, y decide por vínculo: el alumno ve lo suyo, el tutor lo de
+sus hijos, el personal lo del instituto.
+
+**Verificado en stage el 25/10** con la cuenta de una tutora: desde su cuenta corriente bajaron los
+recibos de septiembre de sus tres hijos, ya con el formato de [FIN-31](#fin-31). **No se probó** que un
+tutor no pueda pedir el recibo de otra familia, porque eso pide armar el pedido a mano.
 
 ---
 
@@ -9372,6 +9440,20 @@ compartir el visor. **Falta stage**, que tiene los datos reales que la base loca
 > **Encontrado en esta prueba, y no es de esta ficha:** el pie del boletín dice **«Publicado: 20 de
 > August, 2026»**. Es el mismo defecto que [BUG-09](#bug-09), con la causa que esa ficha no tenía.
 
+### Verificado en stage — 2026-10-25 · sobre el backup de producción del 24/10
+
+Con la cuenta de la tutora *ma. angeles*, que tiene tres hijos con el 1° y el 2° trimestre
+publicados. Lo esperado se sacó antes de la base:
+
+| Hijo | Dio |
+|---|---|
+| Catalina Caseres (Children 4 L-M) | El boletín es el primer bloque, debajo del selector de hijos, y abre en el **2° Trimestre**: *«Publicado: 23 de septiembre de 2026»* |
+| Joaquin Caseres (Pre-adolescents 1) | Abre en el 2° Trimestre: *«Publicado: 22 de septiembre de 2026»* |
+| Pedro Caseres (Adolescents+ L-V) | Ídem, *«22 de septiembre de 2026»* |
+
+El pie ya sale en castellano ([BUG-09](#bug-09)). **Quedan sin ver** la casilla de firma de un tutor
+firmante pendiente y el Hub del alumno.
+
 ---
 
 <a id="feat-33"></a>
@@ -10366,6 +10448,9 @@ que responde el modelo, en lugar de derivarlo de `score >= 70` como pide el prop
 
 **Cambio.** `isCorrect: score >= 70`, calculado en el código. Extraer el umbral a una constante.
 
+> **Resuelto el 2026-08-09 en `6a01fd0`** (anotado en T0, el 25/10: la ficha no lo decía). Se
+> resolvió en los dos proveedores, Gemini y OpenAI, con el umbral en `IAIProvider.ts`.
+
 ---
 
 <a id="ped-07"></a>
@@ -10510,6 +10595,11 @@ ya existe, y es el tipo de cosa que la profesora nota todos los días.
 **Riesgo a tener presente.** Cada generación cuesta cuota, y a diferencia de la práctica del alumno
 —que la usa un curso entero— esto lo dispara una sola persona para su propio uso. Si se vuelve
 frecuente, entra antes de lo previsto la discusión de [PED-07](#ped-07) (topes por plan).
+
+> **Estado al 2026-10-25 (T0) · en curso.** En producción: la página de recursos del docente
+> (`d6460e5`, hoy con doce herramientas) y la página de la clase con el armado (`45399be`, `16c3dc0`,
+> `f6dbcc8`, `dbaa93f`). Sigue abierto lo que esta ficha pide de fondo: generar el recurso. Por eso
+> queda `[~]`.
 
 ---
 
