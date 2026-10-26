@@ -6056,6 +6056,25 @@ etapa.
 > [FEAT-21](#feat-21)). Desde [FEAT-32](#feat-32) el boletín es lo primero de Progreso. **La etapa 2,
 > las novedades, sigue abierta** y espera a [FEAT-08](#feat-08). Por eso queda `[~]`.
 
+### Textos sin apuro — 2026-10-25 · `49b2fe5`
+
+Los textos que ve la familia ya no le piden rendir cuentas ni nombran al instituto como el que mira.
+Lo pidió el usuario al aprobar el aviso de la portada ([FEAT-32](#feat-32), B): *«para que el
+instituto sepa que lo leíste»* le pareció agresivo, y *«que lo leíste»*, una presión.
+
+| Dónde | Decía | Dice |
+|---|---|---|
+| Recuadro de firma, título | Confirmo que lo leí | Firma del informe |
+| Recuadro de firma, texto | Firmá para que el instituto sepa que viste estas notas. No es una firma con validez legal: es un acuse de lectura. | Cuando termines de leerlo, podés firmarlo acá. Es una firma simple, sin validez legal. |
+| Primera firma | …las próximas se van a parecer a ésta. Tomate un segundo… | …queda guardada y la vas a ver al lado cuando firmes los próximos informes… |
+| Botón | Confirmar que lo leí | Firmar |
+| Ya firmado | Confirmaste que lo leíste. El instituto ya figura avisado de que viste estas notas. | Firmaste este informe. El {fecha}. Gracias. |
+| Firmado por otro | Este informe ya fue confirmado. Alcanza con que lo confirme una persona. | Este informe ya está firmado. Con una firma alcanza. |
+| Aviso de publicación | Al final del informe podés confirmar que lo leíste. | Al final del informe podés confirmar con tu firma. |
+
+Los avisos ya enviados conservan el texto viejo: está guardado en cada notificación. Para el
+instituto, en el panel de firmas, sigue siendo un acuse de lectura.
+
 ---
 
 <a id="feat-10"></a>
