@@ -80,6 +80,8 @@ interface StudentReportViewerProps {
   viewer?: { id: string; isStudent: boolean };
   /** Su firma de referencia, para mostrársela mientras firma. */
   signatureReference?: any;
+  /** El informe con el que abre en vez del más reciente: el que pidió la portada (FEAT-32). */
+  initialReportId?: string;
 }
 
 export function StudentReportViewer({
@@ -87,7 +89,8 @@ export function StudentReportViewer({
   reports,
   instituteName,
   viewer,
-  signatureReference
+  signatureReference,
+  initialReportId
 }: StudentReportViewerProps) {
   // Group reports by course
   const reportsByCourse = useMemo(() => {
@@ -103,9 +106,11 @@ export function StudentReportViewer({
   }, [reports]);
 
   const courseIds = Object.keys(reportsByCourse);
+  // El informe que pidió el enlace de «Para firmar», si es de este alumno.
+  const requested = initialReportId ? reports.find((r) => r.id === initialReportId) : undefined;
   // Abre en el curso del informe más reciente, no en el del primero de la lista.
   const [selectedCourseId, setSelectedCourseId] = useState<string>(
-    reports.length > 0 ? masReciente(reports).courseId : ""
+    requested?.courseId ?? (reports.length > 0 ? masReciente(reports).courseId : "")
   );
 
   const courseReports = reportsByCourse[selectedCourseId] || [];
@@ -114,7 +119,7 @@ export function StudentReportViewer({
   // Find all unique periods for the selected course based on the template
   const periodLabels = latestReport?.template?.periodLabels || [];
   const [selectedPeriodIndex, setSelectedPeriodIndex] = useState<number>(
-    latestReport ? latestReport.periodIndex : 0
+    requested?.periodIndex ?? (latestReport ? latestReport.periodIndex : 0)
   );
 
   // Active report based on selected course and period

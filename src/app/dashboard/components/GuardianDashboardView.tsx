@@ -10,7 +10,8 @@ import {
     AlertCircle,
     History,
     GraduationCap,
-    PenTool
+    PenTool,
+    PenLine
 } from "lucide-react";
 import { cn, getMonthName } from "@/lib/utils";
 import Link from "next/link";
@@ -109,12 +110,21 @@ function StudentAttendance({ data, showName, divided }: { data: StudentAttendanc
     );
 }
 
+interface PendingReportsData {
+    studentId: string;
+    studentName: string;
+    courseLabel: string;
+    /** Del primer período al último. */
+    reports: { id: string; label: string }[];
+}
+
 interface GuardianDashboardViewProps {
     guardianName: string;
     instituteName: string;
     students: any[];
     upcomingLessons: any[];
     attendanceByStudent: StudentAttendanceData[];
+    pendingReports: PendingReportsData[];
     recentGrades: any[];
     totalDebt: number;
 }
@@ -125,10 +135,12 @@ export function GuardianDashboardView({
     students,
     upcomingLessons,
     attendanceByStudent,
+    pendingReports,
     recentGrades,
     totalDebt
 }: GuardianDashboardViewProps) {
     const firstName = guardianName.split(" ")[0];
+    const pendingCount = pendingReports.reduce((acc, kid) => acc + kid.reports.length, 0);
 
     // Lógica del Saludo Narrativo
     let narrativeGreeting = "Con gusto te presentamos el desempeño académico de los estudiantes.";
@@ -188,9 +200,65 @@ export function GuardianDashboardView({
                                     Rendimiento Reciente
                                 </h3>
                                 <p className="text-sm text-muted-foreground font-medium mt-1">
-                                    Resumen de los últimos componentes evaluados.
+                                    {pendingCount > 0
+                                        ? "Los informes que faltan firmar y las últimas notas."
+                                        : "Resumen de los últimos componentes evaluados."}
                                 </p>
                             </div>
+
+                            {/* Los informes para firmar, arriba de las notas (FEAT-32, B).
+                                Un renglón por hijo y un botón por período, que abre
+                                Progreso en ese informe. Diseño elegido en el lienzo
+                                «Informes para firmar en el panel del tutor», variante B.
+                                El texto no apura ni nombra al instituto: cuenta qué hay
+                                y dónde se firma. */}
+                            {pendingCount > 0 && (
+                                <div className="mb-6 p-5 sm:p-6 rounded-2xl bg-primary/5 border border-primary/30 space-y-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
+                                            <PenLine size={16} /> Para firmar
+                                        </span>
+                                        <span className="text-xs font-semibold text-muted-foreground">
+                                            {pendingCount === 1 ? "1 informe" : `${pendingCount} informes`}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Ya están para leer. Al final de cada uno podés confirmar con tu firma.
+                                    </p>
+                                    <div className="space-y-3">
+                                        {pendingReports.map((kid) => (
+                                            <div key={kid.studentId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:px-4 bg-background border border-border/40 rounded-2xl">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black shrink-0">
+                                                        {kid.studentName.charAt(0)}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-sm truncate">{kid.studentName}</p>
+                                                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate">{kid.courseLabel}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-end gap-2">
+                                                    {kid.reports.map((report) => (
+                                                        <Link
+                                                            key={report.id}
+                                                            href={`/guardian/academics?informe=${report.id}`}
+                                                            aria-label={`Leer y firmar el informe del ${report.label} de ${kid.studentName.split(" ")[0]}`}
+                                                            className="flex items-center justify-center gap-1.5 h-11 px-3.5 min-w-0 rounded-xl bg-primary/10 border border-primary/40 text-primary text-[13px] font-bold hover:bg-primary/20 transition-colors"
+                                                        >
+                                                            <span className="truncate">{report.label}</span>
+                                                            <ChevronRight size={14} className="shrink-0" />
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {pendingCount > 0 && (
+                                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Últimas notas</p>
+                            )}
 
                             <div className="space-y-4">
                                 {recentGrades.length === 0 ? (

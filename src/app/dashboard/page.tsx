@@ -111,6 +111,24 @@ export default async function DashboardPage() {
                         fees: {
                             where: { status: { notIn: ["PAID", "CANCELLED"] }, ...excludeNotYetDueFees() },
                             select: { originalAmount: true, paidAmount: true }
+                        },
+                        // Los informes que le toca firmar a este tutor y que todavía
+                        // nadie firmó: alcanza con una firma (FEAT-09). Van en la
+                        // portada para el que nunca abre Progreso (FEAT-32, B).
+                        studentReports: {
+                            where: {
+                                publishedAt: { lte: new Date() },
+                                signers: { some: { userId: guardianId } },
+                                signatures: { none: {} }
+                            },
+                            select: {
+                                id: true,
+                                year: true,
+                                periodIndex: true,
+                                publishedAt: true,
+                                course: { select: { name: true, level: true } },
+                                template: { select: { periodLabels: true } }
+                            }
                         }
                     }
                 }
@@ -182,6 +200,33 @@ export default async function DashboardPage() {
         ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 5);
 
+        // Un renglón por hijo, primero el del informe publicado más tarde; sus
+        // períodos, del primero al último. El rótulo del período va sin el
+        // paréntesis de meses —«1° Trimestre (Marzo/Abril/Mayo)»—, que en el
+        // celular no entra en un botón.
+        const currentYear = instituteMonth().year;
+        const pendingReports = guardianLinks
+            .filter(l => l.student.studentReports.length > 0)
+            .map(l => {
+                const reports = [...l.student.studentReports]
+                    .sort((a, b) => a.year - b.year || a.periodIndex - b.periodIndex);
+                const courses = [...new Set(reports.map(r => r.course.level || r.course.name))];
+                return {
+                    studentId: l.student.id,
+                    studentName: l.student.name.trim(),
+                    courseLabel: courses.join(" · "),
+                    lastPublishedAt: Math.max(...reports.map(r => r.publishedAt!.getTime())),
+                    reports: reports.map(r => {
+                        const period = (r.template.periodLabels[r.periodIndex] ?? `Período ${r.periodIndex + 1}`)
+                            .replace(/\s*\(.*\)\s*$/, "");
+                        const course = courses.length > 1 ? `${r.course.level || r.course.name} · ` : "";
+                        const year = r.year !== currentYear ? ` ${r.year}` : "";
+                        return { id: r.id, label: `${course}${period}${year}` };
+                    })
+                };
+            })
+            .sort((a, b) => b.lastPublishedAt - a.lastPublishedAt);
+
         // Total Debt
         const totalDebt = students.flatMap(s => s.fees)
             .reduce((acc, fee) => acc + (fee.originalAmount - fee.paidAmount), 0);
@@ -195,6 +240,7 @@ export default async function DashboardPage() {
                     students={students}
                     upcomingLessons={allLessons}
                     attendanceByStudent={attendanceByStudent}
+                    pendingReports={pendingReports}
                     recentGrades={recentGrades}
                     totalDebt={totalDebt}
                 />

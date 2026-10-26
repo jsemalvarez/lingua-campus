@@ -27,14 +27,22 @@ interface GuardianAcademicsViewProps {
     /** Id del tutor que está mirando, para saber si le toca firmar (FEAT-09). */
     viewerId: string;
     signatureReference: any;
+    /** El informe con el que abre, si se llegó desde «Para firmar» de la portada (FEAT-32). */
+    initialReportId?: string;
 }
 
 export function GuardianAcademicsView({
     students,
     viewerId,
-    signatureReference
+    signatureReference,
+    initialReportId
 }: GuardianAcademicsViewProps) {
-    const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || "");
+    // Abre en el hijo del informe pedido; si no es de ninguno, en el primero.
+    const [selectedStudentId, setSelectedStudentId] = useState(
+        students.find(s => (s.studentReports || []).some((r: { id: string }) => r.id === initialReportId))?.id
+            || students[0]?.id
+            || ""
+    );
 
     const currentStudent = students.find(s => s.id === selectedStudentId);
 
@@ -104,6 +112,7 @@ export function GuardianAcademicsView({
                 instituteName={currentStudent.institute?.name}
                 viewer={{ id: viewerId, isStudent: false }}
                 signatureReference={signatureReference}
+                initialReportId={initialReportId}
             />
 
             {/* ROW 1: Proficiency & Course Summary Layer */}

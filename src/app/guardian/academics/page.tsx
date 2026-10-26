@@ -9,7 +9,13 @@ import { GUARDIAN_SECTIONS, recordActivity } from "@/lib/activity";
 import { instituteToday } from "@/lib/dates";
 import { signatureLinesByReport } from "@/lib/reports/batchSignatureQuery";
 
-export default async function GuardianAcademicsPage() {
+export default async function GuardianAcademicsPage({
+    searchParams
+}: {
+    // `informe`: el que se abre al entrar desde «Para firmar» de la portada (FEAT-32).
+    searchParams: Promise<{ informe?: string }>;
+}) {
+    const { informe } = await searchParams;
     const session = await getServerSession(authOptions);
     if (!session || !session.user) redirect("/login");
 
@@ -146,6 +152,7 @@ export default async function GuardianAcademicsPage() {
                 students={students}
                 viewerId={guardianId}
                 signatureReference={signatureReference?.strokeData ?? null}
+                initialReportId={informe}
             />
         </div>
     );
