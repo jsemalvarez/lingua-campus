@@ -426,8 +426,10 @@ export default async function CourseDetailPage({
                                         ) : (
                                             <div className="space-y-3 mt-4">
                                                 {listedEnrollments.map((enrol: any) => (
-                                                    <div key={enrol.student.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors group">
-                                                        <div className="flex items-center gap-3">
+                                                    // `flex-wrap`: con «Cambiar curso» las acciones no entran al
+                                                    // lado del nombre en el celular, y bajan a un segundo renglón.
+                                                    <div key={enrol.student.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors group">
+                                                        <div className="flex items-center gap-3 min-w-0">
                                                             <div className="h-9 w-9 bg-primary/10 text-primary font-bold rounded-full flex items-center justify-center text-sm">
                                                                 {enrol.student.name.charAt(0).toUpperCase()}
                                                             </div>
@@ -455,7 +457,7 @@ export default async function CourseDetailPage({
                                                                 <p className="text-xs text-muted-foreground">{enrol.student.phone || "Sin teléfono"}</p>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 ml-auto">
                                                             {enrol.status === "FINISHED" && (
                                                                 <div className="px-2 py-1 rounded border border-emerald-500/30 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 uppercase tracking-tighter">
                                                                     Finalizado

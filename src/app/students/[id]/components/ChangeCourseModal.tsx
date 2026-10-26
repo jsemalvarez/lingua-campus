@@ -82,7 +82,7 @@ export function ChangeCourseModal({
             <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                className="h-8 gap-1.5 px-2 text-xs font-semibold whitespace-nowrap text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                 onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
