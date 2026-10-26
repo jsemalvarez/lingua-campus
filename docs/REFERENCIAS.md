@@ -201,7 +201,9 @@ del Plata), relevada el 19/10/2026 leyendo su código público y con una prueba 
   evaluación de pronunciación) y [PED-02](BACKLOG-TECNICO.md#ped-02). El 25/10/2026 dos ideas
   pasaron a la página de propuestas para Patricia (ver [Moodle](#moodle)): el speaking corregido
   sonido por sonido, con los sonidos pendientes de cada alumno, condicionado a probarlo antes
-  con alumnos reales; y una práctica sin micrófono de pares mínimos y dictado. Rachas y medallas
+  con alumnos reales; y una práctica sin micrófono de pares mínimos y dictado. La app muestra los
+  sonidos con su símbolo IPA (/θ/, /ð/); se le pregunta a Patricia en qué niveles mostrarlo
+  (la propuesta: la letra siempre, el símbolo para los más grandes y para el docente). Rachas y medallas
   quedan afuera: a Patricia no la entusiasman.
 
 ### Quinttos
