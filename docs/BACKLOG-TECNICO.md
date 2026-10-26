@@ -281,6 +281,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
 | [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [x] |
 | [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
+| [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -8836,6 +8837,37 @@ columna de acciones queda afuera hasta que se desplaza la página.
 
 ---
 
+<a id="bug-27"></a>
+## BUG-27 · El boletín programado se publica la noche anterior y dice un día menos · **P3**
+
+**De dónde sale.** Del 2026-10-25, verificando en stage el aviso de informes para firmar
+([FEAT-32](#feat-32)). El 1° Trimestre de Pedro Caseres dice *«Publicado: 21 de junio de 2026»*, y en
+la base está el 22 a las 00:00 UTC.
+
+**La causa.** Al programar la publicación, el día elegido en el calendario (`2026-06-22`) se convierte
+con `new Date(publishDate)`
+([`ReportGradeSheet.tsx:226`](../src/app/courses/[id]/reports/[templateId]/ReportGradeSheet.tsx)), que
+lo toma como medianoche UTC. En Argentina eso es el 21 a las 21:00, así que pasan dos cosas:
+
+- La familia ve el boletín tres horas antes de lo elegido.
+- El pie, que muestra la publicación como momento
+  ([`StudentReportViewer.tsx:565`](../src/components/reports/StudentReportViewer.tsx)), dice el día
+  anterior.
+
+El cartel *«Programado (…)»* de la planilla usa `toLocaleDateString()`, que depende del navegador.
+La regla de fechas del build (`lint:fechas`) no mira `new Date("YYYY-MM-DD")`.
+
+**Medido en producción el 25/10:** 110 de los 406 informes publicados tienen la hora en 00:00 UTC.
+Son los programados, del 17 al 22 de junio. Los otros 296 se publicaron en el momento.
+
+**El arreglo.** Pasar el día elegido a la medianoche del instituto, con [`dates.ts`](../src/lib/dates.ts)
+en vez de `new Date(...)`. `instituteDayStart()` ya hace esa cuenta para hoy. Los 110 ya publicados
+se pueden corregir sumándoles tres horas, o dejarse como están: las familias ya los vieron.
+
+**P3.** Nadie lo reclamó, y la diferencia es de tres horas y un día en el pie del boletín.
+
+---
+
 <a id="feat-22"></a>
 ## FEAT-22 · Notificaciones push: el sobre solo no alcanza · **P2**
 
@@ -9480,6 +9512,55 @@ publicados. Lo esperado se sacó antes de la base:
 
 El pie ya sale en castellano ([BUG-09](#bug-09)). **Quedan sin ver** la casilla de firma de un tutor
 firmante pendiente y el Hub del alumno.
+
+### B, hecha — 2026-10-25 · `6cbdebe` · `60c0451` · verificada en stage sobre el backup del 24/10
+
+**El pedido.** Que *Rendimiento Reciente*, en la portada, muestre que hay un informe, lleve a él al
+tocarlo y lo siga mostrando hasta que se firme. En producción, el 25/10, **148 de los 171 tutores
+firmantes tienen al menos uno sin firmar**: 281 informes, 170 del 1° trimestre y 111 del 2°.
+
+**El diseño.** Lienzo *Informes para firmar en el panel del tutor*
+(<https://claude.ai/artifact/PV8NMXnyEjm3jLcZWpUoP8>), con el caso extremo de producción: la tutora
+*ma. angeles*, con tres hijos y seis informes sin firmar. Ganó la **B**: un recuadro «Para firmar»
+arriba de las notas, con un renglón por hijo y un botón por período. La A —informes y notas en una
+sola lista por fecha— dejaba los de junio al fondo, debajo de todas las notas.
+
+**Lo decidido:**
+
+- Se muestran todos los que nadie firmó, también los de junio.
+- Alcanza con una firma ([FEAT-09](#feat-09)): si firma el otro tutor, el aviso se va para los dos.
+  Hoy no hay ningún caso.
+- El texto es *«Ya están para leer. Al final de cada uno podés confirmar con tu firma.»* Se
+  descartaron dos que apuraban: *«…para que el instituto sepa que lo leíste»* y *«…confirmar con tu
+  firma que lo leíste»*.
+
+**Lo que cambia, sin migración:**
+
+- [`dashboard/page.tsx`](../src/app/dashboard/page.tsx) — trae los informes publicados en los que el
+  tutor es firmante y que no tienen ninguna firma. El período va sin los meses entre paréntesis; lleva
+  el curso adelante si el hijo tiene informes en dos cursos, y el año atrás si no es el actual.
+- [`GuardianDashboardView.tsx`](../src/app/dashboard/components/GuardianDashboardView.tsx) — el
+  recuadro, y «Últimas notas» sobre las notas cuando hay algo para firmar.
+- [`guardian/academics/page.tsx`](../src/app/guardian/academics/page.tsx) y
+  [`StudentReportViewer.tsx`](../src/components/reports/StudentReportViewer.tsx) — `?informe=<id>`
+  abre Progreso en ese hijo, curso y período. Sin el parámetro abre como antes.
+
+**Verificado en stage** con la cuenta de *ma. angeles*, con lo esperado sacado antes de la base:
+
+| Caso | Dio |
+|---|---|
+| Portada | «Para firmar · 6 informes»: Catalina, Pedro y Joaquin, en ese orden, cada uno con 1° y 2° Trimestre. Debajo, «Últimas notas» con *Exam: Unit 4* |
+| 1° Trimestre de Pedro | *Expediente de Pedro*, con el 1° Trimestre marcado y la casilla de firma al final |
+| 1° y 2° Trimestre de Catalina | Abre en cada uno. Sin el parámetro abre en el 2°, como antes |
+| Una firma cargada a mano en la base para el 1° de Catalina | «5 informes», y a Catalina le queda sólo el 2°. La firma se borró después: 118 firmas en stage antes y después |
+| Celular, 375 | Los botones cortaban «1° Trim…»: medían 108 px y hacían falta 126. Sin la flecha y con menos margen, miden 112 y el texto entra (`60c0451`). La página no se corre de costado |
+| Tablet, 768 | Los botones van a la derecha del nombre, con flecha |
+
+**Quedó sin ver:** el modo claro, un tutor con un solo informe, y un hijo con informes en dos cursos
+o de otro año. Ese rótulo lleva el curso o el año, y en los datos no hay ningún caso.
+
+> **Encontrado en esta prueba:** el 1° Trimestre de Pedro dice *«Publicado: 21 de junio»* y se
+> programó para el 22. Es [BUG-27](#bug-27).
 
 ---
 
