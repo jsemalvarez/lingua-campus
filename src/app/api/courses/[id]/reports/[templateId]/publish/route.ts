@@ -284,7 +284,7 @@ export async function PATCH(
                         type: "REPORT_PUBLISHED",
                         title,
                         body: needsSignature
-                            ? `${body} Al final del informe podés confirmar que lo leíste.`
+                            ? `${body} Al final del informe podés confirmar con tu firma.`
                             : body,
                         link: "/guardian/academics"
                     });

@@ -35,10 +35,9 @@ export function ReportSignatureBox({
             <div className="p-6 bg-emerald-500/5 rounded-3xl border border-emerald-500/20 flex items-start gap-3">
                 <CheckCircle2 className="text-emerald-600 shrink-0 mt-0.5" size={20} />
                 <div className="space-y-1">
-                    <p className="font-bold text-sm">Confirmaste que lo leíste</p>
+                    <p className="font-bold text-sm">Firmaste este informe</p>
                     <p className="text-sm text-muted-foreground">
-                        El {formatDate(mySignedAt, "moment", "long")}. El instituto ya
-                        figura avisado de que viste estas notas.
+                        El {formatDate(mySignedAt, "moment", "long")}. Gracias.
                     </p>
                 </div>
             </div>
@@ -51,7 +50,7 @@ export function ReportSignatureBox({
             <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 flex items-start gap-3">
                 <CheckCircle2 className="text-muted-foreground shrink-0 mt-0.5" size={20} />
                 <p className="text-sm text-muted-foreground font-medium">
-                    Este informe ya fue confirmado. Alcanza con que lo confirme una persona.
+                    Este informe ya está firmado. Con una firma alcanza.
                 </p>
             </div>
         );
@@ -61,14 +60,14 @@ export function ReportSignatureBox({
 
     const handleSubmit = () => {
         if (isEmptyStroke(stroke)) {
-            toast.error("Dibujá tu firma antes de confirmar");
+            toast.error("Falta dibujar la firma en el recuadro");
             return;
         }
 
         startTransition(async () => {
             const result = await signReportAction(reportId, stroke);
             if (result.success) {
-                toast.success("Listo, quedó confirmado que leíste el informe");
+                toast.success("Listo, el informe quedó firmado. Gracias");
             } else {
                 toast.error(result.error ?? "No se pudo registrar la firma");
             }
@@ -78,22 +77,24 @@ export function ReportSignatureBox({
     return (
         <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 space-y-4">
             <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
-                <PenLine size={14} /> Confirmo que lo leí
+                <PenLine size={14} /> Firma del informe
             </div>
 
+            {/* Sin apurar ni nombrar al instituto como el que controla: el
+                texto cuenta qué es y dónde se firma. Antes decía «Firmá para
+                que el instituto sepa que viste estas notas». */}
             <p className="text-sm text-muted-foreground leading-relaxed">
-                Firmá para que el instituto sepa que viste estas notas. No es una firma con
-                validez legal: es un acuse de lectura.
+                Cuando termines de leerlo, podés firmarlo acá. Es una firma simple, sin
+                validez legal.
             </p>
 
             {isFirstEver && (
                 <div className="flex items-start gap-3 p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20">
                     <Info className="text-amber-600 shrink-0 mt-0.5" size={18} />
                     <p className="text-sm text-muted-foreground">
-                        Es tu primera firma, así que <strong className="text-foreground">esta va a
-                        quedar guardada como tu firma</strong> y las próximas se van a parecer a
-                        ésta. Tomate un segundo. Después la podés volver a registrar desde tu
-                        perfil.
+                        Es tu primera firma: <strong className="text-foreground">queda
+                        guardada</strong> y la vas a ver al lado cuando firmes los próximos
+                        informes. Si después querés cambiarla, lo podés hacer desde tu perfil.
                     </p>
                 </div>
             )}
@@ -123,7 +124,7 @@ export function ReportSignatureBox({
 
             <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={handleSubmit} disabled={isPending}>
-                    {isPending ? "Registrando..." : "Confirmar que lo leí"}
+                    {isPending ? "Guardando..." : "Firmar"}
                 </Button>
                 <Button
                     variant="ghost"
