@@ -213,7 +213,7 @@ export function GuardianDashboardView({
                                 El texto no apura ni nombra al instituto: cuenta qué hay
                                 y dónde se firma. */}
                             {pendingCount > 0 && (
-                                <div className="mb-6 p-5 sm:p-6 rounded-2xl bg-primary/5 border border-primary/30 space-y-4">
+                                <div className="mb-6 p-4 sm:p-6 rounded-2xl bg-primary/5 border border-primary/30 space-y-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <span className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
                                             <PenLine size={16} /> Para firmar
@@ -243,10 +243,12 @@ export function GuardianDashboardView({
                                                             key={report.id}
                                                             href={`/guardian/academics?informe=${report.id}`}
                                                             aria-label={`Leer y firmar el informe del ${report.label} de ${kid.studentName.split(" ")[0]}`}
-                                                            className="flex items-center justify-center gap-1.5 h-11 px-3.5 min-w-0 rounded-xl bg-primary/10 border border-primary/40 text-primary text-[13px] font-bold hover:bg-primary/20 transition-colors"
+                                                            className="flex items-center justify-center gap-1.5 h-11 px-3 sm:px-3.5 min-w-0 rounded-xl bg-primary/10 border border-primary/40 text-primary text-[13px] font-bold hover:bg-primary/20 transition-colors"
                                                         >
                                                             <span className="truncate">{report.label}</span>
-                                                            <ChevronRight size={14} className="shrink-0" />
+                                                            {/* En el celular la flecha no entra: con ella, «1° Trimestre»
+                                                                se cortaba en dos columnas de 108 px. */}
+                                                            <ChevronRight size={14} className="shrink-0 hidden sm:block" />
                                                         </Link>
                                                     ))}
                                                 </div>
