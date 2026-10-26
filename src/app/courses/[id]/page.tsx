@@ -14,6 +14,7 @@ import { RemoveStudentButton } from "../components/RemoveStudentButton";
 import { DeleteCourseButton } from "../components/DeleteCourseButton";
 import { FinishCourseButton } from "../components/FinishCourseButton";
 import { CourseExamModal } from "../components/CourseExamModal";
+import { ChangeCourseModal } from "@/app/students/[id]/components/ChangeCourseModal";
 import { BadgeCheck, Info } from "lucide-react";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { getPeerLevels, isPeerCourse } from "@/lib/peers";
@@ -132,6 +133,16 @@ export default async function CourseDetailPage({
 
     const isTeacherOrAdmin = activeRole === "ADMIN" || activeRole === "SECRETARY" || isCourseTeacher;
     const isFinished = course.status === "FINISHED";
+
+    // Los cursos a los que se puede pasar un alumno desde la lista: los que siguen
+    // dictándose. Es la misma ventana de «Cambiar curso» de la ficha del alumno.
+    const activeCourses = (activeRole === "ADMIN" || activeRole === "SECRETARY") && !isFinished
+        ? await prisma.course.findMany({
+            where: { instituteId: user.instituteId, status: "ACTIVE" },
+            select: { id: true, name: true, level: true },
+            orderBy: { name: 'asc' }
+        })
+        : [];
 
     // ── Navegación por mes del libro de temas ────────────────────────────────
     // Traemos sólo las fechas (payload mínimo) para armar el navegador de meses.
@@ -461,11 +472,22 @@ export default async function CourseDetailPage({
                                                                 </div>
                                                             )}
                                                             {(activeRole === "ADMIN" || activeRole === "SECRETARY") && enrol.status === "ACTIVE" && !isFinished && (
-                                                                <RemoveStudentButton
-                                                                    enrollmentId={enrol.id}
-                                                                    courseId={course.id}
-                                                                    studentName={enrol.student.name}
-                                                                />
+                                                                <>
+                                                                    {/* Con texto y siempre a la vista, al lado de los íconos:
+                                                                        es el camino que se lleva las cuotas. Eliminar y volver
+                                                                        a inscribir se las suelta (FIN-23). */}
+                                                                    <ChangeCourseModal
+                                                                        enrollmentId={enrol.id}
+                                                                        currentCourseId={course.id}
+                                                                        currentCourseName={course.name}
+                                                                        availableCourses={activeCourses}
+                                                                    />
+                                                                    <RemoveStudentButton
+                                                                        enrollmentId={enrol.id}
+                                                                        courseId={course.id}
+                                                                        studentName={enrol.student.name}
+                                                                    />
+                                                                </>
                                                             )}
                                                         </div>
                                                     </div>

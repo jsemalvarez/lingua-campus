@@ -296,7 +296,7 @@ export async function removeStudentFromCourseAction(enrollmentId: string, course
         if (feesWithPayments > 0) {
             return {
                 success: false,
-                error: "Esta inscripción tiene cuotas con pagos registrados, así que no se puede eliminar sin perderlos. Si el alumno dejó el curso, marcá la inscripción como incompleta. Si pasa a otro curso, usá «Cambiar curso» desde su ficha: se lleva las cuotas con él."
+                error: "Esta inscripción tiene cuotas con pagos registrados, así que no se puede eliminar sin perderlos. Si el alumno dejó el curso, marcá la inscripción como incompleta. Si pasa a otro curso, usá «Cambiar curso», al lado: se lleva las cuotas con él."
             };
         }
 
