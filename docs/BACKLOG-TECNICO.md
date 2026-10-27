@@ -282,6 +282,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [x] |
 | [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
 | [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
+| [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -2910,6 +2911,26 @@ que buscaba dos inscripciones donde en realidad había una borrada), [ARQ-05](#a
 restaurar lo borrado), [FIN-18](#fin-18) (matrículas sin curso, el mismo desprendimiento),
 [FIN-24](#fin-24) (qué pasa con las cuotas al mover de curso, que es la decisión que el sistema
 todavía no toma).
+
+### «Cambiar curso» al lado del tacho — 2026-10-25 · `9470247`, `247f6bb` · verificado en stage
+
+Lo pidió el usuario: que mover a un alumno se pueda hacer también desde la lista del curso, al lado
+de «Marcar incompleto» y «Eliminar inscripción», y no sólo desde la ficha del alumno. Va con texto y
+siempre a la vista, porque es el camino que se lleva las cuotas. Abre la misma ventana de la ficha y
+ofrece los cursos activos del instituto. El mensaje del tacho, cuando hay pagos, ya no manda a la
+ficha: dice *«usá «Cambiar curso», al lado»*.
+
+**Verificado en stage** con la cuenta de la secretaria, en *Children 4 L-M*:
+
+- Los 12 alumnos activos tienen «Cambiar curso».
+- La ventana ofrece los 30 cursos activos, con el actual marcado, y no deja guardar sin elegir
+  otro. Se cerró con «Cancelar»: no se movió a nadie.
+- En el celular la fila no entraba —372 píxeles en una lista de 293— y las acciones pasaron a un
+  segundo renglón (`247f6bb`).
+- En escritorio, 10 de las 12 filas van en un renglón. Las de los dos nombres más largos bajan
+  las acciones al segundo.
+
+**Al pasar** apareció [BUG-28](#bug-28): en el celular, la barra de arriba de la secretaria no entra.
 
 ---
 
@@ -8884,6 +8905,31 @@ en vez de `new Date(...)`. `instituteDayStart()` ya hace esa cuenta para hoy. Lo
 se pueden corregir sumándoles tres horas, o dejarse como están: las familias ya los vieron.
 
 **P3.** Nadie lo reclamó, y la diferencia es de tres horas y un día en el pie del boletín.
+
+---
+
+<a id="bug-28"></a>
+## BUG-28 · En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla · **P3**
+
+**De dónde sale.** Del 2026-10-25, verificando en stage «Cambiar curso» en la lista de alumnos del
+curso con la cuenta de la secretaria, Leticia Carbone, que es secretaria y profesora.
+
+**Medido en stage a 375 píxeles:** la barra de arriba termina en el píxel **427**. La página entera
+queda 52 píxeles más ancha que la pantalla, así que se corre de costado, y la barra de abajo también
+se estira a 425.
+
+**La causa.** A la derecha de la barra van siete botones: tema, selector de rol, mensajes, avisos,
+ayuda, perfil y salir ([`Navbar.tsx:127`](../src/components/layout/Navbar.tsx)). El selector de rol
+sólo aparece cuando la persona tiene más de un rol, y es el que no entra. Con un solo rol, como el
+tutor o la dueña, la barra entra: la portada del tutor mide 375.
+
+**No viene del lote:** los componentes de la barra son iguales en `main` y en `stage`, así que ya
+pasa en producción.
+
+**El arreglo.** En el celular, sacar de la barra de arriba la ayuda o el tema, o llevar el selector
+de rol a otro lugar. Se decide mirándolo en pantalla.
+
+**P3.** Hoy le pasa a una sola persona del instituto y sólo en el celular.
 
 ---
 
