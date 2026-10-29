@@ -9971,7 +9971,27 @@ Lo que eso significa en la práctica:
 - **El caso extremo ya está anotado en [PED-05](#ped-05):** los providers de IA degradan en silencio,
   así que ni siquiera llega a haber un error que registrar.
 
-**Decisión pendiente — dónde se guardan.** Son dos caminos con costos distintos:
+**Decidido (2026-10-29): tabla propia, y se escala según haga falta.** Lo que lo apura es que otros
+institutos van a empezar a probar el campus, y la idea es enterarse de lo que les falla antes de que
+pregunten, para poder escribirles primero. Lo que quedó definido:
+
+- **Se agrupa por problema, no por fila.** Cada error es una fila, pero lleva una huella (acción,
+  tipo de error, lugar del código). Diez fallas iguales son un problema que pasó diez veces; los
+  avisos y la vista trabajan sobre el problema. Cada problema tiene estado: abierto o resuelto.
+- **El mail avisa por problema nuevo *en ese instituto*.** Manda aviso una huella que nunca se vio, y
+  también una conocida que aparece por primera vez en otro instituto: ese instituto no sabe que ya
+  está vista y es el que va a preguntar. El mismo problema repetido en el mismo instituto no manda
+  nada, suma al contador. Por Resend, que ya está.
+- **Solo avisa lo que el usuario vio.** Un error que terminó en un cartel en pantalla manda mail; uno
+  que falló por detrás sin que nadie lo note (el logo del recibo) va solo al panel.
+- **El mail alcanza para contestar sin abrir nada más:** instituto, rol (secretaria, docente,
+  familia), qué estaba haciendo («Guardar asistencia, curso Children 4»), hora, y si vio un cartel.
+- **El resumen va en el panel del superadmin, no por mail.** Con un instituto y el producto estable, un
+  mail diario que casi siempre dice «nada» se deja de mirar.
+- **Queda para después, si hace falta:** el aviso por pico (un problema conocido que se dispara en una
+  hora) y el de problema resuelto que vuelve.
+
+Los dos caminos que se compararon:
 
 1. **Servicio externo** (Sentry y equivalentes). Trae agrupación, alertas y stack traces sin
    construir nada. Cuesta plata a partir de cierto volumen y suma un proveedor más al que mandarle
@@ -9990,7 +10010,7 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
 1. Un helper único de registro en lugar de 80 `console.error` sueltos, que reciba el error más el
    contexto (instituto, usuario, acción). El patrón es el mismo de `getAuthContext` y
    `guardPracticeAi`: un solo lugar donde cambiar de destino después.
-2. Elegir destino con el criterio de arriba.
+2. Destino: la tabla propia, con la huella, el estado y los avisos decididos arriba.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
