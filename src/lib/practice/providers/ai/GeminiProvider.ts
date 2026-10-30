@@ -1,4 +1,5 @@
 import { IAIProvider, EvaluationResult, ChatMessage, ListeningQuestion, PracticeDraft, PRONUNCIATION_PASS_SCORE, LessonPlanContext, LessonMomentId } from "./IAIProvider";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * Provider de IA usando Gemini de Google — implementación con fetch directo.
@@ -284,6 +285,9 @@ CRITICAL CONSTRAINTS:
             throw new Error("Invalid array or no variations");
         } catch (e) {
             console.error("[GEMINI] Phrase generation failed, attempting manual extraction. Raw:", text);
+            // No hay cartel: el alumno recibe frases rescatadas o las mismas de
+            // la clase con un punto. Sin esto, ni siquiera había un error que ver.
+            await reportError(e, { action: "practica.generar-frases.respuesta-invalida", shownToUser: false });
             
             // Last resort: extract anything that looks like a sentence between quotes or as lines
             const fallbackRegex = /"([^"]{10,})"/g;
@@ -343,6 +347,8 @@ CRITICAL CONSTRAINTS:
             };
         } catch (e) {
             console.error("[GEMINI] Failed to parse generateListeningText response:", jsonStr);
+            // Vuelve el texto de la clase y ninguna pregunta: el listening queda sin quiz.
+            await reportError(e, { action: "practica.generar-listening.respuesta-invalida", shownToUser: false });
             return { text: seedText, questions: [] };
         }
     }
@@ -379,6 +385,7 @@ CRITICAL CONSTRAINTS:
             return Array.isArray(parsed) ? parsed : [];
         } catch (e) {
             console.error("[GEMINI] Failed to parse generateListeningQuiz response:", jsonStr);
+            await reportError(e, { action: "practica.generar-preguntas.respuesta-invalida", shownToUser: false });
             return [];
         }
     }

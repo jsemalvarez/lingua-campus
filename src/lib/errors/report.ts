@@ -38,8 +38,14 @@ export type ReportOptions = {
     shownToUser?: boolean;
     context?: ErrorContext;
     path?: string;
-    /** Si quien llama ya lo tiene, se ahorra una query. */
+    /** Si quien llama ya lo tiene, se ahorra una query. `null` = no hay sesión que buscar. */
     auth?: AuthContext | null;
+    /**
+     * El instituto, cuando no sale de la sesión: el formulario de inscripción es
+     * público y sabe a qué instituto se anotan aunque nadie esté logueado. Sin
+     * esto, sus fallas caerían en "PLATAFORMA" y el aviso no diría de quién son.
+     */
+    instituteId?: string | null;
 };
 
 export type ReportResult = {
@@ -62,7 +68,8 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
         const fingerprint = fingerprintOf(action, kind, message);
 
         const auth = options.auth !== undefined ? options.auth : await safeAuthContext();
-        const scope = auth?.instituteId ?? NO_INSTITUTE_SCOPE;
+        const instituteId = options.instituteId ?? auth?.instituteId ?? null;
+        const scope = instituteId ?? NO_INSTITUTE_SCOPE;
         const now = new Date();
 
         return await prisma.$transaction(async (tx) => {
@@ -91,7 +98,7 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
             await tx.errorEvent.create({
                 data: {
                     issueId: issue.id,
-                    instituteId: auth?.instituteId ?? null,
+                    instituteId,
                     subjectType: auth ? (auth.isStudent ? "STUDENT" : "USER") : null,
                     subjectId: auth?.userId ?? null,
                     role: auth?.activeRole ?? null,

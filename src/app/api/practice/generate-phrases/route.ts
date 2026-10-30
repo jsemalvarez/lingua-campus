@@ -1,6 +1,7 @@
 import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/generate-phrases
@@ -38,8 +39,8 @@ export async function POST(req: Request) {
         const phrases = await provider.generateVariations(seedPhrases, count, PRACTICE_LANGUAGE);
 
         return Response.json({ phrases });
-    } catch (error: any) {
-        console.error("[GENERATE_PHRASES] Error:", error.message);
+    } catch (error) {
+        await reportError(error, { action: "practica.generar-frases", context: { lessonPracticeId: guard.practice.id } });
         return new Response("Error al generar frases dinámicas", { status: 500 });
     }
 }

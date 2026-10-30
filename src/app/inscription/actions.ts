@@ -12,6 +12,7 @@ import {
     type SituacionDePreinscripcion,
 } from "@/lib/email/templates/preEnrollmentAlert";
 import { instituteBaseUrl } from "@/lib/tenant";
+import { reportError } from "@/lib/errors/report";
 
 /** Lo que hace falta de la ficha del instituto para armar los correos (FEAT-20). */
 const INSTITUTO_DEL_CORREO = {
@@ -235,7 +236,15 @@ async function mandarLosCorreos(params: {
 
     for (const resultado of resultados) {
         if (resultado.status === "rejected") {
-            console.error("[inscription] falló un envío:", resultado.reason);
+            // La familia no ve nada —la pantalla ya le dijo que se anotó—, pero
+            // se queda sin el acuse o el instituto sin el aviso.
+            await reportError(resultado.reason, {
+                action: "inscripcion.enviar-correo",
+                shownToUser: false,
+                auth: null,
+                instituteId,
+                context: { situacion },
+            });
         }
     }
 }
@@ -348,7 +357,13 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
                 link: "/students?tab=pre-enrolled",
             });
         } catch (notifErr) {
-            console.error("Error creating pre-enrollment notification:", notifErr);
+            await reportError(notifErr, {
+                action: "inscripcion.avisar-campana",
+                shownToUser: false,
+                auth: null,
+                instituteId,
+                context: { situacion: "nueva" },
+            });
         }
 
         // Un correo caído no puede voltear una inscripción que ya está guardada.
@@ -362,12 +377,17 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
                 link: "/students?tab=pre-enrolled",
             });
         } catch (mailErr) {
-            console.error("[inscription] falló el envío de la preinscripción:", mailErr);
+            await reportError(mailErr, {
+                action: "inscripcion.enviar-correo",
+                shownToUser: false,
+                auth: null,
+                instituteId,
+                context: { situacion: "nueva" },
+            });
         }
 
         return { success: true };
     } catch (e) {
-        console.error("Error in pre-enrollment:", e);
         // **Cuál de las dos restricciones saltó se averigua contra la base, no
         // leyendo `e.meta.target`.** Cuando la misma persona se vuelve a anotar
         // con el mismo DNI **y** el mismo correo se violan las dos a la vez, y
@@ -378,6 +398,15 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
         if (esViolacionDeUnico(e)) {
             return manejarChoque(formData, instituteId);
         }
+        // El choque no se registra: es alguien que se volvió a anotar, no una
+        // falla. Esto otro sí, y es de lo más caro que hay: una familia que quiso
+        // anotarse y no pudo.
+        await reportError(e, {
+            action: "inscripcion.crear",
+            auth: null,
+            instituteId,
+            context: { formType: (formData.get("formType") as string) || null },
+        });
         return { success: false, error: "Error al procesar la inscripción. Intente nuevamente." };
     }
 }
@@ -469,7 +498,13 @@ async function manejarChoque(formData: FormData, instituteId: string) {
                     unaVezPorDia: true,
                 });
             } catch (notifErr) {
-                console.error("Error creating email-collision notification:", notifErr);
+                await reportError(notifErr, {
+                    action: "inscripcion.avisar-campana",
+                    shownToUser: false,
+                    auth: null,
+                    instituteId,
+                    context: { situacion: "correo-de-otro" },
+                });
             }
 
             return errorDeCorreo;
@@ -505,7 +540,13 @@ async function manejarChoque(formData: FormData, instituteId: string) {
                 unaVezPorDia: true,
             });
         } catch (notifErr) {
-            console.error("Error creating duplicate pre-enrollment notification:", notifErr);
+            await reportError(notifErr, {
+                action: "inscripcion.avisar-campana",
+                shownToUser: false,
+                auth: null,
+                instituteId,
+                context: { situacion },
+            });
         }
 
         try {
@@ -518,12 +559,18 @@ async function manejarChoque(formData: FormData, instituteId: string) {
                 link: dondeSeArregla,
             });
         } catch (mailErr) {
-            console.error("[inscription] falló el envío del duplicado:", mailErr);
+            await reportError(mailErr, {
+                action: "inscripcion.enviar-correo",
+                shownToUser: false,
+                auth: null,
+                instituteId,
+                context: { situacion },
+            });
         }
 
         return { success: true as const };
     } catch (error) {
-        console.error("[inscription] falló el manejo del choque:", error);
+        await reportError(error, { action: "inscripcion.manejar-choque", auth: null, instituteId });
 
         // **El error neutro, y no el acuse.** Si algo se cayó acá no sabemos cuál
         // de las dos causas fue: contestar "ese correo ya está registrado"

@@ -1,5 +1,6 @@
 import { getTTSProvider } from "@/lib/practice/providers/tts";
 import { clampText, guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/tts
@@ -61,8 +62,8 @@ export async function POST(req: Request) {
                 "Cache-Control": "private, max-age=3600", // Cache 1 hora — el texto no cambia
             },
         });
-    } catch (error: any) {
-        console.error("[TTS] Error:", error.message);
+    } catch (error) {
+        await reportError(error, { action: "practica.audio", context: { lessonPracticeId: guard.practice.id } });
         return new Response("Error al generar audio", { status: 500 });
     }
 }

@@ -2,6 +2,7 @@ import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { guardPracticeDraft, readJsonBody } from "@/lib/practice/guard";
 import { checkDraftInputs } from "@/lib/practice/draft";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/generate-draft
@@ -39,8 +40,8 @@ export async function POST(req: Request) {
         const draft = await provider.generatePracticeDraft(topic, content, PRACTICE_LANGUAGE, { words, focus, level, ages });
 
         return Response.json(draft);
-    } catch (error: any) {
-        console.error("[GENERATE_DRAFT] Error:", error.message);
+    } catch (error) {
+        await reportError(error, { action: "practica.generar-borrador", context: { lessonId: body.lessonId as string } });
         return new Response("Error al generar el material de práctica", { status: 500 });
     }
 }

@@ -1,6 +1,7 @@
 import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { clampText, guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/evaluate
@@ -36,8 +37,8 @@ export async function POST(req: Request) {
         const result = await provider.evaluatePronunciation(expected, actual, PRACTICE_LANGUAGE);
 
         return Response.json(result);
-    } catch (error: any) {
-        console.error("[EVALUATE] Server Error:", error.message || error);
+    } catch (error) {
+        await reportError(error, { action: "practica.evaluar", context: { lessonPracticeId: guard.practice.id } });
         return new Response("Error al evaluar pronunciación", { status: 500 });
     }
 }

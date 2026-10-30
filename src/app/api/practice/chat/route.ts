@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         const reply = await provider.chat(messages, scenario);
 
         return Response.json({ message: reply });
-    } catch (error: any) {
+    } catch (error) {
         await reportError(error, {
             action: "practica.chat",
             context: { lessonPracticeId: guard.practice.id },
