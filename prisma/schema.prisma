@@ -545,6 +545,83 @@ model ActivityDay {
   @@index([instituteId, day])
 }
 
+// Registro de errores (ARQ-09).
+//
+// **Se agrupa por problema, no por fila.** Cada falla deja un `ErrorEvent`, pero
+// todas las que comparten huella (acción + tipo de error + mensaje normalizado)
+// cuelgan del mismo `ErrorIssue`. Diez fallas iguales son un problema que pasó
+// diez veces: los avisos y el panel trabajan sobre el problema.
+//
+// **Nada de datos personales.** `message` es la primera línea del error, recortada
+// y limpia (ver `src/lib/errors/report.ts`); el contexto lleva ids, nunca nombres
+// ni DNI. Quién falló se guarda como `subjectId` suelto, igual que `ActivityDay`:
+// sin relación con `User`/`Student`, así que borrar a la persona no arrastra nada.
+model ErrorIssue {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  action      String   // Qué se estaba haciendo: "asistencia.guardar", "render /courses/[id]"
+  kind        String   // Código de Prisma ("P2028") o nombre del error ("TypeError")
+  message     String
+  status      String   @default("OPEN") // OPEN, RESOLVED
+  count       Int      @default(0)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  resolvedAt  DateTime?
+
+  events      ErrorEvent[]
+  scopes      ErrorIssueScope[]
+
+  @@index([status, lastSeenAt])
+}
+
+// Un problema visto en un instituto. Existe para contestar «¿es la primera vez
+// que esto le pasa a *este* instituto?», que es lo que dispara el aviso: un
+// problema conocido que aparece en otro instituto también avisa, porque ese
+// instituto no sabe que ya está visto.
+//
+// `scope` es el `instituteId`, o "PLATAFORMA" cuando no hay instituto (el
+// superadmin, o una página pública que falló antes de resolverlo). No es nulo a
+// propósito: en Postgres dos nulos no chocan en una clave única.
+model ErrorIssueScope {
+  issueId     String
+  issue       ErrorIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  scope       String
+
+  count       Int      @default(0)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  // Cuándo salió el mail de este problema para este instituto. Nulo = todavía no.
+  notifiedAt  DateTime?
+
+  @@id([issueId, scope])
+}
+
+// Cada vez que falló. Es lo que crece, y por eso es lo único que la retención
+// borra de verdad: no es un dato del negocio sino un rastro técnico, y un error
+// de hace meses no sirve.
+model ErrorEvent {
+  id          String   @id @default(cuid())
+  issueId     String
+  issue       ErrorIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  instituteId String?
+  subjectType String?  // "USER" | "STUDENT"
+  subjectId   String?
+  role        String?  // Rol activo con el que operaba
+
+  // Si terminó en un cartel en pantalla. Sólo lo que el usuario vio manda aviso;
+  // lo que falló por detrás va al panel.
+  shownToUser Boolean  @default(true)
+
+  path        String?
+  context     Json?    // Sólo ids: { courseId, lessonId, ... }
+  createdAt   DateTime @default(now())
+
+  @@index([issueId, createdAt])
+  @@index([createdAt])
+}
+
 model Attendance {
   id          String   @id @default(cuid())
   studentId   String
