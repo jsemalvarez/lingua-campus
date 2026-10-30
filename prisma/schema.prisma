@@ -560,6 +560,9 @@ model ErrorIssue {
   id          String   @id @default(cuid())
   fingerprint String   @unique
   action      String   // Qué se estaba haciendo: "asistencia.guardar", "render /courses/[id]"
+  // PEDAGOGICO, PRACTICA_IA, RECURSOS_DOCENTE, ADMINISTRATIVO, COMUNICACION,
+  // ACCESO, PLATAFORMA. Sale de `action`, en `src/lib/errors/areas.ts`.
+  area        String
   kind        String   // Código de Prisma ("P2028") o nombre del error ("TypeError")
   message     String
   status      String   @default("OPEN") // OPEN, RESOLVED
@@ -572,6 +575,7 @@ model ErrorIssue {
   scopes      ErrorIssueScope[]
 
   @@index([status, lastSeenAt])
+  @@index([area, status])
 }
 
 // Un problema visto en un instituto. Existe para contestar «¿es la primera vez

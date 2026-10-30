@@ -5,6 +5,7 @@ CREATE TABLE "ErrorIssue" (
     "id" TEXT NOT NULL,
     "fingerprint" TEXT NOT NULL,
     "action" TEXT NOT NULL,
+    "area" TEXT NOT NULL,
     "kind" TEXT NOT NULL,
     "message" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'OPEN',
@@ -49,6 +50,9 @@ CREATE UNIQUE INDEX "ErrorIssue_fingerprint_key" ON "ErrorIssue"("fingerprint");
 
 -- CreateIndex
 CREATE INDEX "ErrorIssue_status_lastSeenAt_idx" ON "ErrorIssue"("status", "lastSeenAt");
+
+-- CreateIndex
+CREATE INDEX "ErrorIssue_area_status_idx" ON "ErrorIssue"("area", "status");
 
 -- CreateIndex
 CREATE INDEX "ErrorEvent_issueId_createdAt_idx" ON "ErrorEvent"("issueId", "createdAt");

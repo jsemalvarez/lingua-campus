@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { getAuthContext, type AuthContext } from "@/lib/authz";
+import { areaOf } from "./areas";
 
 /**
  * Punto único de registro de errores (ARQ-09).
@@ -66,6 +67,7 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
     try {
         const { kind, message } = describeError(error);
         const fingerprint = fingerprintOf(action, kind, message);
+        const area = areaOf(action);
 
         const auth = options.auth !== undefined ? options.auth : await safeAuthContext();
         const instituteId = options.instituteId ?? auth?.instituteId ?? null;
@@ -75,8 +77,10 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
         return await prisma.$transaction(async (tx) => {
             const issue = await tx.errorIssue.upsert({
                 where: { fingerprint },
-                create: { fingerprint, action, kind, message, count: 1, firstSeenAt: now, lastSeenAt: now },
-                update: { count: { increment: 1 }, lastSeenAt: now },
+                create: { fingerprint, action, area, kind, message, count: 1, firstSeenAt: now, lastSeenAt: now },
+                // El área se reescribe en cada falla: si se corrige el mapa, los
+                // problemas que siguen pasando se reubican solos.
+                update: { area, count: { increment: 1 }, lastSeenAt: now },
                 select: { id: true },
             });
 
