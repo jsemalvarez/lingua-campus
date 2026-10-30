@@ -9983,7 +9983,15 @@ pregunten, para poder escribirles primero. Lo que quedó definido:
   está vista y es el que va a preguntar. El mismo problema repetido en el mismo instituto no manda
   nada, suma al contador. Por Resend, que ya está.
 - **Solo avisa lo que el usuario vio.** Un error que terminó en un cartel en pantalla manda mail; uno
-  que falló por detrás sin que nadie lo note (el logo del recibo) va solo al panel.
+  que falló por detrás sin que nadie lo note (el logo del recibo) va solo al panel. Confirmado
+  también para la inscripción y la práctica con IA, aunque ahí lo silencioso duela —el acuse que no
+  le llega a la familia, el listening que vuelve sin preguntas—: se mira en el panel.
+- **Cada error lleva un área**, para distinguirlos en el panel sin abrir el detalle: Pedagógico,
+  Práctica con IA, Recursos del docente, Administrativo, Comunicación, Acceso y Plataforma (lo que
+  no es de ningún módulo). Práctica con IA y Recursos del docente van aparte a pedido. **El área es
+  la del trámite, no la de la pieza que falló**: el correo de acuse que no sale es Administrativo,
+  porque lo afectado fue una inscripción. Nadie la elige en su `catch`: sale del nombre de la acción
+  o de la ruta, escrita en un solo lugar.
 - **El mail alcanza para contestar sin abrir nada más:** instituto, rol (secretaria, docente,
   familia), qué estaba haciendo («Guardar asistencia, curso Children 4»), hora, y si vio un cartel.
 - **El resumen va en el panel del superadmin, no por mail.** Con un instituto y el producto estable, un
@@ -10011,6 +10019,12 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    contexto (instituto, usuario, acción). El patrón es el mismo de `getAuthContext` y
    `guardPracticeAi`: un solo lugar donde cambiar de destino después.
 2. Destino: la tabla propia, con la huella, el estado y los avisos decididos arriba.
+
+   **En curso en la rama `feat/registro-de-errores`** (29/10), fuera de `stage` para no mezclarse
+   con el lote que se promueve el finde. Hecho: las tablas, `reportError`, `instrumentation.ts`, las
+   áreas, y pasados al helper la inscripción, las ocho rutas de práctica con IA (más los tres
+   lugares donde Gemini degradaba sin avisar) y la asistencia. Falta: probarlo en local, el resto de
+   los `console.error`, el mail, el panel y la retención.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
