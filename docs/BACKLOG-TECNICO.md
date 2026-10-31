@@ -10035,7 +10035,18 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    La migración ya está aplicada en la base local, que comparte con `stage`: `migrate dev` desde
    `stage` la va a marcar como desconocida hasta que la rama se mezcle.
 
-   Falta: el panel, el resto de los `console.error` y la retención.
+   **El resto de los `console.error` del servidor ya pasó al registro** (`c9777e2`): 56 lugares en
+   29 archivos, cada uno con su acción y su nombre en castellano para el mail. La recuperación de
+   contraseña dejó de imprimir el DNI o el correo de quien la pide. Quedan afuera los diez archivos
+   que corren en el navegador; registrar lo que falla ahí es un paso aparte.
+
+   **Lo que sigue llegando crudo a la pantalla**, que es lo que abrió este ítem: 39 lugares en 23
+   archivos todavía devuelven `error.message` al usuario —las clases, las rutas de informes, admin,
+   perfil—. Ahora el error queda registrado antes, así que el mensaje se puede cambiar por uno en
+   castellano sin perder el detalle. Ojo: no todos son crudos, algunos son mensajes de negocio que
+   se tiran a propósito con `throw new Error("…")`, y hay que separarlos.
+
+   Falta: el panel, los mensajes crudos y la retención.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
