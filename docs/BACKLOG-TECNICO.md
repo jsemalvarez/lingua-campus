@@ -10046,7 +10046,15 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    castellano sin perder el detalle. Ojo: no todos son crudos, algunos son mensajes de negocio que
    se tiran a propósito con `throw new Error("…")`, y hay que separarlos.
 
-   Falta: el panel, los mensajes crudos y la retención.
+   **Los mensajes crudos, resueltos** (`c5fcea2`): los 31 lugares del servidor pasan por
+   `userMessageFor`. Para separar lo crudo de lo de negocio hay una clase `UserError`: un mensaje
+   escrito para el usuario («El pago ya fue anulado») se muestra tal cual y **no se registra**,
+   porque no es una falla; cualquier otra cosa se registra y se cambia por un mensaje en castellano.
+   El DNI o correo repetido de un alumno (`P2002`) dice cuál es. Quedan los componentes del
+   navegador, que muestran lo que les manda la API —ya limpio— salvo un corte de red, donde el
+   navegador pone «Failed to fetch» en inglés.
+
+   Falta: el panel, lo que falla en el navegador y la retención.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
