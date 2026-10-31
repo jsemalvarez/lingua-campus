@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
-import { reportError } from "@/lib/errors/report";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function GET(req: NextRequest) {
     try {
@@ -22,8 +22,10 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(templates);
     } catch (error: any) {
-        await reportError(error, { action: "informes.listar-plantillas" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudieron cargar las plantillas. Probá de nuevo en un momento.", { action: "informes.listar-plantillas" }) },
+            { status: 500 }
+        );
     }
 }
 
@@ -85,7 +87,9 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(template, { status: 201 });
     } catch (error: any) {
-        await reportError(error, { action: "informes.crear-plantilla" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo crear la plantilla. Probá de nuevo en un momento.", { action: "informes.crear-plantilla" }) },
+            { status: 500 }
+        );
     }
 }

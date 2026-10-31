@@ -88,6 +88,23 @@ const ACTION_LABELS: Record<string, string> = {
     "mensajes.abrir-adjunto": "Abrir un adjunto",
 
     "acceso.revisar-contrasenas": "Revisar las contraseñas por defecto",
+    "contrasena.cambiar": "Cambiar la contraseña",
+    "perfil.actualizar": "Guardar el perfil",
+
+    "cobros.anular": "Anular un cobro",
+    "caja.anular-gasto": "Anular un gasto",
+    "caja.anular-ingreso": "Anular un ingreso",
+    "alumnos.crear": "Dar de alta un alumno",
+    "alumnos.actualizar": "Guardar los datos de un alumno",
+    "cursos.crear": "Crear un curso",
+    "instituto.actualizar": "Guardar los datos del instituto",
+    "informes.avisar-firmantes": "Avisar a quienes tienen que firmar",
+    "informes.avisar-publicacion": "Avisar que se publicó el informe",
+
+    "plataforma.crear-instituto": "Crear un instituto",
+    "plataforma.editar-instituto": "Editar un instituto",
+    "plataforma.agregar-admin": "Agregar un administrador",
+    "plataforma.eliminar-admin": "Eliminar un administrador",
 };
 
 const ROLE_LABELS: Record<string, string> = {

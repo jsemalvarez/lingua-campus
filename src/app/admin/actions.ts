@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS } from "@/lib/defaultPasswords";
+import { uniqueViolationFields, userMessageFor } from "@/lib/errors/report";
 
 export async function createInstituteAction(formData: FormData) {
     // Protección: solo SUPERADMIN puede ejecutar esta acción
@@ -42,8 +43,9 @@ export async function createInstituteAction(formData: FormData) {
 
         revalidatePath("/admin/institutes");
         return { success: true, data: result };
-    } catch (error: any) {
-        return { success: false, error: error.message };
+    } catch (error) {
+        if (uniqueViolationFields(error)) return { success: false, error: "Ese subdominio, dominio o correo ya lo usa otro instituto o usuario." };
+        return { success: false, error: await userMessageFor(error, "No se pudo crear el instituto.", { action: "plataforma.crear-instituto" }) };
     }
 }
 
@@ -91,8 +93,9 @@ export async function editInstituteAction(formData: FormData) {
         revalidatePath("/admin/institutes");
         revalidatePath(`/admin/institutes/${id}`);
         return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Error al actualizar instituto" };
+    } catch (error) {
+        if (uniqueViolationFields(error)) return { success: false, error: "Ese dominio ya lo usa otro instituto." };
+        return { success: false, error: await userMessageFor(error, "No se pudo actualizar el instituto.", { action: "plataforma.editar-instituto" }) };
     }
 }
 
@@ -123,8 +126,9 @@ export async function addInstituteAdminAction(formData: FormData) {
 
         revalidatePath(`/admin/institutes/${instituteId}`);
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al agregar admin" };
+    } catch (e) {
+        if (uniqueViolationFields(e)) return { success: false, error: "El email ya está registrado" };
+        return { success: false, error: await userMessageFor(e, "No se pudo agregar el administrador.", { action: "plataforma.agregar-admin" }) };
     }
 }
 
@@ -138,7 +142,7 @@ export async function removeInstituteAdminAction(adminId: string, instituteId: s
 
         revalidatePath(`/admin/institutes/${instituteId}`);
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al eliminar admin" };
+    } catch (e) {
+        return { success: false, error: await userMessageFor(e, "No se pudo eliminar el administrador.", { action: "plataforma.eliminar-admin" }) };
     }
 }

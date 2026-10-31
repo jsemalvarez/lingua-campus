@@ -7,7 +7,7 @@ import {
     resolveSigners,
     templateRequiresSignature
 } from "@/lib/reports/signatures";
-import { reportError } from "@/lib/errors/report";
+import { reportError, userMessageFor } from "@/lib/errors/report";
 
 export async function PATCH(
     req: NextRequest,
@@ -299,7 +299,9 @@ export async function PATCH(
         return NextResponse.json({ success: true, count: updated.length, publishedAt: pubDate });
 
     } catch (error: any) {
-        await reportError(error, { action: "informes.publicar" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo publicar el informe. Probá de nuevo en un momento.", { action: "informes.publicar" }) },
+            { status: 500 }
+        );
     }
 }

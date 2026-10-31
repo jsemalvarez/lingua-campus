@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
 import { syncFinalExamLesson } from "@/lib/feeDue";
 import { dayFromKey, dayKey } from "@/lib/dates";
+import { userMessageFor } from "@/lib/errors/report";
 
 // Función auxiliar para obtener el usuario autenticado y su instituto
 async function getAuthAndInstitute() {
@@ -69,8 +70,8 @@ export async function createCourseAction(formData: FormData) {
 
         revalidatePath("/courses");
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al crear curso" };
+    } catch (e) {
+        return { success: false, error: await userMessageFor(e, "No se pudo crear el curso. Probá de nuevo en un momento.", { action: "cursos.crear" }) };
     }
 }
 

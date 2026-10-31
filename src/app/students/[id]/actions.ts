@@ -6,7 +6,8 @@ import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
 import { invalidateResetTokens } from "@/lib/passwordReset";
-import { reportError } from "@/lib/errors/report";
+import { reportError, uniqueViolationFields, userMessageFor } from "@/lib/errors/report";
+import { repeatedStudentMessage, UserError } from "@/lib/errors/userError";
 
 /** Ficha del alumno: los tres roles que ven "Estudiantes" en el menú. */
 const STUDENT_EDITORS = ["ADMIN", "SECRETARY", "TEACHER"] as const;
@@ -74,7 +75,7 @@ export async function editStudentAction(formData: FormData) {
                 // Verificar que el nuevo email no esté en uso
                 const conflict = await prisma.user.findUnique({ where: { email: normalizedNewEmail } });
                 if (conflict) {
-                    throw new Error(`El email ${normalizedNewEmail} ya está en uso por otro usuario.`);
+                    throw new UserError(`El email ${normalizedNewEmail} ya está en uso por otro usuario.`);
                 }
 
                 // Actualizar el usuario
@@ -117,8 +118,10 @@ export async function editStudentAction(formData: FormData) {
         revalidatePath(`/students/${studentId}`);
         revalidatePath("/students");
         return { success: true };
-    } catch (err: any) {
-        return { success: false, error: err.message || "Error de base de datos al actualizar el estudiante" };
+    } catch (err) {
+        const repeated = uniqueViolationFields(err);
+        if (repeated) return { success: false, error: repeatedStudentMessage(repeated) };
+        return { success: false, error: await userMessageFor(err, "No se pudieron guardar los datos del alumno. Probá de nuevo en un momento.", { action: "alumnos.actualizar" }) };
     }
 }
 

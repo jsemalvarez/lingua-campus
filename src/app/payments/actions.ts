@@ -7,7 +7,8 @@ import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
 import { feeAfterPayment, paymentProblem } from "@/lib/feePayment";
-import { reportError } from "@/lib/errors/report";
+import { reportError, userMessageFor } from "@/lib/errors/report";
+import { UserError } from "@/lib/errors/userError";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -503,8 +504,8 @@ export async function voidExpenseAction(expenseId: string, reason?: string) {
                 where: { id: expenseId, instituteId: user.instituteId as string }
             });
 
-            if (!expense) throw new Error("Gasto no encontrado");
-            if (expense.status === "VOIDED") throw new Error("El gasto ya está anulado");
+            if (!expense) throw new UserError("Gasto no encontrado");
+            if (expense.status === "VOIDED") throw new UserError("El gasto ya está anulado");
 
             // Marcar gasto como anulado
             await tx.expense.update({
@@ -542,8 +543,8 @@ export async function voidExpenseAction(expenseId: string, reason?: string) {
 
         revalidatePath("/payments");
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al anular el gasto" };
+    } catch (e) {
+        return { success: false, error: await userMessageFor(e, "No se pudo anular el gasto. Probá de nuevo en un momento.", { action: "caja.anular-gasto" }) };
     }
 }
 
@@ -685,8 +686,8 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
 
             const payment = await tx.payment.findUnique({ where: { id: paymentId } });
 
-            if (!payment) throw new Error("Pago no encontrado");
-            if (payment.status === "VOIDED") throw new Error("El pago ya fue anulado");
+            if (!payment) throw new UserError("Pago no encontrado");
+            if (payment.status === "VOIDED") throw new UserError("El pago ya fue anulado");
 
             // La cuota se lee después de bloquearla, no con un `include` en la consulta
             // anterior: leerla antes del lock es leer un valor que otra transacción
@@ -695,8 +696,8 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
 
             const fee = await tx.fee.findUnique({ where: { id: payment.feeId } });
 
-            if (!fee) throw new Error("Cuota no encontrada");
-            if (fee.instituteId !== user.instituteId) throw new Error("Acceso denegado");
+            if (!fee) throw new UserError("Cuota no encontrada");
+            if (fee.instituteId !== user.instituteId) throw new UserError("Acceso denegado");
 
             // El excedente es una propiedad de la cuota entera, no de un pago suelto:
             // `max(0, capital cobrado - importe de la cuota)`. Lo que este pago aportó al
@@ -743,7 +744,7 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                         select: { creditBalance: true }
                     });
 
-                    if (!student) throw new Error("Alumno no encontrado");
+                    if (!student) throw new UserError("Alumno no encontrado");
 
                     // Decir "anulá primero los pagos hechos con ese saldo" sin decir cuáles
                     // deja al operador buscándolos, y no están en el libro mayor: el asiento
@@ -763,7 +764,7 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
                         creditPayments.map(p => formatFeeLabel(p.fee.type, p.fee.month, p.fee.year))
                     )];
 
-                    throw new Error(
+                    throw new UserError(
                         `No se puede anular: hay que devolver $${formatCurrency(-creditDelta)} de saldo a favor ` +
                         `y el alumno sólo tiene $${formatCurrency(student.creditBalance)}. ` +
                         (heldBy.length > 0
@@ -841,8 +842,8 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
         revalidatePath("/payments/debtors");
         revalidatePath("/students");
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al anular pago" };
+    } catch (e) {
+        return { success: false, error: await userMessageFor(e, "No se pudo anular el pago. Probá de nuevo en un momento.", { action: "cobros.anular" }) };
     }
 }
 
@@ -856,8 +857,8 @@ export async function voidIncomeAction(incomeId: string, reason?: string) {
                 where: { id: incomeId, instituteId: user.instituteId as string }
             });
 
-            if (!income) throw new Error("Ingreso no encontrado");
-            if (income.status === "VOIDED") throw new Error("El ingreso ya fue anulado");
+            if (!income) throw new UserError("Ingreso no encontrado");
+            if (income.status === "VOIDED") throw new UserError("El ingreso ya fue anulado");
 
             // Marcar ingreso como anulado
             await tx.miscellaneousIncome.update({
@@ -892,8 +893,8 @@ export async function voidIncomeAction(incomeId: string, reason?: string) {
 
         revalidatePath("/payments");
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al anular el ingreso" };
+    } catch (e) {
+        return { success: false, error: await userMessageFor(e, "No se pudo anular el ingreso. Probá de nuevo en un momento.", { action: "caja.anular-ingreso" }) };
     }
 }
 

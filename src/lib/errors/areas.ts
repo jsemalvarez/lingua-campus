@@ -48,6 +48,7 @@ const BY_ACTION: Record<string, ErrorArea> = {
     sueldos: "ADMINISTRATIVO",
     docentes: "ADMINISTRATIVO",
     recibos: "ADMINISTRATIVO",
+    instituto: "ADMINISTRATIVO",
 
     mensajes: "COMUNICACION",
     avisos: "COMUNICACION",

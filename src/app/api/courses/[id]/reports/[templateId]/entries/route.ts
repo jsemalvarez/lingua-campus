@@ -5,7 +5,7 @@ import { instituteMonth } from "@/lib/dates";
 import { reportContentHash } from "@/lib/reports/signatures";
 import { asSignedHashes, fallenStudentIds } from "@/lib/reports/batchSignatures";
 import { notifyAfterGradeEdit } from "@/lib/reports/batchSignatureNotices";
-import { reportError } from "@/lib/errors/report";
+import { reportError, userMessageFor } from "@/lib/errors/report";
 
 export async function GET(
     req: NextRequest,
@@ -122,8 +122,10 @@ export async function GET(
         });
 
     } catch (error: any) {
-        await reportError(error, { action: "informes.ver-notas" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo abrir la planilla. Probá de nuevo en un momento.", { action: "informes.ver-notas" }) },
+            { status: 500 }
+        );
     }
 }
 
@@ -343,7 +345,9 @@ export async function POST(
         return NextResponse.json({ success: true, count: result.length, reports: result });
 
     } catch (error: any) {
-        await reportError(error, { action: "informes.guardar-notas" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo guardar la planilla. Probá de nuevo en un momento.", { action: "informes.guardar-notas" }) },
+            { status: 500 }
+        );
     }
 }

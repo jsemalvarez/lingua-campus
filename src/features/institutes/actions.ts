@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function updateInstituteByAdminAction(formData: FormData) {
     // El rol salía del JWT, no de la base: quien tuviera un token viejo de
@@ -57,7 +58,7 @@ export async function updateInstituteByAdminAction(formData: FormData) {
         revalidatePath("/dashboard/settings/institute");
         revalidatePath("/dashboard"); // Por si se muestra el logo o nombre en el dashboard
         return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Error al actualizar los datos del instituto" };
+    } catch (error) {
+        return { success: false, error: await userMessageFor(error, "No se pudieron guardar los datos del instituto. Probá de nuevo en un momento.", { action: "instituto.actualizar" }) };
     }
 }

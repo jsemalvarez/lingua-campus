@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSignedUrl } from "@/lib/supabase-server";
 import prisma from "@/lib/prisma";
-import { reportError } from "@/lib/errors/report";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function GET(req: NextRequest) {
     try {
@@ -46,9 +46,8 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ url: signedUrl });
     } catch (err: any) {
-        await reportError(err, { action: "mensajes.abrir-adjunto" });
         return NextResponse.json(
-            { error: err.message ?? "Error interno del servidor." },
+            { error: await userMessageFor(err, "No se pudo abrir el adjunto. Probá de nuevo en un momento.", { action: "mensajes.abrir-adjunto" }) },
             { status: 500 }
         );
     }

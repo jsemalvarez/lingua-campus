@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_STAFF, getAuthContext } from "@/lib/authz";
-import { reportError } from "@/lib/errors/report";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function GET(
     req: NextRequest,
@@ -66,7 +66,9 @@ export async function GET(
 
         return NextResponse.json(reports);
     } catch (error: any) {
-        await reportError(error, { action: "informes.ver-del-alumno" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudieron cargar los informes. Probá de nuevo en un momento.", { action: "informes.ver-del-alumno" }) },
+            { status: 500 }
+        );
     }
 }

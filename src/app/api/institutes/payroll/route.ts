@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateBulkTeacherPayroll } from "@/lib/payroll";
 import { requireRole } from "@/lib/authz";
-import { reportError } from "@/lib/errors/report";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function GET(req: NextRequest) {
     try {
@@ -26,7 +26,9 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(data);
     } catch (error: any) {
-        await reportError(error, { action: "sueldos.ver-liquidacion-general" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo cargar la liquidación de sueldos. Probá de nuevo en un momento.", { action: "sueldos.ver-liquidacion-general" }) },
+            { status: 500 }
+        );
     }
 }

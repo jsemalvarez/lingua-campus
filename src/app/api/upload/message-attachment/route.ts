@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { uploadToStorage } from "@/lib/supabase-server";
 import prisma from "@/lib/prisma";
 import { randomBytes } from "crypto";
-import { reportError } from "@/lib/errors/report";
+import { userMessageFor } from "@/lib/errors/report";
 
 // ─── Allowed MIME types ───────────────────────────────────────────────────────
 const ALLOWED_MIME_TYPES = new Set([
@@ -100,9 +100,8 @@ export async function POST(req: NextRequest) {
             sizeBytes: file.size,
         });
     } catch (err: any) {
-        await reportError(err, { action: "mensajes.subir-adjunto" });
         return NextResponse.json(
-            { error: err.message ?? "Error interno del servidor." },
+            { error: await userMessageFor(err, "No se pudo adjuntar el archivo. Probá de nuevo en un momento.", { action: "mensajes.subir-adjunto" }) },
             { status: 500 }
         );
     }

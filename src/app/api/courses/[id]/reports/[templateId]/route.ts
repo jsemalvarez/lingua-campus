@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
-import { reportError } from "@/lib/errors/report";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function DELETE(
     req: NextRequest,
@@ -64,7 +64,9 @@ export async function DELETE(
         return NextResponse.json({ success: true });
 
     } catch (error: any) {
-        await reportError(error, { action: "informes.desvincular-del-curso" });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo quitar el informe del curso. Probá de nuevo en un momento.", { action: "informes.desvincular-del-curso" }) },
+            { status: 500 }
+        );
     }
 }

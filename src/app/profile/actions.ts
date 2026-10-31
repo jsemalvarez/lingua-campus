@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { isDefaultForStudent, isDefaultForUser } from "@/lib/defaultPasswords";
 import { getAuthContext } from "@/lib/authz";
 import { invalidateResetTokens } from "@/lib/passwordReset";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function updateProfileAction(formData: FormData) {
     const auth = await getAuthContext();
@@ -79,8 +80,8 @@ export async function updateProfileAction(formData: FormData) {
 
         revalidatePath("/profile");
         return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Error al actualizar el perfil" };
+    } catch (error) {
+        return { success: false, error: await userMessageFor(error, "No se pudo guardar tu perfil. Probá de nuevo en un momento.", { action: "perfil.actualizar", auth }) };
     }
 }
 
@@ -175,7 +176,7 @@ export async function changePasswordAction(formData: FormData) {
         }
 
         return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al cambiar la contraseña." };
+    } catch (e) {
+        return { success: false, error: await userMessageFor(e, "No se pudo cambiar la contraseña. Probá de nuevo en un momento.", { action: "contrasena.cambiar", auth }) };
     }
 }

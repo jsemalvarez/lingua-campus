@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAuthContext, type AuthContext } from "@/lib/authz";
 import { areaOf } from "./areas";
 import { alertIfFirstSeenInScope } from "./alert";
+import { UserError } from "./userError";
 
 /**
  * Punto único de registro de errores (ARQ-09).
@@ -133,6 +134,43 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
         console.error("[reportError] No se pudo registrar el error:", reportFailure);
         return null;
     }
+}
+
+/**
+ * Lo que va a la pantalla cuando algo sale por el `catch` (ARQ-09).
+ *
+ * Un `UserError` es un mensaje escrito para el usuario: se devuelve tal cual y
+ * **no se registra**, porque no es una falla. Cualquier otra cosa —Prisma, un
+ * proveedor, un `TypeError`— se registra y se cambia por `fallback`, que es un
+ * mensaje en castellano. Así el error crudo nunca llega a la pantalla.
+ *
+ * ```ts
+ * } catch (e) {
+ *     return { success: false, error: await userMessageFor(e, "No se pudo anular el pago.", { action: "cobros.anular" }) };
+ * }
+ * ```
+ */
+export async function userMessageFor(error: unknown, fallback: string, options: ReportOptions): Promise<string> {
+    if (error instanceof UserError) return error.message;
+    await reportError(error, options);
+    return fallback;
+}
+
+/**
+ * Los campos de la restricción única que saltó (el `P2002` de Prisma), o `null`
+ * si no fue eso. Un dato repetido no es una falla: es algo que el usuario puede
+ * arreglar, y hay que decirle cuál es en vez de registrarlo.
+ *
+ * `meta.target` llega como lista de campos o, según la versión, como el nombre de
+ * la restricción (`Student_dni_instituteId_key`): las dos sirven para buscar el
+ * campo con `includes`.
+ */
+export function uniqueViolationFields(error: unknown): string[] | null {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") return null;
+    const target = error.meta?.target;
+    if (Array.isArray(target)) return target.map(String);
+    if (typeof target === "string") return target.split("_");
+    return [];
 }
 
 /** Fuera de un request —o con la base caída— no hay sesión que leer, y no es motivo para perder el error. */
