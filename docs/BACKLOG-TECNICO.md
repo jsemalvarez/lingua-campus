@@ -10054,7 +10054,17 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    navegador, que muestran lo que les manda la API —ya limpio— salvo un corte de red, donde el
    navegador pone «Failed to fetch» en inglés.
 
-   Falta: el panel, lo que falla en el navegador y la retención.
+   **Lo que falla en el navegador, también** (`12de081`): avisa a `POST /api/errors`, que registra
+   con el mismo `reportError`. Entra por `reportClientError` en los `catch` (audio de speaking,
+   quiz de listening, guardar la sesión de práctica, recibos, sueldos, plantillas), por un escucha
+   global en el layout (lo que se escapa sin `catch`, como no visto) y por `SectionError` (la
+   pantalla que se rompe en el navegador; lo del servidor trae `digest` y no se cuenta dos veces).
+   La ruta es pública por la inscripción, así que valida la acción, recorta todo y pone un tope por
+   minuto. Donde el `catch` envuelve un pedido a nuestra API, sólo se registra lo que falló en el
+   navegador: lo de la API ya lo registró el servidor. Verificado en local el 31/10. El «Failed to
+   fetch» en inglés de un corte de red sigue apareciendo en mensajes y plantillas.
+
+   Falta: el panel y la retención.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
