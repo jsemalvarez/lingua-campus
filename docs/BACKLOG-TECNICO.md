@@ -10023,8 +10023,19 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    **En curso en la rama `feat/registro-de-errores`** (29/10), fuera de `stage` para no mezclarse
    con el lote que se promueve el finde. Hecho: las tablas, `reportError`, `instrumentation.ts`, las
    áreas, y pasados al helper la inscripción, las ocho rutas de práctica con IA (más los tres
-   lugares donde Gemini degradaba sin avisar) y la asistencia. Falta: probarlo en local, el resto de
-   los `console.error`, el mail, el panel y la retención.
+   lugares donde Gemini degradaba sin avisar) y la asistencia. El mail también (`bafd34a`): va a
+   `ERROR_ALERT_EMAIL`, que hay que cargar en stage y en prod; vacía, no avisa a nadie.
+
+   **Verificado en local el 31/10** con las claves de Gemini y Resend inválidas a propósito:
+   inscripción (un problema Administrativo, dos veces, sin sesión pero en su instituto), chat de
+   práctica (Práctica con IA, visto, alumno) y el mail (uno en la primera falla, ninguno en la
+   segunda). La prueba destapó dos errores, corregidos antes de salir de la rama: el import de
+   `instrumentation.ts` arrastraba `next-auth` al bundle de edge y **dejaba el campus entero en
+   500** (`c261cdb`), y de Gemini se guardaba sólo «Gemini API 400: {», sin el motivo (`53df2d8`).
+   La migración ya está aplicada en la base local, que comparte con `stage`: `migrate dev` desde
+   `stage` la va a marcar como desconocida hasta que la rama se mezcle.
+
+   Falta: el panel, el resto de los `console.error` y la retención.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
