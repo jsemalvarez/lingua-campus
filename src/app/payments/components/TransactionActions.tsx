@@ -6,6 +6,7 @@ import { voidExpenseAction, voidPaymentAction, voidIncomeAction } from "../actio
 import { Download, Loader2 } from "lucide-react";
 import { downloadPaymentReceipt } from "@/lib/pdf/paymentReceipt";
 import { Portal } from "@/components/ui/Portal";
+import { reportClientError } from "@/lib/errors/client";
 
 interface TransactionActionsProps {
     tx: {
@@ -42,7 +43,7 @@ export function TransactionActions({ tx, alwaysVisible = false }: TransactionAct
             const error = await downloadPaymentReceipt(tx.id);
             if (error) alert(error);
         } catch (error) {
-            console.error(error);
+            reportClientError(error, { action: "recibos.descargar", shownToUser: true, context: { paymentId: tx.id } });
             alert("Error al descargar el comprobante");
         } finally {
             setIsDownloading(false);

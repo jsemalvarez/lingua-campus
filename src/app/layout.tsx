@@ -5,6 +5,7 @@ import { Providers } from "@/components/Providers";
 import { headers } from "next/headers";
 import { getTenantByHost } from "@/lib/tenant";
 import { TenantProvider } from "@/components/providers/TenantProvider";
+import { ClientErrorListener } from "@/components/ClientErrorListener";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -114,6 +115,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className={`${inter.className} antialiased min-h-screen bg-background text-foreground`}>
+        <ClientErrorListener />
         <TenantProvider tenant={tenant}>
           <Providers>
             {children}

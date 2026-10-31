@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
+import { failedInBrowser, reportClientError } from "@/lib/errors/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -832,7 +833,7 @@ export function ReportTemplateManager() {
                 const data = await response.json();
                 setTemplates(data);
             } catch (err: any) {
-                console.error(err);
+                if (failedInBrowser(err)) reportClientError(err, { action: "informes.listar-plantillas", shownToUser: true });
                 setError(err.message || "Error de conexión con el servidor.");
             } finally {
                 setLoading(false);
@@ -878,7 +879,7 @@ export function ReportTemplateManager() {
             setEditingId(null);
             setCreatingNew(false);
         } catch (err: any) {
-            console.error(err);
+            if (failedInBrowser(err)) reportClientError(err, { action: "informes.editar-plantilla", shownToUser: true });
             setError(err.message || "Error al guardar la plantilla.");
             throw err; // bubble up to editor for loading state
         }
@@ -906,7 +907,7 @@ export function ReportTemplateManager() {
             const saved = await response.json();
             setTemplates([saved, ...templates]);
         } catch (err: any) {
-            console.error(err);
+            if (failedInBrowser(err)) reportClientError(err, { action: "informes.crear-plantilla", shownToUser: true });
             setError(err.message || "Error al duplicar la plantilla.");
         }
     }
@@ -924,7 +925,7 @@ export function ReportTemplateManager() {
             setTemplates(templates.filter((t) => t.id !== id));
             setDeletingId(null);
         } catch (err: any) {
-            console.error(err);
+            if (failedInBrowser(err)) reportClientError(err, { action: "informes.eliminar-plantilla", shownToUser: true });
             setError(err.message || "Error al eliminar la plantilla.");
         }
     }

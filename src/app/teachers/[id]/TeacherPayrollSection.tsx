@@ -7,6 +7,7 @@ import { DollarSign, Clock, Calendar as CalendarIcon, Loader2, CheckCircle, Aler
 import { formatDate, instituteMonth, instituteTodayKey, monthDays } from "@/lib/dates";
 import { getMonthName } from "@/lib/utils";
 import { processTeacherPayment } from "../actions";
+import { reportClientError } from "@/lib/errors/client";
 
 interface PayrollItem {
     id: string;
@@ -89,7 +90,7 @@ export function TeacherPayrollSection({
                 setSelectedLessonIds(new Set(pendingIds));
             }
         } catch (error) {
-            console.error("Error fetching payroll:", error);
+            reportClientError(error, { action: "sueldos.ver-liquidacion", context: { teacherId } });
         } finally {
             setLoading(false);
         }

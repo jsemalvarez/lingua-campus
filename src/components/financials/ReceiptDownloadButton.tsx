@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { downloadPaymentReceipt } from "@/lib/pdf/paymentReceipt";
 import { cn } from "@/lib/utils";
+import { reportClientError } from "@/lib/errors/client";
 
 interface ReceiptDownloadButtonProps {
     paymentId: string;
@@ -28,7 +29,7 @@ export function ReceiptDownloadButton({
             const error = await downloadPaymentReceipt(paymentId);
             if (error) alert(error);
         } catch (error) {
-            console.error(error);
+            reportClientError(error, { action: "recibos.descargar", shownToUser: true, context: { paymentId } });
             alert("Error al descargar el comprobante");
         } finally {
             setIsDownloading(false);

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
 import { formatDate } from '@/lib/dates';
+import { reportClientError } from '@/lib/errors/client';
 
 interface ReceiptData {
     receiptNumber: string;
@@ -74,7 +75,9 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
                 
                 currentY += logoHeight + 2;
             } catch (e) {
-                console.error('Logo failed to load:', e);
+                // El recibo sale igual, con el nombre en texto: nadie se entera de
+                // que el logo nunca estuvo. Va al panel, sin aviso.
+                reportClientError(e, { action: 'recibos.cargar-logo' });
                 doc.setFontSize(16);
                 doc.setFont('helvetica', 'bold');
                 doc.text((data.institute.name || 'INSTITUTO').toUpperCase(), centerX, currentY + 5, { align: 'center' });
@@ -279,6 +282,7 @@ export const generatePaymentReceipt = async (data: ReceiptData) => {
 
         doc.save(`Recibo_${data.receiptNumber || Date.now()}.pdf`);
     } catch (error) {
-        console.error('PDF Generation Error:', error);
+        // Se apretó «descargar» y no bajó nada, sin cartel.
+        reportClientError(error, { action: 'recibos.generar-pdf' });
     }
 };

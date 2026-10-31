@@ -66,6 +66,9 @@ const ACTION_LABELS: Record<string, string> = {
     "matriculas.generar-masivas": "Generar las matrículas",
     "matriculas.cargar-examen-final": "Cargar el examen final del curso",
     "recibos.cargar": "Abrir un recibo",
+    "recibos.descargar": "Descargar un recibo",
+    "recibos.generar-pdf": "Armar el PDF del recibo",
+    "recibos.cargar-logo": "Poner el logo en el recibo",
     "alumnos.cambiar-curso": "Cambiar de curso a un alumno",
     "alumnos.generar-enlace-perfil": "Generar el enlace para completar datos",
     "alumnos.abrir-enlace-perfil": "Abrir el enlace para completar datos",
@@ -182,7 +185,11 @@ function actionLabel(action: string): string {
     if (ACTION_LABELS[action]) return ACTION_LABELS[action];
     // Lo que llega por instrumentation.ts: "render /payments", "route /api/…".
     const route = action.match(/^(\w+) (\/\S*)$/);
-    if (route) return route[1] === "render" ? `Abrir ${route[2]}` : `Pedido a ${route[2]}`;
+    if (route) {
+        if (route[1] === "render") return `Abrir ${route[2]}`;
+        if (route[1] === "navegador") return `Usar ${route[2]} (falló en el navegador)`;
+        return `Pedido a ${route[2]}`;
+    }
     return action;
 }
 

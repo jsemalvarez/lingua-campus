@@ -11,6 +11,7 @@ import { addMonths, instituteMonth, instituteTodayKey, monthDays } from "@/lib/d
 import { getMonthName } from "@/lib/utils";
 import { processBulkPayrollAction } from "@/app/teachers/actions";
 import { Portal } from "@/components/ui/Portal";
+import { reportClientError } from "@/lib/errors/client";
 
 interface Teacher {
     id: string;
@@ -104,7 +105,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
             });
             setSettlements(newSettlements);
         } catch (error) {
-            console.error("Error fetching bulk payroll:", error);
+            reportClientError(error, { action: "sueldos.ver-liquidacion-general", shownToUser: true });
             setStatus("error");
         } finally {
             setCalculating(false);
