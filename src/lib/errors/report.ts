@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { getAuthContext, type AuthContext } from "@/lib/authz";
 import { areaOf } from "./areas";
+import { alertIfFirstSeenInScope } from "./alert";
 
 /**
  * Punto único de registro de errores (ARQ-09).
@@ -74,7 +75,7 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
         const scope = instituteId ?? NO_INSTITUTE_SCOPE;
         const now = new Date();
 
-        return await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             const issue = await tx.errorIssue.upsert({
                 where: { fingerprint },
                 create: { fingerprint, action, area, kind, message, count: 1, firstSeenAt: now, lastSeenAt: now },
@@ -114,6 +115,20 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
 
             return { issueId: issue.id, isNewInScope };
         });
+
+        // Fuera de la transacción: un mail no puede tenerla abierta, y si no sale
+        // el error igual queda guardado. `alertIfFirstSeenInScope` no tira.
+        if (shownToUser) {
+            await alertIfFirstSeenInScope({
+                issueId: result.issueId,
+                scope,
+                role: auth?.activeRole ?? null,
+                context,
+                at: now,
+            });
+        }
+
+        return result;
     } catch (reportFailure) {
         console.error("[reportError] No se pudo registrar el error:", reportFailure);
         return null;
