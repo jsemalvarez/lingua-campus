@@ -146,13 +146,27 @@ export function describeError(error: unknown): { kind: string; message: string }
         return { kind: error.errorCode ?? "PrismaInit", message: clean(firstLine(error.message)) };
     }
     if (error instanceof Error) {
-        return { kind: error.name || "Error", message: clean(firstLine(error.message)) };
+        return { kind: error.name || "Error", message: clean(summarize(error.message)) };
     }
     return { kind: "Unknown", message: clean(firstLine(String(error))) };
 }
 
 function firstLine(text: string): string {
     return text.split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+}
+
+/**
+ * La primera línea, salvo cuando abre un JSON: los proveedores devuelven
+ * `Gemini API 400: {` y el motivo viene adentro, en `"message"`. Quedarse con la
+ * primera línea guardaba sólo `Gemini API 400: {`, que no dice nada.
+ */
+function summarize(text: string): string {
+    const first = firstLine(text);
+    if (!/[{[]$/.test(first)) return first;
+
+    const inner = text.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1];
+    const head = first.replace(/[{[]$/, "").trim();
+    return inner ? `${head} ${inner}` : head;
 }
 
 function lastLine(text: string): string {
