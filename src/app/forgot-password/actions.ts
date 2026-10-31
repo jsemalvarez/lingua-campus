@@ -8,6 +8,7 @@ import { instituteBaseUrl } from "@/lib/tenant";
 import { issueResetToken, RESET_TOKEN_TTL_MINUTES, type ResetSubject } from "@/lib/passwordReset";
 import { createNotificationForRoles } from "@/app/actions/notifications";
 import { INSTITUTE_ADMINS } from "@/lib/authz";
+import { reportError } from "@/lib/errors/report";
 
 type InstitutoDelCorreo = {
     name: string;
@@ -370,7 +371,7 @@ export async function requestPasswordResetAction(formData: FormData) {
             // Sin el token ni el enlace: un log no es lugar para algo que sirve
             // para entrar.
             if (envio.status === "rejected") {
-                console.error(`[forgot-password] falló un envío de "${identifier}":`, envio.reason);
+                await reportError(envio.reason, { action: "contrasena.recuperar-enviar", shownToUser: false, auth: null });
             }
         }
 
@@ -381,7 +382,7 @@ export async function requestPasswordResetAction(formData: FormData) {
             await avisarAlInstituto(cuenta, "no-salio");
         }
     } catch (error) {
-        console.error(`[forgot-password] falló el pedido de "${identifier}":`, error);
+        await reportError(error, { action: "contrasena.recuperar", shownToUser: false, auth: null });
     }
 
     return respuesta;

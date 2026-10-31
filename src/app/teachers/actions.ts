@@ -7,6 +7,7 @@ import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/authz";
 import { invalidateResetTokens } from "@/lib/passwordReset";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * "Personal" es un módulo de administración: es lo que ya decide el menú y lo
@@ -80,7 +81,7 @@ export async function createTeacherAction(formData: FormData) {
         revalidatePath("/courses");
         return { success: true };
     } catch (e: any) {
-        console.error("Error creating teacher:", e);
+        await reportError(e, { action: "docentes.crear" });
         return { success: false, error: "Error de base de datos al crear profesor." };
     }
 }
@@ -128,7 +129,7 @@ export async function updateTeacherAction(formData: FormData) {
         revalidatePath(`/teachers/${teacherId}`);
         return { success: true };
     } catch (e: any) {
-        console.error("Error updating teacher:", e);
+        await reportError(e, { action: "docentes.actualizar" });
         return { success: false, error: "Error de base de datos al actualizar profesor." };
     }
 }
@@ -162,7 +163,7 @@ export async function resetTeacherPassword(teacherId: string, customPassword?: s
 
         return { success: true, newPassword };
     } catch (e) {
-        console.error("Error resetting password:", e);
+        await reportError(e, { action: "docentes.restablecer-contrasena" });
         return { success: false, error: "Error al restablecer la contraseña" };
     }
 }
@@ -207,7 +208,7 @@ export async function softDeleteTeacher(teacherId: string) {
         revalidatePath("/dashboard");
         return { success: true };
     } catch (e) {
-        console.error("Error soft deleting teacher:", e);
+        await reportError(e, { action: "docentes.eliminar" });
         return { success: false, error: "Error de base de datos al eliminar el profesor" };
     }
 }
@@ -296,7 +297,7 @@ export async function processTeacherPayment(
         revalidatePath("/payments/payroll");
         return { success: true };
     } catch (e) {
-        console.error("Error processing payroll payment:", e);
+        await reportError(e, { action: "sueldos.registrar-pago" });
         return { success: false, error: "Error al registrar el pago" };
     }
 }
@@ -390,7 +391,7 @@ export async function processBulkPayrollAction(
 
         return { success: true };
     } catch (e) {
-        console.error("Error processing bulk payroll:", e);
+        await reportError(e, { action: "sueldos.pagar-masivo" });
         return { success: false, error: "Error al procesar los pagos masivos" };
     }
 }

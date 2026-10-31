@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { reportError } from "@/lib/errors/report";
 
 export async function updateCourseSortOrderAction(sortedCourseIds: string[]) {
     try {
@@ -39,7 +40,7 @@ export async function updateCourseSortOrderAction(sortedCourseIds: string[]) {
         return { success: true };
 
     } catch (error) {
-        console.error("Error updating course sort order:", error);
+        await reportError(error, { action: "cursos.ordenar" });
         return { success: false, error: "Error interno al guardar el nuevo orden" };
     }
 }

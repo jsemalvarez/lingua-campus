@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireCourseWriteAccess } from "@/lib/lessonAccess";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * Crea una clase, un TP o un examen desde el libro de temas.
@@ -49,7 +50,7 @@ export async function createLessonAction(formData: FormData) {
         revalidatePath(`/courses/${courseId}`);
         return { success: true, lessonId: lesson.id };
     } catch (error: any) {
-        console.error("Error creating lesson:", error);
+        await reportError(error, { action: "clase.crear" });
         return { success: false, error: error.message || "No se pudo crear la clase" };
     }
 }
@@ -113,7 +114,7 @@ export async function editLessonAction(formData: FormData) {
         revalidatePath(`/courses/${courseId}`);
         return { success: true };
     } catch (error: any) {
-        console.error("Error editing lesson:", error);
+        await reportError(error, { action: "clase.editar" });
         return { success: false, error: error.message || "No se pudo editar la clase" };
     }
 }
@@ -149,7 +150,7 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
         revalidatePath(`/courses/${courseId}`);
         return { success: true };
     } catch (error: any) {
-        console.error("Error deleting lesson:", error);
+        await reportError(error, { action: "clase.eliminar" });
         return { success: false, error: error.message || "No se pudo eliminar la clase" };
     }
 }
@@ -227,7 +228,7 @@ export async function generateLessonsAction(courseId: string, startDate: Date, e
         revalidatePath(`/courses/${courseId}`);
         return { success: true, count: lessonsToCreate.length };
     } catch (error: any) {
-        console.error("Error generating lessons:", error);
+        await reportError(error, { action: "clase.generar-calendario" });
         return { success: false, error: error.message || "No se pudieron generar las clases" };
     }
 }

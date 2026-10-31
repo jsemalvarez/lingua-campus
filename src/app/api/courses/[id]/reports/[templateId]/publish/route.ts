@@ -7,6 +7,7 @@ import {
     resolveSigners,
     templateRequiresSignature
 } from "@/lib/reports/signatures";
+import { reportError } from "@/lib/errors/report";
 
 export async function PATCH(
     req: NextRequest,
@@ -290,7 +291,7 @@ export async function PATCH(
                     });
                 } catch (notifErr) {
                     // El aviso no puede tumbar una publicación que ya se hizo.
-                    console.error("Error creating report publication notification:", notifErr);
+                    await reportError(notifErr, { action: "informes.avisar-publicacion", shownToUser: false });
                 }
             }
         }
@@ -298,7 +299,7 @@ export async function PATCH(
         return NextResponse.json({ success: true, count: updated.length, publishedAt: pubDate });
 
     } catch (error: any) {
-        console.error("PATCH Course Report Publish Error:", error);
+        await reportError(error, { action: "informes.publicar" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

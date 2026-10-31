@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
+import { reportError } from "@/lib/errors/report";
 
 export async function DELETE(
     req: NextRequest,
@@ -63,7 +64,7 @@ export async function DELETE(
         return NextResponse.json({ success: true });
 
     } catch (error: any) {
-        console.error("DELETE Course Report Link Error:", error);
+        await reportError(error, { action: "informes.desvincular-del-curso" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

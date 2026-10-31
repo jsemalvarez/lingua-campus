@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSignedUrl } from "@/lib/supabase-server";
 import prisma from "@/lib/prisma";
+import { reportError } from "@/lib/errors/report";
 
 export async function GET(req: NextRequest) {
     try {
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ url: signedUrl });
     } catch (err: any) {
-        console.error("[messages/signed-url]", err);
+        await reportError(err, { action: "mensajes.abrir-adjunto" });
         return NextResponse.json(
             { error: err.message ?? "Error interno del servidor." },
             { status: 500 }

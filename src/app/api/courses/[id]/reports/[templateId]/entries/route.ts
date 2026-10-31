@@ -5,6 +5,7 @@ import { instituteMonth } from "@/lib/dates";
 import { reportContentHash } from "@/lib/reports/signatures";
 import { asSignedHashes, fallenStudentIds } from "@/lib/reports/batchSignatures";
 import { notifyAfterGradeEdit } from "@/lib/reports/batchSignatureNotices";
+import { reportError } from "@/lib/errors/report";
 
 export async function GET(
     req: NextRequest,
@@ -121,7 +122,7 @@ export async function GET(
         });
 
     } catch (error: any) {
-        console.error("GET Course Report Entries Error:", error);
+        await reportError(error, { action: "informes.ver-notas" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
@@ -336,13 +337,13 @@ export async function POST(
                 });
             }
         } catch (notifErr) {
-            console.error("Error notifying batch signers:", notifErr);
+            await reportError(notifErr, { action: "informes.avisar-firmantes", shownToUser: false });
         }
 
         return NextResponse.json({ success: true, count: result.length, reports: result });
 
     } catch (error: any) {
-        console.error("POST Course Report Entries Error:", error);
+        await reportError(error, { action: "informes.guardar-notas" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

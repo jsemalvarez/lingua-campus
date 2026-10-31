@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { uploadToStorage } from "@/lib/supabase-server";
 import prisma from "@/lib/prisma";
 import { randomBytes } from "crypto";
+import { reportError } from "@/lib/errors/report";
 
 // ─── Allowed MIME types ───────────────────────────────────────────────────────
 const ALLOWED_MIME_TYPES = new Set([
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
             sizeBytes: file.size,
         });
     } catch (err: any) {
-        console.error("[upload/message-attachment]", err);
+        await reportError(err, { action: "mensajes.subir-adjunto" });
         return NextResponse.json(
             { error: err.message ?? "Error interno del servidor." },
             { status: 500 }

@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
 import prisma from '@/lib/prisma';
+import { reportError } from '@/lib/errors/report';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       });
     }
   } catch (error) {
-    console.error("Error fetching institute for manifest:", error);
+    await reportError(error, { action: "plataforma.manifest", shownToUser: false, auth: null });
     // Continue with institute = null
   }
 

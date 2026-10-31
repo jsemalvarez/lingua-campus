@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
 import { invalidateResetTokens } from "@/lib/passwordReset";
+import { reportError } from "@/lib/errors/report";
 
 /** Ficha del alumno: los tres roles que ven "Estudiantes" en el menú. */
 const STUDENT_EDITORS = ["ADMIN", "SECRETARY", "TEACHER"] as const;
@@ -305,7 +306,7 @@ export async function changeStudentCourseAction(enrollmentId: string, newCourseI
         revalidatePath("/courses");
         return { success: true };
     } catch (e: any) {
-        console.error("Error changing student course:", e);
+        await reportError(e, { action: "alumnos.cambiar-curso" });
         return { success: false, error: "Error al cambiar el curso del estudiante" };
     }
 }
@@ -428,7 +429,7 @@ export async function createGuardianAccount(studentId: string, guardianName: str
         revalidatePath(`/students/${studentId}`);
         return { success: true };
     } catch (error: any) {
-        console.error("Error creating guardian account:", error);
+        await reportError(error, { action: "tutores.crear-cuenta" });
         return { success: false, error: "Error al crear la cuenta del tutor" };
     }
 }
@@ -459,7 +460,7 @@ export async function generateDataCompletionToken(studentId: string) {
 
         return { success: true, token: token.token };
     } catch (error) {
-        console.error("Error generating token:", error);
+        await reportError(error, { action: "alumnos.generar-enlace-perfil" });
         return { success: false, error: "Error al generar el token" };
     }
 }

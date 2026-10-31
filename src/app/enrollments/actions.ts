@@ -8,6 +8,7 @@ import { ENROLLMENT_FEE_MONTH, EXAM_FEE_MONTH } from "@/lib/utils";
 import { finalExamLessonWrites, syncFinalExamLesson } from "@/lib/feeDue";
 import { instituteMonth } from "@/lib/dates";
 import { monthlyFeesToIssue } from "@/lib/monthlyFees";
+import { reportError } from "@/lib/errors/report";
 
 export async function createEnrollmentAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -290,7 +291,7 @@ export async function setCourseExamRegistrationsAction(courseId: string, takingE
     } catch (e: any) {
         // El detalle queda en el log de Vercel; antes se perdía y no había cómo
         // saber por qué había fallado.
-        console.error("Error cargando el examen final del curso:", { courseId, error: e });
+        await reportError(e, { action: "matriculas.cargar-examen-final", context: { courseId } });
         return { success: false, error: "Error al cargar el examen final del curso" };
     }
 }

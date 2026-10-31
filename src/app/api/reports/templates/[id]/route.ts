@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
+import { reportError } from "@/lib/errors/report";
 
 export async function PUT(
     req: NextRequest,
@@ -115,7 +116,7 @@ export async function PUT(
 
         return NextResponse.json(updatedTemplate);
     } catch (error: any) {
-        console.error("PUT Report Template Error:", error);
+        await reportError(error, { action: "informes.editar-plantilla" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
@@ -158,7 +159,7 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("DELETE Report Template Error:", error);
+        await reportError(error, { action: "informes.eliminar-plantilla" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
 import { feeAfterPayment, paymentProblem } from "@/lib/feePayment";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * Finanzas es de administración y secretaría, que es lo que ya decide el menú.
@@ -202,7 +203,7 @@ export async function createPaymentAction(formData: FormData) {
         // efectivamente se grabó y no con lo que calculó la pantalla.
         return { success: true, remaining: result.remaining, surplus: result.surplus };
     } catch (e: any) {
-        console.error(e);
+        await reportError(e, { action: "cobros.registrar" });
         return { success: false, error: "Error al registrar el pago" };
     }
 }
@@ -431,7 +432,7 @@ export async function registerFullCoursePaymentAction(formData: FormData) {
         revalidatePath(`/students/${studentId}`);
         return { success: true };
     } catch (e: any) {
-        console.error("Error al registrar pago único:", e);
+        await reportError(e, { action: "cobros.registrar-pago-unico" });
         return { success: false, error: "Error al registrar el pago único" };
     }
 }
@@ -596,7 +597,7 @@ export async function createIncomeAction(formData: FormData) {
         revalidatePath("/payments");
         return { success: true };
     } catch (e: any) {
-        console.error(e);
+        await reportError(e, { action: "caja.registrar-ingreso-extra" });
         return { success: false, error: "Error al registrar el ingreso extra" };
     }
 }
@@ -964,7 +965,7 @@ export async function registerAdvanceAction(formData: FormData) {
         revalidatePath("/students");
         return { success: true };
     } catch (e) {
-        console.error(e);
+        await reportError(e, { action: "cobros.registrar-adelanto" });
         return { success: false, error: "Error al registrar el adelanto" };
     }
 }
@@ -1068,7 +1069,7 @@ export async function applyCreditToFeeAction(feeId: string, creditAmount: number
         revalidatePath("/students");
         return { success: true };
     } catch (e: any) {
-        console.error(e);
+        await reportError(e, { action: "cobros.aplicar-saldo" });
         return { success: false, error: "Error al aplicar el saldo a favor" };
     }
 }

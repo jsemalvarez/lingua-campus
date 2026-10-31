@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { reportError } from "@/lib/errors/report";
 
 export async function createScheduleAction(formData: FormData) {
     const user = await requireRole(INSTITUTE_STAFF);
@@ -44,7 +45,7 @@ export async function createScheduleAction(formData: FormData) {
         revalidatePath("/schedule");
         return { success: true };
     } catch (e: any) {
-        console.error("Error creating schedule:", e);
+        await reportError(e, { action: "cursos.crear-horario" });
         return { success: false, error: "Error de base de datos al crear horario" };
     }
 }

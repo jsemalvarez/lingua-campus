@@ -2,6 +2,7 @@ import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { readJsonBody } from "@/lib/practice/guard";
 import { guardLessonPlan } from "@/lib/lessonPlan/guard";
+import { reportError } from "@/lib/errors/report";
 
 export const maxDuration = 60;
 
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
         const suggested = await getAIProvider().suggestLessonWords(context, keep, PRACTICE_LANGUAGE);
         return Response.json({ words: suggested });
     } catch (error) {
-        console.error("[LESSON_PLAN_WORDS] Error:", error instanceof Error ? error.message : error);
+        await reportError(error, { action: "clase.sugerir-palabras" });
         return new Response("No pudimos sugerir las palabras. Probá de nuevo en un momento.", { status: 500 });
     }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { reportError } from "@/lib/errors/report";
 
 export interface LinkPreviewData {
     url: string;
@@ -149,7 +150,7 @@ export async function GET(req: NextRequest) {
             },
         });
     } catch (err: any) {
-        console.error("[messages/link-preview]", err);
+        await reportError(err, { action: "mensajes.vista-previa-enlace", shownToUser: false });
         return NextResponse.json(
             { error: err.message ?? "Error interno." },
             { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateBulkTeacherPayroll } from "@/lib/payroll";
 import { requireRole } from "@/lib/authz";
+import { reportError } from "@/lib/errors/report";
 
 export async function GET(req: NextRequest) {
     try {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error("API Bulk Payroll Error:", error);
+        await reportError(error, { action: "sueldos.ver-liquidacion-general" });
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
