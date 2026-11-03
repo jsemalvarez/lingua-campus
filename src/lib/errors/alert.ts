@@ -108,6 +108,7 @@ const ACTION_LABELS: Record<string, string> = {
     "plataforma.editar-instituto": "Editar un instituto",
     "plataforma.agregar-admin": "Agregar un administrador",
     "plataforma.eliminar-admin": "Eliminar un administrador",
+    "plataforma.limpiar-errores": "Borrar los errores viejos (cron diario)",
 };
 
 const ROLE_LABELS: Record<string, string> = {
