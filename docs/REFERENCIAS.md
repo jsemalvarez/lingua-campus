@@ -18,6 +18,7 @@ Nada pendiente por ahora.
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
+| [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
 | [Langboost](#langboost) | Arma la clase con IA para el docente | 03/10/2026 | [PED-09](BACKLOG-TECNICO.md#ped-09) |
 | [ClassesUp](#classesup) | Gestión de academias, argentina | 06/10/2026 | Ideas sin decidir |
@@ -26,6 +27,43 @@ Nada pendiente por ahora.
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
 | [Mondly](#mondly-cem-english) | App de práctica de Pearson | 29/09/2026 | Vara para los precios |
 | [Gestión comparada por precio](#gestión-comparada-por-precio) | Cinco sistemas de gestión | 28/09/2026 | Tabla de precios |
+
+### Duolingo
+
+[duolingo.com](https://www.duolingo.com) · relevada el 03/11/2026 sin cuenta, en computadora y en
+tamaño de celular, para mejorar la estética y la experiencia de las prácticas que ya tenemos: la
+primera lección de inglés para hispanohablantes y parte de la práctica de sonidos. No llegamos a
+ejercicios con micrófono, así que su corrección oral queda sin ver.
+
+- **Cómo es la lección:**
+  - Pantalla completa con la barra de avance, salir y una sola consigna. Nada más alrededor.
+  - Abajo hay un solo botón, que queda en el mismo lugar para comprobar y para seguir. En el
+    celular, al alcance del pulgar.
+  - La respuesta elegida queda en azul hasta comprobar; recién ahí aparece el verde o el rojo.
+  - La corrección sale en una banda abajo, con la respuesta correcta en una línea. Un aviso que no
+    es error («Ejercicios de audio deshabilitados») usa un tercer color.
+  - Lo errado vuelve al final, con el aviso «¡Repasemos el ejercicio incorrecto!» y marcado
+    «Error anterior». En la práctica de sonidos, el par errado vuelve con las opciones invertidas.
+  - Al terminar: un festejo, dos datos (puntos y 94 % de aciertos), seguir o repasar la lección.
+- **Ejercicios vistos:** elegir entre tarjetas con imagen, armar la traducción tocando palabras,
+  elegir entre opciones, completar un diálogo con opciones y escuchar y tocar las palabras.
+- **Pronunciación:** pares mínimos («¿Qué escuchas?», dock o deck), «¿la misma palabra o dos
+  distintas?» y una tabla de sonidos con el símbolo IPA, una palabra de ejemplo y el avance de cada
+  uno.
+- **Audio:** botón grande, otro aparte para escuchar lento y «No puedo escuchar ahora», que apaga
+  los ejercicios de audio por 15 minutos sin restar.
+- **Dónde les ganamos:** el contenido es su curso; la práctica del campus sale de lo que se vio en
+  clase.
+- **Dónde nos quedamos cortos:** la experiencia. Según el código, en la práctica hay varias cosas a
+  la vez en pantalla, los botones cambian de lugar y lo errado no vuelve.
+- **Ideas sin decidir** (también en el registro de prácticas):
+  - Lo que salió mal vuelve al final de la práctica, para intentarlo de nuevo.
+  - Un botón aparte para escuchar el audio más lento.
+  - «No puedo hablar ahora» y «No puedo escuchar ahora»: seguir sin micrófono o sin audio, sin
+    penalidad.
+  - Un diálogo para completar con opciones, para quien todavía no escribe solo.
+- **No sirve para nosotros:** rachas, vidas, puntos, ligas y la serie de pantallas de logros al
+  terminar: a Patricia la gamificación no la entusiasma. Tampoco se toman su personaje ni su aspecto.
 
 ### Moodle
 
