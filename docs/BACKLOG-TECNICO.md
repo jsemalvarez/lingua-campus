@@ -10064,7 +10064,20 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    navegador: lo de la API ya lo registró el servidor. Verificado en local el 31/10. El «Failed to
    fetch» en inglés de un corte de red sigue apareciendo en mensajes y plantillas.
 
-   Falta: el panel y la retención.
+   **La retención, con un cron de Vercel** (`3f7d17f`): `GET /api/cron/limpiar-errores` borra los
+   `ErrorEvent` de más de 90 días y deja `ErrorIssue` y `ErrorIssueScope`, así que el panel sigue
+   sabiendo que el problema existió, cuántas veces pasó y en qué institutos. Corre una vez por día,
+   a las 4 de la mañana de Argentina (`vercel.json`), y sólo en el deploy de producción de cada
+   proyecto: stage limpia su base y prod la suya. El plan gratuito permite un cron por día con hora
+   aproximada, y para esto alcanza. Se eligió frente a `pg_cron` de Supabase porque queda en el
+   código y viaja con el deploy. La ruta sólo responde con `CRON_SECRET`, y sin la variable no borra
+   nada. Verificado en local el 02/11: sin clave y con una equivocada, 401. **Falta probar el
+   borrado** con la base prendida.
+
+   **Antes de mezclar la rama a `stage`:** cargar `ERROR_ALERT_EMAIL` y `CRON_SECRET` en Vercel, en
+   stage y en prod, con una clave distinta en cada uno.
+
+   Falta: el panel. Va primero en diseño.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
