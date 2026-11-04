@@ -83,8 +83,22 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
                 // El área se reescribe en cada falla: si se corrige el mapa, los
                 // problemas que siguen pasando se reubican solos.
                 update: { area, count: { increment: 1 }, lastSeenAt: now },
-                select: { id: true },
+                select: { id: true, status: true },
             });
+
+            // Estaba marcado como resuelto y volvió a pasar: el arreglo no alcanzó.
+            // Se reabre y se vacían los avisos, para que vuelva a llegar el mail.
+            const reopened = issue.status === "RESOLVED";
+            if (reopened) {
+                await tx.errorIssue.update({
+                    where: { id: issue.id },
+                    data: { status: "OPEN", resolvedAt: null },
+                });
+                await tx.errorIssueScope.updateMany({
+                    where: { issueId: issue.id },
+                    data: { notifiedAt: null },
+                });
+            }
 
             // `skipDuplicates` es lo que contesta «¿primera vez acá?» sin carrera:
             // si dos fallas llegan juntas, una sola inserta.
@@ -114,7 +128,7 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
                 },
             });
 
-            return { issueId: issue.id, isNewInScope };
+            return { issueId: issue.id, isNewInScope, reopened };
         });
 
         // Fuera de la transacción: un mail no puede tenerla abierta, y si no sale
@@ -126,10 +140,11 @@ export async function reportError(error: unknown, options: ReportOptions): Promi
                 role: auth?.activeRole ?? null,
                 context,
                 at: now,
+                reopened: result.reopened,
             });
         }
 
-        return result;
+        return { issueId: result.issueId, isNewInScope: result.isNewInScope };
     } catch (reportFailure) {
         console.error("[reportError] No se pudo registrar el error:", reportFailure);
         return null;

@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getEmailProvider } from "@/lib/email";
 import { errorAlertEmail } from "@/lib/email/templates/errorAlert";
-import { INSTITUTE_TIME_ZONE, formatDate } from "@/lib/dates";
+import { formatDate, formatTime } from "@/lib/dates";
 import { ERROR_AREAS, type ErrorArea } from "./areas";
 import type { ErrorContext } from "./report";
 
@@ -16,6 +16,10 @@ import type { ErrorContext } from "./report";
  * **Lo que marca «ya avisado» es `ErrorIssueScope.notifiedAt`, no «primera vez
  * en este instituto».** Si la primera falla fue silenciosa y la segunda terminó
  * en un cartel, la que importa es la segunda: con «primera vez» no avisaría nunca.
+ *
+ * **Un problema marcado como resuelto que vuelve a pasar avisa otra vez.**
+ * `reportError` lo reabre y vacía esos `notifiedAt`: el arreglo no alcanzó, y eso
+ * no puede quedar sumándose en silencio.
  *
  * A dónde va: `ERROR_ALERT_EMAIL`. Sin esa variable no sale nada, que es lo que
  * conviene en local y en cualquier entorno que no la configuró a propósito.
@@ -108,7 +112,14 @@ const ACTION_LABELS: Record<string, string> = {
     "plataforma.editar-instituto": "Editar un instituto",
     "plataforma.agregar-admin": "Agregar un administrador",
     "plataforma.eliminar-admin": "Eliminar un administrador",
+    "contrasena.recuperar": "Pedir recuperar la contraseña",
+    "contrasena.recuperar-enviar": "Mandar el correo para recuperar la contraseña",
+    "inscripcion.avisar-campana": "Avisar de la inscripción en la campanita",
+    "inscripcion.enviar-correo": "Mandar el correo de la inscripción",
+    "mensajes.vista-previa-enlace": "Armar la vista previa de un enlace",
+    "plataforma.manifest": "Armar el ícono de la app del instituto",
     "plataforma.limpiar-errores": "Borrar los errores viejos (cron diario)",
+    "plataforma.cambiar-estado-error": "Marcar un error como resuelto o reabrirlo",
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -126,9 +137,11 @@ export type AlertInput = {
     role: string | null;
     context?: ErrorContext;
     at: Date;
+    /** Esta falla reabrió un problema que estaba marcado como resuelto. */
+    reopened?: boolean;
 };
 
-export async function alertIfFirstSeenInScope({ issueId, scope, role, context, at }: AlertInput): Promise<void> {
+export async function alertIfFirstSeenInScope({ issueId, scope, role, context, at, reopened = false }: AlertInput): Promise<void> {
     const to = process.env.ERROR_ALERT_EMAIL;
     if (!to) return;
 
@@ -158,11 +171,12 @@ export async function alertIfFirstSeenInScope({ issueId, scope, role, context, a
             area: ERROR_AREAS[issue.area as ErrorArea] ?? issue.area,
             accion: actionLabel(issue.action),
             detalle,
-            quien: role ? (ROLE_LABELS[role] ?? role) : "Alguien sin sesión (formulario público)",
-            cuando: `${formatDate(at, "moment", "numericFull")} a las ${timeOf(at)}`,
+            quien: roleLabel(role),
+            cuando: `${formatDate(at, "moment", "numericFull")} a las ${formatTime(at)}`,
             message: issue.message,
             vecesEnTotal: issue.count,
             institutos,
+            reabierto: reopened,
         });
 
         await getEmailProvider().send({
@@ -182,7 +196,11 @@ export async function alertIfFirstSeenInScope({ issueId, scope, role, context, a
     }
 }
 
-function actionLabel(action: string): string {
+export function roleLabel(role: string | null): string {
+    return role ? (ROLE_LABELS[role] ?? role) : "Alguien sin sesión (formulario público)";
+}
+
+export function actionLabel(action: string): string {
     if (ACTION_LABELS[action]) return ACTION_LABELS[action];
     // Lo que llega por instrumentation.ts: "render /payments", "route /api/…".
     const route = action.match(/^(\w+) (\/\S*)$/);
@@ -194,21 +212,11 @@ function actionLabel(action: string): string {
     return action;
 }
 
-/** Hora y minutos en hora del instituto. De `Intl` sólo números, como en `dates.ts`. */
-function timeOf(at: Date): string {
-    return new Intl.DateTimeFormat("en-GB", {
-        timeZone: INSTITUTE_TIME_ZONE,
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-    }).format(at);
-}
-
 /**
  * Los ids del contexto, pasados a nombres: «curso Children 4, clase «Unit 21»».
  * Sólo cosas del instituto —cursos y clases—, nunca de un alumno.
  */
-async function describeContext(context?: ErrorContext): Promise<string | null> {
+export async function describeContext(context?: ErrorContext): Promise<string | null> {
     if (!context) return null;
     const str = (key: string) => (typeof context[key] === "string" ? (context[key] as string) : null);
 

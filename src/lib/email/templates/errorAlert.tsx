@@ -16,6 +16,8 @@ export type ErrorAlertEmailParams = {
     vecesEnTotal: number;
     /** En cuántos institutos se vio, contando éste. */
     institutos: number;
+    /** Estaba marcado como resuelto y volvió a pasar. */
+    reabierto?: boolean;
 };
 
 /**
@@ -31,10 +33,10 @@ export type ErrorAlertEmailParams = {
 export async function errorAlertEmail(
     params: ErrorAlertEmailParams
 ): Promise<{ subject: string; text: string; html: string }> {
-    const { instituteName, area, accion, detalle, quien, cuando, message, vecesEnTotal, institutos } = params;
+    const { instituteName, area, accion, detalle, quien, cuando, message, vecesEnTotal, institutos, reabierto = false } = params;
 
-    const subject = `${instituteName}: falló «${accion}»`;
-    const heading = `Falló «${accion}» en ${instituteName}`;
+    const subject = reabierto ? `${instituteName}: volvió a fallar «${accion}»` : `${instituteName}: falló «${accion}»`;
+    const heading = reabierto ? `Volvió a fallar «${accion}» en ${instituteName}` : `Falló «${accion}» en ${instituteName}`;
 
     const filas: [string, string][] = [
         ["Área", area],
@@ -46,14 +48,15 @@ export async function errorAlertEmail(
     ];
 
     // Lo que decide si es un deploy roto o algo que ya se conocía.
-    const contexto =
-        institutos > 1
+    const contexto = reabierto
+        ? `Lo habías marcado como resuelto y volvió a pasar. Ya se reabrió en el panel (${veces(vecesEnTotal)} en total).`
+        : institutos > 1
             ? `Este problema ya se había visto en otro instituto (${vecesEnTotal} veces en total). Es la primera vez en ${instituteName}.`
             : vecesEnTotal > 1
               ? `Ya había pasado ${veces(vecesEnTotal - 1)} en ${instituteName} antes de este aviso.`
               : "Es la primera vez que pasa en el campus.";
 
-    const nota = `No se vuelve a avisar de este problema en ${instituteName}: las repeticiones se suman en el panel.`;
+    const nota = `No se vuelve a avisar de este problema en ${instituteName}, salvo que lo marques resuelto y vuelva a pasar: las repeticiones se suman en el panel.`;
 
     const text = [
         heading,

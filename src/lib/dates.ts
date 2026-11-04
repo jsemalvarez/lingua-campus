@@ -112,6 +112,16 @@ export function formatDate(value: Date | string, kind: DateKind, style: DateStyl
     }
 }
 
+/** `08:05`: hora y minutos de un instante, en hora del instituto. De `Intl` sólo números. */
+export function formatTime(value: Date | string): string {
+    return new Intl.DateTimeFormat("en-GB", {
+        timeZone: INSTITUTE_TIME_ZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(new Date(value));
+}
+
 // ─── Hoy, el mes y sus límites ───────────────────────────────────────────────
 
 /** `YYYY-MM-DD` de un día (`@db.Date` o medianoche UTC). */
