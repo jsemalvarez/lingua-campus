@@ -10071,13 +10071,24 @@ preguntas que se quieren contestar antes de elegir qué se guarda: es lo que dec
    proyecto: stage limpia su base y prod la suya. El plan gratuito permite un cron por día con hora
    aproximada, y para esto alcanza. Se eligió frente a `pg_cron` de Supabase porque queda en el
    código y viaja con el deploy. La ruta sólo responde con `CRON_SECRET`, y sin la variable no borra
-   nada. Verificado en local el 02/11: sin clave y con una equivocada, 401. **Falta probar el
-   borrado** con la base prendida.
+   nada. Verificado en local: sin clave y con una equivocada, 401 (02/11); con la correcta borró el
+   evento de 100 días y dejó los otros 5 y los 2 problemas (04/11).
 
    **Antes de mezclar la rama a `stage`:** cargar `ERROR_ALERT_EMAIL` y `CRON_SECRET` en Vercel, en
    stage y en prod, con una clave distinta en cada uno.
 
-   Falta: el panel. Va primero en diseño.
+   **El panel, en `/admin/errors`** (`f2cf4ad`), sólo para el superadmin. Salió de un
+   [lienzo](https://claude.ai/artifact/GSu7TKriHjascGrtdKi9Pw): la lista con el resumen de 24 horas,
+   las pestañas y los filtros por área, y el detalle con los números, los 14 días, los institutos y
+   las últimas 20 veces. Un problema marcado como resuelto que vuelve a pasar **se reabre solo y
+   manda el mail de nuevo**, con el asunto «volvió a fallar». Verificado en pantalla el 04/11, salvo
+   el envío real de ese mail, porque en local no hay `ERROR_ALERT_EMAIL`: se armó el texto sin
+   mandarlo, y falta probarlo en stage.
+
+   Queda abierto: la columna «Pantalla» sale casi siempre vacía, porque la ruta sólo se guarda en
+   las caídas de página y en lo que falla en el navegador, no en los `catch` de las acciones.
+
+   Falta mezclar la rama a `stage`, con las dos variables cargadas.
 3. Definir qué **no** se guarda. Nada de datos personales del alumno en el cuerpo del error, y
    cuidado con los `error.message` de proveedores externos, que a veces incluyen la request entera
    —incluida la API key, como pasa hoy con la de Gemini en la query string ([PED-05](#ped-05)).
