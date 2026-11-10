@@ -18,6 +18,7 @@ Nada pendiente por ahora.
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
+| [Acadeu](#acadeu-términos-y-condiciones) | Gestión escolar de Educaria, argentina | 10/11/2026 | Borrador de términos y privacidad |
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
 | [Langboost](#langboost) | Arma la clase con IA para el docente | 03/10/2026 | [PED-09](BACKLOG-TECNICO.md#ped-09) |
@@ -27,6 +28,24 @@ Nada pendiente por ahora.
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
 | [Mondly](#mondly-cem-english) | App de práctica de Pearson | 29/09/2026 | Vara para los precios |
 | [Gestión comparada por precio](#gestión-comparada-por-precio) | Cinco sistemas de gestión | 28/09/2026 | Tabla de precios |
+
+### Acadeu (términos y condiciones)
+
+Los términos y condiciones de Acadeu, la plataforma de gestión escolar de Educaria en Argentina
+S.A. (versión 2.1 del 19/05/2023) · relevados el 10/11/2026 con capturas de las primeras cinco
+secciones, para sumar términos y privacidad al campus, que no tenía ninguno de los dos.
+
+- **Qué nos sirvió:**
+  - El instituto acepta por su gente y consigue la autorización de las familias para los menores.
+  - La plataforma procesa los datos por cuenta del instituto, y los pedidos de acceso van al
+    instituto.
+  - La versión y la fecha arriba del texto.
+- **Qué no tomamos:** que la plataforma no trata datos personales (en el campus sería falso), que
+  toda acción hecha con un usuario se le imputa a su dueño (no sirve para un chico que entra con su
+  DNI), la aceptación por el solo hecho de entrar y el tono.
+- **Qué salió:** un borrador propio, sin nada copiado, que describe lo que hace el campus:
+  [Términos y privacidad de Lingua Campus](https://claude.ai/artifact/1mozvoUUg1qpPh7qv7QENC), en
+  Claude Docs. Lo revisa un abogado antes de publicarse.
 
 ### Duolingo
 
