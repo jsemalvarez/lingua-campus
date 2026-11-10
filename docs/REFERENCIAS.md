@@ -32,17 +32,24 @@ Nada pendiente por ahora.
 ### Acadeu (términos y condiciones)
 
 Los términos y condiciones de Acadeu, la plataforma de gestión escolar de Educaria en Argentina
-S.A. (versión 2.1 del 19/05/2023) · relevados el 10/11/2026 con capturas de las primeras cinco
-secciones, para sumar términos y privacidad al campus, que no tenía ninguno de los dos.
+S.A. (versión 2.1 del 19/05/2023) · relevados el 10/11/2026 con capturas de las secciones 1 a 7,
+10 y 11, para sumar términos y privacidad al campus, que no tenía ninguno de los dos. Faltan la 8
+(«Operatividad de la Plataforma») y la 9, y la 11 está cortada.
 
 - **Qué nos sirvió:**
   - El instituto acepta por su gente y consigue la autorización de las familias para los menores.
   - La plataforma procesa los datos por cuenta del instituto, y los pedidos de acceso van al
     instituto.
   - La versión y la fecha arriba del texto.
+  - Los avisos por correo y dentro de la plataforma valen como comunicación.
+  - Los requisitos técnicos. En el campus pesan por el speaking, que necesita micrófono y un
+    navegador que reconozca la voz.
+  - La prohibición de extraer el contenido en forma automática.
 - **Qué no tomamos:** que la plataforma no trata datos personales (en el campus sería falso), que
   toda acción hecha con un usuario se le imputa a su dueño (no sirve para un chico que entra con su
-  DNI), la aceptación por el solo hecho de entrar y el tono.
+  DNI), la aceptación por el solo hecho de entrar, cambiar los términos sin avisar, quedarse con una
+  licencia perpetua sobre lo que el instituto personaliza y el tono.
+- **Para el abogado:** el instituto como responsable solidario de los daños que causen sus usuarios.
 - **Qué salió:** un borrador propio, sin nada copiado, que describe lo que hace el campus:
   [Términos y privacidad de Lingua Campus](https://claude.ai/artifact/1mozvoUUg1qpPh7qv7QENC), en
   Claude Docs. Lo revisa un abogado antes de publicarse.
