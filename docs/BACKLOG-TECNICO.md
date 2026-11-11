@@ -345,6 +345,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-11](#ped-11) | P2 | 🗣️ El listening va al revés: primero el audio y después las preguntas | [x] |
 | [PED-12](#ped-12) | P3 | El cuestionario del texto generado se contamina con el texto del profesor | [ ] |
 | [PED-13](#ped-13) | P3 | Práctica de escritura con devolución que marca sin corregir | [ ] |
+| [PED-14](#ped-14) | P3 | Un cuento corto de la clase para leer en voz alta | [ ] |
 
 ---
 
@@ -11152,6 +11153,64 @@ y el circuito de borrador y publicación de PED-01.
 la sección tiene que poder quedar apagada por curso.
 
 **P3.** La necesidad está cubierta por la tarjeta de recursos; esto es para cuando haya lugar.
+
+---
+
+<a id="ped-14"></a>
+## PED-14 · Un cuento corto de la clase para leer en voz alta · **P3**
+
+**De dónde sale.** Idea del 2026-11-11, después de relevar Read Along, de Google (detalle en
+[`REFERENCIAS.md`](REFERENCIAS.md#read-along)): el chico lee un cuento en voz alta y la app lo sigue
+de a una palabra. El Speaking practica frases cortas. Un cuento de dos o tres párrafos practica otra
+cosa: leer de corrido, con ritmo y entonación, y ver cómo el sentido se encadena de una oración a la
+otra y de un párrafo al siguiente.
+
+**La idea.** Una sección nueva de la práctica de la clase: un cuento corto que la IA escribe con el
+vocabulario y la gramática que se vieron, al nivel del curso, para leer en voz alta. Lo que la
+separa de Read Along es eso: sus cuentos son los mismos para todos, y acá el cuento sale de la clase.
+
+**Depende del Speaking.** Se lee con el mismo motor: comparar lo que reconoce el navegador contra el
+texto, de a una palabra y en el campus mismo. Eso se pidió el 2026-11-11 para el rediseño de la
+práctica (`feat/rediseno-practica`), con la consigna de que sirva también para un texto de varias
+oraciones. Hasta que el Speaking ande bien, esto no arranca: hoy toda frase que no es idéntica va a
+Gemini (`evaluatePronunciation`) y ahí falla.
+
+**Lo que se reutiliza.** La comparación de a una palabra y el «tocar para escuchar» del Speaking, el
+TTS, los providers de IA con `guardPracticeAi` y su cuota, `PracticeSession` y el circuito de
+borrador y publicación de [PED-01](#ped-01): el docente ve el cuento antes de que les llegue a los
+alumnos.
+
+**Lo que hay que construir**, a confirmar contra el código cuando se arranque:
+
+1. **Schema:** el tipo nuevo en `PracticeType` y dónde guardar el cuento. Lleva migración.
+2. **IA:** generar el cuento desde el tema y el contenido de la clase, con el largo según el nivel.
+3. **Alumno:** el cuento de a un párrafo, con la palabra que toca marcada, tocar una palabra para
+   escucharla y poder saltear sin penalidad.
+4. **Docente:** el cuento en la página de la clase y en la vista previa, para revisarlo y publicarlo.
+5. **Métricas:** el tipo nuevo donde hoy se cuentan los otros tres.
+
+**Lo difícil.**
+
+- **Un texto largo en el reconocedor.** `webkitSpeechRecognition` está pensado para frases: hay que
+  ver cómo se porta con pausas largas y párrafos enteros, y retomar donde quedó el chico sin que
+  pierda el lugar.
+- **Qué mide.** Lo mismo que [PED-03](#ped-03): el navegador transcribe lo que adivina que el chico
+  quiso decir. Esto mide lectura de corrido y que se entienda, no pronunciación, y los textos que ve
+  el alumno no pueden prometer más.
+- **El largo según la edad.** Para Children, unas pocas oraciones. Los dos o tres párrafos, para los
+  más grandes.
+- **Calidad del cuento.** Que use las palabras de la clase sin forzarlas y que tenga sentido de
+  principio a fin. Por eso pasa por la vista previa del docente.
+
+**La otra mitad va aparte.** Que el alumno escriba su propio cuento siguiendo el modelo, con dos o
+tres párrafos encadenados, es producción escrita: va con [PED-13](#ped-13) y con la decisión del
+2026-10-25 de que el writing lo toman las docentes en clase (ver la rúbrica del repaso integrador en
+[`REFERENCIAS.md`](REFERENCIAS.md#moodle)).
+
+**Pasa por Patricia.** Es una sección nueva de la práctica: va a la página de propuestas para su
+visto bueno antes de construir.
+
+**P3.** Mejora deseable. Primero el Speaking.
 
 ---
 

@@ -18,7 +18,7 @@ Nada pendiente por ahora.
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
-| [Read Along](#read-along) | Lectura en voz alta para chicos, de Google | 11/11/2026 | Ideas sin decidir, para rediseñar la práctica |
+| [Read Along](#read-along) | Lectura en voz alta para chicos, de Google | 11/11/2026 | Corrección de a una palabra para el Speaking y [PED-14](BACKLOG-TECNICO.md#ped-14) |
 | [Acadeu](#acadeu-términos-y-condiciones) | Gestión escolar de Educaria, argentina | 10/11/2026 | Borrador de términos y privacidad |
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
@@ -68,13 +68,15 @@ ayuda, no de la pantalla.
 - **Dónde nos quedamos cortos:** el speaking evalúa la frase entera y falla con toda frase que no sea
   idéntica; Read Along va de a una palabra, deja escuchar la que no sale y no castiga saltear. Y no
   tenemos práctica pensada para quien todavía no lee solo.
+- **Qué salió (11/11/2026):**
+  - Para el Speaking, pedido al rediseño de la práctica (`feat/rediseno-practica`): comparar lo que
+    reconoce el navegador contra el texto, de a una palabra y en el campus mismo; marcar la palabra
+    que toca leer; tocar una palabra para escucharla sin restar; regrabar y saltear. Hoy el campus
+    resuelve solo la frase idéntica y cualquier otra va a Gemini (`evaluatePronunciation`), que es
+    donde salen el JSON cortado y los 503.
+  - Un cuento corto de la clase para leer en voz alta, con el mismo motor:
+    [PED-14](BACKLOG-TECNICO.md#ped-14).
 - **Ideas sin decidir:**
-  - Leer en voz alta con la palabra que toca marcada, avanzando de a una, en lugar de grabar la
-    frase entera y evaluarla después.
-  - Comparar lo que reconoce el navegador contra el texto, de a una palabra y en el campus mismo.
-    Hoy el campus resuelve solo la frase idéntica y cualquier otra va a Gemini
-    (`evaluatePronunciation`), que es donde salen el JSON cortado y los 503.
-  - Tocar una palabra para escucharla, sin restar.
   - Para Children: texto grande, un dibujo y un solo botón.
   - La traducción de cada oración al castellano, para los que recién empiezan.
 - **No sirve para nosotros:** estrellas, regalos para desbloquear e insignias: a Patricia la
