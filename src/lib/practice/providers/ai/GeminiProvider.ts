@@ -183,9 +183,12 @@ Rules:
         const text = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: { 
-                temperature: 0.1, 
+                temperature: 0.1,
                 maxOutputTokens: 1024,
-                responseMimeType: "application/json"
+                responseMimeType: "application/json",
+                // Lo que piensa cuenta contra maxOutputTokens: gastaba casi todo
+                // ahí y el JSON llegaba cortado, sin el "}" del final.
+                thinkingConfig: { thinkingBudget: 0 },
             },
         });
 
