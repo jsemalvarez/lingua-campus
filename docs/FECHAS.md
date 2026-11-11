@@ -46,7 +46,8 @@ ageOn(birthDate)        // edad cumplida hoy en el instituto
 formulario. Las columnas de día no tienen `DEFAULT`: el `now()` de Postgres es el día de UTC.
 
 **Mostrar.** `formatDate(valor, "day" | "moment", estilo)`, con los estilos `short` (20 oct 2026),
-`long` (20 de octubre de 2026), `dayMonth`, `dayMonthLong`, `monthYear`, `weekdayDay`, `month`,
+`long` (20 de octubre de 2026), `dayMonth`, `dayMonthLong`, `monthYear`, `weekdayDay`,
+`weekdayDayMonth` (martes 20 de octubre), `month`,
 `dayNumber`, `numericDayMonth`, `numeric` (20/10/26) y `numericFull` (20/10/2026). Los nombres
 salen de listas propias: ni `dayjs.locale("es")`, que es global, ni `Intl` en castellano, que según
 la versión da «oct» u «oct.».

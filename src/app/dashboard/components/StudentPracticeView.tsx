@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card } from "@/components/ui/Card";
-import {
-    Sparkles, Gamepad2, Mic2, Headphones, MessageSquare,
-    Zap, Star, ArrowLeft, CheckCircle2
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Sparkles, Mic2, Headphones, MessageSquare, ArrowLeft } from "lucide-react";
 import { SpeakingHub } from "@/components/practice/SpeakingHub";
 import { ListeningLab } from "@/components/practice/ListeningLab";
 import { AIChatbot } from "@/components/practice/AIChatbot";
+import { PracticeHome, lastSession as getLastSession } from "@/components/practice/PracticeHome";
 import { format, addHours } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -18,6 +16,9 @@ import { cn } from "@/lib/utils";
 export interface PracticeSession {
     type: "SPEAKING" | "LISTENING" | "CHAT";
     accuracyPct: number;
+    /** Frases dichas en Speaking, preguntas en Listening, mensajes en la conversación. */
+    phrasesAttempted: number;
+    phrasesCorrect: number;
     completedAt: string;
 }
 
@@ -52,50 +53,10 @@ type View =
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getLastSession(sessions: PracticeSession[], type: PracticeType) {
-    return sessions
-        .filter((s) => s.type === type)
-        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0] ?? null;
-}
-
 function fmtSeconds(s: number) {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
-}
-
-// ─── ModeIconButton ───────────────────────────────────────────────────────────
-
-const colorMap = {
-    blue: "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 border-blue-200 dark:border-blue-800",
-    violet: "bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/60 border-violet-200 dark:border-violet-800",
-    emerald: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border-emerald-200 dark:border-emerald-800",
-};
-
-function ModeIconButton({ icon, onClick, session, color, tooltip }: {
-    icon: React.ReactNode;
-    onClick: () => void;
-    session: PracticeSession | null;
-    color: keyof typeof colorMap;
-    tooltip: string;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            title={tooltip}
-            className={cn(
-                "relative w-10 h-10 rounded-xl border flex items-center justify-center transition-all hover:scale-110 active:scale-95",
-                colorMap[color]
-            )}
-        >
-            {icon}
-            {session && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
-                    <CheckCircle2 size={10} className="text-white" strokeWidth={3} />
-                </span>
-            )}
-        </button>
-    );
 }
 
 // ─── Sidebar panels ───────────────────────────────────────────────────────────
@@ -135,17 +96,22 @@ const TIPS: Record<PracticeType, { title: string; items: string[] }> = {
 export function StudentPracticeView({ practiceData, isPreview = false }: { practiceData: PracticeData[], isPreview?: boolean }) {
     const [view, setView] = useState<View>({ mode: "landing" });
 
-    // ── Logic & Prep ──────────────────────────────────────────────────────────
-
-    // Group practices by course
-    const courseGroups = practiceData.reduce<Record<string, PracticeData[]>>((acc, item) => {
-        if (!acc[item.courseId]) acc[item.courseId] = [];
-        acc[item.courseId].push(item);
-        return acc;
-    }, {});
+    // Cada vista arranca desde arriba. Si no, al entrar a un ejercicio desde una
+    // clase de más abajo la página quedaba scrolleada y el ejercicio fuera de vista.
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, [view]);
 
     // Common handlers
-    const handleExit = () => setView({ mode: "landing" });
+    // Al volver al inicio queda abierta la clase de la que venía, y la lista se
+    // pide de nuevo para que lo recién hecho ya diga «Hecha».
+    const router = useRouter();
+    const [lastPracticeId, setLastPracticeId] = useState<string | null>(null);
+    const handleExit = () => {
+        if (view.mode !== "landing") setLastPracticeId(view.item.lessonPracticeId);
+        setView({ mode: "landing" });
+        router.refresh();
+    };
 
     // ── MAIN RENDER ───────────────────────────────────────────────────────────
 
@@ -423,149 +389,12 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
             })()}
 
             {view.mode === "landing" && (
-                <main className="container mx-auto px-4 sm:px-6 py-20 animate-in mt-12 mb-24 max-w-5xl">
-                    {/* HERO */}
-                    <div className="text-center space-y-6 mb-20">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
-                            <Sparkles size={14} /> Nueva Dimensión de Aprendizaje
-                        </div>
-                        <h1 className="text-5xl md:text-7xl font-black tracking-tighter italic uppercase leading-none">
-                            Aula de Práctica<br /> <span className="text-primary italic">Automática</span>
-                        </h1>
-                        <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
-                            Entrenás Speaking, Listening y conversación con IA directamente desde el contenido que tu profesor preparó para cada clase.
-                        </p>
-                    </div>
-
-                    {/* FEATURE CARDS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-                        {[
-                            { icon: Mic2, title: "Speaking Hub", desc: "Pronunciá frases y recibí feedback instantáneo de la IA." },
-                            { icon: Headphones, title: "Listening Lab", desc: "Escuchá el audio de la clase y evaluá tu comprensión." },
-                            { icon: MessageSquare, title: "AI Chatbot", desc: "Practicá conversaciones reales en inglés con la IA." },
-                            { icon: Gamepad2, title: "Daily Quest", desc: "Próximamente: desafíos y puntos para motivarte." },
-                        ].map((feat, i) => (
-                            <Card key={i} className="p-8 rounded-[2.5rem] border-none shadow-xl bg-card hover:translate-y-[-8px] transition-all duration-500 group">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-lg shadow-primary/20">
-                                    <feat.icon size={28} />
-                                </div>
-                                <h3 className="font-black text-lg mb-2">{feat.title}</h3>
-                                <p className="text-xs text-muted-foreground font-medium">{feat.desc}</p>
-                            </Card>
-                        ))}
-                    </div>
-
-                    {/* AVAILABLE PRACTICES — grouped by course */}
-                    {practiceData.length > 0 && (
-                        <div className="mb-20">
-                            {/* Section title */}
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="flex-1 h-px bg-border" />
-                                <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground px-3">
-                                    Prácticas disponibles
-                                </span>
-                                <div className="flex-1 h-px bg-border" />
-                            </div>
-
-                            {/* One group per course */}
-                            <div className="space-y-8">
-                                {Object.values(courseGroups).map((groupItems) => {
-                                    const { courseId, courseName, courseColor } = groupItems[0];
-
-                                    return (
-                                        <div key={courseId}>
-                                            {/* Course badge header */}
-                                            <div className="mb-3">
-                                                <span
-                                                    className="inline-flex items-center text-[11px] font-bold px-3 py-1 rounded-full text-white shadow-sm"
-                                                    style={{ backgroundColor: courseColor }}
-                                                >
-                                                    {courseName}
-                                                </span>
-                                            </div>
-
-                                            {/* Practice rows */}
-                                            <div className="space-y-3">
-                                                {groupItems.map((item) => {
-                                                    const hasSpeaking = item.speakingPhrases.length > 0;
-                                                    const hasListening = !!item.listeningText;
-                                                    const hasChat = !!item.chatScenario;
-                                                    const formattedDate = format(
-                                                        addHours(new Date(item.date), 12),
-                                                        "d MMM",
-                                                        { locale: es }
-                                                    );
-
-                                                    return (
-                                                        <div
-                                                            key={item.lessonPracticeId}
-                                                            className="flex items-center gap-4 px-5 py-4 rounded-2xl"
-                                                            style={{
-                                                                borderLeft: `4px solid ${courseColor}`,
-                                                                background: `linear-gradient(to right, ${courseColor}20, ${courseColor}06 40%, transparent 70%)`,
-                                                                boxShadow: `0 0 0 1px ${courseColor}20, 0 2px 8px rgba(0,0,0,0.07), 0 6px 20px ${courseColor}18`,
-                                                            }}
-                                                        >
-                                                            {/* Left: date + topic */}
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">
-                                                                    {formattedDate}
-                                                                </p>
-                                                                <p className="font-black text-[15px] leading-snug truncate">
-                                                                    {item.topic}
-                                                                </p>
-                                                            </div>
-
-                                                            {/* Right: Actions */}
-                                                            <div className="flex items-center gap-2">
-                                                                {hasSpeaking && (
-                                                                    <ModeIconButton
-                                                                        icon={<Mic2 size={18} />}
-                                                                        color="blue"
-                                                                        tooltip="Práctica de Habla"
-                                                                        onClick={() => setView({ mode: "session", item, type: "SPEAKING" })}
-                                                                        session={getLastSession(item.sessions, "SPEAKING")}
-                                                                    />
-                                                                )}
-                                                                {hasListening && (
-                                                                    <ModeIconButton
-                                                                        icon={<Headphones size={18} />}
-                                                                        color="violet"
-                                                                        tooltip="Práctica de Escucha"
-                                                                        onClick={() => setView({ mode: "session", item, type: "LISTENING" })}
-                                                                        session={getLastSession(item.sessions, "LISTENING")}
-                                                                    />
-                                                                )}
-                                                                {hasChat && (
-                                                                    <ModeIconButton
-                                                                        icon={<MessageSquare size={18} />}
-                                                                        color="emerald"
-                                                                        tooltip="Chat con IA"
-                                                                        onClick={() => setView({ mode: "session", item, type: "CHAT" })}
-                                                                        session={getLastSession(item.sessions, "CHAT")}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* COMING SOON CARD */}
-                    <Card className="p-8 rounded-[2.5rem] border-dashed border-2 border-border bg-muted/30 text-center">
-                        <Zap className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                        <h3 className="font-black text-xl mb-2">Más prácticas en camino</h3>
-                        <p className="text-sm text-muted-foreground max-w-sm mx-auto font-medium">
-                            Tus profesores están preparando nuevas experiencias de Speaking y escenarios de Chat para tus próximas lecciones.
-                        </p>
-                    </Card>
-                </main>
+                <PracticeHome
+                    practiceData={practiceData}
+                    isPreview={isPreview}
+                    initialOpenId={lastPracticeId}
+                    onStart={(item, type) => setView({ mode: "session", item, type })}
+                />
             )}
         </div>
     );
