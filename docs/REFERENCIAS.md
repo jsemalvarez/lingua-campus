@@ -18,6 +18,7 @@ Nada pendiente por ahora.
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
+| [Read Along](#read-along) | Lectura en voz alta para chicos, de Google | 11/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Acadeu](#acadeu-términos-y-condiciones) | Gestión escolar de Educaria, argentina | 10/11/2026 | Borrador de términos y privacidad |
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
@@ -28,6 +29,58 @@ Nada pendiente por ahora.
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
 | [Mondly](#mondly-cem-english) | App de práctica de Pearson | 29/09/2026 | Vara para los precios |
 | [Gestión comparada por precio](#gestión-comparada-por-precio) | Cinco sistemas de gestión | 28/09/2026 | Tabla de precios |
+
+### Read Along
+
+[readalong.google.com](https://readalong.google.com) · relevada el 11/11/2026 en la web, con la cuenta
+de Google de Origen MdP (se aceptó el aviso para padres y se creó un perfil), para ver la lectura en
+voz alta pensando en el speaking y en los chicos de Children. Sin micrófono, así que la corrección de
+la lectura queda sin ver, como en Duolingo. Lo que dice «según Google» sale de su blog y su centro de
+ayuda, no de la pantalla.
+
+- **Qué es:** app gratis de Google para chicos que aprenden a leer, desde los 5 años, sin publicidad
+  ni compras. Cuentos ilustrados por nivel; el chico lee en voz alta y una ayudante, Diya, lo
+  escucha y le da una devolución que corrige y alienta. Según Google, la voz se reconoce en el
+  navegador y no sale a sus servidores; al abrir baja un módulo WebAssembly de casi 6 MB, que sería
+  el reconocedor. La versión publicada es del 26/10/2026: sigue activa.
+- **Cómo es la entrada:** se elige el idioma («Español + English»), tres pantallas de presentación y
+  un aviso para padres y docentes con un solo botón, «Entendido». El perfil se crea solo, con un
+  animal y sin nombre: «Presiona tu perfil».
+- **Cómo es la lectura:**
+  - Pantalla limpia: barra de avance arriba, el dibujo a la izquierda, el texto muy grande a la
+    derecha, flechas a los costados y un solo botón de micrófono abajo al medio, con un halo que
+    invita a tocarlo.
+  - La palabra que toca leer va en azul.
+  - Tocar una palabra la marca en azul; según Google, Diya la lee, y con otro toque la deletrea.
+    Tocar una oración la lee entera. Con dos idiomas, traduce al castellano cada oración leída.
+  - La tapa trae el título en inglés y en castellano.
+  - Se puede pasar de página sin leer; terminado así, vuelve a la biblioteca sin cierre ni estrellas.
+  - En una ventana chica, la ayudante tapa el final del texto.
+- **Biblioteca:** «Para ti», colecciones por tema y cuentos de canales de dibujos, cada tapa con su
+  nivel en una esquina. Una pestaña de premios con regalos que se desbloquean con estrellas.
+- **Según Google, solo en Android:** grupos de lectura donde el docente ve la actividad de sus
+  alumnos, y juegos (armar palabras con letras mezcladas, leer todas las palabras posibles en 20
+  segundos, reventar globos con letras de cierto sonido). En la web, «Códigos de socio» deja que la
+  familia comparta los datos de uso con una organización. Recomienda el nivel según cómo lee cada
+  chico.
+- **Dónde les ganamos:** los cuentos son los suyos; la práctica del campus sale de lo que se vio en
+  clase. El chico entra con su DNI, sin que la familia arme una cuenta.
+- **Dónde nos quedamos cortos:** el speaking evalúa la frase entera y falla con toda frase que no sea
+  idéntica; Read Along va de a una palabra, deja escuchar la que no sale y no castiga saltear. Y no
+  tenemos práctica pensada para quien todavía no lee solo.
+- **Ideas sin decidir:**
+  - Leer en voz alta con la palabra que toca marcada, avanzando de a una, en lugar de grabar la
+    frase entera y evaluarla después.
+  - Comparar lo que reconoce el navegador contra el texto, de a una palabra y en el campus mismo.
+    Hoy el campus resuelve solo la frase idéntica y cualquier otra va a Gemini
+    (`evaluatePronunciation`), que es donde salen el JSON cortado y los 503.
+  - Tocar una palabra para escucharla, sin restar.
+  - Para Children: texto grande, un dibujo y un solo botón.
+  - La traducción de cada oración al castellano, para los que recién empiezan.
+- **No sirve para nosotros:** estrellas, regalos para desbloquear e insignias: a Patricia la
+  gamificación no la entusiasma. El perfil por animal tampoco: el chico entra con su DNI.
+- **Falta ver:** la lectura con micrófono, sobre todo qué hace Diya cuando el chico se equivoca o se
+  traba. Queda para probarla con alguien que lea en voz alta.
 
 ### Acadeu (términos y condiciones)
 
