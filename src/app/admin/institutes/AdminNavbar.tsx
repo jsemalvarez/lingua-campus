@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LayoutDashboard, LogOut, UserCircle } from "lucide-react";
+import { LayoutDashboard, LogOut, Presentation, UserCircle } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 /**
@@ -29,6 +29,18 @@ export function AdminNavbar() {
                 <div className="flex items-center gap-2 sm:gap-3">
                     {/* Theme toggle icon */}
                     <ThemeToggle variant="icon" />
+
+                    {/* Las placas para presentarle el campus a un instituto */}
+                    <Link href="/admin/demo">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="inline-flex items-center gap-1.5 text-xs sm:text-sm"
+                        >
+                            <Presentation size={15} />
+                            <span className="hidden sm:inline">Placas de la demo</span>
+                        </Button>
+                    </Link>
 
                     {/* Volver al dashboard — solo si hubiera uno */}
                     <Link href="/dashboard">
