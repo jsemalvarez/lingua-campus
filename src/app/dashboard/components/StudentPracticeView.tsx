@@ -121,6 +121,23 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                 const { item, type } = view;
                 const onComplete = (summary: SessionSummary) => setView({ mode: "summary", item, summary, type });
 
+                // El Speaking ya va con el rediseño: pantalla completa, sin columnas
+                // ni la barra del campus. Listening y la conversación, todavía no.
+                if (type === "SPEAKING") {
+                    return (
+                        <SpeakingHub
+                            key={item.lessonPracticeId}
+                            lessonId={item.lessonId}
+                            lessonPracticeId={item.lessonPracticeId}
+                            topic={item.topic}
+                            phrases={item.speakingPhrases}
+                            onComplete={onComplete}
+                            onExit={handleExit}
+                            isPreview={isPreview}
+                        />
+                    );
+                }
+
                 const prevSpeaking = getLastSession(item.sessions, "SPEAKING");
                 const prevListening = getLastSession(item.sessions, "LISTENING");
                 const prevChat = getLastSession(item.sessions, "CHAT");
@@ -192,7 +209,7 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                         <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm space-y-4">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Otros modos de esta clase</p>
                                             <div className="space-y-2">
-                                                {item.speakingPhrases.length > 0 && type !== "SPEAKING" && (
+                                                {item.speakingPhrases.length > 0 && (
                                                     <button onClick={() => setView({ mode: "session", item, type: "SPEAKING" })}
                                                         className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-all active:scale-[0.98]">
                                                         <Mic2 size={14} /> Speaking
@@ -225,7 +242,6 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
 
                                 {/* ── CENTER: Practice component ── */}
                                 <div className="order-1 lg:order-2">
-                                    {type === "SPEAKING" && <SpeakingHub lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} phrases={item.speakingPhrases} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
                                     {type === "LISTENING" && item.listeningText && <ListeningLab lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} listeningText={item.listeningText} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
                                     {type === "CHAT" && item.chatScenario && <AIChatbot lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} scenario={item.chatScenario} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
                                 </div>
@@ -261,8 +277,7 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                                                     const hasListening = !!practice.listeningText;
                                                     const hasChat = !!practice.chatScenario;
 
-                                                    const targetType = (hasSpeaking && type === "SPEAKING") ? "SPEAKING" :
-                                                        (hasListening && type === "LISTENING") ? "LISTENING" :
+                                                    const targetType = (hasListening && type === "LISTENING") ? "LISTENING" :
                                                             (hasChat && type === "CHAT") ? "CHAT" :
                                                                 (hasSpeaking ? "SPEAKING" : hasListening ? "LISTENING" : "CHAT");
 

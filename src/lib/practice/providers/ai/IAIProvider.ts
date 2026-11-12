@@ -75,11 +75,16 @@ export interface IAIProvider {
      * @param expected - Frase que el alumno debía pronunciar
      * @param actual   - Transcripción de lo que el alumno dijo (via STT)
      * @param language - Idioma del ejercicio (ej: "English")
+     * @param missing  - Las palabras que el campus ya vio que no salieron, al
+     *                   comparar de a una (`src/lib/practice/words.ts`). El Speaking
+     *                   decide bien, casi o todavía no por su cuenta y usa de acá
+     *                   sólo el comentario: con esto, el comentario habla de esas.
      */
     evaluatePronunciation(
         expected: string,
         actual: string,
-        language?: string
+        language?: string,
+        missing?: string[]
     ): Promise<EvaluationResult>;
 
     /**

@@ -148,7 +148,8 @@ export class GeminiProvider implements IAIProvider {
     async evaluatePronunciation(
         expected: string,
         actual: string,
-        language: string = "English"
+        language: string = "English",
+        missing: string[] = []
     ): Promise<EvaluationResult> {
         // 1. Shortcut: Identical strings (ignoring case/punctuation)
         const normalize = (s: string) => s.toLowerCase().replace(/[.,!?;:]/g, "").trim();
@@ -165,11 +166,11 @@ export class GeminiProvider implements IAIProvider {
 
 The student was asked to say: "${expected}"
 The speech recognition transcribed what they said as: "${actual}"
-
+${missing.length > 0 ? `A word-by-word check found that these words did not come out: ${missing.map((w) => `"${w}"`).join(", ")}. Your feedback must be about them: what probably happened and one concrete tip to say them.\n` : ""}
 Evaluate the pronunciation and respond ONLY with a valid JSON object in this exact format:
 {
   "score": <number 0-100>,
-  "feedback": "<brief encouraging feedback in Spanish, 1-2 sentences>",
+  "feedback": "<brief encouraging feedback in Rioplatense Spanish (use 'vos', warm and plain, no slang such as 'che'), 1-2 sentences>",
   "weakArea": "<specific phoneme or pattern that was wrong, e.g. 'th fricative', 'short i vowel', or null if pronunciation was good>"
 }
 

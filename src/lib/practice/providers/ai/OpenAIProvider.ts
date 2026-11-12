@@ -12,8 +12,12 @@ export class OpenAIProvider implements IAIProvider {
     async evaluatePronunciation(
         expected: string,
         actual: string,
-        language: string = "English"
+        language: string = "English",
+        missing: string[] = []
     ): Promise<EvaluationResult> {
+        const missingNote = missing.length > 0
+            ? `\nA word-by-word check found that these words did not come out: ${missing.map((w) => `"${w}"`).join(", ")}. The feedback must be about them, with one concrete tip.`
+            : "";
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -30,7 +34,7 @@ export class OpenAIProvider implements IAIProvider {
                     },
                     {
                         role: "user",
-                        content: `The student was asked to say: "${expected}"\nThe speech recognition transcribed: "${actual}"\n\nIf the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}.\n\nRespond with: {"score": 0-100, "feedback": "Spanish feedback", "weakArea": "phoneme or null"}`,
+                        content: `The student was asked to say: "${expected}"\nThe speech recognition transcribed: "${actual}"${missingNote}\n\nIf the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}.\n\nRespond with: {"score": 0-100, "feedback": "Rioplatense Spanish feedback (use 'vos', warm and plain, no slang such as 'che'), 1-2 sentences", "weakArea": "phoneme or null"}`,
                     },
                 ],
             }),
