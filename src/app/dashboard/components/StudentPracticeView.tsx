@@ -121,8 +121,22 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                 const { item, type } = view;
                 const onComplete = (summary: SessionSummary) => setView({ mode: "summary", item, summary, type });
 
-                // El Speaking ya va con el rediseño: pantalla completa, sin columnas
-                // ni la barra del campus. Listening y la conversación, todavía no.
+                // Speaking y Listening ya van con el rediseño: pantalla completa,
+                // sin columnas ni la barra del campus. La conversación, todavía no.
+                if (type === "LISTENING" && item.listeningText) {
+                    return (
+                        <ListeningLab
+                            key={item.lessonPracticeId}
+                            lessonId={item.lessonId}
+                            lessonPracticeId={item.lessonPracticeId}
+                            topic={item.topic}
+                            listeningText={item.listeningText}
+                            onComplete={onComplete}
+                            onExit={handleExit}
+                            isPreview={isPreview}
+                        />
+                    );
+                }
                 if (type === "SPEAKING") {
                     return (
                         <SpeakingHub
@@ -242,7 +256,6 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
 
                                 {/* ── CENTER: Practice component ── */}
                                 <div className="order-1 lg:order-2">
-                                    {type === "LISTENING" && item.listeningText && <ListeningLab lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} listeningText={item.listeningText} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
                                     {type === "CHAT" && item.chatScenario && <AIChatbot lessonId={item.lessonId} lessonPracticeId={item.lessonPracticeId} scenario={item.chatScenario} onComplete={onComplete} onExit={handleExit} isPreview={isPreview} />}
                                 </div>
 

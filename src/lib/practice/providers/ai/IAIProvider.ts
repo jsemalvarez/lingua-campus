@@ -36,6 +36,12 @@ export interface ChatMessage {
 export interface ListeningQuestion {
     statement: string;
     isTrue: boolean;
+    /**
+     * La oración del texto que decide si es verdadera o falsa, copiada del texto.
+     * Sólo viene si de verdad está en el texto (`cleanListeningQuestions`): al
+     * corregir se muestra como «En el audio: …».
+     */
+    evidence?: string;
 }
 
 /**

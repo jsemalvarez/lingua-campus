@@ -5,18 +5,10 @@ import { BookOpen, Check, ChevronRight, Headphones, MessageSquare, Mic, type Luc
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/dates";
 import type { PracticeData, PracticeSession } from "@/app/dashboard/components/StudentPracticeView";
+import { GREEN_TEXT, GREEN_TINT, MUTED } from "./practiceStyles";
 
 type PracticeType = PracticeSession["type"];
 
-/**
- * Colores de la práctica, con la estética actual del campus. El gris de
- * `muted-foreground` (#808080) y el verde `primary` (#38b397) no llegan a 4,5:1
- * sobre blanco con texto chico: acá van un tono más oscuros. En oscuro se usan
- * los del tema, que sí llegan.
- */
-const MUTED = "text-[#6b6b6b] dark:text-muted-foreground";
-const GREEN_TEXT = "text-[#23705b] dark:text-primary";
-const GREEN_TINT = "bg-[#e8f6f2] dark:bg-primary/15";
 const ROW_HOVER = "transition-colors hover:bg-[#fafafa] dark:hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary";
 
 /** La última vez que hizo ese modo en esa clase, o `null` si nunca. */

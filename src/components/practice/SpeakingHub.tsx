@@ -5,7 +5,8 @@ import { Check, ChevronRight, Mic, MicOff, RotateCcw, Snail, Volume1, Volume2, X
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
 import { checkReading, gradeReading, splitWords, type ReadingGrade } from "@/lib/practice/words";
 import { cn } from "@/lib/utils";
-import { practiceApiError } from "./apiError";
+import { FOCUS, GREEN_BUTTON, GREEN_TEXT, GREEN_TINT, MUTED, ORANGE_BUTTON, ORANGE_TEXT } from "./practiceStyles";
+import { usePracticeAudio } from "./usePracticeAudio";
 
 /**
  * Speaking, de a una palabra (rediseño de la práctica, aprobado en el lienzo el
@@ -47,15 +48,7 @@ function recognitionConstructor(): RecognitionConstructor | null {
     return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-// ─── Colores ─────────────────────────────────────────────────────────────────
-
-const MUTED = "text-[#6b6b6b] dark:text-muted-foreground";
-const GREEN_TEXT = "text-[#23705b] dark:text-primary";
-const GREEN_TINT = "bg-[#e8f6f2] dark:bg-primary/15";
-const GREEN_BUTTON = "bg-[#2b8069] text-white hover:bg-[#23705b]";
-const ORANGE_TEXT = "text-[#c2410c] dark:text-orange-300";
-const ORANGE_BUTTON = "bg-[#c2410c] text-white hover:bg-[#9a3412]";
-const FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+// ─── Cómo se ve cada palabra ─────────────────────────────────────────────────
 
 type WordLook = "neutral" | "toca" | "bien" | "falta";
 
@@ -121,13 +114,12 @@ export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComp
     const [result, setResult] = useState<PhraseResult | null>(null);
     const [comment, setComment] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
-    const [speaking, setSpeaking] = useState<string | null>(null);
+    const audio = usePracticeAudio(lessonPracticeId);
+    const speaking = audio.playing;
 
     const recognitionRef = useRef<Recognition | null>(null);
     const cancelledRef = useRef(false);
     const commentRequestRef = useRef(0);
-    const audioRef = useRef<AudioContext | null>(null);
-    const ttsModeRef = useRef<"server" | "browser" | null>(null);
     const startedAtRef = useRef(0);
     /** Por frase: si salió bien alguna vez. Lo que se guarda al terminar. */
     const outcomesRef = useRef(new Map<number, boolean>());
@@ -157,84 +149,27 @@ export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComp
         }
     }, []);
 
-    // Al salir no queda nada sonando ni escuchando.
+    // Al salir no queda nada escuchando (el audio lo corta `usePracticeAudio`).
     useEffect(() => {
         return () => {
             cancelledRef.current = true;
             recognitionRef.current?.abort();
-            window.speechSynthesis?.cancel();
-            audioRef.current?.close().catch(() => {});
         };
     }, []);
 
     // ── Escuchar ─────────────────────────────────────────────────────────────
 
-    const stopAudio = () => {
-        window.speechSynthesis?.cancel();
-        audioRef.current?.close().catch(() => {});
-        audioRef.current = null;
-        setSpeaking(null);
-    };
-
-    const speakWithBrowser = (text: string, rate: number, key: string): boolean => {
-        const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
-        if (!synth) return false;
-        synth.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "en-US";
-        utterance.rate = rate;
-        const done = () => setSpeaking((current) => (current === key ? null : current));
-        utterance.onend = done;
-        utterance.onerror = done;
-        setSpeaking(key);
-        synth.speak(utterance);
-        return true;
-    };
+    const stopAudio = () => audio.stop();
 
     /**
-     * La frase pasa por `/api/practice/tts`, que según el instituto sintetiza en
-     * el servidor o contesta 204 para usar la voz del navegador. Una palabra suelta
-     * va directo con la del navegador: tocar palabras no gasta cuota.
+     * La frase pasa por el servidor, según el instituto. Una palabra suelta va
+     * directo con la voz del navegador: tocar palabras no gasta cuota.
      */
     const speak = async (text: string, rate: number, key: string, preferBrowser = false) => {
         if (phase === "listening" || phase === "saving") return;
-        stopAudio();
         setNotice(null);
-        if ((preferBrowser || ttsModeRef.current === "browser") && speakWithBrowser(text, rate, key)) return;
-
-        setSpeaking(key);
-        try {
-            const res = await fetch("/api/practice/tts", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ lessonPracticeId, text, language: "en-US", speed: rate }),
-            });
-            if (res.status === 204) {
-                ttsModeRef.current = "browser";
-                if (!speakWithBrowser(text, rate, key)) setSpeaking(null);
-                return;
-            }
-            if (!res.ok) {
-                setSpeaking(null);
-                setNotice(await practiceApiError(res, "No se pudo reproducir el audio. Probá de nuevo."));
-                return;
-            }
-            ttsModeRef.current = "server";
-            const context = new AudioContext();
-            audioRef.current = context;
-            const decoded = await context.decodeAudioData(await res.arrayBuffer());
-            const source = context.createBufferSource();
-            source.buffer = decoded;
-            source.connect(context.destination);
-            source.onended = () => {
-                setSpeaking((current) => (current === key ? null : current));
-                context.close().catch(() => {});
-                if (audioRef.current === context) audioRef.current = null;
-            };
-            source.start();
-        } catch {
-            setSpeaking(null);
-        }
+        const problem = await audio.play(text, { rate, key, preferBrowser });
+        if (problem) setNotice(problem);
     };
 
     // ── Hablar ───────────────────────────────────────────────────────────────

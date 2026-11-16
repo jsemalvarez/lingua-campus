@@ -365,15 +365,23 @@ Task: Generate a True/False comprehension quiz about the text.
 CRITICAL CONSTRAINTS:
 1. The quiz must contain exactly 4 to 6 True/False statements.
 2. Mix true and false statements randomly.
-3. Respond ONLY with a valid JSON array in this exact format, with no markdown formatting around it:
+3. For each statement, "evidence" is the sentence of the text that shows whether it is true or false, copied word for word from the text.
+4. Respond ONLY with a valid JSON array in this exact format, with no markdown formatting around it:
 [
-  { "statement": "Statement 1 goes here", "isTrue": true },
-  { "statement": "Statement 2 goes here", "isTrue": false }
+  { "statement": "Statement 1 goes here", "isTrue": true, "evidence": "Sentence copied from the text" },
+  { "statement": "Statement 2 goes here", "isTrue": false, "evidence": "Sentence copied from the text" }
 ]`;
 
         const textResponse = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 1024, responseMimeType: "application/json" },
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1024,
+                responseMimeType: "application/json",
+                // Como en la evaluación: lo que piensa cuenta contra el máximo y
+                // el JSON puede llegar cortado, más ahora que trae la cita.
+                thinkingConfig: { thinkingBudget: 0 },
+            },
         });
 
         const jsonStr = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
