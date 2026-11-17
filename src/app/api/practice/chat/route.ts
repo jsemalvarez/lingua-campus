@@ -61,8 +61,8 @@ export async function POST(req: Request) {
         const reply = await provider.chat(messages, scenario);
 
         return Response.json({ message: reply });
-    } catch (error: any) {
-        console.error("[CHAT] Error:", error.message);
+    } catch (error) {
+        console.error("[CHAT] Error:", error instanceof Error ? error.message : error);
         return new Response("Error en el chat con IA", { status: 500 });
     }
 }

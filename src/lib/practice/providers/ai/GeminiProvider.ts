@@ -236,11 +236,14 @@ Important rules:
 - Respond only in English
 - Keep responses short (2-4 sentences max) to encourage back-and-forth conversation
 - If the student makes a grammar error, gently correct it naturally within your response
-- Never break character or mention that you are an AI`
+- Never break character or mention that you are an AI
+- Plain text only: no markdown, no asterisks, no bullet lists`
                 }]
             },
             contents: history,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 256 },
+            // Sin pensar: el pensamiento sale del mismo tope de 256 y la respuesta
+            // podía llegar cortada o vacía, como pasaba con la evaluación de Speaking.
+            generationConfig: { temperature: 0.7, maxOutputTokens: 256, thinkingConfig: { thinkingBudget: 0 } },
         });
     }
 
