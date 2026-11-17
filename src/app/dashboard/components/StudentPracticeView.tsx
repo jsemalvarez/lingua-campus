@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SpeakingHub } from "@/components/practice/SpeakingHub";
+import { SpeakingHub, type SpeakingReview } from "@/components/practice/SpeakingHub";
 import { ListeningLab } from "@/components/practice/ListeningLab";
 import { AIChatbot } from "@/components/practice/AIChatbot";
 import { PracticeClose } from "@/components/practice/PracticeClose";
@@ -43,13 +43,16 @@ export interface SessionSummary {
     phrases?: { text: string; ok: boolean; missing: string[] }[];
     /** Conversación: la charla, para releerla en el cierre. No se guarda. */
     messages?: { role: "user" | "assistant"; content: string }[];
+    /** Speaking: la sesión guardada, para que el repaso del cierre la complete. */
+    sessionId?: string;
 }
 
 type PracticeType = "SPEAKING" | "LISTENING" | "CHAT";
 
 type View =
     | { mode: "landing" }
-    | { mode: "session"; item: PracticeData; type: PracticeType }
+    /** `review`: «Repasar la frase» del cierre, sólo esas frases y para completar la vez anterior. */
+    | { mode: "session"; item: PracticeData; type: PracticeType; review?: { phrases: string[]; context: SpeakingReview } }
     | { mode: "summary"; item: PracticeData; summary: SessionSummary; type: PracticeType };
 
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
@@ -82,7 +85,7 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                 (rediseño de la práctica). La página de inicio sólo ofrece los modos
                 que la clase tiene, así que no queda un caso sin ejercicio. */}
             {view.mode === "session" && (() => {
-                const { item, type } = view;
+                const { item, type, review } = view;
                 const onComplete = (summary: SessionSummary) => setView({ mode: "summary", item, summary, type });
 
                 if (type === "LISTENING" && item.listeningText) {
@@ -107,7 +110,8 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                             lessonId={item.lessonId}
                             lessonPracticeId={item.lessonPracticeId}
                             topic={item.topic}
-                            phrases={item.speakingPhrases}
+                            phrases={review?.phrases ?? item.speakingPhrases}
+                            review={review?.context}
                             onComplete={onComplete}
                             onExit={handleExit}
                             isPreview={isPreview}
@@ -137,8 +141,22 @@ export function StudentPracticeView({ practiceData, isPreview = false }: { pract
                     topic={view.item.topic}
                     scenario={view.item.chatScenario}
                     summary={view.summary}
-                    // El repaso es un Speaking con sólo esas frases, y se guarda como cualquier otro.
-                    onReview={(phrases) => setView({ mode: "session", item: { ...view.item, speakingPhrases: phrases }, type: "SPEAKING" })}
+                    // El repaso es un Speaking con sólo esas frases que completa la vez
+                    // anterior: la clase pasa a «3 de 3» si salen (decisión del 17/11/2026).
+                    onReview={(phrases) => setView({
+                        mode: "session",
+                        item: view.item,
+                        type: "SPEAKING",
+                        review: {
+                            phrases,
+                            context: {
+                                sessionId: view.summary.sessionId,
+                                previous: view.summary.phrases ?? [],
+                                durationSeconds: view.summary.durationSeconds,
+                                weakArea: view.summary.weakArea,
+                            },
+                        },
+                    })}
                     onAgain={() => setView({ mode: "session", item: view.item, type: view.type })}
                     onExit={handleExit}
                 />

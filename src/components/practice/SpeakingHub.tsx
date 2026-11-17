@@ -76,11 +76,26 @@ interface PhraseResult {
     transcript: string;
 }
 
+/**
+ * Lo que trae «Repasar la frase» desde el cierre: la vez anterior, para
+ * completarla en lugar de guardar otra sesión (decisión del 17/11/2026).
+ */
+export interface SpeakingReview {
+    /** La sesión que se completa. Sin id (no se llegó a guardar) se guarda como nueva. */
+    sessionId?: string;
+    /** Las frases de la vez anterior y cómo salieron. */
+    previous: NonNullable<SessionSummary["phrases"]>;
+    durationSeconds: number;
+    weakArea?: string;
+}
+
 interface SpeakingHubProps {
     lessonId: string;
     lessonPracticeId: string;
     topic: string;
+    /** Las frases a decir: las de la clase, o en un repaso sólo las que quedaron. */
     phrases: string[];
+    review?: SpeakingReview;
     onComplete: (summary: SessionSummary) => void;
     onExit: () => void;
     isPreview?: boolean;
@@ -96,7 +111,7 @@ function secondsSince(start: number): number {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComplete, onExit, isPreview = false }: SpeakingHubProps) {
+export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, review, onComplete, onExit, isPreview = false }: SpeakingHubProps) {
     // El orden en que se dicen las frases. La que queda casi o todavía no, si el
     // alumno sigue, se agrega una vez al final para repasarla.
     const [queue, setQueue] = useState<number[]>(() => phrases.map((_, i) => i));
@@ -268,43 +283,59 @@ export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComp
     // ── Avanzar ──────────────────────────────────────────────────────────────
 
     const finish = async () => {
-        const outcomes = [...outcomesRef.current.values()];
-        // Sin ninguna frase corregida (sin micrófono, o todo salteado) no hay nada
-        // que medir: no se guarda una sesión con 0 de 0.
-        if (outcomes.length === 0) {
-            onExit();
-            return;
-        }
-        setPhase("saving");
-        const phrasesAttempted = outcomes.length;
-        const phrasesCorrect = outcomes.filter(Boolean).length;
-        const accuracyPct = Math.round((phrasesCorrect / phrasesAttempted) * 100);
-        const durationSeconds = secondsSince(startedAtRef.current);
-        const areas = weakAreasRef.current;
-        const weakArea = areas.length > 0
-            ? [...areas].sort((a, b) => areas.filter((v) => v === b).length - areas.filter((v) => v === a).length)[0]
-            : undefined;
-
-        if (!isPreview) {
-            try {
-                await fetch("/api/practice/session", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        lessonId, lessonPracticeId, type: "SPEAKING",
-                        phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea,
-                    }),
-                });
-            } catch (err) {
-                console.error("Error saving session:", err);
-            }
-        }
         // En el orden de la clase, sólo las que se corrigieron: las salteadas sin decir no cuentan.
         const corrected = phrases
             .map((text, i) => ({ text, i, ok: outcomesRef.current.get(i) }))
             .filter((p): p is { text: string; i: number; ok: boolean } => p.ok !== undefined)
             .map(({ text, i, ok }) => ({ text, ok, missing: ok ? [] : missingRef.current.get(i) ?? [] }));
-        onComplete({ phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea, phrases: corrected });
+        // Sin ninguna frase corregida (sin micrófono, o todo salteado) no hay nada
+        // que medir: no se guarda una sesión con 0 de 0.
+        if (corrected.length === 0) {
+            onExit();
+            return;
+        }
+        setPhase("saving");
+        const seconds = secondsSince(startedAtRef.current);
+        const areas = weakAreasRef.current;
+        const newWeakArea = areas.length > 0
+            ? [...areas].sort((a, b) => areas.filter((v) => v === b).length - areas.filter((v) => v === a).length)[0]
+            : undefined;
+
+        // Un repaso completa la vez anterior: la frase que sale ahora pasa a bien,
+        // y la que vuelve a fallar queda con lo que faltó esta vez.
+        const again = new Map(corrected.map((p) => [p.text, p]));
+        const merged = review ? review.previous.map((p) => (p.ok ? p : again.get(p.text) ?? p)) : corrected;
+        const phrasesAttempted = merged.length;
+        const phrasesCorrect = merged.filter((p) => p.ok).length;
+        const accuracyPct = Math.round((phrasesCorrect / phrasesAttempted) * 100);
+        const durationSeconds = (review?.durationSeconds ?? 0) + seconds;
+        const weakArea = newWeakArea ?? review?.weakArea;
+        let sessionId = review?.sessionId;
+
+        if (!isPreview) {
+            try {
+                if (review && sessionId) {
+                    await fetch("/api/practice/session", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ sessionId, phrasesCorrect, extraSeconds: seconds, weakArea: newWeakArea }),
+                    });
+                } else {
+                    const res = await fetch("/api/practice/session", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            lessonId, lessonPracticeId, type: "SPEAKING",
+                            phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea,
+                        }),
+                    });
+                    if (res.ok) sessionId = ((await res.json()) as { sessionId?: string }).sessionId;
+                }
+            } catch (err) {
+                console.error("Error saving session:", err);
+            }
+        }
+        onComplete({ phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea, phrases: merged, sessionId });
     };
 
     /** A la próxima frase. `review` la deja para repasar al final, si todavía no volvió. */
