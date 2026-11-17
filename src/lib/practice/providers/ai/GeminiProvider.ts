@@ -122,22 +122,45 @@ function describeClass(context: LessonPlanContext): string {
     return lines.filter(Boolean).join("\n");
 }
 
+/**
+ * Las fallas de Gemini que son de su lado y suelen pasar solas: el 503 «This
+ * model is currently experiencing high demand» y el 500. El 429 no entra: es
+ * cuota, y reintentar enseguida no la devuelve.
+ */
+const RETRYABLE_STATUS = new Set([500, 503]);
+/**
+ * La espera antes de cada reintento (más un poco al azar, para no volver todos
+ * juntos). Dos reintentos: como mucho unos 3 s más, que el alumno espera mejor
+ * que un «Probá de nuevo». El 16/11/2026 el chat dio 503 en 2 de 7 llamadas.
+ */
+const RETRY_DELAYS_MS = [700, 1500];
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function callGemini(apiKey: string, body: GeminiRequest): Promise<string> {
     const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    const payload = JSON.stringify(body);
 
-    const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-    });
+    for (let attempt = 0; ; attempt++) {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+        });
 
-    if (!res.ok) {
+        if (res.ok) {
+            const data = await res.json();
+            return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        }
+
         const err = await res.text();
-        throw new Error(`Gemini API ${res.status}: ${err}`);
+        const delay = RETRY_DELAYS_MS[attempt];
+        if (!RETRYABLE_STATUS.has(res.status) || delay === undefined) {
+            throw new Error(`Gemini API ${res.status}: ${err}`);
+        }
+        console.warn(`[GEMINI] ${res.status}, reintento ${attempt + 1} de ${RETRY_DELAYS_MS.length}`);
+        await wait(delay + Math.random() * 300);
     }
-
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
