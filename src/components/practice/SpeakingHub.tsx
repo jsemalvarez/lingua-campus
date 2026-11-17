@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronRight, Mic, MicOff, RotateCcw, Snail, Volume1, Volume2, X } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
-import { checkReading, gradeReading, splitWords, type ReadingGrade } from "@/lib/practice/words";
+import { checkReading, gradeReading, listWords, splitWords, type ReadingGrade } from "@/lib/practice/words";
 import { cn } from "@/lib/utils";
 import { FOCUS, GREEN_BUTTON, GREEN_TEXT, GREEN_TINT, MUTED, ORANGE_BUTTON, ORANGE_TEXT } from "./practiceStyles";
 import { usePracticeAudio } from "./usePracticeAudio";
@@ -94,12 +94,6 @@ function secondsSince(start: number): number {
     return Math.round((Date.now() - start) / 1000);
 }
 
-/** «a», «a» y «b», «a», «b» y «c». */
-function listWords(words: string[]): string {
-    const quoted = words.map((w) => `«${w}»`);
-    return quoted.length <= 1 ? quoted.join("") : `${quoted.slice(0, -1).join(", ")} y ${quoted[quoted.length - 1]}`;
-}
-
 // ─── Componente ──────────────────────────────────────────────────────────────
 
 export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComplete, onExit, isPreview = false }: SpeakingHubProps) {
@@ -123,6 +117,8 @@ export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComp
     const startedAtRef = useRef(0);
     /** Por frase: si salió bien alguna vez. Lo que se guarda al terminar. */
     const outcomesRef = useRef(new Map<number, boolean>());
+    /** Por frase: las palabras que faltaron la última vez. Para el cierre. */
+    const missingRef = useRef(new Map<number, string[]>());
     const weakAreasRef = useRef<string[]>([]);
 
     const phraseIndex = queue[pos];
@@ -245,9 +241,9 @@ export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComp
             setResult({ grade, matched: check.matched, count: check.count, transcript });
             setPhase("result");
             outcomesRef.current.set(phraseIndex, outcomesRef.current.get(phraseIndex) === true || grade === "bien");
-            if (grade !== "bien") {
-                requestComment(transcript, words.filter((_, i) => !check.matched[i]).map((w) => w.text));
-            }
+            const missingWords = words.filter((_, i) => !check.matched[i]).map((w) => w.text);
+            missingRef.current.set(phraseIndex, missingWords);
+            if (grade !== "bien") requestComment(transcript, missingWords);
         };
 
         recognitionRef.current = recognition;
@@ -303,7 +299,12 @@ export function SpeakingHub({ lessonId, lessonPracticeId, topic, phrases, onComp
                 console.error("Error saving session:", err);
             }
         }
-        onComplete({ phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea });
+        // En el orden de la clase, sólo las que se corrigieron: las salteadas sin decir no cuentan.
+        const corrected = phrases
+            .map((text, i) => ({ text, i, ok: outcomesRef.current.get(i) }))
+            .filter((p): p is { text: string; i: number; ok: boolean } => p.ok !== undefined)
+            .map(({ text, i, ok }) => ({ text, ok, missing: ok ? [] : missingRef.current.get(i) ?? [] }));
+        onComplete({ phrasesAttempted, phrasesCorrect, accuracyPct, durationSeconds, weakArea, phrases: corrected });
     };
 
     /** A la próxima frase. `review` la deja para repasar al final, si todavía no volvió. */

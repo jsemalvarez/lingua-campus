@@ -272,3 +272,9 @@ export function gradeReading(check: ReadingCheck, total: number): ReadingGrade {
     if (total === 0 || check.count === total) return "bien";
     return check.count / total >= ALMOST_RATIO ? "casi" : "todavia";
 }
+
+/** Palabras para un texto en castellano: «a», «a» y «b», «a», «b» y «c». */
+export function listWords(words: string[]): string {
+    const quoted = words.map((w) => `«${w}»`);
+    return quoted.length <= 1 ? quoted.join("") : `${quoted.slice(0, -1).join(", ")} y ${quoted[quoted.length - 1]}`;
+}

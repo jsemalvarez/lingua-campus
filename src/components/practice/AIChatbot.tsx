@@ -68,7 +68,7 @@ async function requestReply(lessonPracticeId: string, messages: Message[]): Prom
 }
 
 /** Sin los asteriscos de énfasis: se le pide texto plano a la IA, pero a veces igual los manda. */
-function withoutMarkdown(text: string): string {
+export function withoutMarkdown(text: string): string {
     return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/(^|[^*\w])\*(?!\s)([^*\n]+?)\*(?!\w)/g, "$1$2");
 }
 
@@ -142,23 +142,23 @@ export function AIChatbot({ lessonId, lessonPracticeId, topic, scenario, onCompl
         requestRef.current++;
         setSaving(true);
         const durationSeconds = secondsSince(startedAtRef.current);
-        const phrasesAttempted = userTurns;
-        // La conversación no se corrige. El 80 % fijo es el de siempre y lo leen
-        // los promedios del curso y de Progreso: se revisa con el cierre.
-        const summary: SessionSummary = { phrasesAttempted, phrasesCorrect: phrasesAttempted, accuracyPct: 80, durationSeconds };
+        // La conversación no se corrige: se guardan los mensajes del alumno y el
+        // tiempo, sin porcentaje (antes, un 80 % fijo). Los promedios del curso,
+        // de Progreso y del panel la dejan afuera por tipo (16/11/2026).
+        const record = { phrasesAttempted: userTurns, phrasesCorrect: 0, accuracyPct: 0, durationSeconds };
 
         if (!isPreview) {
             try {
                 await fetch("/api/practice/session", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ lessonId, lessonPracticeId, type: "CHAT", ...summary }),
+                    body: JSON.stringify({ lessonId, lessonPracticeId, type: "CHAT", ...record }),
                 });
             } catch (err) {
                 console.error("Error saving session:", err);
             }
         }
-        onComplete(summary);
+        onComplete({ ...record, messages });
     };
 
     const exit = () => {

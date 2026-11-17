@@ -29,8 +29,10 @@ interface CourseAccuracy {
 export async function PlaygroundChartServer({ instituteId }: { instituteId: string }) {
     // Sin filtrar por estado de la clase, a propósito: acá se mide lo que el
     // alumno hizo, y que el docente después borre la clase no lo deshace.
+    // La conversación no se corrige: suma sesiones pero queda fuera del promedio.
+    // Un curso que sólo tiene conversaciones no tiene precisión y no se dibuja.
     const rows = await prisma.$queryRaw<
-        { nombre: string; color: string; accuracy: number; sessions: number }[]
+        { nombre: string; color: string; accuracy: number | null; sessions: number }[]
     >`
         -- El nombre del curso y no su nivel. El nivel se repite entre secciones
         -- —hay dos "Pre-adolescents 1" y dos "Upper-intermediate"— y en una
@@ -39,7 +41,7 @@ export async function PlaygroundChartServer({ instituteId }: { instituteId: stri
         -- con números distintos se leen como un error del gráfico.
         SELECT c.name                                             AS nombre,
                c.color                                            AS color,
-               ROUND(AVG(ps."accuracyPct")::numeric, 1)::float8   AS accuracy,
+               ROUND((AVG(ps."accuracyPct") FILTER (WHERE ps."type" <> 'CHAT'))::numeric, 1)::float8 AS accuracy,
                COUNT(*)::int                                      AS sessions
           FROM "PracticeSession" ps
           JOIN "Lesson" l ON l.id = ps."lessonId"
@@ -54,12 +56,15 @@ export async function PlaygroundChartServer({ instituteId }: { instituteId: stri
 
     // Máximo 8 cursos para no saturar el gráfico. El total se calcula antes de
     // recortar: es el total del instituto, no el de los ocho que se dibujan.
-    const courseData: CourseAccuracy[] = rows.slice(0, 8).map((r) => ({
-        name: r.nombre,
-        accuracy: r.accuracy ?? 0,
-        sessions: r.sessions,
-        color: r.color,
-    }));
+    const courseData: CourseAccuracy[] = rows
+        .filter((r): r is typeof r & { accuracy: number } => r.accuracy !== null)
+        .slice(0, 8)
+        .map((r) => ({
+            name: r.nombre,
+            accuracy: r.accuracy,
+            sessions: r.sessions,
+            color: r.color,
+        }));
 
     return <PlaygroundActivityChart courseData={courseData} totalSessions={totalSessions} />;
 }

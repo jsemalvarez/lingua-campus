@@ -405,6 +405,8 @@ export function StudentAcademicsView({
               </h4>
               <div className="space-y-2.5">
                 {practiceMetrics.recentSessions.map((s) => {
+                  // La conversación no se corrige: muestra lo que hizo, no un porcentaje.
+                  const isChat = s.type === "CHAT";
                   const scoreColor = s.accuracyPct >= 80 ? "text-emerald-600 dark:text-emerald-400"
                     : s.accuracyPct >= 60 ? "text-amber-600 dark:text-amber-400"
                     : "text-red-600 dark:text-red-400";
@@ -421,13 +423,27 @@ export function StudentAcademicsView({
                           <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">📍 {s.weakArea}</p>
                         )}
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className={cn("text-lg font-black", scoreColor)}>{s.accuracyPct}%</p>
-                        <p className="text-[10px] text-muted-foreground">{s.phrasesCorrect}/{s.phrasesAttempted} frases</p>
-                      </div>
-                      {s.accuracyPct >= 70
-                        ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                        : <XCircle size={16} className="text-red-400 shrink-0" />}
+                      {isChat ? (
+                        <>
+                          <div className="text-right shrink-0">
+                            <p className="text-lg font-black">{s.phrasesAttempted}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {s.phrasesAttempted === 1 ? "mensaje" : "mensajes"} · {Math.max(1, Math.round(s.durationSeconds / 60))} min
+                            </p>
+                          </div>
+                          <span className="w-4 shrink-0" aria-hidden />
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-right shrink-0">
+                            <p className={cn("text-lg font-black", scoreColor)}>{s.accuracyPct}%</p>
+                            <p className="text-[10px] text-muted-foreground">{s.phrasesCorrect}/{s.phrasesAttempted} frases</p>
+                          </div>
+                          {s.accuracyPct >= 70
+                            ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                            : <XCircle size={16} className="text-red-400 shrink-0" />}
+                        </>
+                      )}
                     </div>
                   );
                 })}

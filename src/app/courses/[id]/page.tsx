@@ -202,7 +202,7 @@ export default async function CourseDetailPage({
     const practiceSessions = isTeacherOrAdmin && publishedLessonIds.length > 0
         ? await prisma.practiceSession.findMany({
             where: { lessonId: { in: publishedLessonIds } },
-            select: { lessonId: true, studentId: true, accuracyPct: true }
+            select: { lessonId: true, studentId: true, accuracyPct: true, type: true }
         })
         : [];
 
@@ -210,8 +210,10 @@ export default async function CourseDetailPage({
     const practiceByLesson = publishedLessons.map(lesson => {
         const sessions = practiceSessions.filter(s => s.lessonId === lesson.id);
         const uniqueStudents = new Set(sessions.map(s => s.studentId)).size;
-        const avgAcc = sessions.length > 0
-            ? Math.round(sessions.reduce((s, x) => s + x.accuracyPct, 0) / sessions.length)
+        // La conversación no se corrige: cuenta como sesión pero no entra al promedio.
+        const graded = sessions.filter(s => s.type !== "CHAT");
+        const avgAcc = graded.length > 0
+            ? Math.round(graded.reduce((s, x) => s + x.accuracyPct, 0) / graded.length)
             : null;
         return {
             lessonId: lesson.id,
