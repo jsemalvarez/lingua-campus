@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAuthContext, INSTITUTE_ADMINS, type AuthContext } from "@/lib/authz";
 import { feeAfterPayment } from "@/lib/feePayment";
 import { formatFeeLabel } from "@/lib/utils";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * Los datos del recibo de un pago, para las cuatro pantallas que lo ofrecen: la
@@ -142,7 +143,7 @@ export async function getReceiptDataAction(paymentId: string) {
             institute
         };
     } catch (e: any) {
-        console.error(e);
+        await reportError(e, { action: "recibos.cargar" });
         return { success: false, error: "Error al cargar datos del recibo" };
     }
 }

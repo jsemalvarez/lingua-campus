@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { calculateTeacherPayroll } from "@/lib/payroll";
 import { INSTITUTE_STAFF, requireRole } from "@/lib/authz";
+import { userMessageFor } from "@/lib/errors/report";
 
 export async function GET(
     req: NextRequest,
@@ -53,7 +54,9 @@ export async function GET(
 
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error("API Payroll Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo cargar la liquidación. Probá de nuevo en un momento.", { action: "sueldos.ver-liquidacion" }) },
+            { status: 500 }
+        );
     }
 }

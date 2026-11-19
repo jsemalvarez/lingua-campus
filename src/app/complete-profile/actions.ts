@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * Retrieves student and institute data associated with a temporary link token.
@@ -38,7 +39,7 @@ export async function getStudentByToken(token: string) {
             instituteLevels 
         };
     } catch (error) {
-        console.error("Error getting student by token:", error);
+        await reportError(error, { action: "alumnos.abrir-enlace-perfil", auth: null });
         return { success: false, error: "Error de servidor" };
     }
 }
@@ -126,7 +127,7 @@ export async function updateStudentFromTokenAction(formData: FormData, token: st
         revalidatePath("/students");
         return { success: true };
     } catch (error) {
-        console.error("Error updating student via token:", error);
+        await reportError(error, { action: "alumnos.completar-perfil", auth: null });
         return { success: false, error: "Error al actualizar los datos" };
     }
 }

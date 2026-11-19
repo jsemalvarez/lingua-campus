@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireLessonWriteAccess } from "@/lib/lessonAccess";
+import { reportError } from "@/lib/errors/report";
 
 /** Estados de matrícula que la pantalla de asistencia lista como alumnos del curso. */
 const ENROLLED_STATUSES = ["ACTIVE", "FINISHED"];
@@ -137,7 +138,7 @@ export async function saveLessonAttendanceAction(
         // El error crudo de Prisma queda en el log del servidor, no en la
         // pantalla de la profesora. Antes se devolvía `error.message` tal cual:
         // le llegaba un `P2028` a quien sólo quería guardar la lista.
-        console.error("Error guardando asistencia:", { lessonId, courseId, error });
+        await reportError(error, { action: "asistencia.guardar", context: { lessonId, courseId } });
         return { success: false, error: "Error al guardar el parte de asistencia." };
     }
 }
@@ -217,7 +218,7 @@ export async function scanAttendanceQRAction(
         };
 
     } catch (error: any) {
-        console.error("QR Scan Error:", error);
+        await reportError(error, { action: "asistencia.escanear-qr", context: { lessonId, courseId } });
         return { success: false, error: "Error interno al procesar el código QR." };
     }
 }

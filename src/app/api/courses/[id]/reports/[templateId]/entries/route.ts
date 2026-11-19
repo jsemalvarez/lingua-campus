@@ -5,6 +5,7 @@ import { instituteMonth } from "@/lib/dates";
 import { reportContentHash } from "@/lib/reports/signatures";
 import { asSignedHashes, fallenStudentIds } from "@/lib/reports/batchSignatures";
 import { notifyAfterGradeEdit } from "@/lib/reports/batchSignatureNotices";
+import { reportError, userMessageFor } from "@/lib/errors/report";
 
 export async function GET(
     req: NextRequest,
@@ -121,8 +122,10 @@ export async function GET(
         });
 
     } catch (error: any) {
-        console.error("GET Course Report Entries Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo abrir la planilla. Probá de nuevo en un momento.", { action: "informes.ver-notas" }) },
+            { status: 500 }
+        );
     }
 }
 
@@ -336,13 +339,15 @@ export async function POST(
                 });
             }
         } catch (notifErr) {
-            console.error("Error notifying batch signers:", notifErr);
+            await reportError(notifErr, { action: "informes.avisar-firmantes", shownToUser: false });
         }
 
         return NextResponse.json({ success: true, count: result.length, reports: result });
 
     } catch (error: any) {
-        console.error("POST Course Report Entries Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo guardar la planilla. Probá de nuevo en un momento.", { action: "informes.guardar-notas" }) },
+            { status: 500 }
+        );
     }
 }

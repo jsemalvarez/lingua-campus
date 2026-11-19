@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Building2, Mail, LayoutDashboard, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { AdminNavbar } from "./AdminNavbar";
+import { countNewIssues } from "@/lib/errors/panel";
 
 export default async function AdminInstitutesPage() {
     if (!await requireSuperadmin()) {
@@ -14,12 +15,12 @@ export default async function AdminInstitutesPage() {
     }
 
     const repo = new PrismaInstituteRepository();
-    const institutes = await repo.findAll();
+    const [institutes, newErrors] = await Promise.all([repo.findAll(), countNewIssues()]);
 
     return (
         <div className="min-h-screen bg-background text-foreground">
             {/* Navbar del admin — componente cliente para tener el ThemeToggle */}
-            <AdminNavbar />
+            <AdminNavbar newErrors={newErrors} />
 
             <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
                 {/* Header */}

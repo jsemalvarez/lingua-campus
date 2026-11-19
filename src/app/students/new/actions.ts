@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForStudent } from "@/lib/defaultPasswords";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
+import { uniqueViolationFields, userMessageFor } from "@/lib/errors/report";
+import { repeatedStudentMessage } from "@/lib/errors/userError";
 
 export async function createStudentAction(formData: FormData) {
     // El instituto salía del JWT, que dura 30 días; ahora sale de la base junto
@@ -77,7 +79,9 @@ export async function createStudentAction(formData: FormData) {
 
         revalidatePath("/students");
         return { success: true, studentId: newStudent.id };
-    } catch (e: any) {
-        return { success: false, error: e.message || "Error al crear estudiante" };
+    } catch (e) {
+        const repeated = uniqueViolationFields(e);
+        if (repeated) return { success: false, error: repeatedStudentMessage(repeated) };
+        return { success: false, error: await userMessageFor(e, "No se pudo dar de alta al alumno. Probá de nuevo en un momento.", { action: "alumnos.crear", auth }) };
     }
 }

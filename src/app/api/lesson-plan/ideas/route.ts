@@ -3,6 +3,7 @@ import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { readJsonBody } from "@/lib/practice/guard";
 import { guardLessonPlan } from "@/lib/lessonPlan/guard";
 import { campusIdea, materialIdea, ideaFromAi, MOMENT_IDS, selectedWords, toolsForAges, type MomentId, type PlanIdea } from "@/lib/lessonPlan/plan";
+import { reportError } from "@/lib/errors/report";
 
 export const maxDuration = 60;
 
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
             }
         }
     } catch (error) {
-        console.error("[LESSON_PLAN_IDEAS] Error:", error instanceof Error ? error.message : error);
+        await reportError(error, { action: "clase.generar-ideas" });
         return new Response("No pudimos escribir las ideas. Probá de nuevo en un momento.", { status: 500 });
     }
 

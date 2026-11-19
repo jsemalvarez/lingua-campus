@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireLessonWriteAccess } from "@/lib/lessonAccess";
+import { reportError } from "@/lib/errors/report";
 
 /** Estados de matrícula que la pantalla de notas lista como alumnos del curso. */
 const ENROLLED_STATUSES = ["ACTIVE", "FINISHED"];
@@ -85,7 +86,7 @@ export async function saveLessonGradesAction(
     } catch (error: any) {
         // El error crudo de Prisma va al log del servidor, no a la pantalla del
         // docente. Es el mismo criterio que se adoptó en asistencia (BUG-07).
-        console.error("Error guardando notas:", { lessonId, courseId, error });
+        await reportError(error, { action: "notas.guardar", context: { lessonId, courseId } });
         return { success: false, error: "Error al guardar las notas." };
     }
 }

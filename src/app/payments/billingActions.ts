@@ -8,6 +8,7 @@ import { ENROLLMENT_FEE_MONTH } from "@/lib/utils";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
 import { instituteMonth } from "@/lib/dates";
 import { monthlyFeesToIssue } from "@/lib/monthlyFees";
+import { reportError } from "@/lib/errors/report";
 
 /** Copia textual del helper de `actions.ts`. Ver el comentario de allá. */
 async function getAuthAndInstitute() {
@@ -62,7 +63,7 @@ export async function generateMonthlyFeesAction(month?: number, year?: number) {
             skippedDeleted
         };
     } catch (e: any) {
-        console.error("Error al generar cuotas masivas:", e);
+        await reportError(e, { action: "cuotas.generar-masivas" });
         return { success: false, error: "Error al generar cuotas" };
     }
 }
@@ -126,7 +127,7 @@ export async function countYearlyEnrollmentTargetsAction(year: number) {
         });
         return { success: true, reached };
     } catch (e: any) {
-        console.error("Error al contar inscripciones del año lectivo:", e);
+        await reportError(e, { action: "matriculas.contar-del-ano" });
         return { success: false, error: "Error al contar inscripciones" };
     }
 }
@@ -243,7 +244,7 @@ export async function generateYearlyEnrollmentFeesAction(year: number, amount: n
         revalidatePath("/payments");
         return { success: true, count: feesToCreate.length };
     } catch (e: any) {
-        console.error("Error al generar matrículas masivas:", e);
+        await reportError(e, { action: "matriculas.generar-masivas" });
         return { success: false, error: "Error al generar matrículas masivas" };
     }
 }
@@ -397,7 +398,7 @@ export async function deleteFeeAction(feeId: string, reason: string) {
         revalidatePath("/students");
         return { success: true };
     } catch (e: any) {
-        console.error(e);
+        await reportError(e, { action: "cuotas.eliminar" });
         return { success: false, error: "Error al eliminar la cuota" };
     }
 }
@@ -440,7 +441,7 @@ export async function editFeeAmountAction(feeId: string, newAmount: number) {
         revalidatePath("/payments/debtors");
         return { success: true };
     } catch (e: any) {
-        console.error(e);
+        await reportError(e, { action: "cuotas.actualizar" });
         return { success: false, error: "Error al actualizar la cuota" };
     }
 }

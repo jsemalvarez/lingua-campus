@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { userMessageFor } from "@/lib/errors/report";
 
 export interface LinkPreviewData {
     url: string;
@@ -149,9 +150,8 @@ export async function GET(req: NextRequest) {
             },
         });
     } catch (err: any) {
-        console.error("[messages/link-preview]", err);
         return NextResponse.json(
-            { error: err.message ?? "Error interno." },
+            { error: await userMessageFor(err, "No se pudo armar la vista previa del enlace.", { action: "mensajes.vista-previa-enlace", shownToUser: false }) },
             { status: 500 }
         );
     }

@@ -1,5 +1,6 @@
 import { getAuthContext } from "@/lib/authz";
 import prisma from "@/lib/prisma";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/session
@@ -104,8 +105,8 @@ export async function POST(req: Request) {
         });
 
         return Response.json({ success: true, sessionId: practiceSession.id });
-    } catch (error: any) {
-        console.error("[SESSION] Error:", error.message);
+    } catch (error) {
+        await reportError(error, { action: "practica.guardar-sesion", auth });
         return new Response("Error al guardar sesión", { status: 500 });
     }
 }

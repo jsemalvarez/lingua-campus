@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
 import { practiceApiError } from "./apiError";
+import { reportClientError } from "@/lib/errors/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,7 +156,7 @@ export function AIChatbot({
                     }),
                 });
             } catch (err) {
-                console.error("Error saving session:", err);
+                reportClientError(err, { action: "practica.guardar-sesion", context: { lessonPracticeId, tipo: "chat" } });
             }
         }
 

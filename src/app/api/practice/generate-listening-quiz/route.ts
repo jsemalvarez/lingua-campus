@@ -1,6 +1,7 @@
 import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/generate-listening-quiz
@@ -29,8 +30,8 @@ export async function POST(req: Request) {
         const questions = await provider.generateListeningQuiz(text, PRACTICE_LANGUAGE);
 
         return Response.json({ questions });
-    } catch (error: any) {
-        console.error("[GENERATE_LISTENING_QUIZ] Error:", error.message);
+    } catch (error) {
+        await reportError(error, { action: "practica.generar-preguntas", context: { lessonPracticeId: guard.practice.id } });
         return new Response("Error al generar preguntas de listening", { status: 500 });
     }
 }

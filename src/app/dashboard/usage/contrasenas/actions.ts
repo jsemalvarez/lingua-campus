@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import prisma from "@/lib/prisma";
 import { studentDefaults, userDefaults } from "@/lib/defaultPasswords";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * La pasada que llena el pasado de la métrica 6 (FEAT-11).
@@ -130,7 +131,7 @@ export async function revisarContrasenasPorDefecto(): Promise<ResultadoDeLaPasad
 
         return { ok: true, revisadas: alumnos.length + usuarios.length, faltan };
     } catch (e) {
-        console.error("Error revisando contraseñas por defecto:", e);
+        await reportError(e, { action: "acceso.revisar-contrasenas" });
         return { ok: false, revisadas: 0, faltan: 0, error: "Error al revisar las cuentas" };
     }
 }

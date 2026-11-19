@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { INSTITUTE_ADMINS, requireRole } from "@/lib/authz";
+import { userMessageFor } from "@/lib/errors/report";
+import { UserError } from "@/lib/errors/userError";
 
 export async function PUT(
     req: NextRequest,
@@ -61,7 +63,7 @@ export async function PUT(
                     }
                 });
                 if (entriesCount > 0) {
-                    throw new Error("No se pueden eliminar categorías que ya contienen calificaciones de alumnos.");
+                    throw new UserError("No se pueden eliminar categorías que ya contienen calificaciones de alumnos.");
                 }
 
                 // Safe to delete
@@ -115,8 +117,11 @@ export async function PUT(
 
         return NextResponse.json(updatedTemplate);
     } catch (error: any) {
-        console.error("PUT Report Template Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo guardar la plantilla. Probá de nuevo en un momento.", { action: "informes.editar-plantilla" }) },
+            // Las categorías con notas no se pueden borrar: es una regla, no una falla.
+            { status: error instanceof UserError ? 409 : 500 }
+        );
     }
 }
 
@@ -158,7 +163,9 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("DELETE Report Template Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: await userMessageFor(error, "No se pudo eliminar la plantilla. Probá de nuevo en un momento.", { action: "informes.eliminar-plantilla" }) },
+            { status: 500 }
+        );
     }
 }

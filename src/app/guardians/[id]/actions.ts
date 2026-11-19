@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { DEFAULT_PASSWORDS, isDefaultForUser } from "@/lib/defaultPasswords";
 import { requireRole } from "@/lib/authz";
 import { invalidateResetTokens } from "@/lib/passwordReset";
+import { reportError } from "@/lib/errors/report";
 
 export async function updateGuardianAction(formData: FormData) {
     const adminUser = await requireRole(["ADMIN"]);
@@ -73,7 +74,7 @@ export async function updateGuardianAction(formData: FormData) {
         revalidatePath("/students/[id]", "page");
         return { success: true };
     } catch (e: any) {
-        console.error("Error updating guardian:", e);
+        await reportError(e, { action: "tutores.actualizar" });
         return { success: false, error: "Error de base de datos" };
     }
 }
@@ -108,7 +109,7 @@ export async function resetGuardianPassword(guardianId: string, customPassword?:
         revalidatePath(`/guardians/${guardianId}`);
         return { success: true, newPassword };
     } catch (e) {
-        console.error("Error resetting guardian password:", e);
+        await reportError(e, { action: "tutores.restablecer-contrasena" });
         return { success: false, error: "Error al restablecer la contraseña" };
     }
 }

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
 import { practiceApiError } from "./apiError";
+import { reportClientError } from "@/lib/errors/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,8 @@ export function ListeningLab({
 
             setQuestions(data.questions || []);
         } catch (err) {
-            console.error("Error loading original quiz:", err);
+            // El listening queda sin preguntas, sin cartel.
+            reportClientError(err, { action: "practica.generar-preguntas", context: { lessonPracticeId } });
             if (token === quizRequestRef.current) setQuestions([]);
         }
     }, [lessonPracticeId]);
@@ -279,7 +281,7 @@ export function ListeningLab({
                     }),
                 });
             } catch (err) {
-                console.error("Error saving session:", err);
+                reportClientError(err, { action: "practica.guardar-sesion", context: { lessonPracticeId, tipo: "listening" } });
             }
         }
 

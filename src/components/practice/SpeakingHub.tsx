@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { SessionSummary } from "@/app/dashboard/components/StudentPracticeView";
 import { practiceApiError } from "./apiError";
+import { reportClientError } from "@/lib/errors/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,9 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
                 setError(await practiceApiError(res, "No se pudo reproducir el audio."));
             }
         } catch (err) {
-            console.error("TTS error:", err);
+            // El botón vuelve a su estado y no suena nada: el alumno lo nota,
+            // pero no ve ningún cartel.
+            reportClientError(err, { action: "practica.audio", context: { lessonPracticeId } });
             setPhase("idle");
         }
     };
@@ -305,7 +308,8 @@ export function SpeakingHub({ lessonId, lessonPracticeId, phrases: initialPhrase
                     })
                 });
             } catch (err) {
-                console.error("Error saving session:", err);
+                // El alumno practicó y el registro de la sesión no llegó.
+                reportClientError(err, { action: "practica.guardar-sesion", context: { lessonPracticeId, tipo: "speaking" } });
             }
         }
 

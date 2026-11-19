@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireCourseWriteAccess } from "@/lib/lessonAccess";
 import { SCHEDULED_LESSON_TOPIC } from "@/lib/practice/draft";
+import { userMessageFor } from "@/lib/errors/report";
 
 /**
  * Crea una clase, un TP o un examen desde el libro de temas.
@@ -48,9 +49,8 @@ export async function createLessonAction(formData: FormData) {
 
         revalidatePath(`/courses/${courseId}`);
         return { success: true, lessonId: lesson.id };
-    } catch (error: any) {
-        console.error("Error creating lesson:", error);
-        return { success: false, error: error.message || "No se pudo crear la clase" };
+    } catch (error) {
+        return { success: false, error: await userMessageFor(error, "No se pudo crear la clase. Probá de nuevo en un momento.", { action: "clase.crear", context: { courseId } }) };
     }
 }
 
@@ -112,9 +112,8 @@ export async function editLessonAction(formData: FormData) {
 
         revalidatePath(`/courses/${courseId}`);
         return { success: true };
-    } catch (error: any) {
-        console.error("Error editing lesson:", error);
-        return { success: false, error: error.message || "No se pudo editar la clase" };
+    } catch (error) {
+        return { success: false, error: await userMessageFor(error, "No se pudo guardar la clase. Probá de nuevo en un momento.", { action: "clase.editar", context: { lessonId, courseId } }) };
     }
 }
 
@@ -148,9 +147,8 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
 
         revalidatePath(`/courses/${courseId}`);
         return { success: true };
-    } catch (error: any) {
-        console.error("Error deleting lesson:", error);
-        return { success: false, error: error.message || "No se pudo eliminar la clase" };
+    } catch (error) {
+        return { success: false, error: await userMessageFor(error, "No se pudo eliminar la clase. Probá de nuevo en un momento.", { action: "clase.eliminar", context: { lessonId, courseId } }) };
     }
 }
 
@@ -226,8 +224,7 @@ export async function generateLessonsAction(courseId: string, startDate: Date, e
 
         revalidatePath(`/courses/${courseId}`);
         return { success: true, count: lessonsToCreate.length };
-    } catch (error: any) {
-        console.error("Error generating lessons:", error);
-        return { success: false, error: error.message || "No se pudieron generar las clases" };
+    } catch (error) {
+        return { success: false, error: await userMessageFor(error, "No se pudieron generar las clases. Probá de nuevo en un momento.", { action: "clase.generar-calendario", context: { courseId } }) };
     }
 }

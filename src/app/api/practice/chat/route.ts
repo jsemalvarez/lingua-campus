@@ -1,5 +1,6 @@
 import { getAIProvider } from "@/lib/practice/providers/ai";
 import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
+import { reportError } from "@/lib/errors/report";
 import type { ChatMessage } from "@/lib/practice/providers/ai/IAIProvider";
 
 /**
@@ -61,8 +62,11 @@ export async function POST(req: Request) {
         const reply = await provider.chat(messages, scenario);
 
         return Response.json({ message: reply });
-    } catch (error: any) {
-        console.error("[CHAT] Error:", error.message);
+    } catch (error) {
+        await reportError(error, {
+            action: "practica.chat",
+            context: { lessonPracticeId: guard.practice.id },
+        });
         return new Response("Error en el chat con IA", { status: 500 });
     }
 }

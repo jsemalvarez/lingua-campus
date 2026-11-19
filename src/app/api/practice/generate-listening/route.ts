@@ -1,6 +1,7 @@
 import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * POST /api/practice/generate-listening
@@ -25,8 +26,8 @@ export async function POST(req: Request) {
         const result = await provider.generateListeningText(seedText, PRACTICE_LANGUAGE);
 
         return Response.json(result);
-    } catch (error: any) {
-        console.error("[GENERATE_LISTENING] Error:", error.message);
+    } catch (error) {
+        await reportError(error, { action: "practica.generar-listening", context: { lessonPracticeId: guard.practice.id } });
         return new Response("Error al generar texto de listening", { status: 500 });
     }
 }
