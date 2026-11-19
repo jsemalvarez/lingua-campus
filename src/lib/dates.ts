@@ -81,6 +81,8 @@ export type DateStyle =
     | "monthYear"
     /** martes 20 */
     | "weekdayDay"
+    /** martes 20 de octubre */
+    | "weekdayDayMonth"
     /** oct */
     | "month"
     /** 05 */
@@ -104,6 +106,7 @@ export function formatDate(value: Date | string, kind: DateKind, style: DateStyl
         case "dayMonthLong": return `${day} de ${monthName}`;
         case "monthYear": return `${monthName} de ${year}`;
         case "weekdayDay": return `${weekday} ${day}`;
+        case "weekdayDayMonth": return `${weekday} ${day} de ${monthName}`;
         case "month": return shortMonth;
         case "dayNumber": return pad(day);
         case "numericDayMonth": return `${pad(day)}/${pad(month)}`;

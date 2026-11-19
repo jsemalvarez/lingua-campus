@@ -123,22 +123,45 @@ function describeClass(context: LessonPlanContext): string {
     return lines.filter(Boolean).join("\n");
 }
 
+/**
+ * Las fallas de Gemini que son de su lado y suelen pasar solas: el 503 «This
+ * model is currently experiencing high demand» y el 500. El 429 no entra: es
+ * cuota, y reintentar enseguida no la devuelve.
+ */
+const RETRYABLE_STATUS = new Set([500, 503]);
+/**
+ * La espera antes de cada reintento (más un poco al azar, para no volver todos
+ * juntos). Dos reintentos: como mucho unos 3 s más, que el alumno espera mejor
+ * que un «Probá de nuevo». El 16/11/2026 el chat dio 503 en 2 de 7 llamadas.
+ */
+const RETRY_DELAYS_MS = [700, 1500];
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function callGemini(apiKey: string, body: GeminiRequest): Promise<string> {
     const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    const payload = JSON.stringify(body);
 
-    const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-    });
+    for (let attempt = 0; ; attempt++) {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+        });
 
-    if (!res.ok) {
+        if (res.ok) {
+            const data = await res.json();
+            return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        }
+
         const err = await res.text();
-        throw new Error(`Gemini API ${res.status}: ${err}`);
+        const delay = RETRY_DELAYS_MS[attempt];
+        if (!RETRYABLE_STATUS.has(res.status) || delay === undefined) {
+            throw new Error(`Gemini API ${res.status}: ${err}`);
+        }
+        console.warn(`[GEMINI] ${res.status}, reintento ${attempt + 1} de ${RETRY_DELAYS_MS.length}`);
+        await wait(delay + Math.random() * 300);
     }
-
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -149,7 +172,8 @@ export class GeminiProvider implements IAIProvider {
     async evaluatePronunciation(
         expected: string,
         actual: string,
-        language: string = "English"
+        language: string = "English",
+        missing: string[] = []
     ): Promise<EvaluationResult> {
         // 1. Shortcut: Identical strings (ignoring case/punctuation)
         const normalize = (s: string) => s.toLowerCase().replace(/[.,!?;:]/g, "").trim();
@@ -166,11 +190,11 @@ export class GeminiProvider implements IAIProvider {
 
 The student was asked to say: "${expected}"
 The speech recognition transcribed what they said as: "${actual}"
-
+${missing.length > 0 ? `A word-by-word check found that these words did not come out: ${missing.map((w) => `"${w}"`).join(", ")}. Your feedback must be about them: what probably happened and one concrete tip to say them.\n` : ""}
 Evaluate the pronunciation and respond ONLY with a valid JSON object in this exact format:
 {
   "score": <number 0-100>,
-  "feedback": "<brief encouraging feedback in Spanish, 1-2 sentences>",
+  "feedback": "<brief encouraging feedback in Rioplatense Spanish (use 'vos', warm and plain, no slang such as 'che'), 1-2 sentences>",
   "weakArea": "<specific phoneme or pattern that was wrong, e.g. 'th fricative', 'short i vowel', or null if pronunciation was good>"
 }
 
@@ -236,11 +260,14 @@ Important rules:
 - Respond only in English
 - Keep responses short (2-4 sentences max) to encourage back-and-forth conversation
 - If the student makes a grammar error, gently correct it naturally within your response
-- Never break character or mention that you are an AI`
+- Never break character or mention that you are an AI
+- Plain text only: no markdown, no asterisks, no bullet lists`
                 }]
             },
             contents: history,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 256 },
+            // Sin pensar: el pensamiento sale del mismo tope de 256 y la respuesta
+            // podía llegar cortada o vacía, como pasaba con la evaluación de Speaking.
+            generationConfig: { temperature: 0.7, maxOutputTokens: 256, thinkingConfig: { thinkingBudget: 0 } },
         });
     }
 
@@ -370,15 +397,23 @@ Task: Generate a True/False comprehension quiz about the text.
 CRITICAL CONSTRAINTS:
 1. The quiz must contain exactly 4 to 6 True/False statements.
 2. Mix true and false statements randomly.
-3. Respond ONLY with a valid JSON array in this exact format, with no markdown formatting around it:
+3. For each statement, "evidence" is the sentence of the text that shows whether it is true or false, copied word for word from the text.
+4. Respond ONLY with a valid JSON array in this exact format, with no markdown formatting around it:
 [
-  { "statement": "Statement 1 goes here", "isTrue": true },
-  { "statement": "Statement 2 goes here", "isTrue": false }
+  { "statement": "Statement 1 goes here", "isTrue": true, "evidence": "Sentence copied from the text" },
+  { "statement": "Statement 2 goes here", "isTrue": false, "evidence": "Sentence copied from the text" }
 ]`;
 
         const textResponse = await callGemini(this.apiKey, {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 1024, responseMimeType: "application/json" },
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1024,
+                responseMimeType: "application/json",
+                // Como en la evaluación: lo que piensa cuenta contra el máximo y
+                // el JSON puede llegar cortado, más ahora que trae la cita.
+                thinkingConfig: { thinkingBudget: 0 },
+            },
         });
 
         const jsonStr = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

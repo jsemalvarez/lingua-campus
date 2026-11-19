@@ -2,6 +2,7 @@ import { getAIProvider } from "@/lib/practice/providers/ai";
 import { PRACTICE_LANGUAGE } from "@/lib/practice/providers/ai/IAIProvider";
 import { guardPracticeAi, readJsonBody } from "@/lib/practice/guard";
 import { reportError } from "@/lib/errors/report";
+import { cleanListeningQuestions } from "@/lib/practice/listening";
 
 /**
  * POST /api/practice/generate-listening-quiz
@@ -27,7 +28,8 @@ export async function POST(req: Request) {
 
     try {
         const provider = getAIProvider();
-        const questions = await provider.generateListeningQuiz(text, PRACTICE_LANGUAGE);
+        // La cita de cada frase se queda sólo si está en el texto: la IA puede inventarla.
+        const questions = cleanListeningQuestions(await provider.generateListeningQuiz(text, PRACTICE_LANGUAGE), text);
 
         return Response.json({ questions });
     } catch (error) {

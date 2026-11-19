@@ -38,6 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
     "practica.generar-preguntas": "Generar las preguntas del listening",
     "practica.generar-borrador": "Generar la práctica de la clase",
     "practica.guardar-sesion": "Guardar la sesión de práctica",
+    "practica.completar-sesion": "Completar la sesión con el repaso",
 
     "clase.crear": "Crear una clase",
     "clase.editar": "Editar una clase",

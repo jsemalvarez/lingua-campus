@@ -143,10 +143,12 @@ export default async function StudentAcademicsPage() {
         courseColor: s.lesson.course.color,
     }));
 
+    // La conversación no se corrige: cuenta como sesión y como tiempo, no en la precisión.
+    const gradedSessions = practiceSessions.filter(s => s.type !== "CHAT");
     const practiceMetrics = {
         totalSessions: practiceSessions.length,
-        avgAccuracy: practiceSessions.length > 0
-            ? Math.round(practiceSessions.reduce((s, x) => s + x.accuracyPct, 0) / practiceSessions.length)
+        avgAccuracy: gradedSessions.length > 0
+            ? Math.round(gradedSessions.reduce((s, x) => s + x.accuracyPct, 0) / gradedSessions.length)
             : null,
         totalMinutesPracticed: Math.round(
             practiceSessions.reduce((s, x) => s + x.durationSeconds, 0) / 60

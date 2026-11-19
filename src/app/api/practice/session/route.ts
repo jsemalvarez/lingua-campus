@@ -110,3 +110,71 @@ export async function POST(req: Request) {
         return new Response("Error al guardar sesión", { status: 500 });
     }
 }
+
+/** Hasta cuándo se puede completar una sesión con el repaso: la recién hecha, no una vieja. */
+const REVIEW_WINDOW_MS = 2 * 60 * 60 * 1000;
+/** Tope del tiempo que suma un repaso. */
+const MAX_EXTRA_SECONDS = 2 * 60 * 60;
+
+/**
+ * PATCH /api/practice/session
+ *
+ * Body: { sessionId: string, phrasesCorrect: number, extraSeconds: number, weakArea?: string }
+ *
+ * «Repasar la frase», en el cierre de Speaking, completa la sesión que acaba
+ * de terminar en lugar de crear otra (decisión del 17/11/2026): si la frase
+ * sale en el repaso, la clase pasa a «3 de 3», igual que con el repaso que el
+ * ejercicio ya hace al final. Una sesión aparte dejaba la clase en «1 de 1».
+ *
+ * Sólo suma: las frases bien no bajan ni pasan de las dichas, y el porcentaje
+ * se calcula acá. Sólo la sesión de Speaking del propio alumno, y recién hecha.
+ */
+export async function PATCH(req: Request) {
+    const auth = await getAuthContext();
+    if (!auth) {
+        return new Response("No autorizado", { status: 401 });
+    }
+    if (!auth.isStudent) {
+        return new Response("El usuario no tiene perfil de alumno", { status: 403 });
+    }
+
+    try {
+        const body = await req.json();
+        const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
+        if (!sessionId) {
+            return new Response("Falta la sesión", { status: 400 });
+        }
+
+        const session = await prisma.practiceSession.findFirst({
+            where: { id: sessionId, studentId: auth.userId, type: "SPEAKING" },
+            select: { phrasesAttempted: true, phrasesCorrect: true, durationSeconds: true, completedAt: true },
+        });
+        if (!session) {
+            return new Response("Sesión no encontrada", { status: 404 });
+        }
+        if (Date.now() - session.completedAt.getTime() > REVIEW_WINDOW_MS) {
+            return new Response("Esa sesión ya no se puede completar", { status: 409 });
+        }
+
+        const asked = Math.floor(Number(body.phrasesCorrect) || 0);
+        const phrasesCorrect = Math.min(session.phrasesAttempted, Math.max(session.phrasesCorrect, asked));
+        const accuracyPct = session.phrasesAttempted > 0 ? Math.round((phrasesCorrect / session.phrasesAttempted) * 100) : 0;
+        const extraSeconds = Math.min(MAX_EXTRA_SECONDS, Math.max(0, Math.round(Number(body.extraSeconds) || 0)));
+        const weakArea = typeof body.weakArea === "string" && body.weakArea.trim() ? body.weakArea.trim() : null;
+
+        await prisma.practiceSession.update({
+            where: { id: sessionId },
+            data: {
+                phrasesCorrect,
+                accuracyPct,
+                durationSeconds: session.durationSeconds + extraSeconds,
+                ...(weakArea ? { weakArea } : {}),
+            },
+        });
+
+        return Response.json({ success: true, phrasesCorrect, accuracyPct });
+    } catch (error) {
+        await reportError(error, { action: "practica.completar-sesion", auth });
+        return new Response("Error al guardar sesión", { status: 500 });
+    }
+}

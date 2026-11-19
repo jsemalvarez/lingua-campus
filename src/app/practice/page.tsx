@@ -39,7 +39,7 @@ export default async function StudentPracticePage() {
                 },
                 sessions: {
                     where: { studentId: sessionUser.id },
-                    select: { type: true, accuracyPct: true, completedAt: true },
+                    select: { type: true, accuracyPct: true, phrasesAttempted: true, phrasesCorrect: true, completedAt: true },
                     orderBy: { completedAt: "desc" }
                 }
             },
@@ -62,6 +62,8 @@ export default async function StudentPracticePage() {
         sessions: item.sessions.map((s) => ({
             type: s.type as "SPEAKING" | "LISTENING" | "CHAT",
             accuracyPct: s.accuracyPct,
+            phrasesAttempted: s.phrasesAttempted,
+            phrasesCorrect: s.phrasesCorrect,
             completedAt: s.completedAt.toISOString()
         }))
     }));
