@@ -337,6 +337,16 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
     encuesta.
   - **Los interactivos:** tarjetas que giran, arrastrar y soltar, revelar, línea de tiempo y
     pestañas, entre otros.
+  - **«Palabras que faltan», probado el 21/11:** se sumó una diapositiva a la lección 3 del curso de
+    ejemplo, solo para esa comisión, con «Can I have a _ of water, please? How _ is it?».
+    - **Al armarla:** el docente escribe la frase con un `_` por hueco, carga la palabra correcta de
+      cada uno y abajo ve cómo le va a quedar al alumno. Se guarda sola.
+    - **El alumno:** escribe cada palabra en su hueco y toca «Verificar». No hay lista de palabras
+      para elegir.
+    - **La corrección:** cada hueco queda en verde o en rojo, con «1 de 2 correctas». Acepta
+      mayúsculas y espacios de más («Glass», « much »), pero no un error de tipeo («glas»).
+    - **Después de errar:** no muestra la respuesta correcta ni da pista. «Reintentar» borra los dos
+      huecos, también el que estaba bien, y se puede reintentar sin límite.
 - **Dónde les ganamos:**
   - Está hecho para cursos online, con el alumno registrado por correo. En el campus el chico entra
     con su DNI y la familia tiene su panel.
@@ -364,7 +374,6 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
 - **No sirve para nosotros:** un índice de compromiso con número cuando todavía no hay datos que lo
   sostengan.
 - **Falta ver:**
-  - Un ejercicio del lado del alumno: hay que sumar una diapositiva al curso de ejemplo.
   - El pago del lado del alumno y qué cae en «Por revisar».
   - El asistente de la academia («Agente Director»): cada pregunta gasta su IA.
   - Los doce reportes por comisión.
