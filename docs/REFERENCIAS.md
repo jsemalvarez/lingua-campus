@@ -18,6 +18,7 @@ Nada pendiente por ahora.
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
+| [Mercado Pago para plataformas](#mercado-pago-para-plataformas) | Cómo cobra una plataforma en nombre de cada instituto | 21/11/2026 | Sin decidir |
 | [Read Along](#read-along) | Lectura en voz alta para chicos, de Google | 11/11/2026 | Corrección de a una palabra para el Speaking y [PED-14](BACKLOG-TECNICO.md#ped-14) |
 | [Acadeu](#acadeu-términos-y-condiciones) | Gestión escolar de Educaria, argentina | 10/11/2026 | Borrador de términos y privacidad |
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
@@ -29,6 +30,49 @@ Nada pendiente por ahora.
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
 | [Mondly](#mondly-cem-english) | App de práctica de Pearson | 29/09/2026 | Vara para los precios |
 | [Gestión comparada por precio](#gestión-comparada-por-precio) | Cinco sistemas de gestión | 28/09/2026 | Tabla de precios |
+
+### Mercado Pago para plataformas
+
+La documentación para desarrolladores de Mercado Pago (OAuth y «Split de Pagos 1:1»), leída el
+21/11/2026 para ver cómo podría cada instituto conectar su cuenta al campus y cobrar ahí las cuotas.
+Solo se leyó la documentación: no se creó ninguna aplicación ni se conectó ninguna cuenta.
+
+- **Cómo se conecta un instituto (OAuth):**
+  - **La autorización:** el campus lo manda a una página de Mercado Pago
+    (`auth.mercadopago.com.ar/authorization`), donde entra con su cuenta y autoriza. Vuelve al campus
+    con un código que dura 10 minutos.
+  - **Las credenciales:** con ese código, el servidor del campus pide las del instituto. Llegan un
+    `access_token` para cobrar en su nombre, un `refresh_token` para renovarlo y su `user_id`, que es
+    el que figura como cobrador.
+  - **El vencimiento:** las credenciales duran 6 meses. Hay que renovarlas antes con el
+    `refresh_token`; si no, el instituto tiene que volver a conectar.
+  - **La seguridad:** se recomienda un `state` distinto en cada intento y PKCE, y hacer todo del lado
+    del servidor.
+  - **Las pruebas:** hay credenciales de prueba (`test_token`) y cuentas de prueba, para probar sin
+    plata real.
+- **Cómo se cobra:** con Checkout Pro, donde la familia paga en una página de Mercado Pago, o con
+  Checkout API, donde paga dentro del campus. Las dos usan el `access_token` de cada instituto, y la
+  plata va a su cuenta.
+- **Las comisiones:** Mercado Pago le descuenta la suya al instituto. El campus puede sumar una propia
+  (`marketplace_fee` o `application_fee`) o no cobrar nada, como ClassesUp.
+- **Los reembolsos:** se descuentan de las dos partes en proporción. Si el instituto no tiene saldo,
+  la plataforma no puede devolver el total.
+- **Lo que nos pide a nosotros:**
+  - una cuenta de vendedor de Mercado Pago con la identidad verificada (nivel KYC 6);
+  - una aplicación creada en «Tus integraciones», con el modelo Marketplace y la dirección de vuelta
+    configurada.
+
+  Origen MdP es un nombre comercial sin figura jurídica, así que hay que decidir a nombre de quién va
+  esa cuenta.
+- **Para confirmar:**
+  - La guía dice que el modelo 1:1 «sólo permite realizar pagos con dinero en cuenta entre cuentas
+    de Mercado Pago». Hay que ver si eso deja afuera la tarjeta o el efectivo, que ClassesUp sí
+    promete.
+  - Si sin comisión propia hace falta el split, o alcanza con OAuth y un Checkout Pro común.
+  - Los avisos de pago (webhooks), para que la cuota se marque sola.
+- **Cómo lo resuelve ClassesUp:** en [su sección](#classesup).
+- **Lo que hoy tiene el campus:** el cobro se registra en el mostrador, y «MercadoPago» es uno de los
+  medios que se anotan (`RegisterFeeForm`).
 
 ### Read Along
 
@@ -318,8 +362,22 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
     sugeridos: certificado impreso y envío, material complementario, examen recuperatorio y recargo
     por pago fuera de término.
   - **El recibo:** sale con el logo de la academia.
+- **Mercado Pago:** el botón «Conectar con Mercado Pago» lleva a su propio `/mercadopago/conectar` y
+  vuelve con un aviso (conectada, cancelada o error). Ya conectada, la cuenta muestra el ID de
+  vendedor y se puede desconectar. Al pagar, la cuota se marca sola y queda el número de operación
+  para conciliar. Se puede dejar en modo de prueba. PayPal, en cambio, pide pegar el Client ID y el
+  Secret. Cómo funciona del lado de Mercado Pago:
+  [Mercado Pago para plataformas](#mercado-pago-para-plataformas).
 - **Asistencia:** por fecha, cada alumno queda Presente, Ausente o Justificado. Tiene «Marcar todos
   presentes», el historial de cada uno y un reporte para bajar.
+- **Certificados:**
+  - **El editor:** A4 horizontal, con datos que se completan solos (alumno, curso, fecha e
+    instructor), texto e imágenes libres, logo, color, fondo e íconos de insignia, medalla o trofeo.
+    Exporta a PDF.
+  - **El envío:** cada certificado se asigna a un curso. En la comisión se manda a cada alumno o a
+    todos juntos, y queda pendiente o enviado.
+  - **Nosotros:** no tenemos certificados. Hoy la familia los pide por mensaje, porque
+    «Certificado» es uno de los temas de administración.
 - **El asistente de IA del alumno:**
   - **Qué muestra:** en la ficha y solo para el equipo docente, un resumen, el estado, un índice de
     compromiso de 0 a 100, el riesgo y un perfil en seis ejes. También acciones recomendadas, que
