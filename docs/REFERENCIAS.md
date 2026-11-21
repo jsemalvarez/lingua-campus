@@ -362,6 +362,13 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
     $ 158.601 con la oferta). Como fundador pagaría $ 246.000.
   - **Lo que no trae:** familias, entrada con DNI y práctica oral con lo que se vio en clase. Lo suyo
     es IA para armar cursos online y para seguir al alumno dentro de la plataforma.
+  - **Lo que le gustó al usuario (21/11):**
+    - los tramos (25, 50, 100, 150, 200, 300, 500 y 750);
+    - el encabezado de «Mi plan»: «Escala tu institución sin límites», «Más usuarios, menos costo
+      por usuario. Simple y sin sorpresas.», con «Sin contrato de permanencia», «Actualizaciones
+      gratuitas» y «Cancela cuando quieras».
+
+    Los precios nuestros se van a revisar; para él ofrecemos más que esta plataforma.
 - **Por dentro (21/11/2026):**
   - **El menú:** Inicio, Foro, Cursos y Comisiones, Lecciones, Cobros y su configuración, Usuarios,
     Alumnos, Docentes, Cuestionarios, Certificados y Evaluaciones. No hay familias ni tutores, y el
@@ -436,6 +443,24 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
   - **Se contradijo con los datos de ejemplo:** en la misma ficha dice «se sumó hoy, todavía sin
     ingresos», mientras muestra 14 ingresos y el 100 % de las lecciones. Además, el resumen pone el
     último acceso un día antes de la inscripción.
+- **El asistente de la academia (21/11):** se abre con Ctrl+K, en un panel al costado: «Escribí una
+  pregunta sobre tu academia (cursos, alumnos, evaluaciones, certificados…) y te respondo con tus
+  datos reales». Trae preguntas sugeridas por tema (cursos, alumnos, cuestionarios y certificados),
+  del tipo «¿Cuántos alumnos están en riesgo por inactividad?». Se le hicieron tres preguntas de
+  instituto con los datos de ejemplo:
+  - **«¿Qué alumnos faltaron más a clase este mes?»:** primero preguntó de qué comisión. Después
+    contestó bien que no hay asistencia cargada, pero entre las causas posibles sumó que «no hay
+    alumnos inscriptos», y la comisión tiene 15.
+  - **«¿Quiénes me deben cuotas este mes?»:** dijo que no tiene acceso a cuotas ni pagos, solo a lo
+    académico. Lo dijo de frente, aunque mandó a buscar «en tu sistema de gestión de pagos», y los
+    cobros están en la misma plataforma.
+  - **«¿Qué alumnos están en riesgo de dejar el curso y por qué?»:** contestó «0 en riesgo», pero
+    dijo que hay «0 alumnos totales activos» (el inicio muestra 15, todos activos). De ahí sacó que
+    los cuatro que completaron ya terminaron sus cursos.
+
+  Su sitio promete que cada conclusión muestra en qué datos se apoya; en las respuestas eso fue
+  «según el resumen». Para nosotros: un asistente que contesta sobre los datos tiene que coincidir
+  con la pantalla, o le quita confianza a todo lo demás.
 - **Reportes por comisión (21/11):** son doce, uno debajo del otro. Un menú elige cuáles mostrar, y
   «Exportar» imprime la página (`window.print()`).
   1. Alumnos más comprometidos, por tiempo de visualización o por lecciones, en 7, 30 o 90 días, 6
@@ -511,9 +536,8 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
       empieza a faltar.
 - **No sirve para nosotros:** un índice de compromiso con número cuando todavía no hay datos que lo
   sostengan.
-- **Falta ver:**
-  - El pago del lado del alumno y qué cae en «Por revisar».
-  - El asistente de la academia («Agente Director»): cada pregunta gasta su IA.
+- **Falta ver:** el pago del lado del alumno y qué cae en «Por revisar». Para eso hay que conectar
+  una cuenta de Mercado Pago.
 
 ### Material de Cambridge (capacitación de Patricia)
 
