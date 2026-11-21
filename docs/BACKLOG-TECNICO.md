@@ -316,6 +316,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-31](#feat-31) | P2 | 🗣️ Ver los gastos cargados, filtrados por mes | [x] |
 | [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [x] |
 | [FEAT-33](#feat-33) | P3 | 🗣️ Incorporar las clases particulares al sistema | [ ] |
+| [FEAT-34](#feat-34) | P3 | Que cada instituto conecte su Mercado Pago y la familia pague la cuota desde el campus | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -9670,6 +9671,80 @@ o las lleva fuera del sistema. Lo que ya haya cargado dice cuál de los tres pun
 **Relacionado.** [FEAT-17](#feat-17) (el borrador de la clase, que también arrastra la liquidación),
 [FEAT-14](#feat-14) (el carrito: un paquete de clases es varias cuotas en un solo cobro),
 [FIN-29](#fin-29) (la cuota que se emite al inscribir, que una particular por clase no seguiría).
+
+---
+
+<a id="feat-34"></a>
+## FEAT-34 · Que cada instituto conecte su Mercado Pago y la familia pague la cuota desde el campus · **P3**
+
+**De dónde sale (2026-11-21).** Al recorrer ClassesUp por dentro
+([REFERENCIAS](REFERENCIAS.md#classesup)) quedó a la vista lo que más nos falta en cobros. Ahí la
+academia conecta su Mercado Pago con un botón, el alumno paga desde su estado de cuenta y la cuota se
+marca sola. La idea es darles a los institutos esa misma posibilidad. No es un pedido del cliente.
+
+**Hoy.** Todo cobro se registra en el mostrador
+([`createPaymentAction`](../src/app/payments/actions.ts), `actions.ts:95`). «MercadoPago» es solo una
+de las opciones del medio en [`RegisterFeeForm.tsx:336`](../src/app/payments/components/RegisterFeeForm.tsx),
+y `Payment.method` es texto libre. La familia ve su deuda en el panel
+([`GuardianDashboardView.tsx:353`](../src/app/dashboard/components/GuardianDashboardView.tsx)) y en
+`/guardian/payments`, pero no puede pagar desde ahí.
+
+**Cómo funciona del lado de Mercado Pago.** El detalle está en
+[REFERENCIAS](REFERENCIAS.md#mercado-pago-para-plataformas).
+
+- **La conexión (OAuth):** el instituto toca «Conectar» y autoriza en Mercado Pago. Vuelve con un
+  código que dura 10 minutos, y el servidor lo cambia por un `access_token`, un `refresh_token` y su
+  `user_id`. Las credenciales duran 6 meses y se renuevan con el `refresh_token`.
+- **El cobro:** con Checkout Pro (la página de Mercado Pago) o con Checkout API, usando el
+  `access_token` del instituto, así que la plata va a su cuenta.
+- **Las comisiones:** la de Mercado Pago la paga el instituto. La nuestra (`marketplace_fee`) puede ser
+  cero.
+- **Las pruebas:** hay credenciales y cuentas de prueba, para probar todo sin plata real.
+
+**Lo que hay que construir:**
+
+1. **La conexión, para el admin del instituto:** conectar, ver que quedó conectada (con el ID de
+   vendedor) y desconectar. El token del instituto se guarda cifrado, porque hoy no hay en la base
+   ningún secreto de terceros. Se renueva solo antes de los seis meses, con aviso si falla.
+2. **El botón de pagar, para la familia y el alumno grande:** en `/guardian/payments`, en cada cuota
+   pendiente. Crea el pago con la cuota como referencia (`external_reference`) y el importe que falta.
+3. **El aviso de pago (webhook):** Mercado Pago avisa y el servidor consulta el pago con el token del
+   instituto. Si está aprobado, lo registra con la misma lógica de `createPaymentAction` (`lockFee`,
+   `paymentProblem`, `feeAfterPayment`, el asiento en el libro mayor y el saldo a favor), sin operador
+   (`Transaction.operatorId` ya es opcional) y con el número de operación. `Payment` no tiene dónde
+   guardar ese número, así que hace falta una columna y una migración.
+4. **Que no se cobre dos veces:** el mismo aviso puede llegar más de una vez, y la familia puede pagar
+   por Mercado Pago la misma cuota que la secretaria cobra en efectivo.
+   - Un aviso repetido no puede duplicar el pago: el número de operación va con regla única.
+   - Lo que sobre va al saldo a favor, como hoy.
+5. **El recibo:** el mismo comprobante ([BUG-16](#bug-16), [FIN-31](#fin-31)), con el medio y el
+   número de operación.
+6. **Las devoluciones y los contracargos:** cuando Mercado Pago devuelve un pago, el campus tiene que
+   enterarse y anular el cobro (`voidPaymentAction`). No lo tiene que descubrir ni arreglar a mano la
+   secretaria.
+
+**Lo que se decide antes de construir:**
+
+- **La cuenta de vendedor:** a nombre de quién va la cuenta verificada (KYC 6) que crea la
+  aplicación, porque Origen MdP no tiene figura jurídica.
+- **La comisión:** si se cobra una propia o no.
+- **El modelo:** si sin comisión propia hace falta el modelo Marketplace (el split) o alcanza con
+  OAuth y un Checkout Pro común. También qué medios quedan, porque la guía del split dice que solo
+  admite dinero en cuenta.
+- **El importe:** si se paga la cuota entera o lo que falta, y si lleva recargo por pagar tarde. Hoy
+  el recargo lo pone la secretaria al cobrar, y como falta `dueDate` ([FIN-08](#fin-08)) el campus no
+  sabe cuándo vence una cuota.
+
+**Lo que no entra:** pagar varias cuotas juntas, que es el carrito ([FEAT-14](#feat-14)); PayPal y los
+dólares; y la transferencia que la familia informa con el comprobante, que quedó como idea sin
+decidir en REFERENCIAS.
+
+**Por qué P3.** No lo pidió ningún instituto y nada se rompe sin esto. Sube si un cliente lo pide o si
+se decide ofrecerlo.
+
+**Relacionado.** [FEAT-14](#feat-14) (el carrito), [FIN-08](#fin-08) (la cuota sin `dueDate`),
+[FIN-31](#fin-31) y [BUG-16](#bug-16) (el recibo), [FIN-05](#fin-05) (los montos en `Float`, que
+pesan más cuando la plata entra sola).
 
 ---
 

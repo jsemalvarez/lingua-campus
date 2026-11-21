@@ -18,7 +18,7 @@ Nada pendiente por ahora.
 
 | Referencia | Qué es | Fecha | Qué salió |
 |---|---|---|---|
-| [Mercado Pago para plataformas](#mercado-pago-para-plataformas) | Cómo cobra una plataforma en nombre de cada instituto | 21/11/2026 | Sin decidir |
+| [Mercado Pago para plataformas](#mercado-pago-para-plataformas) | Cómo cobra una plataforma en nombre de cada instituto | 21/11/2026 | [FEAT-34](BACKLOG-TECNICO.md#feat-34) |
 | [Read Along](#read-along) | Lectura en voz alta para chicos, de Google | 11/11/2026 | Corrección de a una palabra para el Speaking y [PED-14](BACKLOG-TECNICO.md#ped-14) |
 | [Acadeu](#acadeu-términos-y-condiciones) | Gestión escolar de Educaria, argentina | 10/11/2026 | Borrador de términos y privacidad |
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
@@ -73,6 +73,8 @@ Solo se leyó la documentación: no se creó ninguna aplicación ni se conectó 
 - **Cómo lo resuelve ClassesUp:** en [su sección](#classesup).
 - **Lo que hoy tiene el campus:** el cobro se registra en el mostrador, y «MercadoPago» es uno de los
   medios que se anotan (`RegisterFeeForm`).
+- **Qué salió (21/11/2026):** la ficha [FEAT-34](BACKLOG-TECNICO.md#feat-34), para que cada instituto
+  conecte su Mercado Pago y la familia pague la cuota desde el campus.
 
 ### Read Along
 
@@ -424,7 +426,8 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
   - Ideas para pasar lista y para el cierre de la clase.
   - Constancias con la marca del instituto.
   - Del 21/11:
-    - que la familia pague la cuota desde el campus y se marque sola;
+    - que la familia pague la cuota desde el campus y se marque sola (pasó a
+      [FEAT-34](BACKLOG-TECNICO.md#feat-34));
     - ver el plan de cuotas antes de guardar el precio;
     - sumar a la práctica palabras que faltan, reordenar la frase y emparejar;
     - que una cuenta nueva arranque con datos de ejemplo y un botón para borrarlos, como el
