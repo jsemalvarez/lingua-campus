@@ -23,7 +23,7 @@ Nada pendiente por ahora.
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
 | [Langboost](#langboost) | Arma la clase con IA para el docente | 03/10/2026 | [PED-09](BACKLOG-TECNICO.md#ped-09) |
-| [ClassesUp](#classesup) | Gestión de academias, argentina | 06/10/2026 | Ideas sin decidir |
+| [ClassesUp](#classesup) | Gestión de academias, argentina | 06/10 y 21/11/2026 | Ideas sin decidir |
 | [Material de Cambridge](#material-de-cambridge-capacitación-de-patricia) | Capacitación de IA de Patricia | 17/10/2026 | Write & Improve en recursos, [PED-13](BACKLOG-TECNICO.md#ped-13) |
 | [Trinity Phonics](#trinity-phonics) | Práctica de pronunciación con Azure | 19/10/2026 | Prueba para [PED-02](BACKLOG-TECNICO.md#ped-02) y [PED-03](BACKLOG-TECNICO.md#ped-03) |
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
@@ -265,21 +265,109 @@ mes; la de octubre ya se usó).
 
 ### ClassesUp
 
-[classesup.com](https://classesup.com) · su Instagram (@classes.up), relevado el 06/10/2026.
+[classesup.com](https://classesup.com) · su Instagram (@classes.up), relevado el 06/10/2026, y el
+producto por dentro el 21/11/2026. Para eso, el usuario abrió una cuenta gratis con su cuenta
+personal de Google y le puso a la academia un nombre genérico. La cuenta nueva trae datos de ejemplo
+(un curso, una comisión, 15 alumnos y una docente), así que se recorrió sin cargar nada.
 
-- **Qué es:** gestión de academias, generalista, aunque sus ejemplos son de inglés. Cursos en vivo y
-  asincrónicos, cobros (Mercado Pago, Stripe, transferencia, y pagos que informa el alumno y la
-  academia aprueba), asistencia, evaluaciones, chat, certificados con la marca de la academia,
-  reportes y dos asistentes de IA (uno marca riesgo de abandono). Gratis hasta 25 alumnos.
+- **Qué es:** gestión de academias, generalista, aunque sus ejemplos son de inglés. Tiene:
+  - cursos en vivo y asincrónicos;
+  - cobros: Mercado Pago, transferencia y pagos que informa el alumno y la academia aprueba (por
+    dentro aparece PayPal; Stripe, que anunciaban en Instagram, no);
+  - asistencia, evaluaciones y chat;
+  - certificados con la marca de la academia;
+  - reportes;
+  - dos asistentes de IA, uno de los cuales marca riesgo de abandono.
+
+  Gratis hasta 25 alumnos activos, sin tarjeta.
 - **Su contenido:** tres publicaciones por día con muy poca respuesta; las de tono de anuncio
   rendían más. Para @somoslinguacampus sirve el formato de consejo útil para el director, no el
   volumen.
+- **Por dentro (21/11/2026):**
+  - **El menú:** Inicio, Foro, Cursos y Comisiones, Lecciones, Cobros y su configuración, Usuarios,
+    Alumnos, Docentes, Cuestionarios, Certificados y Evaluaciones. No hay familias ni tutores, y el
+    alumno se registra con su correo.
+  - **El inicio:** lo que falta para dejar la academia lista, accesos rápidos, el calendario de la
+    semana y las comisiones en curso con su avance. Abajo, reportes:
+    - alumnos nuevos;
+    - ingresos por día;
+    - los alumnos más comprometidos por tiempo de visualización;
+    - quién sube o baja en las últimas ocho semanas.
+  - **Datos de ejemplo:** todo lo de prueba lleva «(ejemplo)» en el nombre, y un solo botón lo borra
+    junto para empezar de cero.
+- **Cobros por dentro:**
+  - **El precio va en cada curso:**
+    - gratis o pago;
+    - pago único o en cuotas mensuales;
+    - cuándo le llega el cobro al alumno: al inscribirlo, un día fijo del mes o a mano.
+
+    Antes de guardar muestra el plan que se va a generar, cuota por cuota y con su vencimiento. Al
+    guardar emite las cuotas a los inscriptos; los que ya tenían cuotas conservan su precio.
+  - **Monedas:** pesos, dólares o las dos por curso.
+  - **Medios del alumno:**
+    - transferencia: el alumno ve los datos de la cuenta al elegirla, y puede haber una en dólares;
+    - Mercado Pago y PayPal, que la academia conecta y que marcan la cuota sola al pagar;
+    - efectivo u otros, que se registran a mano.
+
+    No cobran comisión: la plata va directo a la academia.
+  - **Pagos:**
+    - arriba, lo cobrado, lo que falta cobrar y lo vencido;
+    - pestañas Todos, Por revisar, Vencidos, Por vencer, Cobrados y Dadas de baja;
+    - un botón para exportar.
+  - **Cobro suelto:** un cargo fuera del plan de cuotas, con importe y vencimiento. Trae conceptos
+    sugeridos: certificado impreso y envío, material complementario, examen recuperatorio y recargo
+    por pago fuera de término.
+  - **El recibo:** sale con el logo de la academia.
+- **Asistencia:** por fecha, cada alumno queda Presente, Ausente o Justificado. Tiene «Marcar todos
+  presentes», el historial de cada uno y un reporte para bajar.
+- **El asistente de IA del alumno:**
+  - **Qué muestra:** en la ficha y solo para el equipo docente, un resumen, el estado, un índice de
+    compromiso de 0 a 100, el riesgo y un perfil en seis ejes. También acciones recomendadas, que
+    después sigue para ver si funcionaron, y hallazgos.
+  - **Lo bueno:** avisa cuando no le alcanzan los datos («riesgo no evaluable aún»).
+  - **Se contradijo con los datos de ejemplo:** en la misma ficha dice «se sumó hoy, todavía sin
+    ingresos», mientras muestra 14 ingresos y el 100 % de las lecciones. Además, el resumen pone el
+    último acceso un día antes de la inscripción.
+- **Ejercicios:**
+  - **Diapositivas:** todo es una diapositiva dentro de la lección, elegida entre 80 formatos, y la
+    IA completa el formato con el tema de la lección. Cada comisión puede sumar contenido propio sin
+    tocar el curso.
+  - **Los 12 evaluativos:** opción única, selección múltiple, verdadero o falso, palabras que faltan,
+    reordenar, emparejar, seleccionar imagen, deslizador, tachar, puntuación, respuesta abierta y
+    encuesta.
+  - **Los interactivos:** tarjetas que giran, arrastrar y soltar, revelar, línea de tiempo y
+    pestañas, entre otros.
+- **Dónde les ganamos:**
+  - Está hecho para cursos online, con el alumno registrado por correo. En el campus el chico entra
+    con su DNI y la familia tiene su panel.
+  - La asistencia también se toma con QR.
+  - En el cobro del mostrador, el descuento y el recargo se cargan al cobrar, hay una página de
+    deudores y sale un comprobante.
+- **Dónde nos quedamos cortos:**
+  - La familia no puede pagar desde el campus: todo pago se registra en el mostrador, y «Mercado
+    Pago» es solo el medio que se anota.
+  - No se ve el plan de cuotas antes de ponerle precio al curso.
+  - En ejercicios tenemos speaking, listening y conversación; ellos tienen doce formatos de
+    evaluación.
 - **Ideas sin decidir:**
   - Aviso del alumno que empieza a faltar (la primera recomendada).
   - Recordar la cuota desde Deudores con el mensaje de WhatsApp armado.
   - Que la familia informe el pago con el comprobante.
   - Ideas para pasar lista y para el cierre de la clase.
   - Constancias con la marca del instituto.
+  - Del 21/11:
+    - que la familia pague la cuota desde el campus y se marque sola;
+    - ver el plan de cuotas antes de guardar el precio;
+    - sumar a la práctica palabras que faltan, reordenar la frase y emparejar;
+    - que una cuenta nueva arranque con datos de ejemplo y un botón para borrarlos, como el
+      Instituto Demo.
+- **No sirve para nosotros:** un índice de compromiso con número cuando todavía no hay datos que lo
+  sostengan.
+- **Falta ver:**
+  - Un ejercicio del lado del alumno: hay que sumar una diapositiva al curso de ejemplo.
+  - El pago del lado del alumno y qué cae en «Por revisar».
+  - El asistente de la academia («Agente Director»): cada pregunta gasta su IA.
+  - Los doce reportes por comisión.
 
 ### Material de Cambridge (capacitación de Patricia)
 
