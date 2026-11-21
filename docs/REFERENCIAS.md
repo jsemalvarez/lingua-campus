@@ -506,6 +506,63 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
       mayúsculas y espacios de más («Glass», « much »), pero no un error de tipeo («glas»).
     - **Después de errar:** no muestra la respuesta correcta ni da pista. «Reintentar» borra los dos
       huecos, también el que estaba bien, y se puede reintentar sin límite.
+- **Boletines (21/11):** están en «Evaluaciones». Se elige cada cuánto hay período (mensual,
+  bimestral, trimestral, semestral o anual), cada uno con una línea que lo explica, y en el trimestral
+  dice «El más usado en academias». Después se ponen las fechas de cada período, las secciones y los
+  criterios (el de ejemplo trae «Desempeño académico» con tres y «Actitud» con dos). La misma
+  evaluación sirve para varias comisiones.
+- **Experiencia de uso (21/11):**
+  - **Primeros pasos:** en el inicio, «Te faltan 4 pasos para dejar tu academia lista» y una guía con
+    el siguiente paso destacado: crear el primer curso, sumar el primer alumno, configurar cómo
+    cobrás y subir el logo. Muestra el avance («0 de 4»), cada paso se puede omitir y la guía se
+    oculta.
+  - **La bienvenida insiste:** el cartel «¡Bienvenido, Jose!», con un búho de mascota, vuelve a
+    aparecer cada vez que se entra al inicio, aunque se haya tocado «Después».
+  - **Personalización:** el administrador cambia solo el nombre, el logo (lo sube, con zoom) y tres
+    colores (menú, degradado de arriba y botones), y lo ve en vivo antes de guardar.
+  - **Permisos en palabras:** interruptores con una línea que explica qué pasa si se prende o se
+    apaga. Por ejemplo, «Bloquear el acceso cuando la comisión finaliza» o «Renombrar materiales»
+    (solo en la comisión del docente).
+  - **Comunidad y chat:** un foro con publicaciones por curso o comisión, adjuntos y respuestas que se
+    pueden cerrar, y un chat grupal por comisión. Con alumnos menores, un chat grupal sin moderación
+    es lo primero que pregunta una familia.
+  - **Ayuda:** un chat de soporte con su mascota, «Sr. Búho», que aparece en línea y deja adjuntar
+    archivos. No se le escribió.
+  - **En el celular:** el inicio entra sin correrse de costado. La asistencia pasa de tabla a
+    tarjetas: cada alumno con tres botones grandes (Presente, Ausente, Justificado), un buscador y
+    los contadores arriba.
+  - **Datos que no coinciden:** se repite en varias pantallas (el asistente del alumno, los reportes,
+    el asistente de la academia). La misma cuenta muestra números distintos según dónde se mire.
+- **Qué podemos mejorar nosotros, de lo visto acá (21/11, sin decidir):**
+  - **Experiencia de uso:**
+    - Una guía de primeros pasos para el instituto nuevo, con el siguiente paso destacado y que se
+      pueda ocultar.
+    - Que el administrador suba el logo y elija los colores él mismo, con la vista en vivo. Hoy el
+      logo es un campo para pegar una dirección («URL del Logo», `InstituteSettingsForm.tsx:121`).
+    - Cada opción de configuración con una línea que explique qué cambia, y la recomendada marcada
+      con el porqué.
+    - En el celular, tarjetas con botones grandes en vez de tablas, empezando por el listado de
+      alumnos ([BUG-15](BACKLOG-TECNICO.md#bug-15)).
+    - Que una cuenta nueva arranque con datos de ejemplo y un botón para borrarlos.
+    - Que los carteles de bienvenida no vuelvan después de cerrarlos.
+  - **Cobros:**
+    - Que la familia pague desde el campus ([FEAT-34](BACKLOG-TECNICO.md#feat-34)).
+    - Ver el plan de cuotas antes de ponerle precio al curso.
+    - Un cobro suelto con conceptos sugeridos (examen recuperatorio, material, recargo).
+  - **Inscripción:** una página por curso con precio, cupo y fecha de cierre, en la que el que se
+    anota elige el horario y paga.
+  - **Práctica:**
+    - Palabras que faltan, reordenar la frase y emparejar.
+    - Al errar, mostrar la palabra correcta, dejar lo que estaba bien y perdonar un error chico de
+      tipeo.
+  - **Seguimiento:**
+    - Un reporte por curso para el docente con lo del aula (asistencia que baja, notas y práctica).
+    - El aviso del alumno que empieza a faltar.
+    - Certificados con la marca del instituto.
+  - **Lo que no hay que copiar:**
+    - Números o diagnósticos de la IA que no coinciden con la pantalla.
+    - Un índice de compromiso cuando todavía no hay datos.
+    - Un chat grupal de alumnos sin moderación.
 - **Dónde les ganamos:**
   - Está hecho para cursos online, con el alumno registrado por correo. En el campus el chico entra
     con su DNI y la familia tiene su panel.
