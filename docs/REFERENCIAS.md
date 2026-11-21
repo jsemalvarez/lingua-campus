@@ -329,6 +329,39 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
 - **Su contenido:** tres publicaciones por día con muy poca respuesta; las de tono de anuncio
   rendían más. Para @somoslinguacampus sirve el formato de consejo útil para el director, no el
   volumen.
+- **Lo que le cobran a la academia (21/11/2026):** un plan fijo por mes según la cantidad de alumnos
+  activos, más IVA. Hasta 25 es gratis, y más de 750 se habla aparte. Todos los planes traen lo
+  mismo; cambia solo el cupo. Hay una oferta del 30 % los primeros seis meses, sin permanencia, y
+  el primer mes se cobra proporcional.
+
+  | Plan | Hasta | Por mes | Con la oferta | Por alumno (lista) |
+  |---|---|---|---|---|
+  | Gratuito | 25 | $ 0 | $ 0 | — |
+  | Inicial | 50 | $ 48.000 | $ 33.600 | $ 960 |
+  | Básico | 100 | $ 88.864 | $ 62.205 | $ 889 |
+  | Estándar | 150 | $ 126.528 | $ 88.570 | $ 844 |
+  | Profesional | 200 | $ 161.000 | $ 112.700 | $ 805 |
+  | Avanzado | 300 | $ 226.573 | $ 158.601 | $ 755 |
+  | Empresarial | 500 | $ 355.455 | $ 248.818 | $ 711 |
+  | Corporativo | 750 | $ 500.000 | $ 350.000 | $ 667 |
+
+  - **Qué se cuenta:** el sitio dice «alumnos activos». Adentro de la cuenta dice «usuarios
+    activos» (el contador de arriba marca «0/25 usuarios»), así que puede ser que cuenten también a
+    los docentes. Un alumno inactivo libera el lugar. En dólares: de USD 31 a USD 324 por mes.
+  - **Al lado de los nuestros** (`prices.ts`, sin IVA definido), por mes:
+
+    | Alumnos | ClassesUp | Fundador ($ 1.200) | 2 módulos | 4 módulos |
+    |---|---|---|---|---|
+    | 50 | $ 48.000 | $ 60.000 | $ 71.400 | $ 132.600 |
+    | 100 | $ 88.864 | $ 120.000 | $ 140.000 | $ 260.000 |
+    | 200 | $ 161.000 | $ 240.000 | $ 240.000 | $ 440.000 |
+    | 300 | $ 226.573 | $ 360.000 | $ 301.000 | $ 541.800 |
+    | 500 | $ 355.455 | $ 600.000 | $ 500.000 | $ 900.000 |
+
+    El instituto de 205 alumnos ya no entra en el Profesional: pasa al Avanzado ($ 226.573, o
+    $ 158.601 con la oferta). Como fundador pagaría $ 246.000.
+  - **Lo que no trae:** familias, entrada con DNI y práctica oral con lo que se vio en clase. Lo suyo
+    es IA para armar cursos online y para seguir al alumno dentro de la plataforma.
 - **Por dentro (21/11/2026):**
   - **El menú:** Inicio, Foro, Cursos y Comisiones, Lecciones, Cobros y su configuración, Usuarios,
     Alumnos, Docentes, Cuestionarios, Certificados y Evaluaciones. No hay familias ni tutores, y el
@@ -370,6 +403,21 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
   para conciliar. Se puede dejar en modo de prueba. PayPal, en cambio, pide pegar el Client ID y el
   Secret. Cómo funciona del lado de Mercado Pago:
   [Mercado Pago para plataformas](#mercado-pago-para-plataformas).
+- **La página pública del curso (21/11):** se prende en cada curso, porque de entrada está apagada.
+  - **Lo que muestra:** sobre este curso, qué vas a aprender, para quién es, el nivel, los requisitos
+    y la duración. Cada uno tiene «Generar con IA», y hay un «Generar todo con IA» para la página
+    entera. Lo que queda vacío no aparece, y puede sumar el temario desplegable.
+  - **La inscripción:** abierta para cualquiera con el enlace, con cupo y fecha de cierre
+    opcionales; si no se ponen, cada comisión cierra al empezar. El alumno deja nombre, apellido y
+    correo, y el teléfono es opcional. En los cursos con fechas elige la comisión.
+  - **El pago:** si el curso es pago, se paga ahí y el alumno queda inscripto cuando se confirma el
+    pago. Su sitio muestra Stripe entre los medios, pero adentro de la cuenta no aparece.
+  - **El enlace:** `app.classesup.com/academia/<academia>/curso/<curso>`, que anda recién cuando el
+    curso se publica. No lo publicamos, porque sería poner el curso de ejemplo en internet. Cómo se
+    ve sale de su sitio.
+  - **Nosotros:** una preinscripción pública por instituto, con el nivel opcional y sin curso, precio
+    ni pago. El instituto la acepta después a mano ([BUG-08](BACKLOG-TECNICO.md#bug-08),
+    [FEAT-20](BACKLOG-TECNICO.md#feat-20)).
 - **Asistencia:** por fecha, cada alumno queda Presente, Ausente o Justificado. Tiene «Marcar todos
   presentes», el historial de cada uno y un reporte para bajar.
 - **Certificados:**
@@ -549,3 +597,6 @@ Relevados el 28 y 29/09/2026 para armar la tabla de precios, todos a tamaño de 
 
 Ninguno tiene práctica con IA. Acadesoft, Acadeu, Englody y los de ComparaSoftware no publican
 precio.
+
+ClassesUp publica sus precios: se relevaron el 21/11/2026 y están en [su sección](#classesup), al
+lado de los nuestros.
