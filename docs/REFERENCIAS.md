@@ -388,6 +388,32 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
   - **Se contradijo con los datos de ejemplo:** en la misma ficha dice «se sumó hoy, todavía sin
     ingresos», mientras muestra 14 ingresos y el 100 % de las lecciones. Además, el resumen pone el
     último acceso un día antes de la inscripción.
+- **Reportes por comisión (21/11):** son doce, uno debajo del otro. Un menú elige cuáles mostrar, y
+  «Exportar» imprime la página (`window.print()`).
+  1. Alumnos más comprometidos, por tiempo de visualización o por lecciones, en 7, 30 o 90 días, 6
+     meses o desde el principio.
+  2. Tendencia de compromiso: quién dedica más o menos tiempo semana a semana, en las últimas ocho.
+  3. Avance por alumno: qué porcentaje del curso completó.
+  4. Embudo de finalización: cuántos empezaron, llegaron a la mitad y terminaron.
+  5. Lecciones más abandonadas: las que empezaron y no volvieron a abrir en más de 14 días (o 7, 30 o
+     60).
+  6. Resultados de cuestionarios: la nota promedio y el porcentaje que aprobó.
+  7. En riesgo por notas.
+  8. Entran cada vez menos, por ejemplo de 12 a 3 veces por semana.
+  9. Alumnos inactivos: sin entrar hace varios días.
+  10. Materiales más vistos.
+  11. Lecciones por permanencia: dónde pasan más tiempo.
+  12. Actividad por día y hora: un mapa de calor de cuándo se conectan, en las últimas ocho semanas.
+
+  - **Todo mide la plataforma:** tiempo de visualización, lecciones completadas e ingresos. Sirve
+    para un curso online. En un instituto presencial la clase pasa en el aula, así que un alumno que
+    va a todas las clases y no entra al campus aparecería como inactivo. La asistencia no está entre
+    los doce.
+  - **Con los datos de ejemplo no coincide:** el inicio muestra horas de visualización por alumno, y
+    este reporte, «—».
+  - **Nosotros:** el panel de uso mide cómo se usa el sistema: tutores con cuenta, clases sin parte
+    de asistencia y práctica. La asistencia de cada alumno se ve en su panel y en el de la familia.
+    No hay un reporte por curso que le diga al docente quién empieza a faltar o a bajar.
 - **Ejercicios:**
   - **Diapositivas:** todo es una diapositiva dentro de la lección, elegida entre 80 formatos, y la
     IA completa el formato con el tema de la lección. Cada comisión puede sumar contenido propio sin
@@ -431,13 +457,15 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
     - ver el plan de cuotas antes de guardar el precio;
     - sumar a la práctica palabras que faltan, reordenar la frase y emparejar;
     - que una cuenta nueva arranque con datos de ejemplo y un botón para borrarlos, como el
-      Instituto Demo.
+      Instituto Demo;
+    - un reporte por curso para el docente con lo que pasa en el aula: la asistencia que baja, las
+      notas y la práctica (con [PED-02](BACKLOG-TECNICO.md#ped-02)). Va con el aviso del alumno que
+      empieza a faltar.
 - **No sirve para nosotros:** un índice de compromiso con número cuando todavía no hay datos que lo
   sostengan.
 - **Falta ver:**
   - El pago del lado del alumno y qué cae en «Por revisar».
   - El asistente de la academia («Agente Director»): cada pregunta gasta su IA.
-  - Los doce reportes por comisión.
 
 ### Material de Cambridge (capacitación de Patricia)
 
