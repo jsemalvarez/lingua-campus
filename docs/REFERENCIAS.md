@@ -10,6 +10,17 @@ proponerlas dos veces.
 
 Ninguna de estas referencias se nombra en textos públicos (landing, redes, correos).
 
+Desde el 22/11/2026, la lista corta vive también en la planilla
+[«Referencias e Instagram»](https://claude.ai/artifact/UGuxHBpg5CUnK3K3pjR3Md). Tiene tres hojas:
+
+- **Apps:** cómo se vio cada app (por afuera, por dentro sin cuenta o con cuenta), con qué cuenta,
+  qué salió y qué falta ver.
+- **Instagram:** las cuentas de las que sacamos ideas para publicar.
+- **Publicaciones:** los posts guardados, con su link y dónde los usamos.
+
+El detalle de cada app sigue acá. Cada relevamiento nuevo suma una fila en la planilla y su sección
+en este archivo.
+
 ## Por explorar
 
 Nada pendiente por ahora.
