@@ -317,6 +317,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FEAT-32](#feat-32) | P1 | 🗣️ El boletín del tutor está al final de la página y abre en el primer período | [x] |
 | [FEAT-33](#feat-33) | P3 | 🗣️ Incorporar las clases particulares al sistema | [ ] |
 | [FEAT-34](#feat-34) | P3 | Que cada instituto conecte su Mercado Pago y la familia pague la cuota desde el campus | [ ] |
+| [FEAT-35](#feat-35) | P3 | Preguntarle al campus por el instituto y que conteste con los datos de las pantallas | [ ] |
 | [ARQ-01](#arq-01) | P2 | Multi-tenancy manual: FK e índices faltantes | [ ] |
 | [ARQ-02](#arq-02) | P2 | Pooling de conexiones Prisma/Supabase | [ ] |
 | [ARQ-03](#arq-03) | P2 | Dominios hardcodeados en `tenant.ts` | [ ] |
@@ -347,6 +348,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [PED-12](#ped-12) | P3 | El cuestionario del texto generado se contamina con el texto del profesor | [ ] |
 | [PED-13](#ped-13) | P3 | Práctica de escritura con devolución que marca sin corregir | [ ] |
 | [PED-14](#ped-14) | P3 | Un cuento corto de la clase para leer en voz alta | [ ] |
+| [PED-15](#ped-15) | P3 | Ejercicios cerrados con las palabras de la clase, corregidos sin IA | [ ] |
 
 ---
 
@@ -9748,6 +9750,107 @@ pesan más cuando la plata entra sola).
 
 ---
 
+<a id="feat-35"></a>
+## FEAT-35 · Preguntarle al campus por el instituto y que conteste con los datos de las pantallas · **P3**
+
+**De dónde sale (2026-11-21).** En ClassesUp ([REFERENCIAS](REFERENCIAS.md#classesup)) el asistente de
+la academia se abre en un panel al costado y contesta preguntas sobre la academia «con tus datos
+reales». Al usuario le gustó la idea. No es un pedido del cliente.
+
+**Lo que enseñó ClassesUp.** Se le hicieron tres preguntas y ninguna salió bien:
+
+- dijo «0 alumnos totales activos» cuando el inicio mostraba 15;
+- entre las causas de que no hubiera asistencia sumó «no hay alumnos inscriptos», en una comisión
+  con 15;
+- para las cuotas mandó a buscar «en tu sistema de gestión de pagos», y los cobros están en la misma
+  plataforma.
+
+Un asistente que contesta distinto que la pantalla le quita confianza a todo el campus, también a lo
+que está bien.
+
+**La idea.** La IA no lee la base. Entiende la pregunta, elige una consulta de una lista cerrada que
+escribimos nosotros y redacta la respuesta con lo que esa consulta devuelve.
+
+- **Cada consulta hace la misma cuenta que una pantalla.** Así el número coincide siempre. La
+  respuesta termina con un enlace a esa pantalla («Ver en Deudores») para comprobarlo.
+- **Si ninguna consulta cubre la pregunta, lo dice** y no inventa. Es mejor «eso todavía no lo sé
+  contestar» que un número deducido.
+- **El instituto y el rol los pone el servidor**, nunca la IA. Cada consulta filtra por el instituto
+  de la sesión y muestra solo lo que ese rol ve en pantalla. Si la IA pide un curso por su nombre, el
+  servidor lo busca dentro del instituto.
+- **Solo lee.** Ninguna consulta cambia datos: no cobra, no anota y no manda mensajes.
+
+**Para quién, primero.** Dirección y secretaría (`INSTITUTE_ADMINS`). Después el docente, solo con sus
+cursos. El alumno y la familia no.
+
+**Las primeras consultas**, a confirmar contra el código cuando se arranque. Son seis u ocho, de las
+que hoy obligan a recorrer varias pantallas, por ejemplo:
+
+- quién debe cuotas, del mes o de antes, y cuánto: Deudores
+  ([`getDebtorsReportAction`](../src/app/payments/billingActions.ts), `billingActions.ts:255`);
+- los alumnos de un curso, con sus tutores;
+- las clases sin parte de asistencia y los tutores sin cuenta: el panel de uso
+  (`src/app/dashboard/usage/page.tsx`);
+- la asistencia de un alumno, la misma que muestra su panel.
+
+**Una consulta sin pantalla espera.** «¿Quién faltó más este mes?» hoy no tiene una pantalla que lo
+muestre: el reporte por curso quedó entre las ideas sin decidir de REFERENCIAS. Si el asistente la
+contesta primero, no hay dónde comprobar el número, así que esa consulta entra junto con su
+pantalla, no antes.
+
+**Lo que se reutiliza.** `getAIProvider()` con Gemini y OpenAI, el tope de uso de [SEC-07](#sec-07)
+(`src/lib/practice/quota.ts`) y `requireRole` de `src/lib/authz.ts`.
+
+**Lo que hay que construir:**
+
+1. **Las cuentas, en un solo lugar.** Hoy varias viven dentro de la página: Deudores agrupa por alumno
+   en [`payments/debtors/page.tsx`](../src/app/payments/debtors/page.tsx) y el panel calcula la
+   asistencia en [`dashboard/page.tsx:317`](../src/app/dashboard/page.tsx). Tienen que pasar a
+   funciones que usen la pantalla y el asistente. Si no, el día que cambie una de las dos, dejan de
+   coincidir.
+2. **Elegir la consulta, en el proveedor.** `IAIProvider` hoy tiene `chat(messages, systemPrompt)`,
+   que devuelve texto. Gemini y OpenAI permiten declarar funciones (*function calling*): la IA
+   devuelve qué consulta usar y con qué datos, el servidor la corre y le devuelve el resultado para
+   que redacte. Se implementa en los dos proveedores.
+3. **El panel.** Un botón en la barra del personal que abre un panel al costado. Trae preguntas
+   sugeridas, y cada respuesta lleva su enlace. En el celular ocupa la pantalla entera.
+
+**Lo que se decide antes de construir:**
+
+- **El plan de la IA.** Con el plan gratis de Gemini, Google puede usar lo que se le manda para
+  mejorar sus productos. Acá irían nombres de alumnos, muchos menores, y deudas de familias. Sin plan
+  pago no se construye. La misma pregunta está pendiente para la práctica: qué plan tienen stage y
+  prod.
+- **El tope, compartido o propio.** Cada pregunta son unas dos llamadas. Si sale del mismo tope por
+  instituto que la práctica, las preguntas de la secretaría le gastan la práctica a los alumnos. Va
+  con [PED-07](#ped-07).
+- **Guardar o no las preguntas.** Si no se guardan, no se sabe qué consulta falta sumar. Si se
+  guardan, vuelve la pregunta abierta de [PED-04](#ped-04): quién las lee y cuánto duran.
+
+**Lo difícil:**
+
+- **Que la respuesta no agregue lo que la consulta no dijo.** La IA redacta con los números que le
+  llegan, y puede adornarlos o sacar conclusiones («seguramente se dio de baja»). La instrucción fija
+  le pide contestar solo con eso. Antes de abrirlo, se prueba con muchas preguntas contra la
+  pantalla.
+- **La pregunta es texto libre y va a la IA.** Lleva el mismo tratamiento que el resto: recorte y
+  plantilla fija ([SEC-07](#sec-07)). Como las consultas solo leen y filtran por instituto y rol, lo
+  peor que puede salir es una respuesta mal escrita, nunca un dato de otro instituto.
+- **Si la IA falla, el panel lo dice** ([PED-05](#ped-05)).
+
+**Lo que no entra:**
+
+- que el asistente haga cosas, como cobrar, anotar o mandar el recordatorio;
+- que pregunten la familia o el alumno;
+- diagnósticos con número, como el «riesgo de abandono» de ClassesUp.
+
+**Por qué P3.** No lo pidió el cliente y depende del plan pago de la IA. Sube si se decide ofrecerlo.
+
+**Relacionado.** [SEC-07](#sec-07) y [PED-07](#ped-07) (el tope), [PED-04](#ped-04) (guardar lo que se
+le escribe a la IA), [PED-05](#ped-05) (las fallas de los proveedores).
+
+---
+
 <a id="arq-01"></a>
 ## ARQ-01 · Multi-tenancy manual: FK e índices faltantes · **P2**
 
@@ -11286,6 +11389,88 @@ tres párrafos encadenados, es producción escrita: va con [PED-13](#ped-13) y c
 visto bueno antes de construir.
 
 **P3.** Mejora deseable. Primero el Speaking.
+
+---
+
+<a id="ped-15"></a>
+## PED-15 · Ejercicios cerrados con las palabras de la clase, corregidos sin IA · **P3**
+
+**De dónde sale (2026-11-21).** ClassesUp ([REFERENCIAS](REFERENCIAS.md#classesup)) arma cada lección
+con diapositivas elegidas entre 80 formatos, y la IA completa cada formato con el tema.
+
+- Doce corrigen: opción única, verdadero o falso, palabras que faltan, reordenar, emparejar y otros.
+- El resto presenta contenido: tarjetas que giran, pestañas, línea de tiempo.
+
+«Palabras que faltan» se probó como alumno el 21/11.
+
+**Por qué no los 80.** Allá la lección es el curso y el alumno la recorre online. Acá la clase pasa en
+el aula, y la práctica es para repasar en casa lo que se vio. Los formatos para presentar contenido no
+tienen lugar, y de los que corrigen, para un idioma sirven pocos.
+
+**La idea.** Una sección nueva de la práctica de la clase, con tres formatos:
+
+- **Palabras que faltan:** una frase con un hueco donde va una palabra de la clase. Se escribe la
+  palabra o se elige entre tres opciones, que es la opción múltiple.
+- **Ordenar la frase:** las palabras de una frase, mezcladas, para armarla.
+- **Emparejar:** cada palabra con su significado o su traducción.
+
+**Cómo funciona:**
+
+- **Sale de la clase.** La IA arma los ejercicios con las palabras que el docente tildó en la página
+  de la clase (`LessonPlan.words`, [PED-09](#ped-09)), el tema y el nivel. El docente los revisa, puede
+  editar o sacar uno, y publica, con el circuito de borrador de [PED-01](#ped-01). Nadie arma
+  ejercicios de a uno.
+- **Corrige el código.** Comparar una palabra o un orden no necesita IA. La IA se usa una vez por
+  clase, al generar, y no en cada respuesta, así que no gasta el tope de los alumnos ni depende del
+  plan.
+- **Al errar, enseña.** Muestra la palabra correcta, deja lo que estaba bien y vuelve a ofrecer lo que
+  faltó. ClassesUp borra todo al reintentar y nunca muestra la respuesta.
+- **Sin puntos ni medallas.** Al terminar, cuántos salieron bien y nada más.
+
+**Para los chicos de 6 a 8 años.** Escribir la palabra les cuesta más que saberla. Para ellos,
+palabras que faltan va con las opciones a la vista, sin teclado. El modo se elige según la edad del
+curso, que `courseAgeRange` (`src/lib/lessonPlan/ages.ts`) ya calcula para la página de la clase.
+
+**Lo que se reutiliza:**
+
+- las palabras y el contexto de la clase de [PED-09](#ped-09) (`LessonPlanContext`);
+- los proveedores de IA, con `guardPracticeAi` y su tope;
+- `PracticeSession`, donde los intentados y los correctos ya entran en `phrasesAttempted` y
+  `phrasesCorrect`;
+- el borrador de [PED-01](#ped-01) y las pantallas de la práctica rediseñada.
+
+**Lo que hay que construir**, a confirmar contra el código cuando se arranque:
+
+1. **Schema:** el tipo nuevo en `PracticeType` y dónde guardar los ejercicios en `LessonPractice`.
+   Lleva migración.
+2. **IA:** `generateExercises(contexto, palabras)` en `IAIProvider`, en Gemini y en OpenAI.
+3. **Validar lo que vuelve:** que la palabra del hueco esté en la frase, que la frase para ordenar use
+   esas mismas palabras y que no haya dos parejas con el mismo significado. Lo que no pasa se
+   descarta, como hace `cleanListeningQuestions` (`src/lib/practice/listening.ts`) con el listening.
+4. **Alumno:** las pantallas de los tres formatos, dentro de la práctica rediseñada.
+5. **Docente:** los ejercicios en la página de la clase y en la vista previa, para revisarlos,
+   editarlos y publicarlos.
+6. **Métricas:** el tipo nuevo donde hoy se cuentan los otros tres.
+
+**Lo que se decide antes:** si un error chico de tipeo («glas» por «glass») se perdona y se marca
+como «casi», o cuenta como error.
+
+**Antes del código, el lienzo.** Las pantallas nuevas se diseñan primero en un artifact con la
+estética de la práctica rediseñada. Se aprueban antes de tocar la página.
+
+**Lo que no entra:**
+
+- los formatos para presentar contenido;
+- emparejar con imágenes, que pide un banco de imágenes apto para chicos;
+- armar un ejercicio a mano desde cero.
+
+**Pasa por Patricia.** Es una sección nueva de la práctica: necesita su visto bueno antes de
+construir.
+
+**P3.** Mejora deseable. Sube si Patricia la quiere.
+
+**Relacionado.** [PED-09](#ped-09) (las palabras de la clase), [PED-01](#ped-01) (el borrador),
+[PED-14](#ped-14) (otra sección nueva de la práctica).
 
 ---
 

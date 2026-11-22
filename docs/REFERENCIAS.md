@@ -24,7 +24,7 @@ Nada pendiente por ahora.
 | [Duolingo](#duolingo) | App de idiomas con lecciones cortas | 03/11/2026 | Ideas sin decidir, para rediseñar la práctica |
 | [Moodle](#moodle) | Aula virtual de código abierto | 25/10/2026 | Ideas sin decidir |
 | [Langboost](#langboost) | Arma la clase con IA para el docente | 03/10/2026 | [PED-09](BACKLOG-TECNICO.md#ped-09) |
-| [ClassesUp](#classesup) | Gestión de academias, argentina | 06/10 y 21/11/2026 | Ideas sin decidir |
+| [ClassesUp](#classesup) | Gestión de academias, argentina | 06/10 y 21/11/2026 | [FEAT-35](BACKLOG-TECNICO.md#feat-35), [PED-15](BACKLOG-TECNICO.md#ped-15) e ideas sin decidir |
 | [Material de Cambridge](#material-de-cambridge-capacitación-de-patricia) | Capacitación de IA de Patricia | 17/10/2026 | Write & Improve en recursos, [PED-13](BACKLOG-TECNICO.md#ped-13) |
 | [Trinity Phonics](#trinity-phonics) | Práctica de pronunciación con Azure | 19/10/2026 | Prueba para [PED-02](BACKLOG-TECNICO.md#ped-02) y [PED-03](BACKLOG-TECNICO.md#ped-03) |
 | [Quinttos](#quinttos) | Gestión de institutos, argentina | 19/10/2026 | Contexto comercial |
@@ -460,7 +460,8 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
 
   Su sitio promete que cada conclusión muestra en qué datos se apoya; en las respuestas eso fue
   «según el resumen». Para nosotros: un asistente que contesta sobre los datos tiene que coincidir
-  con la pantalla, o le quita confianza a todo lo demás.
+  con la pantalla, o le quita confianza a todo lo demás. Así quedó en
+  [FEAT-35](BACKLOG-TECNICO.md#feat-35).
 - **Reportes por comisión (21/11):** son doce, uno debajo del otro. Un menú elige cuáles mostrar, y
   «Exportar» imprime la página (`window.print()`).
   1. Alumnos más comprometidos, por tiempo de visualización o por lecciones, en 7, 30 o 90 días, 6
@@ -552,7 +553,7 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
   - **Inscripción:** una página por curso con precio, cupo y fecha de cierre, en la que el que se
     anota elige el horario y paga.
   - **Práctica:**
-    - Palabras que faltan, reordenar la frase y emparejar.
+    - Palabras que faltan, reordenar la frase y emparejar ([PED-15](BACKLOG-TECNICO.md#ped-15)).
     - Al errar, mostrar la palabra correcta, dejar lo que estaba bien y perdonar un error chico de
       tipeo.
   - **Seguimiento:**
@@ -585,7 +586,10 @@ personal de Google y le puso a la academia un nombre genérico. La cuenta nueva 
     - que la familia pague la cuota desde el campus y se marque sola (pasó a
       [FEAT-34](BACKLOG-TECNICO.md#feat-34));
     - ver el plan de cuotas antes de guardar el precio;
-    - sumar a la práctica palabras que faltan, reordenar la frase y emparejar;
+    - sumar a la práctica palabras que faltan, reordenar la frase y emparejar (pasó a
+      [PED-15](BACKLOG-TECNICO.md#ped-15));
+    - preguntarle al campus por el instituto y que conteste con los datos de las pantallas (pasó a
+      [FEAT-35](BACKLOG-TECNICO.md#feat-35));
     - que una cuenta nueva arranque con datos de ejemplo y un botón para borrarlos, como el
       Instituto Demo;
     - un reporte por curso para el docente con lo que pasa en el aula: la asistencia que baja, las
