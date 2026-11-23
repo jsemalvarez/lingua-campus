@@ -334,6 +334,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-14](#arq-14) | P3 | La purga de un alumno no puede borrar a ningún alumno real | [ ] |
 | [ARQ-15](#arq-15) | P2 | 🗣️ La identidad está partida en dos tablas: `User` y `Student` | [ ] |
 | [ARQ-16](#arq-16) | P3 · sube con el número | Qué cuesta cada filtro del calendario | [ ] |
+| [ARQ-17](#arq-17) | P1 · antes de fin de 2026 | Supabase retira las claves heredadas y prod puede estar usándolas | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -10670,6 +10671,55 @@ dibuja —hoy entran enteros—; y recién después mirar índices, que es [ARQ-
 **Relacionado.** [BUG-14](#bug-14) (la otra mitad del mismo reporte, y va primero),
 [ARQ-02](#arq-02) (pooling), [ARQ-11](#arq-11) (la otra pantalla que se midió por lo que costaba),
 [FEAT-07](#feat-07).
+
+---
+
+<a id="arq-17"></a>
+## ARQ-17 · Supabase retira las claves heredadas y prod puede estar usándolas · **P1 · antes de fin de 2026**
+
+**De dónde sale (2026-11-23).** Al armar la base nueva de stage, el panel de Supabase avisa que las
+claves heredadas (`anon` y `service_role`, las que empiezan con `eyJ`) se retiran a principios de 2027.
+[La guía de migración](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys) dice
+que funcionan hasta fin de 2026. Se toma la fecha más corta. Las reemplazan la *publishable*
+(`sb_publishable_…`) y la *secret* (`sb_secret_…`).
+
+**Lo que se sabe y lo que no.** Prod ya tiene creada una publishable (`default`), y la heredada sigue
+habilitada. El `.env` de desarrollo usa la heredada de prod. **No se comprobó cuál usa Vercel de prod**:
+las páginas públicas no traen la clave y las variables no se leyeron. Se ve en el panel de Vercel, por
+cómo empieza cada valor.
+
+**Qué deja de andar si prod usa las heredadas.** El campus va por Prisma y no depende de ellas. Sí
+dependen dos cosas, y una falla sin avisar:
+
+- **Los avisos en vivo.** El envío por *broadcast*
+  ([`notifications.ts:81`](../src/app/actions/notifications.ts),
+  [`messages.ts:93`](../src/app/actions/messages.ts)) no mira el resultado, así que no queda error.
+  La notificación se guarda igual y aparece al recargar. La campana de mensajes además consulta cada
+  tanto; la de notificaciones no.
+- **Los adjuntos de mensajes.** Subir uno y abrir los que ya están devuelven error 500: los dos usan
+  `SUPABASE_SERVICE_ROLE_KEY` ([`supabase-server.ts`](../src/lib/supabase-server.ts)).
+
+**Lo que hay que hacer.** No debería hacer falta tocar código, porque las variables conservan su nombre:
+
+1. **Ensayarlo en stage**, que nace con las claves nuevas: una notificación que llega en vivo, y un
+   adjunto que se sube y se abre. Con `supabase-js` 2.100.0 debería andar, por lo leído en el paquete;
+   falta probarlo.
+2. **Mirar en Vercel de prod** qué formato tienen `NEXT_PUBLIC_SUPABASE_ANON_KEY` y
+   `SUPABASE_SERVICE_ROLE_KEY`. Si ya son `sb_`, la ficha se cierra ahí.
+3. **Reemplazarlas** por la publishable y la secret de prod, y volver a desplegar: la pública queda
+   metida en el JavaScript al compilar. Los dos formatos funcionan a la vez, así que no hay corte.
+4. **Repetir en prod la prueba del punto 1**, y recién después deshabilitar las heredadas en Supabase.
+   Las pestañas abiertas siguen con la clave vieja hasta que se recargan.
+5. **El `.env` de desarrollo**, con la publishable que corresponda.
+
+**Ojo con la documentación de Supabase:** las claves nuevas no son un JWT y no van en
+`Authorization: Bearer`, salvo que el valor sea idéntico al de `apikey`. Si algo falla en el ensayo, se
+mira primero por ahí.
+
+**Por qué P1.** Tiene fecha puesta por un tercero y, si vence, falla algo que las familias usan.
+
+**Relacionado.** [FEAT-06](#feat-06) (los mensajes), [ARQ-08](#arq-08) (el Storage),
+[ARQ-09](#arq-09) (que el envío fallido quede registrado).
 
 ---
 
