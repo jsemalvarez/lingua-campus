@@ -72,6 +72,42 @@ y, como va antes de `prisma migrate deploy`, tampoco toca la base.
 Las reglas están en [`eslint.fechas.config.mjs`](../eslint.fechas.config.mjs) y también corren con
 `npm run lint`.
 
+**Lo que el control no ve.** `fecha.toLocaleString("es-AR")` sobre una variable y sin opciones (puede ser un
+número), `const d = dayjs(x); d.format(...)` en dos pasos, `format` de `date-fns` ([ARQ-18](BACKLOG-TECNICO.md#arq-18))
+y `new Date("2026-06-22")`, que es medianoche UTC ([BUG-27](BACKLOG-TECNICO.md#bug-27)).
+
+## Decisiones
+
+Para que el día de mañana se sepa por qué está así. La más nueva arriba.
+
+**24/11/2026 · Una sola puerta para mostrar, no una sola librería.** Mostrar una fecha o saber qué día es sale de
+`dates.ts`. `date-fns` y `dayjs` quedan para **cuentas**: «hace 2 horas», minutos entre dos horarios, la semana
+siguiente. Se descartó sacarlas del proyecto: eso no depende de la zona horaria, no falla, y en parte toca la
+liquidación. La única excepción es la fecha del recibo: la arma el navegador, sale bien y el recibo no se toca por
+esto. Falta pasar ocho archivos: [ARQ-18](BACKLOG-TECNICO.md#arq-18).
+
+**24/11/2026 · El control frena también `toLocale…String`, `dayjs(x).format()` e `Intl.DateTimeFormat`.** El módulo
+existía desde octubre y aun así quedaban 21 lugares sueltos, porque el control no miraba esos formatos. No era un
+problema de que la gente no supiera: **lo que el build no frena, vuelve**. Por eso la regla no tiene excepciones, y
+se pasaron también los pocos que andaban bien. Ver [BUG-30](BACKLOG-TECNICO.md#bug-30).
+
+**24/11/2026 · La hora, en 24 horas.** «lun 23 nov, 23:12» y no «11:12 p. m.», como en el resto del campus.
+
+**24/11/2026 · `suppressHydrationWarning` no arregla una fecha, la deja mal.** Le dice a React que no avise y
+**que no corrija**: en la bandeja de mensajes un 29/10 a las 21:09 decía «30/10» para siempre, en 11 de 66 hilos
+de producción. Sirve sólo para lo que cambia con el reloj, como «hace 1m».
+
+**24/11/2026 · El avance de un curso se mide con sus fechas** (`periodProgress`), no con las clases cargadas: muchas
+docentes cargan la clase recién al darla, y en 19 de 30 cursos daba 100%. Ver [BUG-29](BACKLOG-TECNICO.md#bug-29).
+
+**18/10/2026 · Dos clases de fecha, día y momento, cada una con su lectura.** Guardar los días como `@db.Date` y
+leerlos en UTC; mostrar los momentos en hora argentina. Se hizo con un solo cliente para no arrastrarlo.
+
+**18/10/2026 · Los nombres de meses y días salen de listas propias.** Ni el idioma del navegador ni `Intl`: daban
+textos distintos en el servidor y en el navegador.
+
+**18/10/2026 · El control va primero en el build**, antes de `prisma migrate deploy`: si frena, no toca la base.
+
 ## Probar de noche
 
 `.claude/launch.json` tiene `dev-utc`: el servidor local con el reloj en UTC, como Vercel. Después

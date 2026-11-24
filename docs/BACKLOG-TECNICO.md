@@ -340,7 +340,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-15](#arq-15) | P2 | 🗣️ La identidad está partida en dos tablas: `User` y `Student` | [ ] |
 | [ARQ-16](#arq-16) | P3 · sube con el número | Qué cuesta cada filtro del calendario | [ ] |
 | [ARQ-17](#arq-17) | P1 · antes de fin de 2026 | Supabase retira las claves heredadas y prod puede estar usándolas | [ ] |
-| [ARQ-18](#arq-18) | P2 | Las fechas se manejan con tres herramientas, y tiene que ser una | [ ] |
+| [ARQ-18](#arq-18) | P2 | Mostrar una fecha, sólo con `dates.ts`: faltan ocho archivos | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -9039,8 +9039,8 @@ De noche, en prod: 2 de 1.946 pagos, 0 de 54 cuotas eliminadas y 7 de 103 firmas
 también esa forma; por eso se pasó además la fecha de los gastos (`ExpensesClient`), que estaba bien.
 
 **Queda afuera.** El recibo (`generateReceipt.ts`) arma la fecha con `dayjs` en una variable, que la regla no
-ve: lo hace el navegador, y sale bien. Y `format` de `date-fns`, en clases y calendario. Los dos son
-[ARQ-18](#arq-18).
+ve: lo hace el navegador, y sale bien. Y `format` de `date-fns`, en clases y calendario. Los dos
+están en [ARQ-18](#arq-18): el recibo se deja y lo otro se pasa.
 
 **El registro de errores no lo anotó** ([ARQ-09](#arq-09)): `ErrorIssue` siguió en cero. Probable, **sin
 verificar**: el error salta al hidratar, antes de que el `useEffect` de
@@ -10918,44 +10918,42 @@ mira primero por ahí.
 ---
 
 <a id="arq-18"></a>
-## ARQ-18 · Las fechas se manejan con tres herramientas, y tiene que ser una · **P2**
+## ARQ-18 · Mostrar una fecha, sólo con `dates.ts`: faltan ocho archivos · **P2**
 
-**Pedido del 2026-11-24**, al cerrar [BUG-30](#bug-30): que haya **una sola función** para las fechas, porque
-trajeron muchos dolores de cabeza. La que queda es [`dates.ts`](../src/lib/dates.ts), que ya usan 76
-archivos y explica [`FECHAS.md`](FECHAS.md). Sobran `date-fns` y `dayjs`.
+**De dónde sale.** Del 2026-11-24, al cerrar [BUG-30](#bug-30): el pedido fue manejar las fechas con **una sola
+función**, porque trajeron muchos dolores de cabeza. El por qué de cada decisión está en
+[`FECHAS.md`](FECHAS.md#decisiones).
 
-**Lo que queda, relevado ese día.**
+**La regla.** `date-fns` y `dayjs` sirven para **hacer cuentas** (restar horas, «hace 2 horas», la semana
+siguiente). Para **mostrar** una fecha o **saber qué día es**, sólo [`dates.ts`](../src/lib/dates.ts).
 
-| Dónde | Con qué | Para qué | ¿Anda bien? |
-|---|---|---|---|
-| `LessonList`, `CoursePracticeMetrics` | `date-fns` | Mostrar el día de la clase | Sí, sumándole 12 horas a mano |
-| `LessonPageView`, `LessonMonthNav`, `schedule/page` | `date-fns` | Mostrar el día o el mes | Sí, poniéndole el mediodía a mano |
-| `attendance/page`, `grades/page` de la clase | `date-fns` | Mostrar el día de la clase | Sí, **porque el servidor está en UTC**: en una máquina en hora argentina dice el día anterior |
-| `schedule/page` | `date-fns` | Semana y día anterior y siguiente | Sí |
-| `RegistrationForm` | `date-fns` | Si el aspirante es menor, en el formulario | La edad puede correrse un día; existe `ageOn` |
-| `NotificationBell`, `StudentAcademicsView` ×2 | `date-fns` y `dayjs` | «hace 2 horas» | Sí |
-| `payroll.ts` ×2 | `dayjs` | Minutos entre dos horarios | Sí; no es una fecha |
-| `generateReceipt.ts` | `dayjs` | La fecha del recibo | Sí, porque lo hace el navegador |
-| `StudentDashboardV2View` | `dayjs` | Nada: quedó importado | – |
+**Lo que falta, relevado ese día leyendo el código.** Ninguno se comprobó por pantalla.
 
-Se leyó el código; no se comprobó cada una por pantalla.
-
-**Por qué vale la pena si casi todo anda.** Cada lugar anda por un truco distinto: doce horas de más, el
-mediodía, el huso del servidor o el del navegador. Ninguno se ve en la pantalla y todos se rompen al copiarlos
-a otro lado. Así se escaparon los veinte de BUG-30.
+| Dónde | Cómo anda hoy |
+|---|---|
+| `LessonList`, `CoursePracticeMetrics` | Bien, sumándole 12 horas a mano |
+| `LessonPageView`, `LessonMonthNav`, `schedule/page` | Bien, poniéndole el mediodía a mano |
+| `attendance/page` y `grades/page` de la clase | Bien **porque el servidor está en UTC**: en una máquina en hora argentina dicen el día anterior |
+| `RegistrationForm` | La edad que decide si el aspirante es menor se puede correr un día; existe `ageOn` |
 
 **El arreglo.**
 
-1. Sumar a `dates.ts` lo que falta: «hace…» (`fromNow`), sumar y restar días, minutos entre dos horarios y
-   el día con semana abreviada.
-2. Pasar los lugares de la tabla, con su pantalla mirada antes y después. El recibo y la liquidación van
-   aparte, porque tocan plata.
-3. Regla en `lint:fechas`: importar `date-fns` o `dayjs` no compila.
-4. Sacar los dos paquetes de `package.json`.
+1. Sumar a `dates.ts` los dos estilos que faltan: «nov 2026» y «mar 24/11».
+2. Pasar los ocho, con su pantalla mirada antes y después. El día para una URL es `dayKey`.
+3. Regla en `lint:fechas`: no se importa `format` de `date-fns`.
+4. De paso, sacar `dayjs` de `StudentDashboardV2View`, que lo importa y no lo usa.
 
-**P2.** Hoy no rompe nada a la vista; evita que vuelva.
+**Lo que se deja como está, a propósito.** «Hace 2 horas» (`NotificationBell`, `StudentAcademicsView`), los
+minutos entre dos horarios (`payroll.ts`), el día y la semana siguiente del calendario y la fecha del recibo
+(`generateReceipt.ts`, que arma el navegador). No tienen el problema, y la liquidación y el recibo tocan plata.
 
-**Relacionado.** [BUG-30](#bug-30), [BUG-27](#bug-27) y [FIN-34](#fin-34).
+**Lo que se descartó.** Sacar las dos librerías del proyecto, que era la primera versión de esta ficha:
+reescribir lo que no falla es trabajo y riesgo a cambio de casi nada.
+
+**P2.** Hoy casi no se nota; evita que vuelva.
+
+**Relacionado.** [BUG-30](#bug-30), [BUG-27](#bug-27) —cómo se guarda el día de publicación— y
+[FIN-34](#fin-34).
 
 ---
 
