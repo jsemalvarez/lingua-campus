@@ -285,8 +285,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
 | [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [x] |
 | [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [x] |
-| [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [~] |
-| [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [~] |
+| [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [x] |
+| [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [x] |
 | [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
@@ -9075,7 +9075,9 @@ por eso coincide: 362. Está igual en `main`.
 
 **Hecho el 2026-11-24.** `status: "ACTIVE"` en las dos. En «Profesores» siguen contando quienes además de
 docentes tienen otro rol: hoy son dos de los ocho. Se revisaron los demás contadores del campus y ninguno
-tiene la misma falla; el panel de uso ya filtraba. **Falta verlo por pantalla en stage:** 30 y 8.
+tiene la misma falla; el panel de uso ya filtraba. Commit `338bf76`.
+
+**Verificado en stage el 2026-11-24:** el panel dice 30 y 8.
 
 **P3.** La diferencia es de uno, pero crece con cada curso que termina.
 
@@ -9098,7 +9100,10 @@ persona y ahí «Secretaría» le gana a su nombre. Los hilos que abre el instit
 **Hecho el 2026-11-24.** Con `destination: "TEACHER"` el dato se conoce: ese destinatario se crea con
 `actingRole: "TEACHER"`. Cuando la familia le escribe a administración sigue sin rol, porque no se sabe quién
 contesta. Los hilos que abre el instituto quedan como estaban: ahí no se sabe si a la persona le escriben como
-docente o como tutora. Los hilos viejos no cambian. **Falta verlo por pantalla en stage.**
+docente o como tutora. Los hilos viejos no cambian. Commit `338bf76`.
+
+**Verificado en stage el 2026-11-24** con un hilo nuevo: el destinatario dice «Leticia Carbone» y en la base
+quedó `TEACHER`.
 
 **Lo que no es parte de esto:** si contesta en modo Secretaría, la respuesta firma «Secretaría». Es lo
 decidido en [FEAT-25](#feat-25) y está bien.
