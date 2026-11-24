@@ -659,13 +659,14 @@ export default async function DashboardPage() {
 
     // 2. Total active courses
     const totalCourses = await prisma.course.count({
-        where: { instituteId: user.instituteId }
+        where: { instituteId: user.instituteId, status: "ACTIVE" }
     });
 
     // 3. Teachers count
     const totalTeachers = await prisma.user.count({
         where: {
             instituteId: user.instituteId,
+            status: "ACTIVE",
             roles: { has: "TEACHER" }
         }
     });

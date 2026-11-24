@@ -737,6 +737,11 @@ export async function createFamilyThread({
         ? { studentId: userId, isAuthor: true, lastReadAt: new Date(), actingRole: "STUDENT" }
         : { userId, isAuthor: true, lastReadAt: new Date(), actingRole: activeRole };
 
+    // Al docente del curso se le escribe como docente: sin el rol, quien además
+    // es secretaria figuraba en el hilo como «Secretaría» (BUG-32). Del lado de
+    // administración no se sabe quién va a contestar, y el rol queda sin poner.
+    const recipientRole = destination === "TEACHER" ? "TEACHER" : null;
+
     const thread = await prisma.messageThread.create({
         data: {
             instituteId,
@@ -748,7 +753,10 @@ export async function createFamilyThread({
             studentId,
             updatedAt: new Date(),
             participants: {
-                create: [author, ...finalUserIds.map((id) => ({ userId: id, isAuthor: false }))],
+                create: [
+                    author,
+                    ...finalUserIds.map((id) => ({ userId: id, isAuthor: false, actingRole: recipientRole })),
+                ],
             },
             messages: {
                 create: {
