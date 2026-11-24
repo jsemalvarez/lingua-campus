@@ -283,7 +283,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
 | [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
-| [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [~] |
+| [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [x] |
 | [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [ ] |
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
@@ -8977,8 +8977,11 @@ asistencia queda en su tarjeta.
 
 **Hecho el 2026-11-24.** `periodProgress` en [`dates.ts`](../src/lib/dates.ts), doce casos de borde
 probados, y el cálculo en [`dashboard/page.tsx`](../src/app/dashboard/page.tsx). Sobre los datos de prod
-de ese día 29 cursos dan 84, 87, 92 o 98, el otro no tiene barra y ninguno da 100. **Falta verlo por
-pantalla en stage.**
+de ese día 29 cursos dan 84, 87, 92 o 98, el otro no tiene barra y ninguno da 100. Commit `31a096a`.
+
+**Verificado en stage el 2026-11-24**, con dos alumnos: a quien decía 100% le da 92% y a quien decía 90%,
+84%, los dos con «Termina el 16 de diciembre», como se había calculado antes de mirar. El caso sin fecha
+de fin no se vio por pantalla.
 
 **Queda afuera, en la misma pantalla.** «Tasa de Asistencia» dice **0%** al lado de «Al día» a quien no
 tiene ninguna asistencia cargada, y «Horas de Clase» trae la barra fija en 65%.
