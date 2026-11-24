@@ -283,6 +283,10 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
 | [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
+| [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [ ] |
+| [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [ ] |
+| [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
+| [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -8935,6 +8939,120 @@ pasa en producción.
 de rol a otro lugar. Se decide mirándolo en pantalla.
 
 **P3.** Hoy le pasa a una sola persona del instituto y sólo en el celular.
+
+---
+
+<a id="bug-29"></a>
+## BUG-29 · El inicio del alumno cuenta como asistidas todas las clases dictadas · **P1**
+
+**De dónde sale.** Del 2026-11-23, revisando stage por pantalla con los datos de prod de ese día.
+
+**Lo que pasa.** El inicio del alumno dice «Has asistido a 55 de 62 clases programadas» a quien tiene
+**una** asistencia cargada, y «Has asistido a 4 de 4», con «Maestría del Curso 100%», a una alumna sin
+ninguna. En la misma pantalla, más abajo, la tasa de asistencia de ella es 0%.
+
+**La causa.** El primer número son las clases del curso principal con fecha anterior a hoy
+([`dashboard/page.tsx:368`](../src/app/dashboard/page.tsx)): las dictadas. No mira las asistencias. La
+frase que las llama asistidas está en
+[`StudentDashboardV2View.tsx:146`](../src/app/dashboard/components/StudentDashboardV2View.tsx). Viene
+del 2026-04-18 (`8cebb84`) y está igual en `main`.
+
+**Medido sobre los datos de prod del 2026-11-23.** De los 196 alumnos con inscripción activa, a los
+**196** les da más clases que las asistencias cargadas en su curso, y **73** no tienen ninguna. El curso
+de cada uno se tomó por el `id` de la inscripción: con más de una, la pantalla puede elegir otro.
+
+**El arreglo.** Dos cosas, que se deciden juntas:
+
+- **La frase.** O cuenta asistencias de verdad (`PRESENT` y `LATE` de ese curso), o dice lo que mide: «55
+  de 62 clases dictadas».
+- **«Maestría del Curso».** Es el porcentaje del curso que ya pasó, no cuánto sabe el alumno.
+
+Contar asistencias tiene una trampa: hay cursos donde no se toman, y el alumno leería que no fue nunca.
+Por eso lo más seguro es que diga lo que mide.
+
+**P1.** Es un dato falso sobre el propio alumno, en la primera pantalla que ve.
+
+**Relacionado.** [BUG-22](#bug-22): los contadores del Hub de Progreso, que mezclan curso principal y
+todos los cursos, y el `enrollments[0]` sin orden.
+
+---
+
+<a id="bug-30"></a>
+## BUG-30 · La hora de los mensajes sale en UTC y el navegador la corrige · **P2**
+
+**De dónde sale.** Del 2026-11-23, probando los mensajes en vivo en stage.
+
+**Lo que pasa.** Al abrir un hilo, la página que manda el servidor trae la hora en UTC y el navegador la
+cambia al hidratar. Un mensaje del lunes 23 a las 23:12 sale como «mar, 24 nov, 02:12 a. m.» y la fecha
+del hilo como «24 de noviembre»; después quedan «lun, 23 nov, 11:12 p. m.» y «23 de noviembre». React lo
+informa como error 418 en la consola. Le pasa igual al alumno y a la secretaria.
+
+**La causa.** `toLocaleString("es-AR")` sin zona horaria, en un componente que se dibuja primero en el
+servidor: [`ThreadViewClient.tsx:57`](../src/app/messages/[threadId]/components/ThreadViewClient.tsx)
+(cada mensaje) y la línea 690 (la fecha del hilo). La bandeja tiene el mismo caso para lo que tiene más
+de una semana ([`MessagesInboxClient.tsx:33`](../src/app/messages/components/MessagesInboxClient.tsx));
+ahí no se vio el error, se encontró leyendo. Está igual en `main`.
+
+**Alcance.** La hora difiere tres horas en todos los mensajes. El día cambia en los escritos entre las 21
+y la medianoche: **23 de los 142** de prod.
+
+**El arreglo.** Pasar esos tres lugares a `formatDate` y `formatTime` de
+[`dates.ts`](../src/lib/dates.ts), que ya fijan la hora del instituto.
+
+**Por qué no lo frenó el control de fechas.** `npm run lint:fechas` no mira `toLocaleString`,
+`toLocaleDateString` ni `toLocaleTimeString`. Conviene sumarle la regla, cuidando que
+`toLocaleString("es-AR")` sobre **números** es legítimo (`formatCurrency`, los PDF).
+
+**El registro de errores no lo anotó** ([ARQ-09](#arq-09)): `ErrorIssue` siguió en cero. Probable, **sin
+verificar**: el error salta al hidratar, antes de que el `useEffect` de
+[`ClientErrorListener.tsx`](../src/components/ClientErrorListener.tsx) se suscriba. Si es así, al panel
+no le llega ningún error de ese momento.
+
+**P2.** La hora equivocada dura un instante, pero ensucia la consola en cada hilo y tapa otros errores.
+
+---
+
+<a id="bug-31"></a>
+## BUG-31 · «Cursos Activos» y «Profesores» del panel cuentan de más · **P3**
+
+**De dónde sale.** Del 2026-11-23, comparando el panel de stage con la base.
+
+**Lo que pasa.** El panel del instituto dice 31 cursos activos y 9 profesores. En la base son **30** y
+**8**: suma un curso finalizado y una cuenta de docente dada de baja.
+
+**La causa.** Ninguna de las dos consultas filtra por `status`
+([`dashboard/page.tsx:659`](../src/app/dashboard/page.tsx) y la 664). «Estudiantes Activos» sí filtra, y
+por eso coincide: 362. Está igual en `main`.
+
+**El arreglo.** `status: "ACTIVE"` en las dos. En «Profesores» siguen contando quienes además de docentes
+tienen otro rol: hoy son dos de los ocho.
+
+**P3.** La diferencia es de uno, pero crece con cada curso que termina.
+
+---
+
+<a id="bug-32"></a>
+## BUG-32 · Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente · **P3**
+
+**De dónde sale.** Del 2026-11-23, probando los mensajes en stage con Leticia Carbone, que tiene los dos
+roles.
+
+**Lo que pasa.** El alumno elige «Profesor del curso · Leticia Carbone», y en el hilo el destinatario
+figura como «Secretaría».
+
+**La causa.** Al abrir el hilo, los destinatarios se crean sin `actingRole`
+([`messages.ts:751`](../src/app/actions/messages.ts)); sin ese dato, el nombre sale de los roles de la
+persona y ahí «Secretaría» le gana a su nombre. Los hilos que abre el instituto tienen el mismo hueco
+(línea 851).
+
+**El arreglo.** Con `destination: "TEACHER"` el dato se conoce: guardar `actingRole: "TEACHER"` en ese
+destinatario. El resto queda como está.
+
+**Lo que no es parte de esto:** si contesta en modo Secretaría, la respuesta firma «Secretaría». Es lo
+decidido en [FEAT-25](#feat-25) y está bien.
+
+**P3.** En producción hay una sola persona con los dos roles, y el 2026-11-23 **ningún** hilo suyo está
+en este caso.
 
 ---
 
