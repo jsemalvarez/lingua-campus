@@ -320,7 +320,6 @@ export default async function DashboardPage() {
         const presentCount = await prisma.attendance.count({
             where: { studentId: student.id, lesson: { status: "ACTIVE" }, status: { in: ["PRESENT", "LATE"] } }
         });
-        const attendanceRate = totalAttendances > 0 ? Math.round((presentCount / totalAttendances) * 100) : 0;
 
         // Horas totales (clases asistidas)
         let totalMinutes = 0;
@@ -392,7 +391,7 @@ export default async function DashboardPage() {
                 <Navbar currentActiveRole={activeRole} />
                 <StudentDashboardV2View
                     student={student}
-                    attendanceRate={attendanceRate}
+                    attendance={{ present: presentCount, total: totalAttendances }}
                     practiceHours={practiceHours}
                     upcomingLessons={upcomingLessons}
                     pendingTasks={pendingTasks}

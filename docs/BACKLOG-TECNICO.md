@@ -287,6 +287,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [ ] |
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
+| [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [~] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -8983,8 +8984,8 @@ de ese día 29 cursos dan 84, 87, 92 o 98, el otro no tiene barra y ninguno da 1
 84%, los dos con «Termina el 16 de diciembre», como se había calculado antes de mirar. El caso sin fecha
 de fin no se vio por pantalla.
 
-**Queda afuera, en la misma pantalla.** «Tasa de Asistencia» dice **0%** al lado de «Al día» a quien no
-tiene ninguna asistencia cargada, y «Horas de Clase» trae la barra fija en 65%.
+**Queda afuera, en la misma pantalla.** La tarjeta de asistencia es [BUG-33](#bug-33). Las otras dos traen
+algo fijo: «Horas de Clase» la barra en 65%, y «Promedio General» la etiqueta «Destacado» con cualquier nota.
 
 **P1.** Es un dato falso sobre el propio alumno, en la primera pantalla que ve.
 
@@ -9069,6 +9070,31 @@ decidido en [FEAT-25](#feat-25) y está bien.
 
 **P3.** En producción hay una sola persona con los dos roles, y el 2026-11-23 **ningún** hilo suyo está
 en este caso.
+
+---
+
+<a id="bug-33"></a>
+## BUG-33 · La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos · **P2**
+
+**De dónde sale.** Del 2026-11-24, mirando en stage el inicio del alumno para [BUG-29](#bug-29).
+
+**Lo que pasa.** «Tasa de Asistencia» dice **0%** a quien no tiene ninguna asistencia cargada, como si
+hubiera faltado siempre. Al lado hay una etiqueta verde «Al día» que está fija en el código: sale con
+cualquier porcentaje.
+
+**Medido sobre los datos de prod del 2026-11-23**, en los 196 alumnos con inscripción activa:
+
+| | Alumnos |
+|---|---|
+| Sin ninguna marca: leen 0% | **70** |
+| Con marcas y menos de 80%: leen «Al día» | **53** (12 con menos de 60%) |
+
+**Hecho el 2026-11-24**, con los textos de la tarjeta del tutor (BUG-21): sin marcas dice «Todavía sin
+asistencia tomada», sin porcentaje; con marcas, el porcentaje y «5 de 6 presentes». La etiqueta «Al día» se
+fue. Las marcas siguen siendo las de todos sus cursos, como antes ([BUG-22](#bug-22)). **Falta verlo por
+pantalla en stage.**
+
+**P2.** Es un dato falso en la primera pantalla, pero está lejos de la vista y entran pocos alumnos.
 
 ---
 

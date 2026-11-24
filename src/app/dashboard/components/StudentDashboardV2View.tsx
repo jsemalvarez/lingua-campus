@@ -23,7 +23,8 @@ dayjs.extend(relativeTime);
 
 interface StudentDashboardV2ViewProps {
    student: any;
-   attendanceRate: number;
+   /** Las marcas del alumno. Sin ninguna (`total` 0) no hay porcentaje: no es 0%. */
+   attendance: { present: number; total: number };
    practiceHours: string;
    upcomingLessons: any[];
    pendingTasks: any[];
@@ -35,7 +36,7 @@ interface StudentDashboardV2ViewProps {
 
 export function StudentDashboardV2View({
    student,
-   attendanceRate,
+   attendance,
    practiceHours,
    upcomingLessons,
    pendingTasks,
@@ -45,6 +46,7 @@ export function StudentDashboardV2View({
 }: StudentDashboardV2ViewProps) {
    const firstName = student.name.split(" ")[0];
    const nextSession = upcomingLessons[0];
+   const attendanceRate = attendance.total > 0 ? Math.round((attendance.present / attendance.total) * 100) : null;
 
    const [motivationQuote, setMotivationQuote] = React.useState("");
 
@@ -219,16 +221,25 @@ export function StudentDashboardV2View({
             <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
               <Calendar size={24} />
             </div>
-            <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">Al día</span>
           </div>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Tasa de Asistencia</p>
+          {/* Los textos son los de la tarjeta del tutor (GuardianDashboardView) */}
           <div className="flex items-baseline gap-2 mb-6">
-            <h2 className="text-3xl font-black tracking-tighter">{attendanceRate}%</h2>
+            {attendanceRate === null ? (
+              <p className="text-sm font-semibold text-muted-foreground">Todavía sin asistencia tomada</p>
+            ) : (
+              <>
+                <h2 className="text-3xl font-black tracking-tighter">{attendanceRate}%</h2>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {attendance.present} de {attendance.total} {attendance.present === 1 ? "presente" : "presentes"}
+                </span>
+              </>
+            )}
           </div>
           <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
             <div 
               className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
-              style={{ width: `${attendanceRate}%` }} 
+              style={{ width: `${attendanceRate ?? 0}%` }} 
             />
           </div>
         </Card>
