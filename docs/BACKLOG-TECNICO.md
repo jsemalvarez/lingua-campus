@@ -284,7 +284,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
 | [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [x] |
-| [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [~] |
+| [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [x] |
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
 | [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [x] |
@@ -9026,7 +9026,7 @@ inglés, un 16 de diciembre sale «12/16/2026».
 `Intl.DateTimeFormat` fuera del módulo. Probada con ocho formas malas, que frena, y cinco buenas, que deja.
 La hora del mensaje cambia de «lun, 23 nov, 11:12 p. m.» a «lun 23 nov, 23:12», como el resto del campus
 (estilo `weekdayDayMonthShort`). En los boletines se ve lo mismo que antes: el día menos es
-[BUG-27](#bug-27). **Falta verlo por pantalla en stage.**
+[BUG-27](#bug-27). Commit `61a0483`.
 
 **Lo que la regla no ve.** `fecha.toLocaleString("es-AR")` sobre una variable, sin opciones: no hay cómo
 saber que no es un número. Hoy no hay ninguno.
@@ -9047,7 +9047,17 @@ verificar**: el error salta al hidratar, antes de que el `useEffect` de
 [`ClientErrorListener.tsx`](../src/components/ClientErrorListener.tsx) se suscriba. Si es así, al panel
 no le llega ningún error de ese momento.
 
-**P2.** La hora equivocada dura un instante, pero ensucia la consola en cada hilo y tapa otros errores.
+**Verificado en stage el 2026-11-24**, comparando el texto que manda el servidor con el de la pantalla, sin
+errores en la consola: el hilo (las dos fechas, antes distintas), la bandeja de secretaría (20 de 20), las
+etiquetas de la pantalla de firmas (103 de 103, 7 de noche), la fecha de pago del alumno y las próximas clases
+del panel. Sin ver por pantalla: los recordatorios de examen, la planilla, los boletines programados, el gráfico
+de notas, las cuotas eliminadas, los gastos y la firma en el boletín.
+
+**En la bandeja no era un instante.** Ese texto tiene `suppressHydrationWarning`, así que React no lo corregía:
+un mensaje del 29/10 a las 21:09 decía **30/10** y quedaba así. En prod son **11 de los 66** hilos con fecha.
+
+**P2.** En el hilo la hora equivocada duraba un instante, pero ensuciaba la consola y tapaba otros errores; en
+la bandeja el día quedaba mal.
 
 ---
 
