@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/dates";
 import {
     Mail,
     ChevronRight,
@@ -30,7 +31,7 @@ function formatRelativeTime(date: Date | null): string {
     if (diffHours < 24) return `hace ${diffHours}h`;
     if (diffDays === 1) return "ayer";
     if (diffDays < 7) return `hace ${diffDays}d`;
-    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+    return formatDate(d, "moment", "numericDayMonth");
 }
 
 type Filters = {

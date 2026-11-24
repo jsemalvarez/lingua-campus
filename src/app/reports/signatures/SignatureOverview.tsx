@@ -13,7 +13,6 @@ import {
     PenLine,
     UserX
 } from "lucide-react";
-import dayjs from "dayjs";
 import { formatDate } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
@@ -389,7 +388,7 @@ export function SignatureOverview({ batches }: { batches: Batch[] }) {
                                                         )}
                                                         <span className="text-xs text-muted-foreground w-32 text-right">
                                                             {row.state === "FIRMADO" && row.signedAt
-                                                                ? dayjs(row.signedAt).format("D/M/YYYY")
+                                                                ? formatDate(row.signedAt, "moment", "numericFull")
                                                                 : row.state === "SIN_FIRMANTE"
                                                                   ? "sin tutor cargado"
                                                                   : "pendiente"}
@@ -527,7 +526,7 @@ function StaffSignatures({ batch }: { batch: Batch }) {
                 ? chip(
                       "Docente",
                       "ok",
-                      `Firmado por ${docente.signerName} el ${dayjs(docente.signedAt).format("D/M/YYYY")}`,
+                      `Firmado por ${docente.signerName} el ${formatDate(docente.signedAt, "moment", "numericFull")}`,
                       <PenLine size={11} />
                   )
                 : chip("Docente", "off", "El docente todavía no firmó", <PenLine size={11} />)}
@@ -543,7 +542,7 @@ function StaffSignatures({ batch }: { batch: Batch }) {
                     : chip(
                           "Dirección",
                           "ok",
-                          `Firmado por ${direccion.signerName} el ${dayjs(direccion.signedAt).format("D/M/YYYY")}`,
+                          `Firmado por ${direccion.signerName} el ${formatDate(direccion.signedAt, "moment", "numericFull")}`,
                           <CheckCircle2 size={11} />
                       )
                 : chip("Dirección", "off", "La dirección todavía no firmó", <PenLine size={11} />)}

@@ -47,7 +47,7 @@ formulario. Las columnas de día no tienen `DEFAULT`: el `now()` de Postgres es 
 
 **Mostrar.** `formatDate(valor, "day" | "moment", estilo)`, con los estilos `short` (20 oct 2026),
 `long` (20 de octubre de 2026), `dayMonth`, `dayMonthLong`, `monthYear`, `weekdayDay`,
-`weekdayDayMonth` (martes 20 de octubre), `month`,
+`weekdayDayMonth` (martes 20 de octubre), `weekdayDayMonthShort` (mar 20 oct), `month`,
 `dayNumber`, `numericDayMonth`, `numeric` (20/10/26) y `numericFull` (20/10/2026). Los nombres
 salen de listas propias: ni `dayjs.locale("es")`, que es global, ni `Intl` en castellano, que según
 la versión da «oct» u «oct.».
@@ -61,6 +61,12 @@ y, como va antes de `prisma migrate deploy`, tampoco toca la base.
 - `new Date().toISOString().slice(0, 10)` (el día de hoy en UTC). Sin cortar, es un instante y está bien.
 - `dayjs()` sin fecha, `startOf`/`endOf` de día, semana, mes o año
 - `dayjs.locale(...)` y `format` con `MMM` o `ddd`
+- `toLocaleDateString` y `toLocaleTimeString`, y `toLocaleString` sobre una fecha: salen en la zona y el
+  idioma de quien corre el código. La hora de un momento es `formatTime`. Sobre un número,
+  `toLocaleString("es-AR")` está bien
+- `dayjs(x).format(...)`, por lo mismo: un momento de las 21 a las 24 dice el día siguiente si lo dibuja el
+  servidor. `dayjs(x).fromNow()` está bien
+- `Intl.DateTimeFormat` fuera de `dates.ts`
 - `CURRENT_DATE` en SQL: se pasa `instituteTodayKey()` como parámetro
 
 Las reglas están en [`eslint.fechas.config.mjs`](../eslint.fechas.config.mjs) y también corren con

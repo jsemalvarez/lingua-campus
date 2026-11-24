@@ -284,7 +284,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
 | [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [x] |
-| [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [ ] |
+| [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [~] |
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
 | [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [x] |
@@ -340,6 +340,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [ARQ-15](#arq-15) | P2 | 🗣️ La identidad está partida en dos tablas: `User` y `Student` | [ ] |
 | [ARQ-16](#arq-16) | P3 · sube con el número | Qué cuesta cada filtro del calendario | [ ] |
 | [ARQ-17](#arq-17) | P1 · antes de fin de 2026 | Supabase retira las claves heredadas y prod puede estar usándolas | [ ] |
+| [ARQ-18](#arq-18) | P2 | Las fechas se manejan con tres herramientas, y tiene que ser una | [ ] |
 | [PED-01](#ped-01) | P1 | Generar la práctica desde `topic`/`content` con un botón | [x] |
 | [PED-02](#ped-02) | P1 | Devolver el `weakArea` agregado al docente | [ ] |
 | [PED-03](#ped-03) | P1 | Validez de la evaluación de pronunciación | [ ] |
@@ -9013,12 +9014,33 @@ ahí no se vio el error, se encontró leyendo. Está igual en `main`.
 **Alcance.** La hora difiere tres horas en todos los mensajes. El día cambia en los escritos entre las 21
 y la medianoche: **23 de los 142** de prod.
 
-**El arreglo.** Pasar esos tres lugares a `formatDate` y `formatTime` de
-[`dates.ts`](../src/lib/dates.ts), que ya fijan la hora del instituto.
+**Eran doce, no tres.** El módulo de fechas existe desde octubre y lo usan 71 archivos; los mensajes son de
+abril y quedaron afuera porque `lint:fechas` no miraba `toLocaleString`, `toLocaleDateString` ni
+`toLocaleTimeString`. Buscándolo en todo el código aparecieron doce: el hilo y la bandeja, la planilla de
+cursos (2), los boletines programados (2), el inicio y el progreso del alumno, las próximas clases del panel
+(2) y el gráfico de notas. Los recordatorios de examen no tenían ni idioma: en el servidor, con idioma
+inglés, un 16 de diciembre sale «12/16/2026».
 
-**Por qué no lo frenó el control de fechas.** `npm run lint:fechas` no mira `toLocaleString`,
-`toLocaleDateString` ni `toLocaleTimeString`. Conviene sumarle la regla, cuidando que
-`toLocaleString("es-AR")` sobre **números** es legítimo (`formatCurrency`, los PDF).
+**Hecho el 2026-11-24.** Los doce pasan por [`dates.ts`](../src/lib/dates.ts), y la regla nueva de
+[`eslint.fechas.config.mjs`](../eslint.fechas.config.mjs) frena esos tres métodos sobre fechas y
+`Intl.DateTimeFormat` fuera del módulo. Probada con ocho formas malas, que frena, y cinco buenas, que deja.
+La hora del mensaje cambia de «lun, 23 nov, 11:12 p. m.» a «lun 23 nov, 23:12», como el resto del campus
+(estilo `weekdayDayMonthShort`). En los boletines se ve lo mismo que antes: el día menos es
+[BUG-27](#bug-27). **Falta verlo por pantalla en stage.**
+
+**Lo que la regla no ve.** `fecha.toLocaleString("es-AR")` sobre una variable, sin opciones: no hay cómo
+saber que no es un número. Hoy no hay ninguno.
+
+**Los ocho con `dayjs(x).format(...)`, el mismo día.** Son momentos con el mismo defecto, también pasados a
+`formatDate`: las firmas de informes (`BatchSignaturePanel`, `SignatureOverview` ×3,
+`StudentReportViewer` ×2), las cuotas eliminadas (`DeletionsClient`, con hora) y la fecha de pago
+(`StudentAdministrationView`). Cinco los dibuja el servidor; los otros tres, sólo el navegador, y salían bien.
+De noche, en prod: 2 de 1.946 pagos, 0 de 54 cuotas eliminadas y 7 de 103 firmas de tanda. La regla frena
+también esa forma; por eso se pasó además la fecha de los gastos (`ExpensesClient`), que estaba bien.
+
+**Queda afuera.** El recibo (`generateReceipt.ts`) arma la fecha con `dayjs` en una variable, que la regla no
+ve: lo hace el navegador, y sale bien. Y `format` de `date-fns`, en clases y calendario. Los dos son
+[ARQ-18](#arq-18).
 
 **El registro de errores no lo anotó** ([ARQ-09](#arq-09)): `ErrorIssue` siguió en cero. Probable, **sin
 verificar**: el error salta al hidratar, antes de que el `useEffect` de
@@ -10882,6 +10904,48 @@ mira primero por ahí.
 
 **Relacionado.** [FEAT-06](#feat-06) (los mensajes), [ARQ-08](#arq-08) (el Storage),
 [ARQ-09](#arq-09) (que el envío fallido quede registrado).
+
+---
+
+<a id="arq-18"></a>
+## ARQ-18 · Las fechas se manejan con tres herramientas, y tiene que ser una · **P2**
+
+**Pedido del 2026-11-24**, al cerrar [BUG-30](#bug-30): que haya **una sola función** para las fechas, porque
+trajeron muchos dolores de cabeza. La que queda es [`dates.ts`](../src/lib/dates.ts), que ya usan 76
+archivos y explica [`FECHAS.md`](FECHAS.md). Sobran `date-fns` y `dayjs`.
+
+**Lo que queda, relevado ese día.**
+
+| Dónde | Con qué | Para qué | ¿Anda bien? |
+|---|---|---|---|
+| `LessonList`, `CoursePracticeMetrics` | `date-fns` | Mostrar el día de la clase | Sí, sumándole 12 horas a mano |
+| `LessonPageView`, `LessonMonthNav`, `schedule/page` | `date-fns` | Mostrar el día o el mes | Sí, poniéndole el mediodía a mano |
+| `attendance/page`, `grades/page` de la clase | `date-fns` | Mostrar el día de la clase | Sí, **porque el servidor está en UTC**: en una máquina en hora argentina dice el día anterior |
+| `schedule/page` | `date-fns` | Semana y día anterior y siguiente | Sí |
+| `RegistrationForm` | `date-fns` | Si el aspirante es menor, en el formulario | La edad puede correrse un día; existe `ageOn` |
+| `NotificationBell`, `StudentAcademicsView` ×2 | `date-fns` y `dayjs` | «hace 2 horas» | Sí |
+| `payroll.ts` ×2 | `dayjs` | Minutos entre dos horarios | Sí; no es una fecha |
+| `generateReceipt.ts` | `dayjs` | La fecha del recibo | Sí, porque lo hace el navegador |
+| `StudentDashboardV2View` | `dayjs` | Nada: quedó importado | – |
+
+Se leyó el código; no se comprobó cada una por pantalla.
+
+**Por qué vale la pena si casi todo anda.** Cada lugar anda por un truco distinto: doce horas de más, el
+mediodía, el huso del servidor o el del navegador. Ninguno se ve en la pantalla y todos se rompen al copiarlos
+a otro lado. Así se escaparon los veinte de BUG-30.
+
+**El arreglo.**
+
+1. Sumar a `dates.ts` lo que falta: «hace…» (`fromNow`), sumar y restar días, minutos entre dos horarios y
+   el día con semana abreviada.
+2. Pasar los lugares de la tabla, con su pantalla mirada antes y después. El recibo y la liquidación van
+   aparte, porque tocan plata.
+3. Regla en `lint:fechas`: importar `date-fns` o `dayjs` no compila.
+4. Sacar los dos paquetes de `package.json`.
+
+**P2.** Hoy no rompe nada a la vista; evita que vuelva.
+
+**Relacionado.** [BUG-30](#bug-30), [BUG-27](#bug-27) y [FIN-34](#fin-34).
 
 ---
 

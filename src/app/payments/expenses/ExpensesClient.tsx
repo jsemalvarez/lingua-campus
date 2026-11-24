@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { instituteMonth } from "@/lib/dates";
+import { formatDate, instituteMonth } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { Calendar, Tag, ArrowDownLeft, Receipt } from "lucide-react";
-import dayjs from "dayjs";
 import { formatCurrency, getMonthName } from "@/lib/utils";
 
 type ExpenseRow = {
@@ -225,12 +224,8 @@ export function ExpensesClient({
                                             key={r.id}
                                             className={`border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors align-top ${isVoided ? "opacity-50" : ""}`}
                                         >
-                                            {/* La fecha se corta del ISO y no se convierte a hora local: el
-                                                gasto se guarda como medianoche UTC, y en Argentina eso es
-                                                el día anterior a las 21:00. Es el mismo recorte que hace la
-                                                tabla del libro mayor. */}
                                             <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                                                {dayjs(r.date.split("T")[0]).format("DD/MM/YYYY")}
+                                                {formatDate(r.date, "day", "numericFull")}
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground">

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { instituteMonth } from "@/lib/dates";
+import { formatDate, instituteMonth } from "@/lib/dates";
 import { useState, useEffect, useTransition } from "react";
 import { 
     Save, Send, Calendar, Clock, AlertTriangle, 
@@ -247,7 +247,8 @@ export function ReportGradeSheet({
                 } else if (publishType === "now") {
                     toast.success("¡Boletines publicados correctamente!");
                 } else {
-                    toast.success(`Boletines programados para el ${new Date(publishDate).toLocaleDateString()}`);
+                    // "moment" y no "day": se guarda la medianoche UTC, que acá es la noche anterior (BUG-27)
+                    toast.success(`Boletines programados para el ${formatDate(publishDate, "moment", "numericFull")}`);
                 }
 
                 setIsPublishOpen(false);
@@ -278,7 +279,7 @@ export function ReportGradeSheet({
         if (isCurrentlyScheduled) {
             return (
                 <span className="px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 font-bold rounded-xl text-xs uppercase flex items-center gap-1">
-                    <Clock size={14} /> Programado ({new Date(publishedAt!).toLocaleDateString()})
+                    <Clock size={14} /> Programado ({formatDate(publishedAt!, "moment", "numericFull")})
                 </span>
             );
         }

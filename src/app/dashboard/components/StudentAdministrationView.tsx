@@ -13,7 +13,7 @@ import {
   ArrowRightCircle,
   TrendingDown
 } from "lucide-react";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { cn, getMonthName } from "@/lib/utils";
 import { formatFeeLabel } from "@/lib/utils";
 import { ReceiptDownloadButton } from "@/components/financials/ReceiptDownloadButton";
@@ -163,7 +163,7 @@ export function StudentAdministrationView({
                             </div>
                             <div>
                                <p className="text-sm font-black italic uppercase">{formatFeeLabel(fee.type, fee.month, fee.year)}</p>
-                               <p className="text-[10px] font-bold text-muted-foreground">{dayjs(fee.datePaid).format('DD/MM/YYYY')}</p>
+                               <p className="text-[10px] font-bold text-muted-foreground">{fee.datePaid ? formatDate(fee.datePaid, "moment", "numericFull") : null}</p>
                             </div>
                          </div>
                          <div className="text-right">

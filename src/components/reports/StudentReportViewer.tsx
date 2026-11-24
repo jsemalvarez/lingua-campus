@@ -13,7 +13,6 @@ import {
   Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import dayjs from "dayjs";
 import { formatDate } from "@/lib/dates";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -307,7 +306,7 @@ export function StudentReportViewer({
           doc.setFontSize(7);
           doc.setTextColor(100, 116, 139);
           doc.text(
-            `${bloque.firma.role === "ADMIN" ? "Dirección" : "Docente"} · ${dayjs(bloque.firma.signedAt).format("D/M/YYYY")}`,
+            `${bloque.firma.role === "ADMIN" ? "Dirección" : "Docente"} · ${formatDate(bloque.firma.signedAt, "moment", "numericFull")}`,
             bloque.centro,
             currentY + 9,
             { align: "center" }
@@ -536,7 +535,7 @@ export function StudentReportViewer({
                     </p>
                     <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mt-0.5">
                       {line.role === "TEACHER" ? "Docente" : "Dirección"} ·{" "}
-                      {dayjs(line.signedAt).format("D/M/YYYY")}
+                      {formatDate(line.signedAt, "moment", "numericFull")}
                     </p>
                   </div>
                 </div>

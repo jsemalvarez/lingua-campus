@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { instituteMonth } from "@/lib/dates";
+import { formatDate, formatTime, instituteMonth } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { Calendar, Trash2 } from "lucide-react";
 import Link from "next/link";
-import dayjs from "dayjs";
 import { formatCurrency, getMonthName } from "@/lib/utils";
 
 type DeletionRow = {
@@ -119,7 +118,7 @@ export function DeletionsClient({ rows, year, month }: { rows: DeletionRow[]; ye
                                 {rows.map((r) => (
                                     <tr key={r.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors align-top">
                                         <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                                            {dayjs(r.deletedAt).format("DD/MM/YYYY HH:mm")}
+                                            {formatDate(r.deletedAt, "moment", "numericFull")} {formatTime(r.deletedAt)}
                                         </td>
                                         <td className="px-4 py-3 font-semibold">
                                             <Link href={`/students/${r.studentId}`} className="hover:text-primary transition-colors">

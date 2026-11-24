@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
-import { ageOn, instituteToday } from "@/lib/dates";
+import { ageOn, formatDate, instituteToday } from "@/lib/dates";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { getActiveRole } from "@/lib/roles";
@@ -104,7 +104,7 @@ export default async function StudentAcademicsPage() {
         ...(pendingFeesCount > 0 ? [{ id: "fees", title: `Pagar cuotas pendientes (${pendingFeesCount})`, type: "FINANCE", dueDate: "" }] : []),
         ...upcomingLessons.filter(l => l.type === "EXAM").map(l => ({
             id: l.id, title: `Examen: ${l.topic}`, type: "ACADEMIC",
-            dueDate: l.date.toLocaleDateString()
+            dueDate: formatDate(l.date, "day", "numericFull")
         }))
     ];
 

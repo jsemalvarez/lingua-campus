@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { formatDate } from '@/lib/dates';
 import {
   LineChart,
   Line,
@@ -32,7 +33,7 @@ export function StudentPerformanceChart({ data }: StudentPerformanceChartProps) 
     ? data.slice().reverse().map(g => ({
         name: g.lesson.topic,
         score: parseFloat(g.score) || 0,
-        fullDate: new Date(g.createdAt).toLocaleDateString()
+        fullDate: formatDate(g.createdAt, "moment", "numericFull")
       }))
     : [
         { name: 'Lun', score: 65, fullDate: 'Lunes' },

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { formatDate, formatTime } from "@/lib/dates";
 import { sendMessage, getThread } from "@/app/actions/messages";
 import {
     ArrowLeft,
@@ -54,13 +55,7 @@ interface AttachmentPreview {
 }
 
 function formatDateTime(date: Date): string {
-    return new Date(date).toLocaleString("es-AR", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    return `${formatDate(date, "moment", "weekdayDayMonthShort")}, ${formatTime(date)}`;
 }
 
 function formatBytes(bytes: number): string {
@@ -687,11 +682,7 @@ export function ThreadViewClient({ thread: initialThread }: Props) {
                             {thread.participants.length === 1 ? "participante" : "participantes"}
                         </span>
                         <span>
-                            {new Date(thread.createdAt).toLocaleDateString("es-AR", {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                            })}
+                            {formatDate(thread.createdAt, "moment", "long")}
                         </span>
                     </div>
 

@@ -41,6 +41,27 @@ export const dateRules = [
         message: `Nombres de meses o días de un idioma que depende del entorno: usá formatDate(). ${DATES_MESSAGE}`,
     },
     {
+        selector: "CallExpression[callee.property.name=/^toLocale(Date|Time)String$/]",
+        message: `La fecha en la zona y el idioma de quien corre el código: el servidor y el navegador no dan lo mismo. Usá formatDate() o formatTime(). ${DATES_MESSAGE}`,
+    },
+    {
+        // Sobre un número es legítimo: de `toLocaleString` se frena sólo lo que se ve que es una fecha.
+        selector: "CallExpression[callee.property.name='toLocaleString'][callee.object.type='NewExpression'][callee.object.callee.name='Date']",
+        message: `La fecha en la zona y el idioma de quien corre el código: usá formatDate() o formatTime(). ${DATES_MESSAGE}`,
+    },
+    {
+        selector: "CallExpression[callee.property.name='toLocaleString'] > ObjectExpression > Property[key.name=/^(weekday|day|month|year|hour|minute|second|timeZone|dateStyle|timeStyle)$/]",
+        message: `La fecha en la zona y el idioma de quien corre el código: usá formatDate() o formatTime(). ${DATES_MESSAGE}`,
+    },
+    {
+        selector: "CallExpression[callee.property.name='format'][callee.object.type='CallExpression'][callee.object.callee.name='dayjs']",
+        message: `dayjs(...).format() sale en la zona de quien corre el código: usá formatDate() o formatTime(). ${DATES_MESSAGE}`,
+    },
+    {
+        selector: "NewExpression[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+        message: `El formato con zona sale de un solo lugar: usá formatDate() o formatTime(). ${DATES_MESSAGE}`,
+    },
+    {
         selector: "TemplateElement[value.raw=/CURRENT_DATE/]",
         message: `CURRENT_DATE es el día de Postgres, en UTC: pasá instituteTodayKey() como parámetro. ${DATES_MESSAGE}`,
     },

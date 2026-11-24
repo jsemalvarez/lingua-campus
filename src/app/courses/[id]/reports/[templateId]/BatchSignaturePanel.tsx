@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { AlertTriangle, CheckCircle2, PenLine, Undo2 } from "lucide-react";
 import { toast } from "sonner";
-import dayjs from "dayjs";
+import { formatDate } from "@/lib/dates";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { SignaturePad, StrokeData, isEmptyStroke } from "@/components/reports/SignaturePad";
@@ -197,7 +197,7 @@ export function BatchSignaturePanel({
                                         {ETIQUETA[role]} · {firma.signerName}
                                     </p>
                                     <p className="text-muted-foreground">
-                                        {dayjs(firma.signedAt).format("D/M/YYYY")}
+                                        {formatDate(firma.signedAt, "moment", "numericFull")}
                                         {firma.fallenCount > 0 && (
                                             <span className="text-amber-600 font-semibold">
                                                 {" "}· caída en {firma.fallenCount}{" "}

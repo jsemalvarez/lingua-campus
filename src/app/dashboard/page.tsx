@@ -349,7 +349,7 @@ export default async function DashboardPage() {
                 id: l.id,
                 title: `Examen: ${l.topic}`,
                 type: 'ACADEMIC',
-                dueDate: l.date.toLocaleDateString()
+                dueDate: formatDate(l.date, "day", "numericFull")
             }))
         ];
 
@@ -595,7 +595,7 @@ export default async function DashboardPage() {
                                                 <span className="flex items-baseline justify-between gap-2">
                                                     <span className="font-bold text-sm text-foreground/90 truncate">{lesson.course.level || lesson.course.name}</span>
                                                     <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
-                                                        {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })}
+                                                        {formatDate(lesson.date, "day", "numericDayMonth")}
                                                         {lesson.schedule?.startTime ? ` · ${lesson.schedule.startTime}` : ""}
                                                         {lesson.schedule?.room ? ` · ${lesson.schedule.room}` : ""}
                                                     </span>
@@ -860,7 +860,7 @@ export default async function DashboardPage() {
                                         <span className="text-xs text-muted-foreground">Prof. {lesson.course.teacher?.name || 'N/A'} • {lesson.topic}</span>
                                     </div>
                                     <div className="text-sm font-semibold tabular-nums">
-                                        {new Date(lesson.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                        {formatDate(lesson.date, "day", "numericDayMonth")}
                                     </div>
                                 </div>
                             ))}

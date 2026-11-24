@@ -47,7 +47,7 @@ export function SpreadsheetView({ data, activeRole, instituteName }: Spreadsheet
         doc.text(`Planilla de Alumnos - ${instituteName}`, 14, 22);
         doc.setFontSize(11);
         doc.setTextColor(100);
-        doc.text(`Generado el: ${new Date().toLocaleDateString('es-AR')}`, 14, 30);
+        doc.text(`Generado el: ${formatDate(new Date(), "moment", "numericFull")}`, 14, 30);
 
         let startY = 40;
 
@@ -121,7 +121,7 @@ export function SpreadsheetView({ data, activeRole, instituteName }: Spreadsheet
                 <div className="hidden print:block text-center space-y-2 mb-8 border-b pb-6">
                     <h1 className="text-4xl font-bold">{instituteName}</h1>
                     <h2 className="text-2xl text-gray-600">Planilla de Alumnos</h2>
-                    <p className="text-sm text-gray-500">Fecha de generación: {new Date().toLocaleDateString('es-AR')}</p>
+                    <p className="text-sm text-gray-500">Fecha de generación: {formatDate(new Date(), "moment", "numericFull")}</p>
                 </div>
 
                 {/* Table Section */}
