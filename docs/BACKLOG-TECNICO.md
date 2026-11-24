@@ -288,6 +288,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [x] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [x] |
 | [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [x] |
+| [BUG-34](#bug-34) | P3 | Un archivo de la página que no llega a cargar deja a la persona en la pantalla de error | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -9137,6 +9138,35 @@ fue. Las marcas siguen siendo las de todos sus cursos, como antes ([BUG-22](#bug
 **Verificado en stage el 2026-11-24** con tres alumnos: sin marcas, 1 de 1 (en singular) y 83% · 5 de 6.
 
 **P2.** Es un dato falso en la primera pantalla, pero está lejos de la vista y entran pocos alumnos.
+
+---
+
+<a id="bug-34"></a>
+## BUG-34 · Un archivo de la página que no llega a cargar deja a la persona en la pantalla de error · **P3**
+
+**De dónde sale.** Del registro de errores ([ARQ-09](#arq-09)), que lo capturó solo en stage el 2026-11-24 a las
+18:56:31. Es el primer error real del registro: el panel lo mostró bien, en Comunicación.
+
+**Lo que pasó.** `ChunkLoadError: Loading chunk 9451 failed (timeout…)` en `/messages`, con la sesión de un
+alumno. El navegador pidió el archivo de esa página, no le llegó y, pasada la espera, React mostró la pantalla de
+error. Quedó como **visto** por la persona. La bandeja se había visto bien un par de minutos antes: el contenido
+venía del servidor y faltaba el archivo.
+
+**Lo que no se sabe.** La causa. El archivo existe y a las 19:30 respondía 200 en menos de un segundo. Candidatos,
+**sin verificar**: un corte de red, la pestaña en segundo plano (la manejaba el navegador interno), el service
+worker de la PWA, o el deploy de unos minutos antes. Con un deploy nuevo, quien tiene una pestaña abierta puede
+pedir archivos de la versión vieja.
+
+**Lo que hace hoy el código.** Nada en particular: cae en la pantalla de error común
+([`error.tsx`](../src/app/error.tsx), `SectionError`), con su botón de reintentar. No se probó si ese botón
+alcanza para este caso.
+
+**El arreglo, si se repite.** Ante un `ChunkLoadError`, recargar la página **una sola vez** (con una marca en
+`sessionStorage` para no entrar en un ciclo) y avisar recién si vuelve a fallar. Cuidado con lo que la persona
+tenga escrito sin guardar: recargar lo pierde.
+
+**Cuándo.** Mirar el panel de errores de prod unas semanas después de promover. Si aparece más de una vez, o en más
+de una persona, sube a P2. Con un solo caso en stage no alcanza.
 
 ---
 
