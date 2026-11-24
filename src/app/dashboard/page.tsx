@@ -21,7 +21,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { formatFeeLabel } from "@/lib/utils";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
-import { ageOn, instituteMonth, instituteToday } from "@/lib/dates";
+import { ageOn, formatDate, instituteMonth, instituteToday, periodProgress } from "@/lib/dates";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
@@ -358,15 +358,19 @@ export default async function DashboardPage() {
         const isMinor = student.birthDate ? ageOn(student.birthDate) < 18 : false;
 
 
-        // Calcular progreso del curso principal (Maestría)
-        let courseProgress = 0;
-        let lessonStats = { current: 0, total: 0 };
-        if (student.enrollments.length > 0) {
-            const mainCourseId = student.enrollments[0].courseId;
-            const total = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE" } });
-            const passed = await prisma.lesson.count({ where: { courseId: mainCourseId, status: "ACTIVE", date: { lt: instituteToday() } } });
-            courseProgress = total > 0 ? Math.round((passed / total) * 100) : 0;
-            lessonStats = { current: passed, total };
+        // Avance del curso principal: los días que pasaron entre su inicio y su
+        // fin. No se mide con las clases: muchas docentes las cargan cuando las
+        // dan, así que las dictadas son todas las cargadas y daba 100% (BUG-29).
+        const mainCourse = student.enrollments[0]?.course;
+        const coursePercent = periodProgress(mainCourse?.startDate, mainCourse?.endDate);
+        let courseTimeline: { percent: number; text: string } | null = null;
+        if (coursePercent !== null && mainCourse?.startDate && mainCourse.endDate) {
+            const start = formatDate(mainCourse.startDate, "day", "dayMonthLong");
+            const end = formatDate(mainCourse.endDate, "day", "dayMonthLong");
+            const text = today < mainCourse.startDate ? `Empieza el ${start}`
+                : today > mainCourse.endDate ? `Terminó el ${end}`
+                : `Termina el ${end}`;
+            courseTimeline = { percent: coursePercent, text };
         }
 
         // Calcular promedio general (GPA)
@@ -393,8 +397,7 @@ export default async function DashboardPage() {
                     upcomingLessons={upcomingLessons}
                     pendingTasks={pendingTasks}
                     isMinor={isMinor}
-                    courseProgress={courseProgress}
-                    lessonStats={lessonStats}
+                    courseTimeline={courseTimeline}
                     averageGrade={averageGrade}
                 />
             </div>

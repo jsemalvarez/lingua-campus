@@ -28,8 +28,8 @@ interface StudentDashboardV2ViewProps {
    upcomingLessons: any[];
    pendingTasks: any[];
    isMinor: boolean;
-   courseProgress: number;
-   lessonStats: { current: number; total: number };
+   /** Cuánto del curso ya pasó; `null` si el curso no tiene las dos fechas. */
+   courseTimeline: { percent: number; text: string } | null;
    averageGrade: string | null;
 }
 
@@ -40,8 +40,7 @@ export function StudentDashboardV2View({
    upcomingLessons,
    pendingTasks,
    isMinor,
-   courseProgress,
-   lessonStats,
+   courseTimeline,
    averageGrade,
 }: StudentDashboardV2ViewProps) {
    const firstName = student.name.split(" ")[0];
@@ -130,22 +129,24 @@ export function StudentDashboardV2View({
                            {mainCourse.level || mainCourse.name}
                         </h2>
 
-                        {/* Mastery Progress Bar */}
-                        <div className="max-w-md space-y-3 pt-2">
-                           <div className="flex justify-between items-end">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Maestría del Curso</span>
-                              <span className="text-xs font-black italic text-primary">{courseProgress}%</span>
+                        {/* Avance del curso: tiempo entre su inicio y su fin */}
+                        {courseTimeline && (
+                           <div className="max-w-md space-y-3 pt-2">
+                              <div className="flex justify-between items-end">
+                                 <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Avance del curso</span>
+                                 <span className="text-xs font-black italic text-primary">{courseTimeline.percent}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                 <div
+                                    className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-1000"
+                                    style={{ width: `${courseTimeline.percent}%` }}
+                                 />
+                              </div>
+                              <p className="text-xs font-semibold text-white/60">
+                                 {courseTimeline.text}
+                              </p>
                            </div>
-                           <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                              <div
-                                 className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-1000"
-                                 style={{ width: `${courseProgress}%` }}
-                              />
-                           </div>
-                           <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.1em]">
-                              Has asistido a {lessonStats.current} de {lessonStats.total} clases programadas
-                           </p>
-                        </div>
+                        )}
                      </div>
                   ) : (
                      <p className="text-white/40 italic">No tienes matrículas activas.</p>

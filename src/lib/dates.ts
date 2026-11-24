@@ -201,6 +201,19 @@ export function yearDays(year: number): { first: Date; last: Date; next: Date } 
 }
 
 /**
+ * Cuánto pasó de un período de días (el inicio y el fin de un curso), de 0 a 100.
+ * `null` si falta una de las dos fechas o están al revés: no hay qué medir. 100
+ * es sólo desde el último día, para no dar por terminado lo que no terminó.
+ */
+export function periodProgress(start: Date | null | undefined, end: Date | null | undefined, on: Date = instituteToday()): number | null {
+    if (!start || !end || end <= start) return null;
+    if (on >= end) return 100;
+    if (on <= start) return 0;
+    const percent = Math.round(((on.getTime() - start.getTime()) / (end.getTime() - start.getTime())) * 100);
+    return Math.min(percent, 99);
+}
+
+/**
  * Edad cumplida en un día. Las dos fechas se leen como días (en UTC): el
  * nacimiento está guardado a medianoche UTC, a la de Argentina (03:00) o a la
  * del horario de verano de 2007-2009 (02:00), y en UTC las tres dan el día

@@ -283,7 +283,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
 | [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [ ] |
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
-| [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [ ] |
+| [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [~] |
 | [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [ ] |
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
@@ -8961,14 +8961,27 @@ del 2026-04-18 (`8cebb84`) y está igual en `main`.
 **196** les da más clases que las asistencias cargadas en su curso, y **73** no tienen ninguna. El curso
 de cada uno se tomó por el `id` de la inscripción: con más de una, la pantalla puede elegir otro.
 
-**El arreglo.** Dos cosas, que se deciden juntas:
+**La barra mentía por otro lado.** La primera idea, que la frase dijera «clases dictadas», no servía: en
+**19 de los 30** cursos activos, con **120 de los 196** alumnos, las clases se cargan a medida que se
+dan. Ahí las dictadas son todas las cargadas y daba **100%** con el curso sin terminar: 18 de ellos van
+hasta mediados de diciembre y el otro no tiene fecha de fin.
 
-- **La frase.** O cuenta asistencias de verdad (`PRESENT` y `LATE` de ese curso), o dice lo que mide: «55
-  de 62 clases dictadas».
-- **«Maestría del Curso».** Es el porcentaje del curso que ya pasó, no cuánto sabe el alumno.
+**Por qué nadie lo reportó.** Entre el 2026-09-15 y el 2026-11-24 entraron 58 de los 196 alumnos, y 19 en
+los últimos 30 días; de esos 19, 13 veían 100%. La frase iba en 9 píxeles, blanco al 30%. El tutor tiene
+otra pantalla, que ya dice «Todavía sin asistencia tomada».
 
-Contar asistencias tiene una trampa: hay cursos donde no se toman, y el alumno leería que no fue nunca.
-Por eso lo más seguro es que diga lo que mide.
+**Decidido el 2026-11-24:** la barra mide **los días del curso**, de su inicio a su fin. «Maestría del
+Curso» pasa a «Avance del curso» y la frase a «Termina el 18 de diciembre» («Empieza el…» y «Terminó
+el…» fuera de ese período). Sin las dos fechas no hay barra: hoy es **un** curso, con un alumno. La
+asistencia queda en su tarjeta.
+
+**Hecho el 2026-11-24.** `periodProgress` en [`dates.ts`](../src/lib/dates.ts), doce casos de borde
+probados, y el cálculo en [`dashboard/page.tsx`](../src/app/dashboard/page.tsx). Sobre los datos de prod
+de ese día 29 cursos dan 84, 87, 92 o 98, el otro no tiene barra y ninguno da 100. **Falta verlo por
+pantalla en stage.**
+
+**Queda afuera, en la misma pantalla.** «Tasa de Asistencia» dice **0%** al lado de «Al día» a quien no
+tiene ninguna asistencia cargada, y «Horas de Clase» trae la barra fija en 65%.
 
 **P1.** Es un dato falso sobre el propio alumno, en la primera pantalla que ve.
 
