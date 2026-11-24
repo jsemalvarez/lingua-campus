@@ -287,7 +287,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [ ] |
 | [BUG-31](#bug-31) | P3 | «Cursos Activos» y «Profesores» del panel cuentan de más | [ ] |
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [ ] |
-| [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [~] |
+| [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [x] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
 | [FEAT-03](#feat-03) | P3 | Saltar al mes de la clase recién creada o movida | [ ] |
@@ -8981,8 +8981,8 @@ probados, y el cálculo en [`dashboard/page.tsx`](../src/app/dashboard/page.tsx)
 de ese día 29 cursos dan 84, 87, 92 o 98, el otro no tiene barra y ninguno da 100. Commit `31a096a`.
 
 **Verificado en stage el 2026-11-24**, con dos alumnos: a quien decía 100% le da 92% y a quien decía 90%,
-84%, los dos con «Termina el 16 de diciembre», como se había calculado antes de mirar. El caso sin fecha
-de fin no se vio por pantalla.
+84%, los dos con «Termina el 16 de diciembre», como se había calculado antes de mirar. En el
+curso sin fecha de fin la barra no aparece.
 
 **Queda afuera, en la misma pantalla.** La tarjeta de asistencia es [BUG-33](#bug-33). Las otras dos traen
 algo fijo: «Horas de Clase» la barra en 65%, y «Promedio General» la etiqueta «Destacado» con cualquier nota.
@@ -9091,8 +9091,10 @@ cualquier porcentaje.
 
 **Hecho el 2026-11-24**, con los textos de la tarjeta del tutor (BUG-21): sin marcas dice «Todavía sin
 asistencia tomada», sin porcentaje; con marcas, el porcentaje y «5 de 6 presentes». La etiqueta «Al día» se
-fue. Las marcas siguen siendo las de todos sus cursos, como antes ([BUG-22](#bug-22)). **Falta verlo por
-pantalla en stage.**
+fue. Las marcas siguen siendo las de todos sus cursos, como antes ([BUG-22](#bug-22)). Commit
+`e336c67`.
+
+**Verificado en stage el 2026-11-24** con tres alumnos: sin marcas, 1 de 1 (en singular) y 83% · 5 de 6.
 
 **P2.** Es un dato falso en la primera pantalla, pero está lejos de la vista y entran pocos alumnos.
 
