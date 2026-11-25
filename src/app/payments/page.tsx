@@ -11,6 +11,7 @@ import { TransactionTable } from "./components/TransactionTable";
 import { GenerateFeesButton } from "./components/GenerateFeesButton";
 import { CollectionChart } from "./components/CollectionChart";
 import { formatFeeLabel } from "@/lib/utils";
+import { expenseLabel, incomeLabel } from "@/lib/cashCategories";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
 import { instituteMonth, monthDays } from "@/lib/dates";
 import { DebtChart } from "./components/DebtChart";
@@ -166,10 +167,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const primaryStats = [
         {
             label: `Cobrado en ${monthLabel}`,
-            value: `$${totalCollected.toLocaleString()}`,
+            value: `$${totalCollected.toLocaleString("es-AR")}`,
             breakdown: [
-                { key: "Cuotas y Matrículas", val: `$${feesIncome.toLocaleString()}` },
-                { key: "Otros Ingresos", val: `$${miscIncome.toLocaleString()}` }
+                { key: "Cuotas y Matrículas", val: `$${feesIncome.toLocaleString("es-AR")}` },
+                { key: "Otros Ingresos", val: `$${miscIncome.toLocaleString("es-AR")}` }
             ],
             icon: ArrowUpRight,
             color: "text-blue-600",
@@ -178,7 +179,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         },
         {
             label: `Rentabilidad (Neto - ${monthLabel})`,
-            value: rentabilidad >= 0 ? `+$${rentabilidad.toLocaleString()}` : `-$${Math.abs(rentabilidad).toLocaleString()}`,
+            value: rentabilidad >= 0 ? `+$${rentabilidad.toLocaleString("es-AR")}` : `-$${Math.abs(rentabilidad).toLocaleString("es-AR")}`,
             icon: TrendingUp,
             color: "text-emerald-600",
             bg: "bg-emerald-50 dark:bg-emerald-950/40",
@@ -186,10 +187,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         },
         {
             label: `Gastos Operativos (${monthLabel})`,
-            value: `$${totalExpenses.toLocaleString()}`,
+            value: `$${totalExpenses.toLocaleString("es-AR")}`,
             breakdown: [
-                { key: "Sueldos / Honorarios", val: `$${payrollExpenses.toLocaleString()}` },
-                { key: "Gastos Generales", val: `$${otherExpenses.toLocaleString()}` }
+                { key: "Sueldos / Honorarios", val: `$${payrollExpenses.toLocaleString("es-AR")}` },
+                { key: "Gastos Generales", val: `$${otherExpenses.toLocaleString("es-AR")}` }
             ],
             icon: ArrowDownLeft,
             color: "text-rose-600",
@@ -201,7 +202,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const secondaryStats = [
         {
             label: `Progreso de Cobro (${monthLabel})`,
-            value: `$${feesCollectedThisMonth.toLocaleString()} / $${totalToCollect.toLocaleString()}`,
+            value: `$${feesCollectedThisMonth.toLocaleString("es-AR")} / $${totalToCollect.toLocaleString("es-AR")}`,
             icon: Calculator,
             color: "text-blue-600",
             bg: "bg-blue-50 dark:bg-blue-950/40",
@@ -212,7 +213,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         },
         {
             label: "Deuda Total (Alumnos)",
-            value: `$${totalDebt.toLocaleString()}`,
+            value: `$${totalDebt.toLocaleString("es-AR")}`,
             icon: AlertCircle,
             color: "text-rose-600",
             bg: "bg-rose-50 dark:bg-rose-950/40",
@@ -226,7 +227,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const adjustmentStats = [
         {
             label: `Intereses Cobrados (${monthLabel})`,
-            value: `$${totalSurcharges.toLocaleString()}`,
+            value: `$${totalSurcharges.toLocaleString("es-AR")}`,
             icon: Coins,
             color: "text-amber-600",
             bg: "bg-amber-50 dark:bg-amber-950/40",
@@ -235,7 +236,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         },
         {
             label: `Descuentos Otorgados (${monthLabel})`,
-            value: `$${totalDiscounts.toLocaleString()}`,
+            value: `$${totalDiscounts.toLocaleString("es-AR")}`,
             icon: Percent,
             color: "text-indigo-600",
             bg: "bg-indigo-50 dark:bg-indigo-950/40",
@@ -275,14 +276,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 return { concept: expense.description || "Pago de sueldo", who: expense.recipient?.name ?? null, where: null };
             }
             const recipient = expense.recipient?.name ?? null;
-            return { concept: expense.description, who: recipient ?? expense.category, where: recipient ? expense.category : null };
+            const category = expenseLabel(expense.category);
+            return { concept: expense.description, who: recipient ?? category, where: recipient ? category : null };
         }
         const income = t.miscIncome;
         if (income) {
             if (income.category === "ADELANTO") {
                 return { concept: "Adelanto de pago", who: income.student?.name ?? null, where: null };
             }
-            return { concept: income.description, who: income.student?.name ?? null, where: income.category as string | null };
+            return { concept: income.description, who: income.student?.name ?? null, where: incomeLabel(income.category) as string | null };
         }
         return { concept: (t.description || "").split(" - Motivo: ")[0], who: null, where: null };
     };
@@ -511,37 +513,37 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                             {stat.chartType === "COLLECTION" ? (
                                                 <div className="mt-2 flex items-stretch font-bold tracking-tight h-8 sm:h-9 select-none text-[10px] sm:text-lg">
                                                     <div className="flex items-center px-2 sm:px-3 border border-blue-600/50 rounded-l-lg text-emerald-600 bg-transparent">
-                                                        ${feesCollectedThisMonth.toLocaleString()}
+                                                        ${feesCollectedThisMonth.toLocaleString("es-AR")}
                                                     </div>
                                                     <div className="flex items-center justify-center px-2 bg-muted border-y border-blue-600/50 sm:text-xs text-muted-foreground font-medium">
                                                         +
                                                     </div>
                                                     <div className="flex items-center px-2 sm:px-3 border border-blue-600/50 text-amber-500 bg-transparent">
-                                                        ${Math.max(0, totalToCollect - feesCollectedThisMonth).toLocaleString()}
+                                                        ${Math.max(0, totalToCollect - feesCollectedThisMonth).toLocaleString("es-AR")}
                                                     </div>
                                                     <div className="flex items-center justify-center px-2 bg-muted border-y border-blue-600/50 sm:text-xs text-muted-foreground font-medium">
                                                         =
                                                     </div>
                                                     <div className="flex items-center px-3 sm:px-4 bg-blue-600 text-white rounded-r-lg shadow-sm">
-                                                        ${totalToCollect.toLocaleString()}
+                                                        ${totalToCollect.toLocaleString("es-AR")}
                                                     </div>
                                                 </div>
                                             ) : stat.chartType === "DEBT" ? (
                                                 <div className="mt-2 flex items-stretch font-bold tracking-tight h-8 sm:h-9 select-none text-[10px] sm:text-lg">
                                                     <div className="flex items-center px-2 sm:px-3 border border-rose-500 rounded-l-lg text-rose-600 bg-transparent">
-                                                        ${historicalDebt.toLocaleString()}
+                                                        ${historicalDebt.toLocaleString("es-AR")}
                                                     </div>
                                                     <div className="flex items-center justify-center px-2 bg-muted border-y border-rose-500 sm:text-xs text-muted-foreground font-medium">
                                                         +
                                                     </div>
                                                     <div className="flex items-center px-2 sm:px-3 border border-rose-500 text-amber-500 bg-transparent">
-                                                        ${currentMonthDebt.toLocaleString()}
+                                                        ${currentMonthDebt.toLocaleString("es-AR")}
                                                     </div>
                                                     <div className="flex items-center justify-center px-2 bg-muted border-y border-rose-500 sm:text-xs text-muted-foreground font-medium">
                                                         =
                                                     </div>
                                                     <div className="flex items-center px-3 sm:px-4 bg-rose-600 text-white rounded-r-lg shadow-sm">
-                                                        ${totalDebt.toLocaleString()}
+                                                        ${totalDebt.toLocaleString("es-AR")}
                                                     </div>
                                                 </div>
                                             ) : (

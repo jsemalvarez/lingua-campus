@@ -132,7 +132,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                             </div>
                                             <div className="text-right">
                                                 <p className={`font-black ${isVoided ? 'line-through text-muted-foreground' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                                    ${payment.amount.toLocaleString()}
+                                                    ${payment.amount.toLocaleString("es-AR")}
                                                 </p>
                                                 {isVoided ? (
                                                     <span className="text-[10px] uppercase font-bold tracking-widest text-rose-600 px-2 py-0.5 bg-rose-50 dark:bg-rose-950/40 rounded-full border border-rose-500/20">

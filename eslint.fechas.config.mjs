@@ -62,6 +62,12 @@ export const dateRules = [
         message: `El formato con zona sale de un solo lugar: usá formatDate() o formatTime(). ${DATES_MESSAGE}`,
     },
     {
+        // No es de fechas, pero es la misma causa: el servidor escribe «$35,000» y el
+        // navegador «$35.000» (FIN-10).
+        selector: "CallExpression[callee.property.name='toLocaleString'][arguments.length=0]",
+        message: "El número en el idioma de quien corre el código: usá formatCurrency() o toLocaleString(\"es-AR\").",
+    },
+    {
         selector: "TemplateElement[value.raw=/CURRENT_DATE/]",
         message: `CURRENT_DATE es el día de Postgres, en UTC: pasá instituteTodayKey() como parámetro. ${DATES_MESSAGE}`,
     },

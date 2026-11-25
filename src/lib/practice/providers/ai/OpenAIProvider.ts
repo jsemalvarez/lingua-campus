@@ -34,7 +34,7 @@ export class OpenAIProvider implements IAIProvider {
                     },
                     {
                         role: "user",
-                        content: `The student was asked to say: "${expected}"\nThe speech recognition transcribed: "${actual}"${missingNote}\n\nIf the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}.\n\nRespond with: {"score": 0-100, "feedback": "Rioplatense Spanish feedback (use 'vos', warm and plain, no slang such as 'che'), 1-2 sentences", "weakArea": "phoneme or null"}`,
+                        content: `The student was asked to say: "${expected}"\nThe speech recognition transcribed: "${actual}"${missingNote}\n\nIf the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}.\n\nRespond with: {"score": 0-100, "feedback": "Rioplatense Spanish feedback (use 'vos', warm and plain, no slang such as 'che'), 1-2 sentences", "weakArea": "what to practise, in plain Rioplatense Spanish that a child or a parent understands, 2 to 6 words, naming the sound by an English word that has it, e.g. 'la «th» de «think»', 'la vocal corta de «ship»'; never phonetics terms (fricative, vowel, flap, alveolar); null if it was good"}`,
                     },
                 ],
             }),

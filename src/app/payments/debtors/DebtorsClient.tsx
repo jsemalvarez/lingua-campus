@@ -154,11 +154,11 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                     ? [[`Deuda de ${periodLabel}`, "Deudores"]]
                     : [["Mora Histórica", `Pendiente ${getMonthName(currentMonth)}`, "Deuda Total Global"]],
                 body: period
-                    ? [[`$${totalAll.toLocaleString()}`, `${filtered.length}`]]
+                    ? [[`$${totalAll.toLocaleString("es-AR")}`, `${filtered.length}`]]
                     : [[
-                        `$${totalHistorical.toLocaleString()}`,
-                        `$${totalCurrent.toLocaleString()}`,
-                        `$${totalAll.toLocaleString()}`,
+                        `$${totalHistorical.toLocaleString("es-AR")}`,
+                        `$${totalCurrent.toLocaleString("es-AR")}`,
+                        `$${totalAll.toLocaleString("es-AR")}`,
                     ]],
                 theme: "grid",
                 headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: "bold", fontSize: 8 },
@@ -195,15 +195,15 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                     s.name,
                     s.phone || "—",
                     s.months.map((m) => m.label).join("\n"),
-                    `$${s.totalOwed.toLocaleString()}`,
+                    `$${s.totalOwed.toLocaleString("es-AR")}`,
                 ])
                 : filtered.map((s) => [
                     s.name,
                     s.phone || "—",
-                    `$${s.previousMonthsOwed.toLocaleString()}`,
-                    `$${s.currentMonthOwed.toLocaleString()}`,
-                    `$${s.totalOwed.toLocaleString()}`,
-                    s.months.map((m) => `${m.label}: $${m.amount.toLocaleString()}`).join("\n"),
+                    `$${s.previousMonthsOwed.toLocaleString("es-AR")}`,
+                    `$${s.currentMonthOwed.toLocaleString("es-AR")}`,
+                    `$${s.totalOwed.toLocaleString("es-AR")}`,
+                    s.months.map((m) => `${m.label}: $${m.amount.toLocaleString("es-AR")}`).join("\n"),
                 ]);
 
             autoTable(doc, {
@@ -369,7 +369,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                     </div>
                     <div className="flex items-center gap-6">
                         <div>
-                            <h2 className="text-2xl font-black text-primary">${totalAll.toLocaleString()}</h2>
+                            <h2 className="text-2xl font-black text-primary">${totalAll.toLocaleString("es-AR")}</h2>
                             <p className="text-[10px] text-muted-foreground">Total del mes</p>
                         </div>
                         <div>
@@ -392,7 +392,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                             </div>
                             <span className="text-[10px] font-black uppercase tracking-widest">Mora Histórica</span>
                         </div>
-                        <h2 className="text-2xl font-black text-rose-600">${totalHistorical.toLocaleString()}</h2>
+                        <h2 className="text-2xl font-black text-rose-600">${totalHistorical.toLocaleString("es-AR")}</h2>
                         <p className="text-[10px] text-muted-foreground mt-1">Total acumulado de meses anteriores</p>
                     </Card>
 
@@ -405,7 +405,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                                 Pendiente de {getMonthName(currentMonth)}
                             </span>
                         </div>
-                        <h2 className="text-2xl font-black text-amber-600">${totalCurrent.toLocaleString()}</h2>
+                        <h2 className="text-2xl font-black text-amber-600">${totalCurrent.toLocaleString("es-AR")}</h2>
                         <p className="text-[10px] text-muted-foreground mt-1">Saldo por cobrar del mes en curso</p>
                     </Card>
 
@@ -416,7 +416,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                             </div>
                             <span className="text-[10px] font-black uppercase tracking-widest">Deuda Total Global</span>
                         </div>
-                        <h2 className="text-2xl font-black">${totalAll.toLocaleString()}</h2>
+                        <h2 className="text-2xl font-black">${totalAll.toLocaleString("es-AR")}</h2>
                         <p className="text-[10px] text-rose-100/70 mt-1">Suma total de deudas en el instituto</p>
                     </Card>
                 </div>
@@ -671,7 +671,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                                                 <p className="text-[10px] uppercase font-black text-rose-100 tracking-tighter mb-1">
                                                     Debe de {periodLabel}
                                                 </p>
-                                                <h4 className="text-xl font-black">${s.totalOwed.toLocaleString()}</h4>
+                                                <h4 className="text-xl font-black">${s.totalOwed.toLocaleString("es-AR")}</h4>
                                             </div>
                                         )}
                                         {!period && s.previousMonthsOwed > 0 && (
@@ -679,7 +679,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                                                 <p className="text-[10px] uppercase font-black text-rose-600 dark:text-rose-400 tracking-tighter mb-1">
                                                     Vencido (Histórico)
                                                 </p>
-                                                <h4 className="text-lg font-black text-rose-600">${s.previousMonthsOwed.toLocaleString()}</h4>
+                                                <h4 className="text-lg font-black text-rose-600">${s.previousMonthsOwed.toLocaleString("es-AR")}</h4>
                                             </div>
                                         )}
                                         {!period && (
@@ -687,13 +687,13 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                                                 <p className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-tighter mb-1">
                                                     {getMonthName(currentMonth)}
                                                 </p>
-                                                <h4 className="text-lg font-black text-amber-600">${s.currentMonthOwed.toLocaleString()}</h4>
+                                                <h4 className="text-lg font-black text-amber-600">${s.currentMonthOwed.toLocaleString("es-AR")}</h4>
                                             </div>
                                         )}
                                         {!period && (
                                             <div className="bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-lg shadow-rose-200 dark:shadow-rose-900/20 text-center min-w-[140px]">
                                                 <p className="text-[10px] uppercase font-black text-rose-100 tracking-tighter mb-1">Deuda Total</p>
-                                                <h4 className="text-xl font-black">${s.totalOwed.toLocaleString()}</h4>
+                                                <h4 className="text-xl font-black">${s.totalOwed.toLocaleString("es-AR")}</h4>
                                             </div>
                                         )}
                                     </div>
@@ -730,7 +730,7 @@ export function DebtorsClient({ summaryList, currentMonthLabel, currentMonth, cu
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-sm font-black text-foreground">${m.amount.toLocaleString()}</div>
+                                                <div className="text-sm font-black text-foreground">${m.amount.toLocaleString("es-AR")}</div>
                                                 <PendingFeeActions feeId={m.feeId} isPaid={m.isPaid} originalAmount={m.amount} />
                                             </div>
                                         ))}

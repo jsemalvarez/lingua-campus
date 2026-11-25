@@ -195,14 +195,14 @@ Evaluate the pronunciation and respond ONLY with a valid JSON object in this exa
 {
   "score": <number 0-100>,
   "feedback": "<brief encouraging feedback in Rioplatense Spanish (use 'vos', warm and plain, no slang such as 'che'), 1-2 sentences>",
-  "weakArea": "<specific phoneme or pattern that was wrong, e.g. 'th fricative', 'short i vowel', or null if pronunciation was good>"
+  "weakArea": "<what to practise, in plain Rioplatense Spanish that a child or a parent understands, 2 to 6 words, naming the sound by an English word that has it, e.g. 'la «th» de «think»', 'la vocal corta de «ship»'; never phonetics terms (fricative, vowel, flap, alveolar); null if it was good>"
 }
 
 Rules:
 - Be lenient with minor transcription differences (contractions, capitalization)
 - Focus on phonetic similarity, not exact word matching
 - If the transcription is close enough to understand, score >= ${PRONUNCIATION_PASS_SCORE}
-- weakArea must be a specific phoneme/pattern or null, never a full sentence
+- weakArea is shown to the student and the family: Spanish, short, no jargon, never a full sentence
 - feedback must be in Spanish and encouraging even when wrong`;
 
         const text = await callGemini(this.apiKey, {

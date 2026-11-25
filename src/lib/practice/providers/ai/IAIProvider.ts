@@ -24,7 +24,7 @@ export const PRACTICE_LANGUAGE = "English";
 export interface EvaluationResult {
     score: number;       // 0-100
     feedback: string;    // Mensaje para el alumno (en español)
-    weakArea?: string;   // Área difícil detectada, ej: "th fricative", "short vowels"
+    weakArea?: string;   // Qué repasar, en criollo: la ven el alumno y la familia. Ej: «la «th» de «think»» (BUG-39)
     isCorrect: boolean;  // Derivado: score >= PRONUNCIATION_PASS_SCORE
 }
 

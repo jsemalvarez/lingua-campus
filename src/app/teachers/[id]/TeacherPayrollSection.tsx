@@ -197,7 +197,7 @@ export function TeacherPayrollSection({
                             Liquidación de Haberes
                             {data && (
                                 <span className="text-[10px] bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-500/20 ml-2">
-                                    Valor Hora: ${data.rate.toLocaleString()}
+                                    Valor Hora: ${data.rate.toLocaleString("es-AR")}
                                 </span>
                             )}
                         </h3>
@@ -247,7 +247,7 @@ export function TeacherPayrollSection({
                         </div>
                         <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
                             <p className="text-xs font-bold uppercase tracking-widest text-emerald-500/70 mb-1">Total a Liquidar</p>
-                            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">${finalAmount.toLocaleString()}</p>
+                            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">${finalAmount.toLocaleString("es-AR")}</p>
                         </div>
                     </div>
 
@@ -259,7 +259,7 @@ export function TeacherPayrollSection({
                             <div>
                                 <p className="font-bold text-sm text-emerald-700 dark:text-emerald-400">Período completamente liquidado</p>
                                 <p className="text-xs text-emerald-600/70 dark:text-emerald-400/60">
-                                    Las {data.lessonCount} clases de este período ya fueron pagadas. Total liquidado: ${data.allItems.reduce((acc, i) => acc + i.amount, 0).toLocaleString()}
+                                    Las {data.lessonCount} clases de este período ya fueron pagadas. Total liquidado: ${data.allItems.reduce((acc, i) => acc + i.amount, 0).toLocaleString("es-AR")}
                                 </p>
                             </div>
                         </div>
@@ -368,7 +368,7 @@ export function TeacherPayrollSection({
                             <tfoot className="bg-muted/20 border-t border-border/40">
                                 <tr className="font-bold">
                                     <td colSpan={3} className="px-4 py-3 text-right text-muted-foreground uppercase text-[10px] tracking-widest">Total Crudo:</td>
-                                    <td className="px-4 py-3 text-right">${data.totalAmount.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right">${data.totalAmount.toLocaleString("es-AR")}</td>
                                 </tr>
                             </tfoot>
                         </table>

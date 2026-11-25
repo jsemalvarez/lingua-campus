@@ -114,7 +114,7 @@ function Amount({ tx }: { tx: Transaction }) {
         <span className={`font-bold tabular-nums tracking-tight whitespace-nowrap ${KIND[kindOf(tx)].text} ${voided ? "line-through" : ""}`}>
             {/* Sin `+` ni `-`: no entró ni salió plata. El importe está para
                 reconocer cuál es, no para sumarlo a la caja. */}
-            {movesNoCash(tx) ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString()}
+            {movesNoCash(tx) ? "" : tx.type === "INCOME" ? "+" : "-"}${tx.amount.toLocaleString("es-AR")}
         </span>
     );
 }

@@ -170,7 +170,7 @@ export function RegisterFullCourseFeeForm({ students }: { students: StudentListO
 
             <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex justify-between items-center text-sm">
                 <span className="font-semibold text-emerald-800 dark:text-emerald-300">Total Neto a Ingresar a Caja:</span>
-                <span className="font-extrabold text-lg text-emerald-600">${netToCollect.toLocaleString()}</span>
+                <span className="font-extrabold text-lg text-emerald-600">${netToCollect.toLocaleString("es-AR")}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -116,7 +116,7 @@ export function TransactionActions({ tx, alwaysVisible = false }: TransactionAct
                             </h3>
                             <p className="text-muted-foreground text-sm">
                                 Estás a punto de anular: <br/>
-                                <span className="font-semibold text-foreground">"{tx.description}"</span> por <span className="font-semibold text-foreground">${tx.amount.toLocaleString()}</span>.
+                                <span className="font-semibold text-foreground">"{tx.description}"</span> por <span className="font-semibold text-foreground">${tx.amount.toLocaleString("es-AR")}</span>.
                                 <br/><br/>
                                 {tx.isCreditApplication
                                     ? "El importe vuelve al saldo a favor del alumno y la cuota queda impaga. No sale ni entra plata de la caja: ese dinero ya había ingresado."

@@ -364,7 +364,7 @@ export function GuardianDashboardView({
                             </h3>
                             
                             <h2 className={cn("text-2xl font-black tracking-tight", totalDebt > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
-                                {totalDebt > 0 ? `$${totalDebt.toLocaleString()}` : "Pagado"}
+                                {totalDebt > 0 ? `$${totalDebt.toLocaleString("es-AR")}` : "Pagado"}
                             </h2>
                             
                             <p className="text-[11px] text-muted-foreground font-medium mt-1 mb-4">

@@ -420,7 +420,7 @@ export function StudentAcademicsView({
                         <p className="text-[12px] font-bold truncate">{s.lessonTopic}</p>
                         <p className="text-[10px] text-muted-foreground">{s.courseName} · {dayjs(s.completedAt).locale("es").fromNow()}</p>
                         {s.weakArea && (
-                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">📍 {s.weakArea}</p>
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">📍 Para repasar: {s.weakArea}</p>
                         )}
                       </div>
                       {isChat ? (

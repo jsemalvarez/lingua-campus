@@ -5,6 +5,7 @@ import { formatDate, instituteMonth } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 import { Calendar, Tag, ArrowDownLeft, Receipt } from "lucide-react";
 import { formatCurrency, getMonthName } from "@/lib/utils";
+import { expenseLabel } from "@/lib/cashCategories";
 
 type ExpenseRow = {
     id: string;
@@ -17,20 +18,6 @@ type ExpenseRow = {
     status: string;
     operatorName: string;
 };
-
-const CATEGORY_LABELS: Record<string, string> = {
-    Payroll: "Sueldos",
-    ALQUILER: "Alquiler / Expensas",
-    SERVICIOS: "Servicios",
-    MANTENIMIENTO: "Mantenimiento / Limpieza",
-    MATERIALES: "Material Didáctico",
-    PUBLICIDAD: "Publicidad / Marketing",
-    OTROS: "Otros"
-};
-
-// Lo que no está en el mapa se muestra tal cual está en la base. Es preferible
-// un `NOMINA` crudo en pantalla a esconder un gasto que existe. Ver FEAT-31.
-const labelFor = (category: string) => CATEGORY_LABELS[category] ?? category;
 
 export function ExpensesClient({
     rows,
@@ -68,7 +55,7 @@ export function ExpensesClient({
     // Ordenadas por lo que se lee y no por el valor de la base: `Payroll` cae
     // entre `OTROS` y `PUBLICIDAD`, y en pantalla eso pone «Sueldos» en medio de
     // la lista sin ninguna razón visible.
-    const categoryOptions = [...categories].sort((a, b) => labelFor(a).localeCompare(labelFor(b), "es"));
+    const categoryOptions = [...categories].sort((a, b) => expenseLabel(a).localeCompare(expenseLabel(b), "es"));
 
     // Los anulados se listan pero no suman: el total tiene que poder compararse
     // contra la tarjeta "Gastos Operativos", que también los deja afuera.
@@ -101,7 +88,7 @@ export function ExpensesClient({
                         </option>
                         {categoryOptions.map((c) => (
                             <option key={c} value={c} className="bg-white dark:bg-zinc-900 text-foreground font-semibold font-sans">
-                                {labelFor(c)}
+                                {expenseLabel(c)}
                             </option>
                         ))}
                     </select>
@@ -146,7 +133,7 @@ export function ExpensesClient({
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                             Total de {periodLabel}
-                            {category ? ` · ${labelFor(category)}` : ""}
+                            {category ? ` · ${expenseLabel(category)}` : ""}
                         </p>
                         <h2 className="text-3xl font-bold tracking-tight mt-1 text-rose-600">
                             ${formatCurrency(total)}
@@ -172,8 +159,8 @@ export function ExpensesClient({
                             {byCategory.map(([cat, data]) => (
                                 <div key={cat}>
                                     <div className="flex justify-between items-baseline text-xs gap-2">
-                                        <span className="text-muted-foreground truncate" title={labelFor(cat)}>
-                                            {labelFor(cat)}
+                                        <span className="text-muted-foreground truncate" title={expenseLabel(cat)}>
+                                            {expenseLabel(cat)}
                                             <span className="text-muted-foreground/60"> ({data.count})</span>
                                         </span>
                                         <span className="font-semibold tabular-nums whitespace-nowrap">
@@ -200,7 +187,7 @@ export function ExpensesClient({
                         <ArrowDownLeft className="mx-auto text-muted-foreground/40 mb-3" size={32} />
                         <p className="text-sm font-semibold text-muted-foreground">
                             {category
-                                ? `No hay gastos de ${labelFor(category)} en ${periodLabel}.`
+                                ? `No hay gastos de ${expenseLabel(category)} en ${periodLabel}.`
                                 : `No hay gastos cargados en ${periodLabel}.`}
                         </p>
                     </div>
@@ -229,7 +216,7 @@ export function ExpensesClient({
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                                                    {labelFor(r.category)}
+                                                    {expenseLabel(r.category)}
                                                 </span>
                                             </td>
                                             {/* Concepto, destinatario y ticket son texto libre: envuelven y

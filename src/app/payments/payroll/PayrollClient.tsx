@@ -213,7 +213,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total a Liquidar ({selectedTeachers.length} seleccionados)</p>
                                 <h3 className="text-2xl font-black text-foreground">
-                                    ${totalToPay.toLocaleString()}
+                                    ${totalToPay.toLocaleString("es-AR")}
                                 </h3>
                             </div>
                         </div>
@@ -253,7 +253,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                                             </div>
                                             <h3 className="text-xl font-bold mb-2">¿Confirmar liquidación?</h3>
                                             <p className="text-muted-foreground text-sm">
-                                                Estás a punto de registrar <span className="font-semibold text-foreground">{selectedTeachers.length} pagos</span> por un total de <span className="font-bold text-foreground">${totalToPay.toLocaleString()}</span>.
+                                                Estás a punto de registrar <span className="font-semibold text-foreground">{selectedTeachers.length} pagos</span> por un total de <span className="font-bold text-foreground">${totalToPay.toLocaleString("es-AR")}</span>.
                                             </p>
                                             <p className="text-muted-foreground text-xs mt-2">
                                                 Período: <span className="font-semibold">{getMonthName(globalMonth)} {globalYear}</span>
@@ -363,7 +363,7 @@ export function PayrollClient({ teachers }: { teachers: Teacher[] }) {
                                                 <div className="text-right min-w-[80px]">
                                                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Sueldo</p>
                                                     <p className="font-black text-lg text-emerald-600 dark:text-emerald-400">
-                                                        ${displayAmount.toLocaleString()}
+                                                        ${displayAmount.toLocaleString("es-AR")}
                                                     </p>
                                                 </div>
                                             )}

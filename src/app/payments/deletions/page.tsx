@@ -79,8 +79,8 @@ export default async function FeeDeletionsPage({ searchParams }: { searchParams:
                         Cuotas Eliminadas
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Las deudas que se dieron de baja, con quién las eliminó y por qué. La cuota ya no
-                        existe: esto es la copia que quedó.
+                        Las deudas que se dieron de baja, con quién las eliminó y por qué. Ya no se le
+                        cobran al alumno.
                     </p>
                 </header>
 
