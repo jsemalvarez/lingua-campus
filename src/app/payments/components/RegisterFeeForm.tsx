@@ -76,6 +76,9 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
             if (fee) {
                 setBaseAmount(fee.originalAmount - fee.paidAmount);
             }
+        } else {
+            // Sin cuota elegida no queda el importe de la anterior.
+            setBaseAmount(0);
         }
     }, [selectedFeeId, pendingFees]);
 
@@ -99,9 +102,9 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
         if (res.success) {
             setPendingFees(res.fees || []);
             setStudentCredit(res.creditBalance || 0);
-            if (res.fees?.[0]) {
-                setSelectedFeeId(res.fees[0].id);
-            }
+            // La deuda más vieja, o ninguna si está al día: lo que todavía no venció
+            // lo elige quien cobra (FIN-35).
+            setSelectedFeeId(res.suggestedFeeId ?? "");
         }
         setIsLoadingFees(false);
     }
@@ -227,12 +230,18 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                 onChange={(e) => setSelectedFeeId(e.target.value)}
                                 className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500/20"
                             >
+                                {!selectedFeeId && <option value="">Elegí qué se paga…</option>}
                                 {pendingFees.map(f => (
                                     <option key={f.id} value={f.id}>
-                                        {feeLabel(f)} (${(f.originalAmount - f.paidAmount).toLocaleString()} pendientes)
+                                        {feeLabel(f)} (${formatCurrency(f.originalAmount - f.paidAmount)} pendientes)
                                     </option>
                                 ))}
                             </select>
+                        )}
+                        {!isLoadingFees && pendingFees.length > 0 && !selectedFeeId && (
+                            <p className="text-xs text-muted-foreground">
+                                Está al día: lo que figura todavía no venció.
+                            </p>
                         )}
                     </div>
 
@@ -245,7 +254,7 @@ export function RegisterFeeForm({ students }: { students: StudentListOption[] })
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600/70 dark:text-blue-400/70">Saldo a Favor</p>
-                                    <p className="text-sm font-bold text-blue-700 dark:text-blue-300">${studentCredit.toLocaleString()}</p>
+                                    <p className="text-sm font-bold text-blue-700 dark:text-blue-300">${studentCredit.toLocaleString("es-AR")}</p>
                                 </div>
                             </div>
                             <Button 

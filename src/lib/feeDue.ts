@@ -102,6 +102,45 @@ export function feeStanding(
 }
 
 /**
+ * En qué orden se ofrecen las cuotas al cobrar, y cuál queda elegida sola.
+ *
+ * **Primero lo que se debe, de lo más viejo a lo más nuevo.** Antes iba al revés, y
+ * con diciembre generado por adelantado el formulario se abría en diciembre con
+ * noviembre impago: de los cinco cobros de diciembre hechos del 7 al 19/11, cuatro
+ * se anularon (FIN-35).
+ *
+ * **Lo que todavía no es deuda no se elige solo** —la cuota de un mes que no llegó y
+ * el derecho de examen, que se va pagando de a partes—. Si el alumno está al día,
+ * quien cobra dice qué está cobrando. Dos de esos cuatro cobros anulados se hicieron
+ * menos de un minuto después de cobrar noviembre: no era un problema de orden.
+ */
+export function orderForCollection<
+    T extends {
+        type: string;
+        month: number;
+        year: number;
+        enrollment?: { course?: { examDate?: Date | null } | null } | null;
+    }
+>(fees: T[], today: Date = instituteToday()): { fees: T[]; suggested: T | null } {
+    const rank: Record<FeeStanding, number> = { OVERDUE: 0, CURRENT: 0, LATER: 1, UPCOMING: 2 };
+    // Cuándo vence, contado en meses. La cuota, desde que empieza su mes. La matrícula va
+    // con mes 0: antes que las cuotas de su año. El derecho de examen también tiene mes 0,
+    // pero vence el día del examen: después que la cuota de ese mes.
+    const due = (fee: T) => {
+        const examDate = fee.type === "EXAM" ? fee.enrollment?.course?.examDate : null;
+        return examDate
+            ? examDate.getUTCFullYear() * 12 + examDate.getUTCMonth() + 1 + examDate.getUTCDate() / 32
+            : fee.year * 12 + fee.month;
+    };
+
+    const sorted = [...fees].sort(
+        (a, b) => rank[feeStanding(a, today)] - rank[feeStanding(b, today)] || due(a) - due(b)
+    );
+    const first = sorted[0];
+    return { fees: sorted, suggested: first && rank[feeStanding(first, today)] === 0 ? first : null };
+}
+
+/**
  * Deja la clase del examen final del curso en la fecha del examen.
  *
  * Sin fecha no hace nada: antes la clase se creaba con el día en que se cargaba

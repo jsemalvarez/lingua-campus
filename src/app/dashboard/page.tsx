@@ -21,7 +21,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { formatFeeLabel } from "@/lib/utils";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
-import { ageOn, formatDate, instituteMonth, instituteToday, periodProgress } from "@/lib/dates";
+import { ageOn, formatDate, formatTime, instituteMonth, instituteToday, periodProgress } from "@/lib/dates";
 import { StudentsChart } from "./components/StudentsChart";
 import { AnnualFinanceChartServer } from "./components/AnnualFinanceChartServer";
 import { PlaygroundChartServer } from "./components/PlaygroundChartServer";
@@ -295,14 +295,14 @@ export default async function DashboardPage() {
 
         // Próximas clases de sus cursos
         const today = instituteToday();
-        const upcomingLessons = await prisma.lesson.findMany({
+        const lessonsFromToday = await prisma.lesson.findMany({
             where: {
                 courseId: { in: courseIds },
                 status: "ACTIVE",
                 date: { gte: today }
             },
             orderBy: { date: 'asc' },
-            take: 5,
+            take: 6,
             include: {
                 course: {
                     include: {
@@ -312,6 +312,11 @@ export default async function DashboardPage() {
                 schedule: true
             }
         });
+        // La de hoy que ya terminó no es «próxima» (BUG-40).
+        const nowTime = formatTime(new Date());
+        const upcomingLessons = lessonsFromToday.filter(
+            l => l.date > today || !l.schedule || l.schedule.endTime > nowTime
+        );
 
         // Estadísticas de asistencia
         const totalAttendances = await prisma.attendance.count({
@@ -728,16 +733,23 @@ export default async function DashboardPage() {
     });
 
     // 6. Fetch recent payments
-    const recentPayments = await prisma.fee.findMany({
+    // Los pagos, no las cuotas: ordenaba las cuotas por `datePaid`, que las pagadas a
+    // medias no tienen, y Postgres pone los vacíos primero. Mostraba siempre las mismas
+    // tres cuotas a medio pagar (BUG-35). Los de saldo a favor y los del descuento del
+    // 100% quedan afuera: no entró plata.
+    const recentPayments = await prisma.payment.findMany({
         where: {
-            instituteId: user.instituteId,
-            status: { in: ["PAID", "PARTIAL"] },
-            paidAmount: { gt: 0 }
+            status: "VALID",
+            amount: { gt: 0 },
+            method: { not: "SALDO" },
+            fee: { instituteId: user.instituteId }
         },
-        orderBy: { datePaid: 'desc' },
+        orderBy: { date: 'desc' },
         take: 3,
-        include: {
-            student: { select: { name: true } }
+        select: {
+            id: true,
+            amount: true,
+            fee: { select: { type: true, month: true, year: true, student: { select: { name: true } } } }
         }
     });
 
@@ -881,11 +893,11 @@ export default async function DashboardPage() {
                             ) : recentPayments.map((payment) => (
                                 <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors">
                                     <div className="flex flex-col">
-                                        <span className="font-medium text-sm">{payment.student.name || 'Sin nombre'}</span>
-                                        <span className="text-xs text-muted-foreground">{formatFeeLabel(payment.type, payment.month, payment.year)}</span>
+                                        <span className="font-medium text-sm">{payment.fee.student.name || 'Sin nombre'}</span>
+                                        <span className="text-xs text-muted-foreground">{formatFeeLabel(payment.fee.type, payment.fee.month, payment.fee.year)}</span>
                                     </div>
                                     <div className="text-sm font-bold text-green-600">
-                                        +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.paidAmount)}
+                                        +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payment.amount)}
                                     </div>
                                 </div>
                             ))}

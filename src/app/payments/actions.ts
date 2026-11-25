@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
 import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
+import { orderForCollection } from "@/lib/feeDue";
 import { feeAfterPayment, paymentProblem } from "@/lib/feePayment";
 import { reportError, userMessageFor } from "@/lib/errors/report";
 import { UserError } from "@/lib/errors/userError";
@@ -214,7 +215,7 @@ export async function getStudentPendingFeesAction(studentId: string) {
     if (!user) return { success: false, error: "No autorizado" };
 
     try {
-        const [fees, student] = await Promise.all([
+        const [pending, student] = await Promise.all([
             prisma.fee.findMany({
                 where: {
                     studentId,
@@ -224,13 +225,10 @@ export async function getStudentPendingFeesAction(studentId: string) {
                 },
                 include: {
                     enrollment: {
-                        include: { course: { select: { name: true } } }
+                        include: { course: { select: { name: true, examDate: true } } }
                     }
                 },
-                orderBy: [
-                    { year: "desc" },
-                    { month: "desc" }
-                ]
+                orderBy: { createdAt: "asc" }
             }),
             // Las cuotas ya filtran por instituto; el saldo también tiene que
             // hacerlo, o se filtra el de un alumno ajeno cuando no hay cuotas.
@@ -240,7 +238,15 @@ export async function getStudentPendingFeesAction(studentId: string) {
             })
         ]);
 
-        return { success: true, fees, creditBalance: student?.creditBalance || 0 };
+        // Lo más viejo que se debe va primero y queda elegido; lo que no venció, no (FIN-35).
+        const { fees, suggested } = orderForCollection(pending);
+
+        return {
+            success: true,
+            fees,
+            suggestedFeeId: suggested?.id ?? null,
+            creditBalance: student?.creditBalance || 0
+        };
     } catch (e: any) {
         return { success: false, error: "Error al cargar cuotas pendientes" };
     }
@@ -673,6 +679,62 @@ function capitalOf(payment: { amount: number; surcharge: number; discount: numbe
     return payment.amount + payment.discount - payment.surcharge;
 }
 
+/**
+ * Le saca al alumno un saldo a favor que se le había acreditado: el excedente de un
+ * cobro que se anula, o un adelanto que se anula (FIN-36).
+ *
+ * **El saldo no puede quedar negativo**: sería una deuda que la UI no muestra en
+ * ningún lado. Si ya se consumió, la anulación se traba hasta que se anulen los
+ * pagos que lo gastaron.
+ *
+ * La condición viaja en el `where` en lugar de chequearse antes: así el control y el
+ * descuento son una sola operación atómica y dos anulaciones simultáneas sobre el
+ * mismo alumno no pueden pasar las dos.
+ *
+ * La tolerancia de medio centavo es por los montos en Float, que arrastran ruido
+ * binario (FIN-05): sin ella un 1e-13 traba una anulación legítima.
+ */
+async function takeBackCredit(tx: Prisma.TransactionClient, studentId: string, amount: number) {
+    const updated = await tx.student.updateMany({
+        where: { id: studentId, creditBalance: { gte: amount - 0.005 } },
+        data: { creditBalance: { increment: -amount } }
+    });
+    if (updated.count > 0) return;
+
+    const student = await tx.student.findUnique({
+        where: { id: studentId },
+        select: { creditBalance: true }
+    });
+
+    if (!student) throw new UserError("Alumno no encontrado");
+
+    // Decir "anulá primero los pagos hechos con ese saldo" sin decir cuáles
+    // deja al operador buscándolos, y no están en el libro mayor: el asiento
+    // de una aplicación de saldo es de $0 y la tabla filtra los $0 (FIN-11).
+    // Nombrar las cuotas lo manda derecho al bloque de la ficha del alumno.
+    const creditPayments = await tx.payment.findMany({
+        where: {
+            method: "SALDO",
+            status: "VALID",
+            fee: { studentId }
+        },
+        select: { fee: { select: { type: true, month: true, year: true } } }
+    });
+
+    // Dos aplicaciones sobre la misma cuota son un solo nombre para quien lee.
+    const heldBy = [...new Set(
+        creditPayments.map(p => formatFeeLabel(p.fee.type, p.fee.month, p.fee.year))
+    )];
+
+    throw new UserError(
+        `No se puede anular: hay que devolver $${formatCurrency(amount)} de saldo a favor ` +
+        `y el alumno sólo tiene $${formatCurrency(student.creditBalance)}. ` +
+        (heldBy.length > 0
+            ? `Anulá primero, desde la ficha del alumno, los pagos hechos con ese saldo: ${heldBy.join(", ")}.`
+            : `Anulá primero los pagos hechos con ese saldo.`)
+    );
+}
+
 export async function voidPaymentAction(paymentId: string, reason?: string) {
     const user = await getAuthAndInstitute();
     if (!user) return { success: false, error: "No autorizado" };
@@ -719,59 +781,14 @@ export async function voidPaymentAction(paymentId: string, reason?: string) {
             const creditReturned = payment.method === "SALDO" ? payment.amount : 0;
             const creditDelta = creditReturned - (surplusBefore - surplusAfter);
 
-            if (creditDelta !== 0) {
-                // El saldo no puede quedar negativo: sería una deuda que la UI no muestra
-                // en ningún lado. Si ya se consumió, la anulación se traba hasta que se
-                // anulen los pagos que lo gastaron.
-                //
-                // La condición viaja en el `where` en lugar de chequearse antes: así el
-                // control y el descuento son una sola operación atómica y dos anulaciones
-                // simultáneas sobre el mismo alumno no pueden pasar las dos.
-                //
-                // La tolerancia de medio centavo es por los montos en Float, que arrastran
-                // ruido binario (FIN-05): sin ella un 1e-13 traba una anulación legítima.
+            if (creditDelta > 0) {
                 const updated = await tx.student.updateMany({
-                    where: {
-                        id: fee.studentId,
-                        ...(creditDelta < 0 ? { creditBalance: { gte: -creditDelta - 0.005 } } : {})
-                    },
+                    where: { id: fee.studentId },
                     data: { creditBalance: { increment: creditDelta } }
                 });
-
-                if (updated.count === 0) {
-                    const student = await tx.student.findUnique({
-                        where: { id: fee.studentId },
-                        select: { creditBalance: true }
-                    });
-
-                    if (!student) throw new UserError("Alumno no encontrado");
-
-                    // Decir "anulá primero los pagos hechos con ese saldo" sin decir cuáles
-                    // deja al operador buscándolos, y no están en el libro mayor: el asiento
-                    // de una aplicación de saldo es de $0 y la tabla filtra los $0 (FIN-11).
-                    // Nombrar las cuotas lo manda derecho al bloque de la ficha del alumno.
-                    const creditPayments = await tx.payment.findMany({
-                        where: {
-                            method: "SALDO",
-                            status: "VALID",
-                            fee: { studentId: fee.studentId }
-                        },
-                        select: { fee: { select: { type: true, month: true, year: true } } }
-                    });
-
-                    // Dos aplicaciones sobre la misma cuota son un solo nombre para quien lee.
-                    const heldBy = [...new Set(
-                        creditPayments.map(p => formatFeeLabel(p.fee.type, p.fee.month, p.fee.year))
-                    )];
-
-                    throw new UserError(
-                        `No se puede anular: hay que devolver $${formatCurrency(-creditDelta)} de saldo a favor ` +
-                        `y el alumno sólo tiene $${formatCurrency(student.creditBalance)}. ` +
-                        (heldBy.length > 0
-                            ? `Anulá primero, desde la ficha del alumno, los pagos hechos con ese saldo: ${heldBy.join(", ")}.`
-                            : `Anulá primero los pagos hechos con ese saldo.`)
-                    );
-                }
+                if (updated.count === 0) throw new UserError("Alumno no encontrado");
+            } else if (creditDelta < 0) {
+                await takeBackCredit(tx, fee.studentId, -creditDelta);
             }
 
             // Marcar el pago como anulado
@@ -858,13 +875,22 @@ export async function voidIncomeAction(incomeId: string, reason?: string) {
             });
 
             if (!income) throw new UserError("Ingreso no encontrado");
-            if (income.status === "VOIDED") throw new UserError("El ingreso ya fue anulado");
 
-            // Marcar ingreso como anulado
-            await tx.miscellaneousIncome.update({
-                where: { id: income.id },
+            // Marcar ingreso como anulado. La condición viaja en el `where`: dos
+            // anulaciones a la vez no pueden pasar las dos, que en un adelanto le
+            // descontarían el saldo dos veces.
+            const voided = await tx.miscellaneousIncome.updateMany({
+                where: { id: income.id, status: { not: "VOIDED" } },
                 data: { status: "VOIDED" }
             });
+            if (voided.count === 0) throw new UserError("El ingreso ya fue anulado");
+
+            // El adelanto le había acreditado saldo a favor al alumno: anularlo se lo
+            // saca. Antes sólo se revertía la caja y el saldo quedaba, o sea plata que
+            // nunca entró (FIN-36).
+            if (income.category === "ADELANTO" && income.studentId) {
+                await takeBackCredit(tx, income.studentId, income.amount);
+            }
 
             // Marcar transacción original como anulada
             await tx.transaction.updateMany({
@@ -892,6 +918,7 @@ export async function voidIncomeAction(incomeId: string, reason?: string) {
         });
 
         revalidatePath("/payments");
+        revalidatePath("/students");
         return { success: true };
     } catch (e) {
         return { success: false, error: await userMessageFor(e, "No se pudo anular el ingreso. Probá de nuevo en un momento.", { action: "caja.anular-ingreso" }) };
