@@ -221,7 +221,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [SEC-11](#sec-11) | P1 | 🗣️ Obligar a cambiar la contraseña por defecto en el primer ingreso | [ ] |
 | [SEC-12](#sec-12) | P1 | El login del alumno no mira el estado: el preinscripto y el dado de baja entran igual | [x] |
 | [SEC-13](#sec-13) | P2 · hoy inofensivo | El login del alumno no ata la búsqueda al instituto | [ ] |
-| [SEC-14](#sec-14) | P2 | Las acciones de la campana no miran quién las llama | [~] |
+| [SEC-14](#sec-14) | P2 | Las acciones de la campana no miran quién las llama | [x] |
 | [FIN-01](#fin-01) | P0 | Anular un pago no devuelve el saldo a favor | [x] |
 | [FIN-02](#fin-02) | P0 | Anular un pago con saldo saca plata inexistente | [x] |
 | [FIN-03](#fin-03) | P1 | `datePaid` se borra siempre al anular (código muerto) | [x] |
@@ -231,7 +231,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-07](#fin-07) | P1 | Pasar a curso completo no limpia las cuotas mensuales | [x] |
 | [FIN-08](#fin-08) | P2 | `OVERDUE` nunca se asigna / falta `dueDate` | [ ] |
 | [FIN-09](#fin-09) | P2 | 🗣️ Deudores incluye alumnos dados de baja y cursos terminados | [x] |
-| [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [~] |
+| [FIN-10](#fin-10) | P3 | Formato de moneda con locale del servidor | [x] |
 | [FIN-11](#fin-11) | P1 | No hay forma de anular una aplicación de saldo a favor | [x] |
 | [FIN-12](#fin-12) | P1 | Los generadores de matrícula asumen una por alumno y año | [x] |
 | [FIN-13](#fin-13) | P2 | 🗣️ No se ve quién aplicó un descuento o recargo, ni por qué | [ ] |
@@ -256,8 +256,8 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [FIN-32](#fin-32) | P1 | 🗣️ El cobro no avisa si la cuota queda saldada, y el excedente que anuncia está mal | [x] |
 | [FIN-33](#fin-33) | P1 | Anular un cobro hecho por error deja una deuda que no se puede borrar | [x] |
 | [FIN-34](#fin-34) | P2 | Un cobro de después de las 21 aparece al día siguiente en los movimientos | [x] |
-| [FIN-35](#fin-35) | P1 | El cobro elige sola la cuota más nueva | [~] |
-| [FIN-36](#fin-36) | P2 | Anular un adelanto no le saca el saldo a favor al alumno | [~] |
+| [FIN-35](#fin-35) | P1 | El cobro elige sola la cuota más nueva | [x] |
+| [FIN-36](#fin-36) | P2 | Anular un adelanto no le saca el saldo a favor al alumno | [x] |
 | [BUG-01](#bug-01) | P1 | El alumno que entra con DNI no puede guardar prácticas | [x] |
 | [BUG-02](#bug-02) | P1 | Borrar una clase con prácticas hechas falla | [x] |
 | [BUG-03](#bug-03) | P1 | Vaciar las frases de una clase ya practicada falla | [x] |
@@ -284,7 +284,7 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-24](#bug-24) | P1 | El cartel de confirmación se dibuja fuera de la pantalla | [x] |
 | [BUG-25](#bug-25) | P1 | 🗣️ Cargar el examen final falla en el curso más grande | [x] |
 | [BUG-26](#bug-26) | P3 | Finanzas se corre de costado en una tablet o una ventana angosta | [ ] |
-| [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [~] |
+| [BUG-27](#bug-27) | P3 | El boletín programado se publica la noche anterior y dice un día menos | [x] |
 | [BUG-28](#bug-28) | P3 | En el celular, la barra de arriba de quien tiene dos roles no entra en la pantalla | [ ] |
 | [BUG-29](#bug-29) | P1 | El inicio del alumno cuenta como asistidas todas las clases dictadas | [x] |
 | [BUG-30](#bug-30) | P2 | La hora de los mensajes sale en UTC y el navegador la corrige | [x] |
@@ -292,12 +292,12 @@ sistema en un estado donde la mitad de los permisos se evalúan de una forma y l
 | [BUG-32](#bug-32) | P3 | Quien es docente y secretaria figura como «Secretaría» en el hilo que le escriben como docente | [x] |
 | [BUG-33](#bug-33) | P2 | La tarjeta de asistencia del alumno dice 0% a quien no tiene marcas, y «Al día» a todos | [x] |
 | [BUG-34](#bug-34) | P3 | Un archivo de la página que no llega a cargar deja a la persona en la pantalla de error | [ ] |
-| [BUG-35](#bug-35) | P3 | «Pagos Recientes» del inicio muestra siempre las mismas cuotas a medio pagar | [~] |
-| [BUG-36](#bug-36) | P2 | Una sesión cortada queda en el panel como una falla | [~] |
-| [BUG-37](#bug-37) | P3 | En el celular, el boletín de la familia se corre de costado | [~] |
-| [BUG-38](#bug-38) | P3 | El aviso de pre-inscripción muestra un código en vez del nivel | [~] |
-| [BUG-39](#bug-39) | P3 | Progreso le muestra al alumno jerga de fonética en inglés | [~] |
-| [BUG-40](#bug-40) | P3 | Textos viejos: categorías en clave, «Próxima Sesión» que ya pasó, «La cuota ya no existe» | [~] |
+| [BUG-35](#bug-35) | P3 | «Pagos Recientes» del inicio muestra siempre las mismas cuotas a medio pagar | [x] |
+| [BUG-36](#bug-36) | P2 | Una sesión cortada queda en el panel como una falla | [x] |
+| [BUG-37](#bug-37) | P3 | En el celular, el boletín de la familia se corre de costado | [x] |
+| [BUG-38](#bug-38) | P3 | El aviso de pre-inscripción muestra un código en vez del nivel | [x] |
+| [BUG-39](#bug-39) | P3 | Progreso le muestra al alumno jerga de fonética en inglés | [x] |
+| [BUG-40](#bug-40) | P3 | Textos viejos: categorías en clave, «Próxima Sesión» que ya pasó, «La cuota ya no existe» | [x] |
 | [BUG-41](#bug-41) | P3 · decisión del instituto | Publicar el boletín alcanza a los alumnos sin notas | [ ] |
 | [FEAT-01](#feat-01) | P2 | 🗣️ Adjuntar archivos en el primer mensaje de un hilo | [ ] |
 | [FEAT-02](#feat-02) | P2 | 🗣️ Paginar las clases del curso por mes | [x] |
@@ -1173,7 +1173,7 @@ navegador puede invocar con los argumentos que quiera. Ninguna miraba la sesión
 parámetro**: con el id de otro se leían sus avisos o se marcaban como leídos. En el mismo archivo estaban las que
 **crean** avisos, que son para el servidor. Los ids no se adivinan (son `cuid`), y por eso es P2 y no P1.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `f556afb` · verificado en stage el 25/11
 
 - **La identidad sale de la sesión**, como en `messages.ts`. La campana pide todo con una sola acción,
   `getMyNotifications`, que sin sesión devuelve vacío.
@@ -1182,6 +1182,8 @@ parámetro**: con el id de otro se leían sus avisos o se marcaban como leídos.
 
 **Lo que queda abierto.** El aviso en vivo viaja por un canal de Realtime cuyo nombre es `user:<id>`: quien tenga el
 id de otro puede escucharlo. Cerrarlo pide autorización de Realtime en Supabase.
+
+**En stage.** La campana pasó de 21 a 22 en vivo, y el aviso se marcó sin recargar, sólo para Leticia. Llamando a la acción a mano con la sesión de Leticia y el id del aviso de Patricia, quedó sin leer; un id vacío no marcó nada.
 
 ---
 
@@ -1778,12 +1780,14 @@ components— imprimen `$30,000`. Eso explica los dos formatos conviviendo en `/
 había anotado como misterio. Lo que falta barrer es el subconjunto que corre en el servidor, bastante
 menor que 57, y **no se puede detectar mirando la pantalla en un navegador argentino**.
 
-### Los que faltaban — 2026-11-24 · falta verificar en stage
+### Los que faltaban — 2026-11-24 · `00af7b2` · verificado en stage el 25/11
 
 Se vio de nuevo al probar en stage, en un navegador en inglés: *«$49,000 pendientes»* arriba de *«$46.000»*, en el
 mismo formulario. Los 52 `toLocaleString()` que quedaban, en 12 archivos, pasaron a `toLocaleString("es-AR")`: no
 sólo los del servidor, porque en uno del navegador el HTML del servidor y el del navegador no coinciden. Y
 `lint:fechas`, que corre en el build, frena un `toLocaleString()` sin idioma.
+
+**En stage.** En un navegador en inglés, 103 importes de Finanzas y Deudores, ninguno con coma de miles, y los totales del mes iguales a la base.
 
 ---
 
@@ -4077,7 +4081,7 @@ Victoria y Bahiano 10/11, Helena 11/11). El quinto, Joaquín Román el 19/11, qu
 noviembre impago, y sólo el instituto sabe si fue a propósito. **Dos de los cuatro se hicieron a menos de un
 minuto de haber cobrado noviembre**: ordenar al revés no alcanzaba.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `875824e` · verificado en stage el 25/11
 
 `orderForCollection`, en [`feeDue.ts`](../src/lib/feeDue.ts), al lado de la regla que dice qué es deuda:
 
@@ -4087,6 +4091,8 @@ minuto de haber cobrado noviembre**: ordenar al revés no alcanzaba.
 
 El derecho de examen cuenta por la fecha del examen, no por su mes, que es 0: ordenando por mes habría quedado
 primero siempre.
+
+**En stage.** Bustamante, debiendo $3.000 de noviembre, abre en noviembre; con noviembre recién saldado, el mismo alumno abre en *«Elegí qué se paga…»* —el caso real—. Catalina, al día, no elige y deja el examen al final; Juan Perez abre en la matrícula. Confirmar sin elegir: *«Debes seleccionar un estudiante y una cuota pendiente»*.
 
 ---
 
@@ -4099,12 +4105,14 @@ primero siempre.
 sacaba de la caja y **dejaba el saldo**: plata para pagar cuotas que nunca entró. Se vio con un adelanto de $2.000
 a Juan Perez: anulado, el saldo siguió en $2.000.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `875824e` · verificado en stage el 25/11
 
 Anular un adelanto descuenta el saldo, con **la misma regla que anular un cobro con excedente**
 ([FIN-01](#fin-01)): si el alumno ya lo usó, no deja y nombra las cuotas que lo tienen. La regla salió de
 `voidPaymentAction` a `takeBackCredit`, que usan las dos. La marca de anulado pasó al `where` de la escritura: dos
 anulaciones a la vez no pueden descontar dos veces.
+
+**En stage.** Con $2.000 de saldo: un adelanto de $1.500 lo lleva a $3.500 y anularlo lo devuelve a $2.000. Usado en la matrícula, anularlo no deja y la nombra; anulando antes la aplicación, sí. Se repitió el cobro con excedente de Octavio, cuyo código se movió: $7.000 de saldo, y $0 al anularlo.
 
 ---
 
@@ -9003,11 +9011,13 @@ se pueden corregir sumándoles tres horas, o dejarse como están: las familias y
 
 **P3.** Nadie lo reclamó, y la diferencia es de tres horas y un día en el pie del boletín.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `1db4de8` · verificado en stage el 25/11
 
 El día elegido se guarda como la medianoche del instituto, con `dayStartFromKey` de
 [`dates.ts`](../src/lib/dates.ts): el 5/12 es el 5/12 a las 03:00 UTC, y todas las pantallas lo muestran como 5. Los
 110 ya publicados quedan como están. Al 24/11 no hay ninguno programado a futuro en producción.
+
+**En stage.** Se eligió 05/12: la pantalla dice 05/12 y en la base está a las 03:00 UTC.
 
 ---
 
@@ -9269,10 +9279,12 @@ de una persona, sube a P2. Con un solo caso en stage no alcanza.
 **Lo que pasa.** Ordenaba las **cuotas** por `datePaid`, que una cuota pagada a medias no tiene. Postgres pone los
 vacíos primero, así que mostraba siempre tres derechos de examen a medio pagar, y nunca lo último que se cobró.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `875824e` · verificado en stage el 25/11
 
 Muestra los últimos tres **pagos** válidos, con lo que entró en cada uno. Quedan afuera el saldo aplicado y el
 descuento del 100%, que no son plata que entró.
+
+**En stage.** Tobias $72.000, Octavio $56.000 y Bustamante $46.000: los tres últimos de la base.
 
 ---
 
@@ -9285,10 +9297,12 @@ descuento del 100%, que no son plata que entró.
 sesión vencida, `getMessagingContext` tira `Error("No autorizado.")`; nadie ve nada, pero queda en el panel como
 algo que vio una persona, y puede mandar un mail. Se vio dando de baja a una alumna con la sesión abierta.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `f556afb` · verificado en stage el 25/11
 
 Es un `UserError` —el sistema diciendo que no—, y `onRequestError` ya no registra los `UserError`, igual que
 `userMessageFor`. Los otros tres rechazos por permiso de `messages.ts`, también.
+
+**En stage.** Una alumna pasada a baja con la sesión abierta: la consulta de mensajes falló por adentro y el registro siguió en 2.
 
 ---
 
@@ -9300,9 +9314,11 @@ Es un `UserError` —el sistema diciendo que no—, y `onRequestError` ya no reg
 **Lo que pasa.** A 375 píxeles la página medía **459**: las tarjetas de «Próximas Clases», «Registro de Faltas» y
 «Notas» escriben el tema en un renglón, y la columna de la grilla crecía con el más largo.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `1db4de8` · verificado en stage el 25/11
 
 `grid-cols-1` explícito, que no deja crecer la columna, y la etiqueta «Falta» no se achica.
+
+**En stage.** 375 de 375, en el mismo informe que medía 459.
 
 ---
 
@@ -9313,10 +9329,12 @@ Es un `UserError` —el sistema diciendo que no—, y `onRequestError` ya no reg
 
 **Lo que pasa.** El formulario manda el id del nivel y el aviso lo mostraba tal cual: *«Nivel: cmnb5c0b9…»*.
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `f556afb` · verificado en stage el 25/11
 
 Busca el nombre. Lo que no es un id se muestra como está: en producción hay 181 alumnos con el nivel escrito como
 texto, de una versión anterior. Los avisos viejos quedan como están.
+
+**En stage.** *«Prueba Pase Dos — Nivel: Children 2…»*.
 
 ---
 
@@ -9328,10 +9346,12 @@ texto, de una versión anterior. Los avisos viejos quedan como están.
 **Lo que pasa.** Después de Speaking, Progreso dice *«📍 initial s, r-colored vowel, initial w, alveolar flap»*, al
 lado de un 100%. Es lo que se le pedía a la IA (*«specific phoneme, e.g. 'th fricative'»*).
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `00af7b2` · verificado en stage el 25/11
 
 Se le pide en castellano y nombrando el sonido con una palabra (*«la «th» de «think»»*), sin términos de fonética.
 En pantalla va *«Para repasar: …»*, que tiene sentido aunque al final hayan salido todas.
+
+**En stage.** *«Para repasar: la «a» de «can»»*, con el reconocimiento simulado. Las sesiones viejas de stage conservan lo que tenían.
 
 ---
 
@@ -9340,13 +9360,15 @@ En pantalla va *«Para repasar: …»*, que tiene sentido aunque al final hayan 
 
 **De dónde sale.** Del **2026-11-24**, probando en stage todo lo que va a `main` (40 pruebas). Los dos primeros ya estaban en producción; el tercero lo trae [FIN-33](#fin-33).
 
-### Hecho — 2026-11-24 · falta verificar en stage
+### Resuelto — 2026-11-24 · `00af7b2` · verificado en stage el 25/11
 
 - **Movimientos** decía `VENTA_LIBROS` y `ALQUILER`. Los nombres viven en
   [`cashCategories.ts`](../src/lib/cashCategories.ts), que usa también Gastos.
 - **«Próxima Sesión»** del alumno mostraba la clase de hoy aunque ya hubiera terminado.
 - **«Cuotas Eliminadas»** decía *«La cuota ya no existe»*, y la anulada sí existe. Dice *«Ya no se le cobran al
   alumno»*.
+
+**En stage.** *«Alquiler / Expensas»* y *«Venta de Libros»* en Movimientos; a las 23:59 la próxima sesión es la del viernes 27 (`875824e`); el texto nuevo en Eliminadas.
 
 ---
 
