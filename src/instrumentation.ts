@@ -7,8 +7,16 @@ import type { Instrumentation } from "next";
  *
  * Lo que sí se atrapa y se contesta con un `{ success: false }` no pasa por acá:
  * lo registra el `catch` con `reportError`, que sabe qué se estaba haciendo.
+ *
+ * Un `UserError` tampoco: no es una falla, es el sistema diciendo que no, igual que
+ * en `userMessageFor`. Sin esto, cada cuenta dada de baja con la pestaña abierta
+ * dejaba un «No autorizado.» en el panel y un mail (BUG-36).
  */
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+    // Por el nombre y no con `instanceof`: este archivo se empaqueta aparte, y su clase
+    // no es la misma que tiró la acción.
+    if ((error as { name?: unknown })?.name === "UserError") return;
+
     // **El import va adentro del `if`, no después de un `return` temprano.** Este
     // archivo se compila también para edge, donde no hay `crypto` ni Prisma; el
     // compilador sólo descarta la rama si la condición envuelve al import. Con

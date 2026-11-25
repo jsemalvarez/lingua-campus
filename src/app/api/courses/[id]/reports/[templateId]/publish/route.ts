@@ -254,7 +254,7 @@ export async function PATCH(
             if (recienPublicados.length > 0) {
                 try {
                     const { createNotificationForStudents, createNotificationForUsers } =
-                        await import("@/app/actions/notifications");
+                        await import("@/lib/notifications");
 
                     const periodLabel =
                         (template.periodLabels as string[])[periodIndex] ??

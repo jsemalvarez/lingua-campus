@@ -5,6 +5,7 @@ import { Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/lib/authz";
 import { supabaseClient } from "@/lib/supabase-client";
+import { UserError } from "@/lib/errors/userError";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXTO DE SESIÓN
@@ -29,7 +30,9 @@ type MessagingContext = {
  */
 async function getMessagingContext(): Promise<MessagingContext> {
     const ctx = await getAuthContext();
-    if (!ctx) throw new Error("No autorizado.");
+    // `UserError` y no `Error`: la campana de mensajes consulta sola, y una cuenta dada
+    // de baja o una sesión vencida con la pestaña abierta no es una falla (BUG-36).
+    if (!ctx) throw new UserError("No autorizado.");
 
     return {
         userId: ctx.userId,
@@ -685,7 +688,7 @@ export async function createFamilyThread({
     body: string;
 }): Promise<{ threadId: string }> {
     const ctx = await getMessagingContext();
-    if (!isFamily(ctx)) throw new Error("No tenés permiso para iniciar conversaciones.");
+    if (!isFamily(ctx)) throw new UserError("No tenés permiso para iniciar conversaciones.");
     if (!ctx.instituteId) throw new Error("Tu usuario no está asociado a un instituto.");
 
     const { userId, isStudent, activeRole, instituteId } = ctx;
@@ -816,7 +819,7 @@ export async function createThread({
     // `createFamilyThread`, que recalcula su alcance en vez de confiar en los
     // ids que le manden.
     if (isStudent || (!isAdmin && senderRole !== "TEACHER")) {
-        throw new Error("No tenés permiso para iniciar conversaciones.");
+        throw new UserError("No tenés permiso para iniciar conversaciones.");
     }
 
     if (!instituteId) {
@@ -957,7 +960,7 @@ export async function sendMessage({
         const canJoin =
             isAdmin && !!instituteId && thread?.instituteId === instituteId;
 
-        if (!canJoin) throw new Error("No tenés acceso a este hilo.");
+        if (!canJoin) throw new UserError("No tenés acceso a este hilo.");
 
         participant = await prisma.threadParticipant.create({
             data: {

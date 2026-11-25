@@ -2,151 +2,56 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { supabaseClient } from "@/lib/supabase-client";
+import { getAuthContext } from "@/lib/authz";
 
-export async function getUnreadNotifications(userId: string, isStudent: boolean = false) {
-    return prisma.notification.findMany({
-        where: isStudent ? { studentId: userId, read: false } : { userId: userId, read: false },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-    });
+/**
+ * Los avisos de quien llama, y de nadie más (SEC-14).
+ *
+ * Son server actions: endpoints que el navegador puede invocar con los argumentos
+ * que quiera. Antes recibían de quién eran los avisos por parámetro y no miraban la
+ * sesión, así que con el id de otra persona se leían o se marcaban los suyos. Es la
+ * misma regla que sigue `messages.ts`: la identidad nunca llega por parámetro.
+ *
+ * Crear avisos no va acá sino en `@/lib/notifications`: en un archivo `"use server"`
+ * cada función exportada es un endpoint, y ésas no son para el navegador.
+ */
+async function ownNotifications() {
+    const ctx = await getAuthContext();
+    if (!ctx) return null;
+    return ctx.isStudent ? { studentId: ctx.userId } : { userId: ctx.userId };
 }
 
-export async function getRecentNotifications(userId: string, isStudent: boolean = false) {
-    return prisma.notification.findMany({
-        where: isStudent ? { studentId: userId } : { userId: userId },
-        orderBy: { createdAt: "desc" },
-        take: 15,
-    });
+/** Lo que muestra la campana. Sin sesión, vacía: no es una falla, es que se fue. */
+export async function getMyNotifications() {
+    const own = await ownNotifications();
+    if (!own) return { unreadCount: 0, recent: [] };
+
+    const [unreadCount, recent] = await Promise.all([
+        prisma.notification.count({ where: { ...own, read: false } }),
+        prisma.notification.findMany({ where: own, orderBy: { createdAt: "desc" }, take: 15 }),
+    ]);
+    return { unreadCount, recent };
 }
 
 export async function markAsRead(notificationId: string) {
-    await prisma.notification.update({
-        where: { id: notificationId },
-        data: { read: true },
-    });
-    revalidatePath("/dashboard");
-}
+    const own = await ownNotifications();
+    // Un `id` vacío en el `where` de Prisma no filtra: marcaría todos.
+    if (!own || typeof notificationId !== "string" || !notificationId) return;
 
-export async function markAllAsRead(userId: string, isStudent: boolean = false) {
     await prisma.notification.updateMany({
-        where: isStudent ? { studentId: userId, read: false } : { userId: userId, read: false },
+        where: { ...own, id: notificationId },
         data: { read: true },
     });
     revalidatePath("/dashboard");
 }
 
-type BaseNotificationParams = {
-    instituteId: string;
-    type: string;
-    title: string;
-    body: string;
-    link?: string;
-};
+export async function markAllAsRead() {
+    const own = await ownNotifications();
+    if (!own) return;
 
-export async function createNotificationForRoles({
-    instituteId,
-    roles,
-    type,
-    title,
-    body,
-    link,
-}: BaseNotificationParams & { roles: any[] }) {
-    // Buscar usuarios del instituto que tengan alguno de los roles
-    const targetUsers = await prisma.user.findMany({
-        where: {
-            instituteId,
-            roles: { hasSome: roles },
-        },
-        select: { id: true },
+    await prisma.notification.updateMany({
+        where: { ...own, read: false },
+        data: { read: true },
     });
-
-    if (targetUsers.length === 0) return;
-
-    // Insertar notificaciones masivas
-    await prisma.notification.createMany({
-        data: targetUsers.map(u => ({
-            instituteId,
-            userId: u.id,
-            type,
-            title,
-            body,
-            link
-        }))
-    });
-
-    // Enviar broadcast a cada canal
-    for (const u of targetUsers) {
-        if (supabaseClient) {
-            await supabaseClient.channel(`user:${u.id}`).send({
-                type: "broadcast",
-                event: "new_notification",
-                payload: { type, title, body, link, read: false, createdAt: new Date() },
-            });
-        }
-    }
-}
-
-export async function createNotificationForUsers({
-    instituteId,
-    userIds,
-    type,
-    title,
-    body,
-    link,
-}: BaseNotificationParams & { userIds: string[] }) {
-    if (!userIds.length) return;
-
-    await prisma.notification.createMany({
-        data: userIds.map(id => ({
-            instituteId,
-            userId: id,
-            type,
-            title,
-            body,
-            link
-        }))
-    });
-
-    for (const id of userIds) {
-        if (supabaseClient) {
-            await supabaseClient.channel(`user:${id}`).send({
-                type: "broadcast",
-                event: "new_notification",
-                payload: { type, title, body, link, read: false, createdAt: new Date() },
-            });
-        }
-    }
-}
-
-export async function createNotificationForStudents({
-    instituteId,
-    studentIds,
-    type,
-    title,
-    body,
-    link,
-}: BaseNotificationParams & { studentIds: string[] }) {
-    if (!studentIds.length) return;
-
-    await prisma.notification.createMany({
-        data: studentIds.map(id => ({
-            instituteId,
-            studentId: id,
-            type,
-            title,
-            body,
-            link
-        }))
-    });
-
-    for (const id of studentIds) {
-        if (supabaseClient) {
-            await supabaseClient.channel(`user:${id}`).send({
-                type: "broadcast",
-                event: "new_notification",
-                payload: { type, title, body, link, read: false, createdAt: new Date() },
-            });
-        }
-    }
+    revalidatePath("/dashboard");
 }

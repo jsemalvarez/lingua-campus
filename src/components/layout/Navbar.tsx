@@ -142,10 +142,7 @@ export function Navbar({
                                             variant="icon"
                                             isActive={pathname.startsWith("/messages")}
                                         />
-                                        <NotificationBell
-                                            userId={sessionUser.id}
-                                            isStudent={userRoles.includes("STUDENT")}
-                                        />
+                                        <NotificationBell userId={sessionUser.id} />
                                     </>
                                 )}
 

@@ -7,8 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabaseClient } from "@/lib/supabase-client";
 import {
-    getUnreadNotifications,
-    getRecentNotifications,
+    getMyNotifications,
     markAsRead,
     markAllAsRead,
 } from "@/app/actions/notifications";
@@ -23,7 +22,7 @@ type Notification = {
     createdAt: Date;
 };
 
-export function NotificationBell({ userId, isStudent = false }: { userId: string, isStudent?: boolean }) {
+export function NotificationBell({ userId }: { userId: string }) {
     const [open, setOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -33,15 +32,12 @@ export function NotificationBell({ userId, isStudent = false }: { userId: string
     // ── Carga inicial ──
     useEffect(() => {
         async function loadInitial() {
-            const [unread, recent] = await Promise.all([
-                getUnreadNotifications(userId, isStudent),
-                getRecentNotifications(userId, isStudent),
-            ]);
-            setUnreadCount(unread.length);
+            const { unreadCount, recent } = await getMyNotifications();
+            setUnreadCount(unreadCount);
             setNotifications(recent as Notification[]);
         }
         loadInitial();
-    }, [userId, isStudent]);
+    }, [userId]);
 
     // ── Supabase Broadcast subscription ──
     useEffect(() => {
@@ -88,7 +84,7 @@ export function NotificationBell({ userId, isStudent = false }: { userId: string
 
     function handleMarkAll() {
         startTransition(async () => {
-            await markAllAsRead(userId, isStudent);
+            await markAllAsRead();
             setUnreadCount(0);
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
         });
@@ -183,7 +179,9 @@ export function NotificationBell({ userId, isStudent = false }: { userId: string
                                             {n.body}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                            {formatDistanceToNow(new Date(n.createdAt), {
+                                            {/* Un aviso en vivo puede traer la hora del servidor unos
+                                                segundos adelantada: decía «en menos de un minuto». */}
+                                            {formatDistanceToNow(Math.min(new Date(n.createdAt).getTime(), Date.now()), {
                                                 addSuffix: true,
                                                 locale: es,
                                             })}

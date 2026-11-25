@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { createNotificationForUsers } from "@/app/actions/notifications";
+import { createNotificationForUsers } from "@/lib/notifications";
 import { asSignedHashes, fallenStudentIds } from "./batchSignatures";
 
 /**

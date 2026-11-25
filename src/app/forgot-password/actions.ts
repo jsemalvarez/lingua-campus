@@ -6,7 +6,7 @@ import { resolveSender } from "@/lib/email/sender";
 import { passwordResetEmail } from "@/lib/email/templates/passwordReset";
 import { instituteBaseUrl } from "@/lib/tenant";
 import { issueResetToken, RESET_TOKEN_TTL_MINUTES, type ResetSubject } from "@/lib/passwordReset";
-import { createNotificationForRoles } from "@/app/actions/notifications";
+import { createNotificationForRoles } from "@/lib/notifications";
 import { INSTITUTE_ADMINS } from "@/lib/authz";
 import { reportError } from "@/lib/errors/report";
 

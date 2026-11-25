@@ -149,7 +149,7 @@ async function avisarPorLaCampana(params: {
         if (yaAvisado) return;
     }
 
-    const { createNotificationForRoles } = await import("@/app/actions/notifications");
+    const { createNotificationForRoles } = await import("@/lib/notifications");
 
     await createNotificationForRoles({
         instituteId,
@@ -342,7 +342,16 @@ export async function createPreEnrollmentAction(formData: FormData, instituteId:
 
         // 🔔 Crear notificación en DB usando el nuevo sistema para Roles
         try {
-            const levelLabel = registeredLevel ? ` — Nivel: ${registeredLevel}` : "";
+            // El formulario manda el `id` del nivel, y el aviso mostraba eso (BUG-38). Lo
+            // que no es un `id` es el nombre, escrito por una versión vieja.
+            const level = registeredLevel
+                ? await prisma.level.findFirst({
+                      where: { id: registeredLevel, instituteId },
+                      select: { name: true },
+                  })
+                : null;
+            const levelName = level?.name ?? registeredLevel;
+            const levelLabel = levelName ? ` — Nivel: ${levelName}` : "";
 
             // **El "sin correo" va acá y no sólo en el correo al instituto**: es
             // el único aviso que llega cuando `Institute.email` está vacío, y es
