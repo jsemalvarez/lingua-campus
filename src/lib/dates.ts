@@ -243,3 +243,14 @@ export function instituteDayStart(now: Date = new Date()): Date {
     const offsetMinutes = match ? (match[1] === "-" ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3] ?? 0)) : 0;
     return new Date(instituteToday(now).getTime() - offsetMinutes * 60_000);
 }
+
+/**
+ * El instante en que empieza un día elegido en un calendario (`2026-12-05`): la
+ * medianoche del instituto. Para lo que arranca ese día a una hora, como un boletín
+ * programado: `new Date("2026-12-05")` es la medianoche UTC, que acá es la noche
+ * anterior (BUG-27). Para guardar el día en sí, `dayFromKey()`.
+ */
+export function dayStartFromKey(key: string): Date {
+    // Al mediodía UTC, en Argentina es el mismo día.
+    return instituteDayStart(new Date(dayFromKey(key).getTime() + 12 * 60 * 60_000));
+}

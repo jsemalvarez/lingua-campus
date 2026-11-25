@@ -116,7 +116,7 @@ export function GuardianAcademicsView({
             />
 
             {/* ROW 1: Proficiency & Course Summary Layer */}
-            <div className="grid lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2 p-6 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg bg-gradient-to-r from-card to-card/50 relative overflow-hidden rounded-[2rem]">
                     <div className="absolute top-0 right-0 p-8 opacity-5">
                         <GraduationCap size={150} />
@@ -185,7 +185,9 @@ export function GuardianAcademicsView({
             </div>
 
             {/* ROW 2 & 3: GRID TETRIS LAYOUT */}
-            <div className={cn("grid lg:grid-cols-2 gap-8 items-stretch", !hasEnrollment && "opacity-60")}>
+            {/* `grid-cols-1` y no sólo `grid`: la columna implícita crece con el tema más
+                largo, que va en un renglón, y en el celular corría la página (BUG-37). */}
+            <div className={cn("grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch", !hasEnrollment && "opacity-60")}>
                 
                 {/* COLUMN LEFT: Próximas Clases (Tall) */}
                 <Card className="p-8 border-y-0 border-r-0 border-l-4 border-l-primary shadow-lg bg-card rounded-[2rem] flex flex-col h-full min-h-[680px]">
@@ -258,7 +260,7 @@ export function GuardianAcademicsView({
                                                 </div>
                                             </div>
                                             <span className={cn(
-                                                "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                                                "shrink-0 ml-3 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
                                                 att.status === "ABSENT" ? "bg-rose-500/10 text-rose-600" : "bg-amber-500/10 text-amber-600"
                                             )}>
                                                 {att.status === "LATE" ? "Tarde" : "Falta"}

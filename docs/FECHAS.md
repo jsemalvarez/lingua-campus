@@ -39,6 +39,7 @@ addMonths(m, -1)        // el mes anterior
 monthDays(m)            // { first, last, next } del mes, como días: { gte: first, lte: last }
 yearDays(year)          // lo mismo para un año
 instituteDayStart()     // el instante en que empezó hoy (03:00 UTC): para ventanas de tiempo
+dayStartFromKey("2026-12-05") // el instante en que empieza ese día: un boletín programado (BUG-27)
 ageOn(birthDate)        // edad cumplida hoy en el instituto
 ```
 
@@ -63,7 +64,7 @@ y, como va antes de `prisma migrate deploy`, tampoco toca la base.
 - `dayjs.locale(...)` y `format` con `MMM` o `ddd`
 - `toLocaleDateString` y `toLocaleTimeString`, y `toLocaleString` sobre una fecha: salen en la zona y el
   idioma de quien corre el código. La hora de un momento es `formatTime`. Sobre un número,
-  `toLocaleString("es-AR")` está bien
+  `toLocaleString("es-AR")` está bien; sin idioma también frena ([FIN-10](BACKLOG-TECNICO.md#fin-10))
 - `dayjs(x).format(...)`, por lo mismo: un momento de las 21 a las 24 dice el día siguiente si lo dibuja el
   servidor. `dayjs(x).fromNow()` está bien
 - `Intl.DateTimeFormat` fuera de `dates.ts`
@@ -74,7 +75,8 @@ Las reglas están en [`eslint.fechas.config.mjs`](../eslint.fechas.config.mjs) y
 
 **Lo que el control no ve.** `fecha.toLocaleString("es-AR")` sobre una variable y sin opciones (puede ser un
 número), `const d = dayjs(x); d.format(...)` en dos pasos, `format` de `date-fns` ([ARQ-18](BACKLOG-TECNICO.md#arq-18))
-y `new Date("2026-06-22")`, que es medianoche UTC ([BUG-27](BACKLOG-TECNICO.md#bug-27)).
+y `new Date("2026-06-22")`, que es medianoche UTC: para un instante, `dayStartFromKey()`
+([BUG-27](BACKLOG-TECNICO.md#bug-27)).
 
 ## Decisiones
 
