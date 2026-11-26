@@ -69,7 +69,8 @@ const STYLE: Record<CollectionGroup, { text: string; chip: string; bar: string; 
 const money = (n: number) => `$${formatCurrency(n)}`;
 const sum = (rows: CollectionRow[]) => rows.reduce((t, r) => t + r.amount, 0);
 const studentsIn = (rows: CollectionRow[]) => new Set(rows.map((r) => r.studentId ?? `sin-alumno:${r.concept}`)).size;
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+// «2.051 cobros», no «2051»: el año entero pasa de mil.
+const plural = (n: number, one: string, many: string) => `${formatCurrency(n)} ${n === 1 ? one : many}`;
 const normalize = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

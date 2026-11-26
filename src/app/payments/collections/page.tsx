@@ -83,7 +83,9 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
             // día, esa hora no es la del cobro.
             time: rowGroup !== "sin-registro" && instituteTodayKey(m.createdAt) === day ? formatTime(m.createdAt) : null,
             studentId: student?.id ?? null,
-            studentName: student?.name ?? null,
+            // Hay nombres cargados con un espacio adelante: sin el `trim` quedaban
+            // primeros en una lista que se ordena por nombre.
+            studentName: student?.name.trim() ?? null,
             concept: fee
                 ? formatFeeLabel(fee.type, fee.month, fee.year)
                 : income?.category === "ADELANTO" ? "Adelanto de pago" : income?.description || m.description || "Sin concepto",
