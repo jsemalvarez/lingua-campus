@@ -42,6 +42,11 @@ export default function InstituteLanding({ institute }: { institute: Institute }
   const secondaryColor = "#f6a138"; // Amber for highlights
   const accentColor = "#2e3192";
 
+  // Desde noviembre se inscribe para el año que viene: el 26/11/2026 decía
+  // «Inscripciones Abiertas 2026» y el instituto ya estaba anotando para 2027.
+  const today = instituteMonth();
+  const enrollmentYear = today.month >= 11 ? today.year + 1 : today.year;
+
   return (
     <div className="min-h-screen selection:bg-indigo-500/20 dark:selection:bg-white/20 bg-slate-50 dark:bg-slate-950 pb-20 sm:pb-0 scroll-smooth">
 
@@ -147,7 +152,7 @@ export default function InstituteLanding({ institute }: { institute: Institute }
           <div className="container mx-auto px-6 text-center max-w-5xl relative z-10 mt-16 sm:mt-0">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm text-slate-700 dark:text-slate-300 font-medium text-sm mb-8 border border-white/50 dark:border-slate-800/50 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Sparkles className="w-4 h-4" style={{ color: secondaryColor }} />
-              <span>Inscripciones Abiertas {instituteMonth().year}</span>
+              <span>Inscripciones Abiertas {enrollmentYear}</span>
             </div>
 
             <h2 className={`text-3xl sm:text-4xl lg:text-5xl italic mb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 ${lato.className}`} style={{ color: primaryColor }}>be Modern, speak English</h2>
