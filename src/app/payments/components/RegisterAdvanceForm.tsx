@@ -91,7 +91,7 @@ export function RegisterAdvanceForm({ students }: RegisterAdvanceFormProps) {
                         required
                         className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
                     >
-                        <option value="EFECTIVE">Efectivo 💵</option>
+                        <option value="EFECTIVO">Efectivo 💵</option>
                         <option value="TRANSFERENCIA">Transferencia 🏦</option>
                         <option value="TARJETA">Tarjeta 💳</option>
                         <option value="MERCADOPAGO">MercadoPago 📱</option>

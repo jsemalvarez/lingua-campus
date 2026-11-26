@@ -14,10 +14,11 @@ import { formatFeeLabel } from "@/lib/utils";
 import { expenseLabel, incomeLabel } from "@/lib/cashCategories";
 import { excludeNotYetDueFees } from "@/lib/feeDue";
 import { instituteMonth, monthDays } from "@/lib/dates";
+import { COLLECTION_GROUPS, COLLECTION_GROUP_LABELS, collectionGroup, collectionMethodLabel, sumByGroup } from "@/lib/collections";
 import { DebtChart } from "./components/DebtChart";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Users, BookOpen } from "lucide-react";
+import { Users, BookOpen, ChevronRight } from "lucide-react";
 import { MonthYearSelector } from "./components/MonthYearSelector";
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -114,7 +115,24 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         .reduce((acc, t) => acc + t.amount, 0);
 
     const totalCollected = feesIncome + miscIncome;
-        
+
+    // Lo mismo, por forma de pago: cada línea abre Cobros filtrada. Efectivo y
+    // transferencia van siempre; las otras dos, sólo si el mes las tiene.
+    const collectedThisMonth = currentMonthTransactions.filter(t => (t.type === "PAYMENT" || t.type === "MISC_INCOME") && t.amount > 0);
+    const collectedByGroup = sumByGroup(collectedThisMonth);
+    // Si «otras» es una sola —Mercado Pago, digamos—, se la nombra, igual que en Cobros.
+    const otherMethods = Array.from(new Set(
+        collectedThisMonth.filter(t => collectionGroup(t) === "otras").map(t => collectionMethodLabel(t))
+    ));
+    const collectedMethods = COLLECTION_GROUPS
+        .filter(g => g === "efectivo" || g === "transferencia" || collectedByGroup[g] > 0)
+        .map(g => ({
+            group: g,
+            label: g === "otras" && otherMethods.length === 1 ? otherMethods[0] : COLLECTION_GROUP_LABELS[g],
+            val: `$${collectedByGroup[g].toLocaleString("es-AR")}`,
+            href: `/payments/collections?year=${currentYear}&month=${currentMonth}&group=${g}`
+        }));
+
     const payrollExpenses = currentMonthTransactions
         .filter(t => t.type === "PAYROLL")
         .reduce((acc, t) => acc + Math.abs(t.amount), 0);
@@ -172,6 +190,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 { key: "Cuotas y Matrículas", val: `$${feesIncome.toLocaleString("es-AR")}` },
                 { key: "Otros Ingresos", val: `$${miscIncome.toLocaleString("es-AR")}` }
             ],
+            methods: collectedMethods,
             icon: ArrowUpRight,
             color: "text-blue-600",
             bg: "bg-blue-50 dark:bg-blue-950/40",
@@ -402,6 +421,16 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                 Ver Deudores
                             </Button>
                         </Link>
+                        {/* Lo que entró, por forma de pago. Es de la dirección: la
+                            secretaría no ve los totales de la caja. */}
+                        {!isSecretary && (
+                            <Link href={`/payments/collections?year=${currentYear}&month=${currentMonth}`}>
+                                <Button variant="outline" className="flex items-center gap-2 border-emerald-600/40 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
+                                    <ArrowUpRight size={16} />
+                                    Ver Cobros
+                                </Button>
+                            </Link>
+                        )}
                         {/* El detalle de lo que sale, que en esta tabla queda repartido
                             entre los cobros. La secretaría no ve egresos (SEC-03), así
                             que tampoco ve el acceso. Ver FEAT-31. */}
@@ -465,6 +494,29 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                                                 <span className="text-muted-foreground">{item.key}</span>
                                                 <span className="font-semibold text-foreground/80">{item.val}</span>
                                             </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {stat.methods && (
+                                    <div className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
+                                        {stat.methods.map((m: (typeof collectedMethods)[number]) => (
+                                            <Link
+                                                key={m.group}
+                                                href={m.href}
+                                                aria-label={`Ver los cobros de ${m.label.toLowerCase()} de ${monthLabel}`}
+                                                className={`flex justify-between items-center gap-2 min-h-11 px-3 rounded-lg border text-[13px] font-semibold transition-colors ${
+                                                    m.group === "efectivo" ? "border-emerald-600/25 bg-emerald-50/60 text-emerald-700 hover:bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                                    : m.group === "transferencia" ? "border-indigo-600/25 bg-indigo-50/60 text-indigo-700 hover:bg-indigo-50 dark:bg-indigo-950/30 dark:text-indigo-300"
+                                                    : m.group === "otras" ? "border-amber-600/25 bg-amber-50/60 text-amber-700 hover:bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400"
+                                                    : "border-dashed border-zinc-400 text-zinc-700 hover:bg-muted/40 dark:text-zinc-300"
+                                                }`}
+                                            >
+                                                <span>{m.label}</span>
+                                                <span className="flex items-center gap-1.5 text-foreground tabular-nums">
+                                                    {m.val}
+                                                    <ChevronRight size={15} className="text-muted-foreground" />
+                                                </span>
+                                            </Link>
                                         ))}
                                     </div>
                                 )}
