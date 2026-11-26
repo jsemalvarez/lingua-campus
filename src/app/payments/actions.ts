@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { ENROLLMENT_FEE_MONTH, formatCurrency, formatFeeLabel } from "@/lib/utils";
-import { dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
+import { cashDayProblem, dayFromKey, instituteMonth, instituteToday } from "@/lib/dates";
 import { orderForCollection } from "@/lib/feeDue";
 import { feeAfterPayment, paymentProblem } from "@/lib/feePayment";
 import { reportError, userMessageFor } from "@/lib/errors/report";
@@ -464,6 +464,10 @@ export async function createExpenseAction(formData: FormData) {
         return { success: false, error: "Descripción y un monto mayor a 0 son obligatorios" };
     }
 
+    // La fecha es opcional; si viene, tiene que ser un día que pueda tener la caja.
+    const dateProblem = dateStr ? cashDayProblem(dateStr) : null;
+    if (dateProblem) return { success: false, error: dateProblem };
+
     try {
         await prisma.$transaction(async (tx) => {
             const exp = await tx.expense.create({
@@ -571,6 +575,9 @@ export async function createIncomeAction(formData: FormData) {
     if (!description || isNaN(amount) || amount <= 0) {
         return { success: false, error: "Descripción y un monto mayor a 0 son obligatorios" };
     }
+
+    const dateProblem = dateStr ? cashDayProblem(dateStr) : null;
+    if (dateProblem) return { success: false, error: dateProblem };
 
     try {
         await prisma.$transaction(async (tx) => {

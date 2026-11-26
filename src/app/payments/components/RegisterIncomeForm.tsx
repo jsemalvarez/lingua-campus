@@ -5,6 +5,7 @@ import { createIncomeAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { EntitySearch } from "./EntitySearch";
+import { cashDayLimits } from "@/lib/dates";
 
 interface StudentInfo {
     id: string;
@@ -116,6 +117,8 @@ export function RegisterIncomeForm({ students }: RegisterIncomeFormProps) {
                     <input
                         type="date"
                         name="date"
+                        min={cashDayLimits().min}
+                        max={cashDayLimits().max}
                         className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
                     />
                 </div>

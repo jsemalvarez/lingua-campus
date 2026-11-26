@@ -5,6 +5,7 @@ import { createExpenseAction } from "../actions";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, AlertCircle } from "lucide-react";
+import { cashDayLimits } from "@/lib/dates";
 
 export function RegisterExpenseForm() {
     const router = useRouter();
@@ -58,7 +59,7 @@ export function RegisterExpenseForm() {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Fecha (Opcional)</label>
-                    <input type="date" name="date" className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
+                    <input type="date" name="date" min={cashDayLimits().min} max={cashDayLimits().max} className="w-full px-4 py-2 rounded-lg border border-input bg-background/50 text-sm outline-none focus:ring-2 focus:ring-rose-500/20" />
                 </div>
                 <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Nº de Ticket (Opcional)</label>

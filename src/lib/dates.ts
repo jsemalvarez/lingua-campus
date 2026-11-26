@@ -140,6 +140,39 @@ export function dayFromKey(key: string): Date {
     return new Date(`${key}T00:00:00.000Z`);
 }
 
+/**
+ * Los días que puede tener un gasto, un sueldo o un ingreso cargado a mano: del
+ * 1° de enero del año pasado a hoy. Son `min` y `max` del `<input type="date">`
+ * y el límite que aplica `cashDayProblem` en el servidor.
+ *
+ * Sin límite, tipear «26» en el año guarda el año 26: pasó con un sueldo, un gasto
+ * y un ingreso en noviembre de 2026, que quedaron fuera de todos los meses. En
+ * producción ningún movimiento se cargó con fecha futura, y el más atrasado se
+ * cargó 286 días después.
+ */
+export function cashDayLimits(now: Date = new Date()): { min: string; max: string } {
+    const today = instituteTodayKey(now);
+    return { min: `${Number(today.slice(0, 4)) - 1}-01-01`, max: today };
+}
+
+/**
+ * Por qué no sirve el día de un movimiento de caja cargado a mano, o `null` si
+ * sirve. El servidor decide: el límite de la pantalla lo saltea un navegador
+ * viejo o un pedido armado a mano.
+ */
+export function cashDayProblem(key: string, now: Date = new Date()): string | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+    // Un 31 de febrero no da error: corre al 3 de marzo. Ida y vuelta, o no es un día.
+    if (!match || isNaN(dayFromKey(key).getTime()) || dayKey(dayFromKey(key)) !== key) {
+        return "La fecha no es válida.";
+    }
+    const { min, max } = cashDayLimits(now);
+    const written = `${match[3]}/${match[2]}/${match[1]}`;
+    if (key < min) return `La fecha dice ${written}: revisá el año. Se pueden cargar movimientos desde el ${min.slice(8)}/${min.slice(5, 7)}/${min.slice(0, 4)}.`;
+    if (key > max) return `La fecha dice ${written}, y todavía no llegó: cargá el día en que se pagó.`;
+    return null;
+}
+
 /** `YYYY-MM-DD` de hoy en el calendario del instituto. Sirve también de `value` de un `<input type="date">`. */
 export function instituteTodayKey(now: Date = new Date()): string {
     return new Intl.DateTimeFormat("en-CA", {
